@@ -32,6 +32,7 @@
       url = "github:nix-darwin/nix-darwin/nix-darwin-25.11";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
+
   };
 
   outputs =
@@ -59,7 +60,7 @@
       };
 
       nixosConfigurations = {
-        pc = import ./hosts/pc {
+        remote-dev = import ./hosts/remote-dev {
           inherit
             self
             nixpkgs

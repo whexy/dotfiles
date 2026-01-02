@@ -1,4 +1,4 @@
-# Host configuration for pc (x86_64-linux)
+# Host configuration for remote dev manchines (x86_64-linux)
 {
   self,
   nixpkgs,
@@ -10,19 +10,21 @@ nixpkgs.lib.nixosSystem {
   system = "x86_64-linux";
 
   modules = [
-    ./hardware-configuration.nix
-
-    ../../modules/personal.nix
+    ../../modules/dev.nix
 
     home-manager.nixosModules.home-manager
 
     {
-      networking.hostName = "pc";
+      networking.hostName = "dev";
 
       system.stateVersion = "25.11";
       system.configurationRevision = self.rev or self.dirtyRev or null;
 
-      time.timeZone = "UTC";
+      # Bootloader - systemd-boot for UEFI
+      boot.loader.systemd-boot.enable = true;
+      boot.loader.efi.canTouchEfiVariables = true;
+
+      time.timeZone = "America/Chicago";
       networking.networkmanager.enable = true;
 
       users.users.whexy = {
@@ -36,6 +38,8 @@ nixpkgs.lib.nixosSystem {
       };
 
       services.openssh.enable = true;
+      services.tailscale.enable = true;
+      services.qemuGuest.enable = true;
       virtualisation.docker.enable = true;
 
       home-manager.useGlobalPkgs = true;
