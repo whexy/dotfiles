@@ -1,5 +1,10 @@
 # Minimal system basics for ALL hosts (including headless servers)
-{ pkgs, inputs, ... }:
+{
+  pkgs,
+  inputs,
+  lib,
+  ...
+}:
 {
   nixpkgs.config.allowUnfree = true;
 
@@ -17,16 +22,23 @@
     "flakes"
   ];
 
-  environment.systemPackages = with pkgs; [
-    curl
-    git
-    htop
-    jq
-    openssh
-    podman
-    rsync
-    vim
-    wget
-    ghostty-bin.terminfo
-  ];
+  environment.systemPackages =
+    with pkgs;
+    [
+      curl
+      git
+      htop
+      jq
+      openssh
+      podman
+      rsync
+      vim
+      wget
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      ghostty-bin.terminfo
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      ghostty.terminfo
+    ];
 }
