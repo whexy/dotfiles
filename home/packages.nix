@@ -28,10 +28,12 @@
   dev = with pkgs; [
     _1password-cli
     age
+    clang
     cmake
+    deno
     fd
-    gcc
     gdb
+    go
     kubectl
     llvm
     mtr
@@ -41,6 +43,7 @@
     tldr
     typst
     zellij
+    zig
 
     # Quick tools
     uv
