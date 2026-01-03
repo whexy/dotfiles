@@ -37,6 +37,7 @@
 
             wrapProgram $out/bin/${binary} \
               --prefix PATH : ${opPath} \
+              --run 'op account get &>/dev/null || eval $(op signin)' \
               ${envMapping}
           '') binaries
         );
