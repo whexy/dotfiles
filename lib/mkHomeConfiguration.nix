@@ -19,14 +19,16 @@ let
       (import ../overlays/mk-op-wrapped.nix)
     ];
   };
+  username = builtins.getEnv "USER";
+  homeDirectory = builtins.getEnv "HOME";
 in
 home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
   modules = [
     ../home/dev.nix
     {
-      home.username = builtins.getEnv "USER";
-      home.homeDirectory = builtins.getEnv "HOME";
+      home.username = username;
+      home.homeDirectory = homeDirectory;
     }
   ];
 }

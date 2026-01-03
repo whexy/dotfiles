@@ -6,10 +6,10 @@ Supports macOS, NixOS, and whatever Linux you're running.
 
 ```shell
 # Linux x86_64
-nix run home-manager -- switch --flake github:whexy/dotfiles#linux
+nix run home-manager -- switch --flake github:whexy/dotfiles#linux --impure
 
 # Linux ARM
-nix run home-manager -- switch --flake github:whexy/dotfiles#linux-aarch64
+nix run home-manager -- switch --flake github:whexy/dotfiles#linux-aarch64 --impure
 
 # macOS
 sudo darwin-rebuild switch --flake github:whexy/dotfiles#macos
