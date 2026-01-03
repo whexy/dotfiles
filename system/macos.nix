@@ -1,7 +1,8 @@
+# macOS-specific system configuration
 { self, ... }:
 {
   imports = [
-    ./home/macos/aerospace.nix
+    (import ../home/wrapper.nix ../home/macos/aerospace.nix)
   ];
 
   system.stateVersion = 6;

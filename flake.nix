@@ -46,7 +46,38 @@
       nix-darwin,
       ...
     }:
+    let
+      # Helper to create standalone home-manager configurations
+      mkHomeConfiguration =
+        { system, username, homeDirectory }:
+        let
+          pkgs = import nixpkgs {
+            inherit system;
+            config.allowUnfree = true;
+            overlays = [
+              (final: prev: {
+                unstable = import nixpkgs-unstable {
+                  inherit system;
+                  config.allowUnfree = true;
+                };
+              })
+              (import ./overlays/mk-op-wrapped.nix)
+            ];
+          };
+        in
+        home-manager.lib.homeManagerConfiguration {
+          inherit pkgs;
+          modules = [
+            ./home/standalone.nix
+            {
+              home.username = username;
+              home.homeDirectory = homeDirectory;
+            }
+          ];
+        };
+    in
     {
+      # macOS (nix-darwin) configurations
       darwinConfigurations = {
         mbp = import ./hosts/mbp {
           inherit
@@ -59,6 +90,7 @@
         };
       };
 
+      # NixOS configurations
       nixosConfigurations = {
         remote-dev = import ./hosts/remote-dev {
           inherit
@@ -67,6 +99,23 @@
             nixpkgs-unstable
             home-manager
             ;
+        };
+      };
+
+      # Standalone home-manager configurations (for non-NixOS Linux)
+      homeConfigurations = {
+        # Default: x86_64-linux for user "whexy"
+        "whexy@linux" = mkHomeConfiguration {
+          system = "x86_64-linux";
+          username = "whexy";
+          homeDirectory = "/home/whexy";
+        };
+
+        # aarch64-linux variant
+        "whexy@linux-aarch64" = mkHomeConfiguration {
+          system = "aarch64-linux";
+          username = "whexy";
+          homeDirectory = "/home/whexy";
         };
       };
     };

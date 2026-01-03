@@ -10,12 +10,12 @@ nix-darwin.lib.darwinSystem {
   system = "aarch64-darwin";
 
   modules = [
-    ../../modules/personal.nix
-    ../../modules/macos.nix
+    ../../system/personal.nix
+    ../../system/macos.nix
 
     home-manager.darwinModules.home-manager
 
-    ../../modules/user.nix
+    ../../system/user.nix
 
     {
       networking.hostName = "mbp";
