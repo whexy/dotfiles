@@ -4,7 +4,8 @@
 
 {
   # Base packages (minimal system tools)
-  base = with pkgs;
+  base =
+    with pkgs;
     [
       curl
       git
@@ -25,6 +26,7 @@
 
   # Development packages
   dev = with pkgs; [
+    _1password-cli
     age
     cmake
     fd
@@ -49,7 +51,6 @@
     black
     golangci-lint
     nixfmt-rfc-style
-    # rustfmt  # provided by rustup
     shellcheck
     shfmt
     stylua
