@@ -1,9 +1,8 @@
 # Personal workstation configuration (for NixOS / nix-darwin)
-{ pkgs, ... }:
+{ pkgs, username, ... }:
 {
   imports = [
     ./base.nix
-    (import ../home/wrapper.nix ../home/personal.nix)
   ];
 
   nixpkgs.overlays = [
@@ -11,6 +10,7 @@
   ];
 
   home-manager.useGlobalPkgs = true;
+  home-manager.users.${username} = import ../home/personal.nix;
 
   fonts.packages = [
     (pkgs.nerd-fonts.fira-code)

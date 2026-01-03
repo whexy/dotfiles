@@ -47,39 +47,17 @@
       ...
     }:
     let
-      # Helper to create standalone home-manager configurations
-      mkHomeConfiguration =
-        { system, username, homeDirectory }:
-        let
-          pkgs = import nixpkgs {
-            inherit system;
-            config.allowUnfree = true;
-            overlays = [
-              (final: prev: {
-                unstable = import nixpkgs-unstable {
-                  inherit system;
-                  config.allowUnfree = true;
-                };
-              })
-              (import ./overlays/mk-op-wrapped.nix)
-            ];
-          };
-        in
-        home-manager.lib.homeManagerConfiguration {
-          inherit pkgs;
-          modules = [
-            ./home/standalone.nix
-            {
-              home.username = username;
-              home.homeDirectory = homeDirectory;
-            }
-          ];
-        };
+      systemUsername = "whexy";
+
+      # Import library functions
+      lib = import ./lib {
+        inherit nixpkgs nixpkgs-unstable home-manager;
+      };
     in
     {
       # macOS (nix-darwin) configurations
       darwinConfigurations = {
-        mbp = import ./hosts/mbp {
+        macos = import ./hosts/mbp {
           inherit
             self
             nixpkgs-unstable
@@ -87,6 +65,7 @@
             ;
           nixpkgs = nixpkgs-darwin;
           home-manager = home-manager-darwin;
+          username = systemUsername;
         };
       };
 
@@ -99,23 +78,17 @@
             nixpkgs-unstable
             home-manager
             ;
+          username = systemUsername;
         };
       };
 
-      # Standalone home-manager configurations (for non-NixOS Linux)
+      # Standalone home-manager configurations
       homeConfigurations = {
-        # Default: x86_64-linux for user "whexy"
-        "whexy@linux" = mkHomeConfiguration {
+        linux = lib.mkHomeConfiguration {
           system = "x86_64-linux";
-          username = "whexy";
-          homeDirectory = "/home/whexy";
         };
-
-        # aarch64-linux variant
-        "whexy@linux-aarch64" = mkHomeConfiguration {
+        linux-aarch64 = lib.mkHomeConfiguration {
           system = "aarch64-linux";
-          username = "whexy";
-          homeDirectory = "/home/whexy";
         };
       };
     };

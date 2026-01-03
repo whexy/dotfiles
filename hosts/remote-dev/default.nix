@@ -4,6 +4,7 @@
   nixpkgs,
   nixpkgs-unstable,
   home-manager,
+  username,
   ...
 }:
 nixpkgs.lib.nixosSystem {
@@ -14,42 +15,48 @@ nixpkgs.lib.nixosSystem {
 
     home-manager.nixosModules.home-manager
 
-    {
-      networking.hostName = "dev";
+    (
+      { pkgs, ... }:
+      {
+        networking.hostName = "dev";
 
-      system.stateVersion = "25.11";
-      system.configurationRevision = self.rev or self.dirtyRev or null;
+        system.stateVersion = "25.11";
+        system.configurationRevision = self.rev or self.dirtyRev or null;
 
-      # Bootloader - systemd-boot for UEFI
-      boot.loader.systemd-boot.enable = true;
-      boot.loader.efi.canTouchEfiVariables = true;
+        # Bootloader - systemd-boot for UEFI
+        boot.loader.systemd-boot.enable = true;
+        boot.loader.efi.canTouchEfiVariables = true;
 
-      time.timeZone = "America/Chicago";
-      networking.networkmanager.enable = true;
+        time.timeZone = "America/Chicago";
+        networking.networkmanager.enable = true;
 
-      users.users.whexy = {
-        isNormalUser = true;
-        description = "whexy";
-        extraGroups = [
-          "wheel"
-          "networkmanager"
-          "docker"
-        ];
-      };
+        # User configuration
+        users.users.${username} = {
+          isNormalUser = true;
+          description = username;
+          home = "/home/${username}";
+          shell = pkgs.zsh;
+          extraGroups = [
+            "wheel"
+            "networkmanager"
+            "docker"
+          ];
+        };
 
-      services.openssh.enable = true;
-      services.tailscale.enable = true;
-      services.qemuGuest.enable = true;
-      virtualisation.docker.enable = true;
+        services.openssh.enable = true;
+        services.tailscale.enable = true;
+        services.qemuGuest.enable = true;
+        virtualisation.docker.enable = true;
 
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
-      home-manager.backupFileExtension = "backup";
-    }
+        home-manager.useGlobalPkgs = true;
+        home-manager.useUserPackages = true;
+        home-manager.backupFileExtension = "backup";
+      }
+    )
   ];
 
   specialArgs = {
-    inherit self;
+    inherit self username;
     inputs = { inherit nixpkgs-unstable; };
   };
 }

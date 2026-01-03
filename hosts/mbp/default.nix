@@ -4,6 +4,7 @@
   nix-darwin,
   nixpkgs-unstable,
   home-manager,
+  username,
   ...
 }:
 nix-darwin.lib.darwinSystem {
@@ -15,19 +16,27 @@ nix-darwin.lib.darwinSystem {
 
     home-manager.darwinModules.home-manager
 
-    ../../system/user.nix
+    (
+      { pkgs, ... }:
+      {
+        networking.hostName = "mbp";
 
-    {
-      networking.hostName = "mbp";
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
-      home-manager.backupFileExtension = "backup";
-    }
+        # User configuration
+        users.users.${username} = {
+          home = "/Users/${username}";
+          shell = pkgs.zsh;
+        };
+
+        home-manager.useGlobalPkgs = true;
+        home-manager.useUserPackages = true;
+        home-manager.backupFileExtension = "backup";
+      }
+    )
 
   ];
 
   specialArgs = {
-    inherit self;
+    inherit self username;
     inputs = { inherit nixpkgs-unstable; };
   };
 }

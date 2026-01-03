@@ -1,9 +1,8 @@
 # Development environment (for NixOS / nix-darwin hosts)
-{ ... }:
+{ username, ... }:
 {
   imports = [
     ./base.nix
-    (import ../home/wrapper.nix ../home/dev.nix)
   ];
 
   nixpkgs.overlays = [
@@ -11,4 +10,5 @@
   ];
 
   home-manager.useGlobalPkgs = true;
+  home-manager.users.${username} = import ../home/dev.nix;
 }
