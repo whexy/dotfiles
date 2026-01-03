@@ -47,6 +47,7 @@ M.LSPS = {
 	{ name = "yaml-language-server" },
 	{ name = "ts_ls" },
 	{ name = "nil_ls" },
+	{ name = "zls" },
 }
 
 M.FORMATTERS = {
