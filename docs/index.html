@@ -1,0 +1,224 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>whexy/Dotfiles</title>
+    <link rel="stylesheet" href="output.css" />
+  </head>
+  <body class="max-w-4xl mx-auto px-4 flex min-h-screen items-center">
+    <div class="w-full">
+      <svg
+        width="48"
+        height="48"
+        viewBox="-1152.0 -997.6612651596732 2304.0 1995.3225303193465"
+        class="mb-6 text-stone-700"
+      >
+        <polygon
+          fill="currentColor"
+          points="-624.0 249.4153162899184 -496.0 27.712812921102 63.99999999999994 997.6612651596733 -192.00000000000006 997.6612651596733 -320.00000000000017 775.9587617908571 -448.00000000000034 997.6612651596732 -576.0000000000003 997.6612651596732 -640.0000000000003 886.8100134752651 -448.0000000000001 554.2562584220408"
+        />
+        <polygon
+          fill="currentColor"
+          points="-528.0000000000001 -415.6921938165305 -272.0 -415.69219381653056 -832.0 554.2562584220408 -960.0 332.55375505322456 -832.0000000000001 110.85125168440817 -1088.0 110.85125168440794 -1152.0 -1.7053025658242404e-13 -1088.0 -110.85125168440834 -704.0000000000001 -110.85125168440811"
+        />
+        <polygon
+          fill="currentColor"
+          points="95.99999999999983 -665.1075101064489 223.99999999999991 -443.4050067376326 -896.0000000000001 -443.40500673763245 -768.0000000000001 -665.1075101064487 -512.0000000000001 -665.1075101064489 -640.0 -886.8100134752652 -576.0 -997.6612651596733 -448.0 -997.6612651596733 -256.0000000000001 -665.1075101064489"
+        />
+        <polygon
+          fill="currentColor"
+          points="624.0 -249.41531628991848 496.0 -27.71281292110206 -64.00000000000007 -997.6612651596733 191.99999999999994 -997.6612651596733 320.00000000000006 -775.9587617908571 448.0000000000002 -997.6612651596732 576.0000000000002 -997.6612651596733 640.0000000000002 -886.8100134752652 448.00000000000006 -554.2562584220408"
+        />
+        <polygon
+          fill="currentColor"
+          points="528.0000000000002 415.6921938165302 272.00000000000017 415.69219381653045 831.9999999999998 -554.2562584220411 959.9999999999999 -332.5537550532249 832.0000000000001 -110.85125168440845 1088.0 -110.8512516844084 1152.0 -2.8421709430404007e-13 1088.0 110.85125168440794 704.0000000000001 110.85125168440788"
+        />
+        <polygon
+          fill="currentColor"
+          points="-96.0 665.1075101064489 -224.00000000000009 443.40500673763256 896.0 443.4050067376328 768.0 665.107510106449 511.9999999999999 665.1075101064491 639.9999999999997 886.8100134752656 575.9999999999997 997.6612651596736 447.99999999999966 997.6612651596737 255.9999999999999 665.107510106449"
+        />
+      </svg>
+      <h1 class="text-4xl font-bold mb-2">
+        <a
+          href="https://github.com/whexy/dotfiles"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="hover:text-stone-600 transition-colors inline-flex items-center gap-2"
+        >
+          Dotfiles
+          <svg
+            width="24"
+            height="24"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+            class="opacity-50"
+          >
+            <line x1="7" y1="17" x2="17" y2="7"></line>
+            <polyline points="7 7 17 7 17 17"></polyline>
+          </svg>
+        </a>
+      </h1>
+      <p class="text-xl text-stone-600 mb-8">
+        Reproducible chaos across machines.
+      </p>
+
+      <div class="border border-stone-300 rounded p-6">
+        <div class="flex gap-2 mb-4 text-sm">
+          <button
+            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
+            data-tab="linux"
+            data-command="nix run home-manager -- switch --flake github:whexy/dotfiles#linux --impure"
+          >
+            Linux x86_64
+          </button>
+          <button
+            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
+            data-tab="linux-arm"
+            data-command="nix run home-manager -- switch --flake github:whexy/dotfiles#linux-aarch64 --impure"
+          >
+            Linux ARM
+          </button>
+          <button
+            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
+            data-tab="macos"
+            data-command="sudo darwin-rebuild switch --flake github:whexy/dotfiles#macos"
+          >
+            macOS
+          </button>
+          <button
+            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
+            data-tab="nixos"
+            data-command="nixos-install --flake github:whexy/dotfiles#remote-dev"
+          >
+            NixOS
+          </button>
+        </div>
+        <div class="flex border border-stone-300 rounded overflow-hidden">
+          <code
+            id="command-display"
+            class="font-mono text-sm bg-stone-50 p-3 flex-1 overflow-x-auto whitespace-nowrap"
+          >
+            $ nix run home-manager -- switch --flake github:whexy/dotfiles#linux
+            --impure
+          </code>
+          <button
+            id="copy-button"
+            class="px-4 hover:bg-stone-100 transition-colors flex-shrink-0"
+            title="Copy to clipboard"
+            type="button"
+            aria-label="Copy command to clipboard"
+          >
+            <svg
+              width="20"
+              height="20"
+              viewBox="0 0 24 24"
+              fill="none"
+              stroke="currentColor"
+              stroke-width="2"
+            >
+              <rect x="9" y="9" width="13" height="13" rx="2" ry="2"></rect>
+              <path
+                d="M5 15H4a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2h9a2 2 0 0 1 2 2v1"
+              ></path>
+            </svg>
+          </button>
+        </div>
+      </div>
+
+      <footer class="mt-12 pb-8 flex justify-center gap-4">
+        <a
+          href="https://github.com/whexy"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="w-10 h-10 flex items-center justify-center rounded hover:bg-stone-100 transition-colors"
+          aria-label="GitHub"
+        >
+          <svg width="20" height="20" viewBox="0 0 24 24" fill="currentColor">
+            <path
+              d="M12 0c-6.626 0-12 5.373-12 12 0 5.302 3.438 9.8 8.207 11.387.599.111.793-.261.793-.577v-2.234c-3.338.726-4.033-1.416-4.033-1.416-.546-1.387-1.333-1.756-1.333-1.756-1.089-.745.083-.729.083-.729 1.205.084 1.839 1.237 1.839 1.237 1.07 1.834 2.807 1.304 3.492.997.107-.775.418-1.305.762-1.604-2.665-.305-5.467-1.334-5.467-5.931 0-1.311.469-2.381 1.236-3.221-.124-.303-.535-1.524.117-3.176 0 0 1.008-.322 3.301 1.23.957-.266 1.983-.399 3.003-.404 1.02.005 2.047.138 3.006.404 2.291-1.552 3.297-1.23 3.297-1.23.653 1.653.242 2.874.118 3.176.77.84 1.235 1.911 1.235 3.221 0 4.609-2.807 5.624-5.479 5.921.43.372.823 1.102.823 2.222v3.293c0 .319.192.694.801.576 4.765-1.589 8.199-6.086 8.199-11.386 0-6.627-5.373-12-12-12z"
+            />
+          </svg>
+        </a>
+        <a
+          href="https://whexy.com"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="w-10 h-10 flex items-center justify-center rounded hover:bg-stone-100 transition-colors"
+          aria-label="Blog"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <path d="M4 19.5A2.5 2.5 0 0 1 6.5 17H20"></path>
+            <path
+              d="M6.5 2H20v20H6.5A2.5 2.5 0 0 1 4 19.5v-15A2.5 2.5 0 0 1 6.5 2z"
+            ></path>
+          </svg>
+        </a>
+        <a
+          href="https://shiwx.org"
+          target="_blank"
+          rel="noopener noreferrer"
+          class="w-10 h-10 flex items-center justify-center rounded hover:bg-stone-100 transition-colors"
+          aria-label="Personal Website"
+        >
+          <svg
+            width="20"
+            height="20"
+            viewBox="0 0 24 24"
+            fill="none"
+            stroke="currentColor"
+            stroke-width="2"
+          >
+            <circle cx="12" cy="12" r="10"></circle>
+            <line x1="2" y1="12" x2="22" y2="12"></line>
+            <path
+              d="M12 2a15.3 15.3 0 0 1 4 10 15.3 15.3 0 0 1-4 10 15.3 15.3 0 0 1-4-10 15.3 15.3 0 0 1 4-10z"
+            ></path>
+          </svg>
+        </a>
+      </footer>
+    </div>
+
+    <script>
+      let currentCommand =
+        "nix run home-manager -- switch --flake github:whexy/dotfiles#linux --impure";
+
+      // Set initial active tab
+      document
+        .querySelector('[data-tab="linux"]')
+        .classList.add("bg-stone-200");
+
+      // Tab switching
+      document.querySelectorAll(".tab-button").forEach((button) => {
+        button.addEventListener("click", () => {
+          // Remove active state from all tabs
+          document.querySelectorAll(".tab-button").forEach((btn) => {
+            btn.classList.remove("bg-stone-200");
+          });
+
+          // Add active state to clicked tab
+          button.classList.add("bg-stone-200");
+
+          // Update command display
+          currentCommand = button.getAttribute("data-command");
+          document.getElementById("command-display").textContent =
+            "$ " + currentCommand;
+        });
+      });
+
+      // Copy button
+      document.getElementById("copy-button").addEventListener("click", () => {
+        navigator.clipboard.writeText(currentCommand);
+      });
+    </script>
+  </body>
+</html>
