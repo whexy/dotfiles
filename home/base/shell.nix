@@ -22,9 +22,4 @@
       };
     };
   };
-
-  # SSH authorized keys for remote access
-  home.file.".ssh/authorized_keys".text = ''
-    ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMdMvHl7VPzajwBjWw+pqcLatA42yWtQKiEPj/9VqI9i
-  '';
 }
