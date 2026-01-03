@@ -28,7 +28,8 @@
 
   programs.starship =
     let
-      getPreset = name:
+      getPreset =
+        name:
         with builtins;
         removeAttrs (fromTOML (readFile "${pkgs.starship}/share/starship/presets/${name}.toml")) [
           "\"$schema\""
@@ -36,12 +37,10 @@
     in
     {
       enable = true;
-      settings = lib.recursiveUpdate
-        (lib.mergeAttrsList [
-          (getPreset "nerd-font-symbols")
-          (getPreset "pure-preset")
-        ])
-        { };
+      settings = lib.recursiveUpdate (lib.mergeAttrsList [
+        (getPreset "nerd-font-symbols")
+        (getPreset "pure-preset")
+      ]) { };
     };
 
   programs.zoxide = {
@@ -85,6 +84,7 @@
 
     shellAliases = {
       venv = "source .venv/bin/activate";
+      op-signin = "eval $(${pkgs._1password-cli}/bin/op signin)";
     };
 
     initContent = ''
