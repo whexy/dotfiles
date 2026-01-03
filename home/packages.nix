@@ -8,7 +8,6 @@
     with pkgs;
     [
       curl
-      git
       htop
       jq
       openssh
@@ -21,6 +20,7 @@
       ghostty-bin.terminfo
     ]
     ++ lib.optionals pkgs.stdenv.isLinux [
+      git
       ghostty.terminfo
     ];
 
