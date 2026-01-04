@@ -84,7 +84,13 @@
 
       # Standalone home-manager configurations
       homeConfigurations = {
-        home = lib.mkHomeConfiguration { };
+        home = import ./home/standalone.nix {
+          inherit
+            nixpkgs
+            nixpkgs-unstable
+            home-manager
+            ;
+        };
       };
     };
 }

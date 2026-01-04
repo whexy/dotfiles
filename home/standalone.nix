@@ -5,20 +5,17 @@
   home-manager,
 }:
 let
-  system = builtins.currentSystem;
-  pkgs = import nixpkgs {
-    inherit system;
-    config.allowUnfree = true;
-    overlays = [
-      (final: prev: {
-        unstable = import nixpkgs-unstable {
-          inherit system;
-          config.allowUnfree = true;
-        };
-      })
-      (import ../overlays/mk-op-wrapped.nix)
-    ];
+
+  nixpkgsSettings = import ../overlays/nixpkgs-settings.nix {
+    inputs = { inherit nixpkgs-unstable; };
   };
+
+  pkgs = import nixpkgs {
+    system = builtins.currentSystem;
+    inherit (nixpkgsSettings.nixpkgs) overlays;
+    inherit (nixpkgsSettings.nixpkgs) config;
+  };
+
   username = builtins.getEnv "USER";
   homeDirectory = builtins.getEnv "HOME";
 in
