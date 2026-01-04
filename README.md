@@ -17,16 +17,10 @@
 
 ## Quick Start
 
-### Linux x86_64
+### Dotfiles-only
 
 ```bash
-nix run home-manager -- switch --flake github:whexy/dotfiles#linux --impure
-```
-
-### Linux ARM
-
-```bash
-nix run home-manager -- switch --flake github:whexy/dotfiles#linux-aarch64 --impure
+nix run home-manager -- switch --flake github:whexy/dotfiles#home --impure
 ```
 
 ### macOS
