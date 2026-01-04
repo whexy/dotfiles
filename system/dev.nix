@@ -5,10 +5,6 @@
     ./base.nix
   ];
 
-  nixpkgs.overlays = [
-    (import ../overlays/mk-op-wrapped.nix)
-  ];
-
   home-manager.useGlobalPkgs = true;
   home-manager.users.${username} = import ../home/dev.nix;
 }

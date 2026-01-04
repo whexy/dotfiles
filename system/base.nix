@@ -1,15 +1,6 @@
-{ inputs, ... }:
+{ ... }:
 {
-  nixpkgs.config.allowUnfree = true;
-
-  nixpkgs.overlays = [
-    (final: prev: {
-      unstable = import inputs.nixpkgs-unstable {
-        inherit (prev) system;
-        config = prev.config;
-      };
-    })
-  ];
+  imports = [ ../overlays/nixpkgs-settings.nix ];
 
   nix.settings.experimental-features = [
     "nix-command"
