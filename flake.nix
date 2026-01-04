@@ -84,12 +84,7 @@
 
       # Standalone home-manager configurations
       homeConfigurations = {
-        linux = lib.mkHomeConfiguration {
-          system = "x86_64-linux";
-        };
-        linux-aarch64 = lib.mkHomeConfiguration {
-          system = "aarch64-linux";
-        };
+        home = lib.mkHomeConfiguration { };
       };
     };
 }

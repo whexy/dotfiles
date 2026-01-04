@@ -4,8 +4,8 @@
   nixpkgs-unstable,
   home-manager,
 }:
-{ system }:
 let
+  system = builtins.currentSystem;
   pkgs = import nixpkgs {
     inherit system;
     config.allowUnfree = true;
