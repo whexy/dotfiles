@@ -26,30 +26,34 @@
 
   # Development packages
   dev = with pkgs; [
-    _1password-cli
-    age
+    # Languages
     clang
-    cmake
     deno
-    fd
-    gdb
-    gnumake
     go
-    kubectl
-    llvm
-    mtr
     nodejs
-    ripgrep
-    rustup
-    tldr
     typst
-    zellij
     zig
 
-    # Quick tools
+    # Language tools
+    cmake
+    gdb
+    gnumake
+    llvm
+    rustup
     uv
-    xh
+
+    # Quick tools
+    _1password-cli
+    age
+    fd
+    just
+    kubectl
+    mtr
+    ripgrep
+    tldr
     tree-sitter
+    xh
+    zellij
 
     # Formatters & Linters
     black
