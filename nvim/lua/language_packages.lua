@@ -51,6 +51,7 @@ M.LSPS = {
 }
 
 M.FORMATTERS = {
+	{ language = "json", name = "prettier" },
 	{ language = "lua", name = "stylua" },
 	{ language = "sh", name = "shfmt" },
 	{ language = "yaml", name = "yamlfmt" },
@@ -59,6 +60,7 @@ M.FORMATTERS = {
 	{ language = "toml", name = "tombi" },
 	{ language = "typst", name = "typstyle" },
 	{ language = "nix", name = "nixfmt" },
+	{ language = "html", name = "prettier" },
 }
 
 M.LINTERS = {

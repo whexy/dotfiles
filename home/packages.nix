@@ -33,6 +33,7 @@
     deno
     fd
     gdb
+    gnumake
     go
     kubectl
     llvm
@@ -59,6 +60,7 @@
     stylua
     typstyle
     yamlfmt
+    prettier
 
     # LSP
     basedpyright
