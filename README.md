@@ -38,6 +38,6 @@ sudo darwin-rebuild switch --flake github:whexy/dotfiles#macos
 ### NixOS
 
 ```bash
-nixos-install --flake github:whexy/dotfiles#remote-dev
+sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev --impure
 ```
 
