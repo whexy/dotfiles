@@ -26,7 +26,7 @@ nix run home-manager -- switch --flake github:whexy/dotfiles#home --impure
 ### macOS
 
 ```bash
-sudo darwin-rebuild switch --flake github:whexy/dotfiles#macos
+sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp
 ```
 
 ### NixOS

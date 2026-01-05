@@ -13,6 +13,7 @@ nix-darwin.lib.darwinSystem {
   modules = [
     ../../system/personal.nix
     ../../system/macos.nix
+    ../../system/macos-laptop.nix
 
     home-manager.darwinModules.home-manager
 
