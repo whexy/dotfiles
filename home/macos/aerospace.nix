@@ -6,6 +6,7 @@
     package = pkgs.unstable.aerospace;
 
     userSettings = {
+      config-version = 2;
       after-startup-command = [ ];
       start-at-login = true;
       enable-normalization-flatten-containers = true;
