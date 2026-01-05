@@ -17,27 +17,51 @@
       on-focused-monitor-changed = [ "move-mouse monitor-lazy-center" ];
       automatically-unhide-macos-hidden-apps = false;
 
-      persistent-workspaces = [ "1" "2" "3" "4" "5" "6" "7" "8" "9" ];
+      persistent-workspaces = [
+        "1"
+        "2"
+        "3"
+        "4"
+        "5"
+        "6"
+        "7"
+        "8"
+        "9"
+      ];
 
       workspace-to-monitor-force-assignment = {
-        "8" = [ 1 "main" ];
-        "9" = [ 3 "main" ];
+        "8" = [
+          1
+          "main"
+        ];
+        "9" = [
+          3
+          "main"
+        ];
       };
 
       key-mapping.preset = "qwerty";
 
       gaps = {
-        inner = { horizontal = 0; vertical = 0; };
-        outer = { left = 0; bottom = 0; top = 0; right = 0; };
+        inner = {
+          horizontal = 0;
+          vertical = 0;
+        };
+        outer = {
+          left = 0;
+          bottom = 0;
+          top = 0;
+          right = 0;
+        };
       };
 
       mode.main.binding = {
         cmd-alt-ctrl-slash = "layout tiles horizontal vertical";
         cmd-alt-ctrl-comma = "layout accordion horizontal vertical";
-        cmd-alt-ctrl-shift-h = "focus left";
-        cmd-alt-ctrl-shift-j = "focus down";
-        cmd-alt-ctrl-shift-k = "focus up";
-        cmd-alt-ctrl-shift-l = "focus right";
+        cmd-alt-ctrl-shift-h = "focus left --boundaries all-monitors-outer-frame";
+        cmd-alt-ctrl-shift-j = "focus down --boundaries all-monitors-outer-frame";
+        cmd-alt-ctrl-shift-k = "focus up --boundaries all-monitors-outer-frame";
+        cmd-alt-ctrl-shift-l = "focus right --boundaries all-monitors-outer-frame";
         cmd-alt-ctrl-shift-tab = "focus-back-and-forth";
         cmd-alt-ctrl-h = "move left";
         cmd-alt-ctrl-j = "move down";
@@ -70,14 +94,38 @@
       };
 
       mode.service.binding = {
-        esc = [ "reload-config" "mode main" ];
-        r = [ "flatten-workspace-tree" "mode main" ];
-        f = [ "layout floating tiling" "mode main" ];
-        backspace = [ "close-all-windows-but-current" "mode main" ];
-        cmd-alt-ctrl-h = [ "join-with left" "mode main" ];
-        cmd-alt-ctrl-j = [ "join-with down" "mode main" ];
-        cmd-alt-ctrl-k = [ "join-with up" "mode main" ];
-        cmd-alt-ctrl-l = [ "join-with right" "mode main" ];
+        esc = [
+          "reload-config"
+          "mode main"
+        ];
+        r = [
+          "flatten-workspace-tree"
+          "mode main"
+        ];
+        f = [
+          "layout floating tiling"
+          "mode main"
+        ];
+        backspace = [
+          "close-all-windows-but-current"
+          "mode main"
+        ];
+        cmd-alt-ctrl-h = [
+          "join-with left"
+          "mode main"
+        ];
+        cmd-alt-ctrl-j = [
+          "join-with down"
+          "mode main"
+        ];
+        cmd-alt-ctrl-k = [
+          "join-with up"
+          "mode main"
+        ];
+        cmd-alt-ctrl-l = [
+          "join-with right"
+          "mode main"
+        ];
       };
     };
   };
