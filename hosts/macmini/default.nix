@@ -1,4 +1,4 @@
-# Host configuration for mbp (laptop)
+# Host configuration for mac mini
 {
   self,
   nix-darwin,
@@ -13,14 +13,14 @@ nix-darwin.lib.darwinSystem {
   modules = [
     ../../system/personal.nix
     ../../system/macos.nix
-    ../../system/macos-laptop.nix
+    ../../system/macos-desktop.nix
 
     home-manager.darwinModules.home-manager
 
     (
       { pkgs, ... }:
       {
-        networking.hostName = "mbp";
+        networking.hostName = "mac-mini";
 
         # User configuration
         users.users.${username} = {

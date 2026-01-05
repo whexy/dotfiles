@@ -1,11 +1,6 @@
 {
   description = "Nix Configurations";
 
-  nixConfig = {
-    extra-substituters = [ "https://cache.numtide.com" ];
-    extra-trusted-public-keys = [ "numtide.cachix.org-1:2ps1kLBUWjxIneOy1Ber+6DVdnZhm2AqJvta27H8eQw=" ];
-  };
-
   inputs = {
     # NixOS / Linux
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -46,18 +41,10 @@
       nix-darwin,
       ...
     }:
-    let
-      systemUsername = "whexy";
-
-      # Import library functions
-      lib = import ./lib {
-        inherit nixpkgs nixpkgs-unstable home-manager;
-      };
-    in
     {
       # macOS (nix-darwin) configurations
       darwinConfigurations = {
-        macos = import ./hosts/mbp {
+        mbp = import ./hosts/mbp {
           inherit
             self
             nixpkgs-unstable
@@ -65,7 +52,18 @@
             ;
           nixpkgs = nixpkgs-darwin;
           home-manager = home-manager-darwin;
-          username = systemUsername;
+          username = "whexy";
+        };
+
+        mini = import ./hosts/macmini {
+          inherit
+            self
+            nixpkgs-unstable
+            nix-darwin
+            ;
+          nixpkgs = nixpkgs-darwin;
+          home-manager = home-manager-darwin;
+          username = "whexy";
         };
       };
 
@@ -78,7 +76,7 @@
             nixpkgs-unstable
             home-manager
             ;
-          username = systemUsername;
+          username = "whexy";
         };
       };
 
