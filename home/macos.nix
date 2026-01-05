@@ -1,0 +1,6 @@
+{ ... }:
+{
+  imports = [
+    ./macos/aerospace.nix
+  ];
+}

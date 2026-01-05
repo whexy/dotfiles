@@ -1,19 +1,24 @@
-# Function to create standalone home-manager configurations
+# Standalone home-manager configuration for non-NixOS Linux systems
 {
   nixpkgs,
   nixpkgs-unstable,
   home-manager,
 }:
 let
-
-  nixpkgsSettings = import ../overlays/nixpkgs-settings.nix {
-    inputs = { inherit nixpkgs-unstable; };
-  };
+  system = builtins.currentSystem;
 
   pkgs = import nixpkgs {
-    system = builtins.currentSystem;
-    inherit (nixpkgsSettings.nixpkgs) overlays;
-    inherit (nixpkgsSettings.nixpkgs) config;
+    inherit system;
+    config.allowUnfree = true;
+    overlays = [
+      (import ../overlays/mk-op-wrapped.nix)
+      (final: prev: {
+        unstable = import nixpkgs-unstable {
+          inherit system;
+          config = prev.config;
+        };
+      })
+    ];
   };
 
   username = builtins.getEnv "USER";
@@ -22,7 +27,8 @@ in
 home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
   modules = [
-    ../home/dev.nix
+    ./base.nix
+    ./dev.nix
     {
       home.username = username;
       home.homeDirectory = homeDirectory;

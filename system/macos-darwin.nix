@@ -1,8 +1,6 @@
 # macOS-specific system configuration
 { self, username, ... }:
 {
-  home-manager.users.${username} = import ../home/macos/aerospace.nix;
-
   system.stateVersion = 6;
   system.configurationRevision = self.rev or self.dirtyRev or null;
   system.primaryUser = username;

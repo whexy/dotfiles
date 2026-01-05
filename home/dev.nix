@@ -1,11 +1,7 @@
 # Development home-manager configuration
-{ pkgs, lib, ... }:
-let
-  packages = import ./packages.nix { inherit pkgs lib; };
-in
+{ pkgs, ... }:
 {
   imports = [
-    ./base.nix
     ./dev/agents.nix
     ./dev/git.nix
     ./dev/shell.nix
@@ -18,5 +14,62 @@ in
     enableSshSupport = true;
   };
 
-  home.packages = packages.dev;
+  home.packages = with pkgs; [
+    # Languages
+    clang
+    deno
+    go
+    nodejs
+    typst
+    zig
+    python314
+
+    # Language tools
+    cmake
+    gdb
+    gnumake
+    llvm
+    rustup
+    uv
+
+    # Quick tools
+    _1password-cli
+    age
+    fd
+    devbox
+    devenv
+    just
+    kubectl
+    mtr
+    ripgrep
+    tldr
+    tree-sitter
+    xh
+    zellij
+
+    # Formatters & Linters
+    black
+    golangci-lint
+    nixfmt-rfc-style
+    shellcheck
+    shfmt
+    stylua
+    typstyle
+    yamlfmt
+    prettier
+
+    # LSP
+    basedpyright
+    clang-tools
+    gopls
+    lua-language-server
+    nil
+    ruff
+    tinymist
+    tombi
+    typescript-language-server
+    vscode-langservers-extracted
+    yaml-language-server
+    zls
+  ];
 }

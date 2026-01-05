@@ -2,7 +2,6 @@
 { ... }:
 {
   imports = [
-    ./dev.nix
-    ./personal/ghostty.nix
+    ./gui/ghostty.nix
   ];
 }
