@@ -40,43 +40,55 @@
       home-manager-darwin,
       nix-darwin,
       ...
-    }:
+    }@inputs:
+    let
+      mkHost = import ./mkhost.nix {
+        inherit inputs self;
+      };
+    in
     {
       # macOS (nix-darwin) configurations
       darwinConfigurations = {
-        mbp = import ./hosts/mbp {
-          inherit
-            self
-            nixpkgs-unstable
-            nix-darwin
-            ;
-          nixpkgs = nixpkgs-darwin;
-          home-manager = home-manager-darwin;
+        mbp = mkHost {
+          system = "aarch64-darwin";
+          hardware = "macos-laptop";
+          hostname = "mbp";
           username = "whexy";
+          darwin = true;
+          caps = [
+            "base"
+            "dev"
+            "gui"
+            "macos"
+          ];
         };
 
-        mini = import ./hosts/macmini {
-          inherit
-            self
-            nixpkgs-unstable
-            nix-darwin
-            ;
-          nixpkgs = nixpkgs-darwin;
-          home-manager = home-manager-darwin;
+        mini = mkHost {
+          system = "aarch64-darwin";
+          hardware = "macos-desktop";
+          hostname = "mini";
           username = "whexy";
+          darwin = true;
+          caps = [
+            "base"
+            "dev"
+            "gui"
+            "macos"
+          ];
         };
       };
 
       # NixOS configurations
       nixosConfigurations = {
-        remote-dev = import ./hosts/remote-dev {
-          inherit
-            self
-            nixpkgs
-            nixpkgs-unstable
-            home-manager
-            ;
+        remote-dev = mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64";
+          hostname = "remote-dev";
           username = "whexy";
+          caps = [
+            "base"
+            "dev"
+          ];
         };
       };
 

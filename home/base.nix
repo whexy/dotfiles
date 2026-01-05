@@ -1,8 +1,5 @@
 # Base home-manager configuration
 { pkgs, lib, ... }:
-let
-  packages = import ./packages.nix { inherit pkgs lib; };
-in
 {
   imports = [
     ./base/shell.nix
@@ -11,5 +8,23 @@ in
   ];
 
   home.stateVersion = "25.11";
-  home.packages = packages.base;
+  home.packages =
+    with pkgs;
+    [
+      curl
+      htop
+      jq
+      openssh
+      podman
+      rsync
+      vim
+      wget
+    ]
+    ++ lib.optionals pkgs.stdenv.isDarwin [
+      ghostty-bin.terminfo
+    ]
+    ++ lib.optionals pkgs.stdenv.isLinux [
+      git
+      ghostty.terminfo
+    ];
 }
