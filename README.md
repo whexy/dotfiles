@@ -35,3 +35,10 @@ sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp
 sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev
 ```
 
+### WSL
+
+```bash
+nix build github:whexy/dotfiles#nixosConfigurations.wsl.config.system.build.tarballBuilder
+sudo ./result/bin/nixos-wsl-tarball-builder
+```
+
