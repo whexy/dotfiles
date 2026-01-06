@@ -1,11 +1,12 @@
 # Standalone home-manager configuration for non-NixOS Linux systems
+# Note: This configuration uses impure evaluation to read your username and home directory
 {
   nixpkgs,
   nixpkgs-unstable,
   home-manager,
+  system,
 }:
 let
-  system = builtins.currentSystem;
 
   pkgs = import nixpkgs {
     inherit system;
@@ -21,6 +22,7 @@ let
     ];
   };
 
+  # Read username and home directory from environment (requires --impure)
   username = builtins.getEnv "USER";
   homeDirectory = builtins.getEnv "HOME";
 in
