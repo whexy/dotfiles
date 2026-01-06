@@ -105,6 +105,7 @@
           caps = [
             "base"
             "dev"
+            "gui"
           ];
         };
       };

@@ -58,6 +58,7 @@ systemFunc {
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
       home-manager.backupFileExtension = "backup";
+      home-manager.extraSpecialArgs = { inherit darwin; };
       home-manager.users.${username} = {
         imports = homeConfigs;
       };
@@ -68,6 +69,7 @@ systemFunc {
         inherit inputs self;
         inherit system hostname;
         inherit username;
+        inherit darwin;
       };
     }
 
