@@ -3,6 +3,7 @@
 {
   time.timeZone = "America/Chicago";
   programs.zsh.enable = true;
+  security.sudo.wheelNeedsPassword = false;
 
   # Dev services
   networking.networkmanager.enable = true;
