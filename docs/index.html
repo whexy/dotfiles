@@ -69,10 +69,17 @@
         <div class="flex gap-2 mb-4 text-sm">
           <button
             class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
-            data-tab="linux"
-            data-command="nix run home-manager -- switch --flake github:whexy/dotfiles#home --impure"
+            data-tab="linux-x86"
+            data-command="home-manager switch --flake github:whexy/dotfiles#home --impure"
           >
-            Dotfiles-only
+            Dotfiles (x86_64)
+          </button>
+          <button
+            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
+            data-tab="linux-aarch64"
+            data-command="home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure"
+          >
+            Dotfiles (aarch64)
           </button>
           <button
             class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
@@ -101,8 +108,7 @@
             id="command-display"
             class="font-mono text-sm bg-stone-50 p-3 flex-1 overflow-x-auto whitespace-nowrap"
           >
-            $ nix run home-manager -- switch --flake github:whexy/dotfiles#home
-            --impure
+            $ home-manager switch --flake github:whexy/dotfiles#home --impure
           </code>
           <button
             id="copy-button"
@@ -190,11 +196,11 @@
 
     <script>
       let currentCommand =
-        "nix run home-manager -- switch --flake github:whexy/dotfiles#home --impure";
+        "home-manager switch --flake github:whexy/dotfiles#home --impure";
 
       // Set initial active tab
       document
-        .querySelector('[data-tab="linux"]')
+        .querySelector('[data-tab="linux-x86"]')
         .classList.add("bg-stone-200");
 
       // Tab switching

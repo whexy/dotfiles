@@ -19,9 +19,17 @@
 
 ### Dotfiles-only
 
+For x86_64 Linux:
 ```bash
-nix run home-manager -- switch --flake github:whexy/dotfiles#home --impure
+home-manager switch --flake github:whexy/dotfiles#home --impure
 ```
+
+For aarch64 Linux:
+```bash
+home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure
+```
+
+> **Note:** The `--impure` flag is required because this configuration reads your username and home directory path from environment variables (`$USER` and `$HOME`).
 
 ### macOS
 

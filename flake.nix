@@ -118,6 +118,16 @@
             nixpkgs-unstable
             home-manager
             ;
+          system = "x86_64-linux";
+        };
+
+        home-aarch64 = import ./home/standalone.nix {
+          inherit
+            nixpkgs
+            nixpkgs-unstable
+            home-manager
+            ;
+          system = "aarch64-linux";
         };
       };
     };
