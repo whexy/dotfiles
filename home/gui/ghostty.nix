@@ -1,9 +1,9 @@
 # Ghostty terminal configuration
-{ pkgs, ... }:
+{ pkgs, darwin, ... }:
 {
   programs.ghostty = {
     enable = true;
-    package = pkgs.ghostty-bin;
+    package = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
 
     settings = {
       theme = "Gruvbox Dark";
