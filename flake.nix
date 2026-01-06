@@ -28,6 +28,11 @@
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
+    # WSL installer
+    nixos-wsl = {
+      url = "github:nix-community/NixOS-WSL";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
@@ -85,6 +90,18 @@
           hardware = "qemu-x86_64";
           hostname = "remote-dev";
           username = "whexy";
+          caps = [
+            "base"
+            "dev"
+          ];
+        };
+
+        wsl = mkHost {
+          system = "x86_64-linux";
+          hardware = "wsl";
+          hostname = "nixos-wsl";
+          username = "whexy";
+          wsl = true;
           caps = [
             "base"
             "dev"
