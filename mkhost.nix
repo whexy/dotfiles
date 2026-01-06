@@ -31,10 +31,13 @@ systemFunc {
   modules = [
     # Global Nix Setting
     {
-      nix.settings.experimental-features = [
-        "nix-command"
-        "flakes"
-      ];
+      nix.settings = {
+        experimental-features = [
+          "nix-command"
+          "flakes"
+        ];
+        warn-dirty = false;
+      };
     }
 
     # Global Nixpkgs Config (overlays, ...)
@@ -72,5 +75,7 @@ systemFunc {
     {
       networking.hostName = hostname;
     }
+
+    (if wsl then inputs.nixos-wsl.nixosModules.wsl else { })
   ];
 }
