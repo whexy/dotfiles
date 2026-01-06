@@ -32,6 +32,6 @@ sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp
 ### NixOS
 
 ```bash
-sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev --impure
+sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev
 ```
 
