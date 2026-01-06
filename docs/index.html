@@ -88,6 +88,13 @@
           >
             NixOS
           </button>
+          <button
+            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
+            data-tab="wsl"
+            data-command="nix build github:whexy/dotfiles#nixosConfigurations.wsl.config.system.build.tarballBuilder && sudo ./result/bin/nixos-wsl-tarball-builder"
+          >
+            WSL
+          </button>
         </div>
         <div class="flex border border-stone-300 rounded overflow-hidden">
           <code
