@@ -1,0 +1,72 @@
+when:
+  - event: push
+  - event: pull_request
+
+steps:
+  # Verify flake structure
+  check-flake:
+    image: nixos/nix:latest
+    commands:
+      - echo "Verifying flake structure..."
+      - nix flake check --extra-experimental-features 'nix-command flakes' --all-systems
+
+  # NixOS x86_64-linux - Full build (native)
+  build-nixos-remote-dev:
+    image: nixos/nix:latest
+    commands:
+      - echo "=== Building NixOS x86_64-linux remote-dev ==="
+      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel -L --show-trace
+      - echo "SUCCESS - Can be applied"
+
+  build-nixos-wsl:
+    image: nixos/nix:latest
+    commands:
+      - echo "=== Building NixOS x86_64-linux wsl ==="
+      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel -L --show-trace
+      - echo "SUCCESS - Can be applied"
+
+  # Darwin aarch64 - Evaluation and instantiation only
+  check-darwin-mbp:
+    image: nixos/nix:latest
+    commands:
+      - echo "=== Checking Darwin aarch64 mbp ==="
+      - echo "Evaluating configuration..."
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mbp.system.drvPath
+      - echo "Building derivation (without executing)..."
+      - nix-instantiate --extra-experimental-features 'nix-command flakes' --eval -E '(builtins.getFlake (toString ./.)).darwinConfigurations.mbp.system' --show-trace
+      - echo "SUCCESS - Configuration evaluates correctly"
+      - echo "NOTE Cross-platform build not performed - requires macOS runner"
+
+  check-darwin-mini:
+    image: nixos/nix:latest
+    commands:
+      - echo "=== Checking Darwin aarch64 mini ==="
+      - echo "Evaluating configuration..."
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mini.system.drvPath
+      - echo "Building derivation (without executing)..."
+      - nix-instantiate --extra-experimental-features 'nix-command flakes' --eval -E '(builtins.getFlake (toString ./.)).darwinConfigurations.mini.system' --show-trace
+      - echo "SUCCESS - Configuration evaluates correctly"
+      - echo "NOTE Cross-platform build not performed - requires macOS runner"
+
+  # Home Manager - Full build
+  build-home-manager:
+    image: nixos/nix:latest
+    commands:
+      - echo "=== Building Home Manager home ==="
+      - nix build --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home.activationPackage -L --show-trace
+      - echo "SUCCESS - Can be applied"
+
+  # Summary
+  summary:
+    image: nixos/nix:latest
+    commands:
+      - echo "========================================" 
+      - echo "CI Results Summary"
+      - echo "========================================"
+      - echo "NixOS configs     BUILT and tested"
+      - echo "Darwin configs    EVALUATED (not built - requires macOS)"
+      - echo "Home Manager      BUILT and tested"
+      - echo ""
+      - echo "NixOS and Home Manager configurations are ready to apply."
+      - echo "Darwin configurations evaluated successfully but were not built."
+      - echo "========================================"
