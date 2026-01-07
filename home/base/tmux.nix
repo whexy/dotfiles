@@ -9,7 +9,7 @@
     escapeTime = 0;
     historyLimit = 50000;
     mouse = true;
-    keyMode = "emacs";
+    keyMode = "vi";
     terminal = "screen-256color";
 
     extraConfig = ''
