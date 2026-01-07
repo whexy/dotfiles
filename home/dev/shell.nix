@@ -115,6 +115,10 @@
       '
       zstyle ':fzf-tab:*' fzf-preview $TABPREVIEW
 
+      # Fix case-sensitive completion: disable oh-my-zsh's case-insensitive matching
+      # that incorrectly lowercases the typed prefix
+      zstyle ':completion:*' matcher-list ''
+
       # path context-aware jump
       pd() {
         local line idx raw dir
