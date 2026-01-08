@@ -4,7 +4,7 @@
   imports = [
     ./dev/agents.nix
     ./dev/git.nix
-    ./dev/shell.nix
+    ./dev/fish.nix
     ./dev/ssh.nix
     ./dev/neovim.nix
   ];

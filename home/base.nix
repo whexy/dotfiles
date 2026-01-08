@@ -2,7 +2,7 @@
 { pkgs, lib, ... }:
 {
   imports = [
-    ./base/shell.nix
+    ./base/fish.nix
     ./base/tmux.nix
     ./base/vim.nix
   ];
