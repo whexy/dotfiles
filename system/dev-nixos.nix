@@ -2,7 +2,7 @@
 { pkgs, ... }:
 {
   time.timeZone = "America/Chicago";
-  programs.fish.enable = true;
+  programs.zsh.enable = true;
   security.sudo.wheelNeedsPassword = false;
 
   # Dev services

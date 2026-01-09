@@ -51,6 +51,7 @@
   programs.direnv = {
     enable = true;
     nix-direnv.enable = true;
+    enableZshIntegration = true;
   };
 
   programs.zsh = {
@@ -88,16 +89,6 @@
     };
 
     initContent = ''
-      # TODO: devbox global disabled to avoid conflict with home-manager
-      # [ -x "$(command -v devbox)" ] && {
-      #   eval "$(devbox global shellenv)"
-      # }
-
-      # If devbox is configured, update the autocomplete plugin
-      [ -x "$(command -v devbox)" ] && {
-        source <(devbox completion zsh); compdef _devbox devbox
-      }
-
       # fzf configuration
       local TABPREVIEW='
       (

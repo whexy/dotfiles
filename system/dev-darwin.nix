@@ -2,10 +2,9 @@
 { pkgs, ... }:
 {
   time.timeZone = "America/Chicago";
-  programs.fish.enable = true;
+  programs.zsh.enable = true;
   environment.shells = with pkgs; [
     bash
-    fish
     zsh
   ];
 }
