@@ -13,7 +13,7 @@
     terminal = "screen-256color";
 
     extraConfig = ''
-      set-option -g default-command "${pkgs.zsh}/bin/zsh -l"
+      set-option -g default-command "${pkgs.fish}/bin/fish -l"
 
       bind C-b send-prefix
       bind C-k clear-history
