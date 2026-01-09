@@ -2,4 +2,5 @@
 { ... }:
 {
   # Base NixOS settings
+  services.envfs.enable = true;
 }
