@@ -62,8 +62,6 @@
     };
 
     shellInit = ''
-      # Fish has syntax highlighting and autosuggestions built-in, no plugins needed!
-
       # Pin ssh socket to a fixed path
       # so tmux & zellij sessions can always get new sock without restart
       if test -n "$SSH_AUTH_SOCK"; and string match -q "/tmp/*" "$SSH_AUTH_SOCK"
@@ -197,11 +195,6 @@
         name = "puffer-fish";
         src = pkgs.fishPlugins.puffer.src;
       }
-      # Sponge - Clean failed commands from history
-      {
-        name = "sponge";
-        src = pkgs.fishPlugins.sponge.src;
-      }
       # Git abbreviations - oh-my-zsh style git aliases
       {
         name = "plugin-git";
@@ -217,11 +210,6 @@
           sha256 = "sha256-iKNaD0E7IwiQZ+7pTrbPtrUcCJiTcVpb9ksVid1J6A0=";
         };
       }
-      # Tide - Alternative prompt (keeping starship, but available if needed)
-      # {
-      #   name = "tide";
-      #   src = pkgs.fishPlugins.tide.src;
-      # }
     ];
   };
 }
