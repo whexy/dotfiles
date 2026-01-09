@@ -1,5 +1,7 @@
 { pkgs, username, ... }:
 {
+  system.primaryUser = username;
+
   # work-around for chsh on macOS
   users.knownUsers = [ username ];
 
