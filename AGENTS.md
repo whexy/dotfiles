@@ -40,7 +40,7 @@ capability of a certain machine.
 
 `dev` cap:
     machines used for development. dev setups like fancy NeoVim, LSPs, Linters,
-    Formatters, direnv, devbox, everything for better developer experience.
+    Formatters, direnv, everything for better developer experience.
 
 `gui` cap:
     machines expected to have GUI environments. Enable GUI related setups,

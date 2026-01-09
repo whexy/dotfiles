@@ -4,7 +4,7 @@
   imports = [
     ./dev/agents.nix
     ./dev/git.nix
-    ./dev/fish.nix
+    ./dev/shell.nix
     ./dev/ssh.nix
     ./dev/neovim.nix
   ];
@@ -36,7 +36,6 @@
     _1password-cli
     age
     fd
-    devbox
     devenv
     just
     kubectl
