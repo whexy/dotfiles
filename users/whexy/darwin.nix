@@ -1,6 +1,6 @@
 { pkgs, username, ... }:
 {
-
+  # work-around for chsh on macOS
   users.knownUsers = [ username ];
 
   # User configuration
@@ -13,4 +13,9 @@
       "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMdMvHl7VPzajwBjWw+pqcLatA42yWtQKiEPj/9VqI9i"
     ];
   };
+
+  nix.settings.trusted-users = [
+    "root"
+    username
+  ];
 }
