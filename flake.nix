@@ -130,5 +130,13 @@
           system = "aarch64-linux";
         };
       };
+
+      # Portable packages
+      packages.x86_64-linux.portable-nvim = import ./portable-nvim.nix {
+        pkgs = import nixpkgs {
+          system = "x86_64-linux";
+          config.allowUnfree = true;
+        };
+      };
     };
 }
