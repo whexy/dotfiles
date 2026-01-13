@@ -1,6 +1,11 @@
 {
   description = "Nix Configurations";
 
+  nixConfig = {
+    extra-substituters = [ "https://cache.numtide.com" ];
+    extra-trusted-public-keys = [ "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" ];
+  };
+
   inputs = {
     # NixOS / Linux
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-25.11";
@@ -32,6 +37,11 @@
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    # AI coding agents (daily builds)
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
     };
   };
 
@@ -118,6 +128,7 @@
             nixpkgs-unstable
             home-manager
             ;
+          llm-agents = inputs.llm-agents;
           system = "x86_64-linux";
         };
 
@@ -127,6 +138,7 @@
             nixpkgs-unstable
             home-manager
             ;
+          llm-agents = inputs.llm-agents;
           system = "aarch64-linux";
         };
       };
