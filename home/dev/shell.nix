@@ -96,8 +96,8 @@
           eza -1 -hl --icons --color=always $realpath
       elif [ -f "$realpath" ]; then
           bat --style=numbers --color=always --line-range :500 $realpath
-      elif grep -q "^$word=" $HOME/.zsh_alias_cache 2>/dev/null; then
-          grep "^$word=" $HOME/.zsh_alias_cache
+      elif grep -q "^$word=" "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh/aliases" 2>/dev/null; then
+          grep "^$word=" "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh/aliases"
       else
           echo ''${desc#*-- }
       fi
@@ -135,6 +135,10 @@
         ln -sf "$SSH_AUTH_SOCK" $HOME/.ssh/ssh-agent.sock
         export SSH_AUTH_SOCK="$HOME/.ssh/ssh-agent.sock"
       fi
+
+      # Dump aliases for fzf-tab preview (must be at end after all aliases are defined)
+      mkdir -p "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+      alias > "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh/aliases"
     '';
 
     plugins = [
