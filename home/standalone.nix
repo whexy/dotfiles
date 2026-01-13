@@ -4,6 +4,7 @@
   nixpkgs,
   nixpkgs-unstable,
   home-manager,
+  llm-agents,
   system,
 }:
 let
@@ -18,6 +19,10 @@ let
           inherit system;
           config = prev.config;
         };
+      })
+      # Add llm-agents packages (daily builds)
+      (final: prev: {
+        llm-agents = llm-agents.packages.${system};
       })
     ];
   };

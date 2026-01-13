@@ -13,5 +13,10 @@
         config = prev.config;
       };
     })
+
+    # Add llm-agents packages (daily builds)
+    (final: prev: {
+      llm-agents = inputs.llm-agents.packages.${prev.system};
+    })
   ];
 }
