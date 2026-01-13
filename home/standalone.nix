@@ -13,6 +13,7 @@ let
     inherit system;
     config.allowUnfree = true;
     overlays = [
+      (import ../overlays/fix-1password.nix)
       (import ../overlays/mk-op-wrapped.nix)
       (final: prev: {
         unstable = import nixpkgs-unstable {
@@ -39,6 +40,9 @@ home-manager.lib.homeManagerConfiguration {
     {
       home.username = username;
       home.homeDirectory = homeDirectory;
+    }
+    {
+      targets.genericLinux.enable = true;
     }
   ];
 }
