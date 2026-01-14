@@ -17,14 +17,17 @@ let
   lib = inputs.nixpkgs.lib;
 
   # Derive nixpkgs tags from caps and platform flags
-  # Mapping: base -> unstable, dev -> llm-tools + op-wrap, wsl -> op-wsl
+  # Mapping: base -> unstable, dev -> llm-tools + op-wrap, wsl -> op-wsl + ssh-wsl
   nixpkgsTags = lib.flatten [
     (lib.optional (builtins.elem "base" caps) "unstable")
     (lib.optionals (builtins.elem "dev" caps) [
       "llm-tools"
       "op-wrap"
     ])
-    (lib.optional wsl "op-wsl")
+    (lib.optionals wsl [
+      "op-wsl"
+      "ssh-wsl"
+    ])
   ];
 
   nixpkgsSettings = import ./overlays/nixpkgs-settings.nix {
@@ -75,7 +78,7 @@ systemFunc {
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
       home-manager.backupFileExtension = "backup";
-      home-manager.extraSpecialArgs = { inherit darwin; };
+      home-manager.extraSpecialArgs = { inherit darwin wsl; };
       home-manager.users.${username} = {
         imports = homeConfigs;
       };
