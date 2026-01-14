@@ -1,12 +1,7 @@
 # Git configuration
 { pkgs, lib, ... }:
-let
-  gh-wrapped = pkgs.mkOpWrapped pkgs.gh [ "gh" ] {
-    "GH_TOKEN" = "op://Developer/GitHub Personal Access Token/token";
-  };
-in
 {
-  home.packages = [ gh-wrapped ];
+  home.packages = [ pkgs.gh ];
 
   programs.git = {
     enable = true;
@@ -27,17 +22,18 @@ in
         format = "ssh";
         ssh = {
           allowedSignersFile = "~/.git_allowed_signers";
-        } // lib.optionalAttrs pkgs.stdenv.isDarwin {
+        }
+        // lib.optionalAttrs pkgs.stdenv.isDarwin {
           program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign";
         };
       };
 
       credential = {
         "https://github.com" = {
-          helper = "!${gh-wrapped}/bin/gh auth git-credential";
+          helper = "!${pkgs.gh}/bin/gh auth git-credential";
         };
         "https://gist.github.com" = {
-          helper = "!${gh-wrapped}/bin/gh auth git-credential";
+          helper = "!${pkgs.gh}/bin/gh auth git-credential";
         };
       };
     };
