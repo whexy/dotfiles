@@ -8,24 +8,21 @@
   system,
 }:
 let
+  nixpkgsSettings = import ../overlays/nixpkgs-settings.nix {
+    inputs = {
+      inherit nixpkgs nixpkgs-unstable llm-agents;
+    };
+    tags = [
+      "unstable"
+      "llm-tools"
+      "op-wrap"
+      "op-fakeroot"
+    ];
+  };
 
   pkgs = import nixpkgs {
     inherit system;
-    config.allowUnfree = true;
-    overlays = [
-      (import ../overlays/fix-1password.nix)
-      (import ../overlays/mk-op-wrapped.nix)
-      (final: prev: {
-        unstable = import nixpkgs-unstable {
-          inherit system;
-          config = prev.config;
-        };
-      })
-      # Add llm-agents packages (daily builds)
-      (final: prev: {
-        llm-agents = llm-agents.packages.${system};
-      })
-    ];
+    inherit (nixpkgsSettings) config overlays;
   };
 
   # Read username and home directory from environment (requires --impure)
