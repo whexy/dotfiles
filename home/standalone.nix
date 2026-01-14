@@ -31,6 +31,9 @@ let
 in
 home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
+  extraSpecialArgs = {
+    wsl = false;
+  };
   modules = [
     ./base.nix
     ./dev.nix
@@ -40,6 +43,9 @@ home-manager.lib.homeManagerConfiguration {
     }
     {
       targets.genericLinux.enable = true;
+      # Disable GPU integration - it's not needed for standalone configs (typically remote servers)
+      # and some GPU packages (like libvdpau-va-gl) have dependencies not available on aarch64
+      targets.genericLinux.gpu.enable = false;
     }
   ];
 }
