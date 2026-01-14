@@ -14,8 +14,25 @@
 }:
 
 let
+  lib = inputs.nixpkgs.lib;
+
+  # Derive nixpkgs tags from caps and platform flags
+  # Mapping: base -> unstable, dev -> llm-tools + op-wrap, wsl -> op-wsl
+  nixpkgsTags = lib.flatten [
+    (lib.optional (builtins.elem "base" caps) "unstable")
+    (lib.optionals (builtins.elem "dev" caps) [
+      "llm-tools"
+      "op-wrap"
+    ])
+    (lib.optional wsl "op-wsl")
+  ];
+
+  nixpkgsSettings = import ./overlays/nixpkgs-settings.nix {
+    inherit inputs;
+    tags = nixpkgsTags;
+  };
+
   # Included config files
-  nixpkgsConfig = ./overlays/nixpkgs-settings.nix;
   hardwareConfig = ./hardware/${hardware}.nix;
   userConfig = if darwin then ./users/${username}/darwin.nix else ./users/${username}/nixos.nix;
   platformSuffix = if darwin then "darwin" else "nixos";
@@ -41,7 +58,7 @@ systemFunc {
     }
 
     # Global Nixpkgs Config (overlays, ...)
-    nixpkgsConfig
+    nixpkgsSettings.nixpkgsModule
 
     # Host Spec
     hardwareConfig
