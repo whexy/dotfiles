@@ -87,6 +87,7 @@ systemFunc {
         inherit system hostname;
         inherit username;
         inherit darwin;
+        inherit wsl;
       };
     }
 
