@@ -5,6 +5,7 @@
 #   - "llm-tools"   : Add llm-agents packages as `pkgs.llm-agents`
 #   - "op-wrap"     : Add mkOpWrapped helper for 1password secret injection
 #   - "op-wsl"      : Use Windows op.exe instead of native op (for WSL)
+#   - "ssh-wsl"     : Use Windows ssh.exe instead of native ssh (for WSL)
 #   - "op-fakeroot" : Fix 1password-cli for containerized/bwrap environments
 #
 # Usage:
@@ -57,6 +58,7 @@ let
   # Order matters: op-wsl and op-fakeroot must come before op-wrap
   overlays = lib.flatten [
     (lib.optional (hasTag "op-wsl") (import ./op-wsl.nix))
+    (lib.optional (hasTag "ssh-wsl") (import ./ssh-wsl.nix))
     (lib.optional (hasTag "op-fakeroot") (import ./fix-1password.nix))
     (lib.optional (hasTag "op-wrap") (import ./mk-op-wrapped.nix))
     (lib.optional (hasTag "unstable") (import ./unstable.nix { inherit (inputs) nixpkgs-unstable; }))

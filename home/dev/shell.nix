@@ -85,7 +85,7 @@
 
     shellAliases = {
       venv = "source .venv/bin/activate";
-      op-signin = "eval $(${pkgs._1password-cli}/bin/op signin)";
+      op-signin = "eval $(op signin)";
     };
 
     initContent = ''

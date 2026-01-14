@@ -1,5 +1,10 @@
 # Base home-manager configuration
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  wsl ? false,
+  ...
+}:
 {
   imports = [
     ./base/shell.nix
@@ -14,7 +19,7 @@
       curl
       htop
       jq
-      openssh
+      (if wsl then openssh-wsl else openssh)
       podman
       rsync
       vim
