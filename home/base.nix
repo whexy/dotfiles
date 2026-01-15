@@ -2,6 +2,7 @@
 {
   pkgs,
   lib,
+  darwin ? false,
   wsl ? false,
   ...
 }:
@@ -16,20 +17,17 @@
   home.packages =
     with pkgs;
     [
+      (if darwin then ghostty-bin.terminfo else ghostty.terminfo)
+      (if wsl then openssh-wsl else openssh)
       curl
       htop
       jq
-      (if wsl then openssh-wsl else openssh)
       podman
       rsync
       vim
       wget
     ]
-    ++ lib.optionals pkgs.stdenv.isDarwin [
-      ghostty-bin.terminfo
-    ]
-    ++ lib.optionals pkgs.stdenv.isLinux [
-      git
-      ghostty.terminfo
+    ++ lib.optional (!darwin) [
+      git # macOS: use native git to avoid keychain prompt
     ];
 }
