@@ -27,7 +27,7 @@
       vim
       wget
     ]
-    ++ lib.optional (!darwin) [
+    ++ lib.optionals (!darwin) [
       git # macOS: use native git to avoid keychain prompt
     ];
 }

@@ -6,17 +6,8 @@ default:
 
 # Verify all flake outputs evaluate correctly
 verify:
-    @echo "Verifying NixOS configurations..."
-    @nix eval .#nixosConfigurations.remote-dev --apply 'x: "ok"' && echo "  remote-dev: ok"
-    @nix eval .#nixosConfigurations.wsl --apply 'x: "ok"' && echo "  wsl: ok"
-    @echo "Verifying Darwin configurations..."
-    @nix eval .#darwinConfigurations.mbp --apply 'x: "ok"' && echo "  mbp: ok"
-    @nix eval .#darwinConfigurations.mini --apply 'x: "ok"' && echo "  mini: ok"
-    @echo "Verifying Home Manager configurations..."
-    @nix eval .#homeConfigurations.home --apply 'x: "ok"' && echo "  home: ok"
-    @echo "Verifying packages..."
-    @nix eval .#packages.x86_64-linux.portable-nvim --apply 'x: "ok"' && echo "  portable-nvim: ok"
-    @echo "All configurations verified!"
+    @echo "Running flake checks..."
+    nix flake check --extra-experimental-features 'nix-command flakes' --all-systems
 
 # Build WSL tarball for import (requires sudo)
 build-wsl:
