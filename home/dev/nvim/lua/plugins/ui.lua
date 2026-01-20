@@ -14,6 +14,12 @@ return {
 	},
 	{
 		"folke/noice.nvim",
+		cond = function()
+			return not vim.g.started_by_firenvim
+		end,
+		enabled = function()
+			return not vim.g.started_by_firenvim
+		end,
 		dependencies = {
 			"MunifTanjim/nui.nvim",
 			"rcarriga/nvim-notify",
