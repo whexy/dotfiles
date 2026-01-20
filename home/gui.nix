@@ -4,5 +4,6 @@
   imports = [
     ./gui/ghostty.nix
     ./gui/i3.nix
+    ./gui/wezterm.nix
   ];
 }

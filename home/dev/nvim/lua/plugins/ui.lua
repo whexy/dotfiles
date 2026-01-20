@@ -117,6 +117,7 @@ return {
 			"nvim-lua/plenary.nvim",
 			"MunifTanjim/nui.nvim",
 			"nvim-tree/nvim-web-devicons",
+			"antosha417/nvim-lsp-file-operations",
 		},
 		lazy = false,
 		keys = {
@@ -126,6 +127,20 @@ return {
 					require("neo-tree.command").execute({ toggle = true, dir = vim.uv.cwd() })
 				end,
 				desc = "Explorer NeoTree (cwd)",
+			},
+		},
+		config = {
+			source_selector = {
+				winbar = true,
+			},
+			filesystem = {
+				follow_current_file = {
+					enabled = true,
+				},
+				filtered_items = {
+					visible = true,
+				},
+				use_libuv_file_wathcer = true,
 			},
 		},
 	},
