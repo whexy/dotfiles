@@ -25,5 +25,9 @@ vim.api.nvim_create_autocmd("User", {
 	end,
 })
 
+if vim.g.started_by_firenvim then
+	vim.g.noice_disable = true
+end
+
 require("config.keymaps")
 require("config.commands")
