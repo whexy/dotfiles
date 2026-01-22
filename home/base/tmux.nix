@@ -10,7 +10,7 @@
     historyLimit = 50000;
     mouse = true;
     keyMode = "vi";
-    terminal = "screen-256color";
+    terminal = "xterm-256color";
 
     extraConfig = ''
       set-option -g default-command "${pkgs.zsh}/bin/zsh -l"
