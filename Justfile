@@ -4,6 +4,16 @@
 default:
     @just --list
 
+# Update flake inputs (all or specific input)
+update *INPUT:
+    @if [ -z "{{INPUT}}" ]; then \
+        echo "Updating all flake inputs..."; \
+        nix flake update; \
+    else \
+        echo "Updating {{INPUT}}..."; \
+        nix flake update {{INPUT}}; \
+    fi
+
 # Verify all flake outputs evaluate correctly
 verify:
     @echo "Running flake checks..."
