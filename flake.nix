@@ -2,8 +2,14 @@
   description = "Nix Configurations";
 
   nixConfig = {
-    extra-substituters = [ "https://cache.numtide.com" ];
-    extra-trusted-public-keys = [ "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" ];
+    extra-substituters = [
+      "https://cache.numtide.com"
+      "https://nix-community.cachix.org"
+    ];
+    extra-trusted-public-keys = [
+      "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
+      "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
+    ];
   };
 
   inputs = {
@@ -42,6 +48,11 @@
     # AI coding agents (daily builds)
     llm-agents = {
       url = "github:numtide/llm-agents.nix";
+    };
+
+    # Neovim nightly builds
+    neovim-nightly-overlay = {
+      url = "github:nix-community/neovim-nightly-overlay";
     };
   };
 
@@ -129,6 +140,7 @@
             home-manager
             ;
           llm-agents = inputs.llm-agents;
+          neovim-nightly-overlay = inputs.neovim-nightly-overlay;
           system = "x86_64-linux";
         };
 
@@ -139,6 +151,7 @@
             home-manager
             ;
           llm-agents = inputs.llm-agents;
+          neovim-nightly-overlay = inputs.neovim-nightly-overlay;
           system = "aarch64-linux";
         };
       };

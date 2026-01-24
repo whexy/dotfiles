@@ -5,6 +5,7 @@
   nixpkgs-unstable,
   home-manager,
   llm-agents,
+  neovim-nightly-overlay,
   system,
 }:
 let
@@ -34,6 +35,9 @@ home-manager.lib.homeManagerConfiguration {
   extraSpecialArgs = {
     darwin = false;
     wsl = false;
+    inputs = {
+      inherit neovim-nightly-overlay;
+    };
   };
   modules = [
     ./base.nix
