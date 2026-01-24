@@ -78,7 +78,7 @@ systemFunc {
       home-manager.useGlobalPkgs = true;
       home-manager.useUserPackages = true;
       home-manager.backupFileExtension = "backup";
-      home-manager.extraSpecialArgs = { inherit darwin wsl; };
+      home-manager.extraSpecialArgs = { inherit inputs darwin wsl; };
       home-manager.users.${username} = {
         imports = homeConfigs;
       };
