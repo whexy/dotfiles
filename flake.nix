@@ -71,6 +71,9 @@
       mkHost = import ./mkhost.nix {
         inherit inputs self;
       };
+      mkHome = import ./mkhome.nix {
+        inherit inputs;
+      };
     in
     {
       # macOS (nix-darwin) configurations
@@ -117,6 +120,16 @@
           ];
         };
 
+        remote-basic = mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64";
+          hostname = "remote-basic";
+          username = "whexy";
+          caps = [
+            "base"
+          ];
+        };
+
         wsl = mkHost {
           system = "x86_64-linux";
           hardware = "wsl";
@@ -133,26 +146,22 @@
 
       # Standalone home-manager configurations
       homeConfigurations = {
-        home = import ./home/standalone.nix {
-          inherit
-            nixpkgs
-            nixpkgs-unstable
-            home-manager
-            ;
-          llm-agents = inputs.llm-agents;
-          neovim-nightly-overlay = inputs.neovim-nightly-overlay;
+        home = mkHome {
           system = "x86_64-linux";
         };
 
-        home-aarch64 = import ./home/standalone.nix {
-          inherit
-            nixpkgs
-            nixpkgs-unstable
-            home-manager
-            ;
-          llm-agents = inputs.llm-agents;
-          neovim-nightly-overlay = inputs.neovim-nightly-overlay;
+        home-aarch64 = mkHome {
           system = "aarch64-linux";
+        };
+
+        home-base = mkHome {
+          system = "x86_64-linux";
+          caps = [ "base" ];
+        };
+
+        home-base-aarch64 = mkHome {
+          system = "aarch64-linux";
+          caps = [ "base" ];
         };
       };
 
