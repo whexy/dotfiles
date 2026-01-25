@@ -35,8 +35,9 @@
     # Quick tools
     _1password-cli
     age
-    fd
     devenv
+    fd
+    file
     just
     kubectl
     mtr
