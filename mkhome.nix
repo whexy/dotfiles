@@ -1,27 +1,36 @@
-# Standalone home-manager configuration for non-NixOS Linux systems
+# Function to create a standalone home-manager configuration
 # Note: This configuration uses impure evaluation to read your username and home directory
 {
-  nixpkgs,
-  nixpkgs-unstable,
-  home-manager,
-  llm-agents,
-  neovim-nightly-overlay,
-  system,
+  inputs,
 }:
+{
+  system,
+  caps ? [
+    "base"
+    "dev"
+  ],
+}:
+
 let
-  nixpkgsSettings = import ../overlays/nixpkgs-settings.nix {
-    inputs = {
-      inherit nixpkgs nixpkgs-unstable llm-agents;
-    };
-    tags = [
-      "unstable"
+  lib = inputs.nixpkgs.lib;
+
+  # Derive nixpkgs tags from caps
+  # Mapping: base -> unstable, dev -> llm-tools + op-wrap
+  nixpkgsTags = lib.flatten [
+    (lib.optional (builtins.elem "base" caps) "unstable")
+    (lib.optionals (builtins.elem "dev" caps) [
       "llm-tools"
       "op-wrap"
       "op-fakeroot"
-    ];
+    ])
+  ];
+
+  nixpkgsSettings = import ./overlays/nixpkgs-settings.nix {
+    inherit inputs;
+    tags = nixpkgsTags;
   };
 
-  pkgs = import nixpkgs {
+  pkgs = import inputs.nixpkgs {
     inherit system;
     inherit (nixpkgsSettings) config overlays;
   };
@@ -29,19 +38,17 @@ let
   # Read username and home directory from environment (requires --impure)
   username = builtins.getEnv "USER";
   homeDirectory = builtins.getEnv "HOME";
+
+  homeConfigs = map (cap: ./home/${cap}.nix) caps;
 in
-home-manager.lib.homeManagerConfiguration {
+inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
   extraSpecialArgs = {
     darwin = false;
     wsl = false;
-    inputs = {
-      inherit neovim-nightly-overlay;
-    };
+    inherit inputs;
   };
-  modules = [
-    ./base.nix
-    ./dev.nix
+  modules = homeConfigs ++ [
     {
       home.username = username;
       home.homeDirectory = homeDirectory;

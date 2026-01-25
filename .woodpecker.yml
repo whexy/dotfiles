@@ -61,18 +61,6 @@ steps:
       - nix-instantiate --extra-experimental-features 'nix-command flakes' --eval -E '(builtins.getFlake (toString ./.)).darwinConfigurations.mbp.system' --show-trace
       - echo "SUCCESS - Configuration evaluates correctly"
       - echo "NOTE Cross-platform build not performed - requires macOS runner"
-  check-darwin-mini:
-    image: nixos/nix:latest
-    when:
-      event: [push, pull_request]
-    commands:
-      - echo "=== Checking Darwin aarch64 mini ==="
-      - echo "Evaluating configuration..."
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mini.system.drvPath
-      - echo "Building derivation (without executing)..."
-      - nix-instantiate --extra-experimental-features 'nix-command flakes' --eval -E '(builtins.getFlake (toString ./.)).darwinConfigurations.mini.system' --show-trace
-      - echo "SUCCESS - Configuration evaluates correctly"
-      - echo "NOTE Cross-platform build not performed - requires macOS runner"
   # Home Manager - Full build (x86_64)
   build-home-manager:
     image: nixos/nix:latest
@@ -92,19 +80,3 @@ steps:
       - echo "Evaluating configuration..."
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-aarch64.activationPackage.drvPath --impure
       - echo "SUCCESS - Configuration evaluates correctly"
-  # Summary
-  summary:
-    image: nixos/nix:latest
-    when:
-      event: [push, pull_request]
-    commands:
-      - echo "========================================"
-      - echo "CI Results Summary"
-      - echo "========================================"
-      - echo "NixOS configs     BUILT and tested"
-      - echo "Darwin configs    EVALUATED (not built - requires macOS)"
-      - echo "Home Manager      BUILT and tested"
-      - echo ""
-      - echo "NixOS and Home Manager configurations are ready to apply."
-      - echo "Darwin configurations evaluated successfully but were not built."
-      - echo "========================================"
