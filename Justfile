@@ -45,3 +45,32 @@ build-portable-nvim:
     echo "Created: ./nvim (portable, self-contained executable)"
     echo ""
     echo "Distribute this single file. Users can run it on any x86_64 Linux system."
+
+# Build Proxmox VMA image for a NixOS configuration
+# DISK_GB: disk size in GB (default: auto-sized based on closure)
+build-proxmox CONFIG DISK_GB="auto":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    DISK_ARG=""
+    if [ "{{DISK_GB}}" != "auto" ]; then
+        DISK_MB=$(({{DISK_GB}} * 1024))
+        DISK_ARG="--disk-size $DISK_MB"
+        echo "Building Proxmox VMA image for {{CONFIG}} ({{DISK_GB}}GB disk)..."
+    else
+        echo "Building Proxmox VMA image for {{CONFIG}} (auto-sized disk)..."
+    fi
+    
+    nix run github:nix-community/nixos-generators -- \
+        --flake .#{{CONFIG}} \
+        --format proxmox \
+        $DISK_ARG \
+        -o result-proxmox
+    
+    VMA_FILE=$(find -L result-proxmox -name '*.vma.zst' -type f 2>/dev/null | head -1)
+    
+    echo ""
+    echo "Build complete!"
+    echo "Created: $VMA_FILE"
+    echo ""
+    echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
