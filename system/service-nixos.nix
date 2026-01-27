@@ -28,4 +28,11 @@
 
   # Docker (without gVisor)
   virtualisation.docker.enable = true;
+
+  # Firewall configuration
+  networking.firewall.allowedTCPPorts = [
+    22 # SSH
+    80 # HTTP (Caddy)
+    443 # HTTPS (Caddy)
+  ];
 }
