@@ -10,7 +10,7 @@
   imports = [
     ./base/shell.nix
     ./base/tmux.nix
-    ./base/vim.nix
+    ./base/neovim.nix
   ];
 
   home.stateVersion = "25.11";
