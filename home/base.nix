@@ -24,7 +24,6 @@
       jq
       podman
       rsync
-      vim
       wget
     ]
     ++ lib.optionals (!darwin) [

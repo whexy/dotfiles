@@ -130,6 +130,18 @@
           ];
         };
 
+        # Proxmox VM image (use `just build-proxmox remote-service`)
+        remote-service = mkHost {
+          system = "x86_64-linux";
+          hardware = "proxmox";
+          hostname = "remote-service";
+          username = "whexy";
+          caps = [
+            "base"
+            "service"
+          ];
+        };
+
         wsl = mkHost {
           system = "x86_64-linux";
           hardware = "wsl";
