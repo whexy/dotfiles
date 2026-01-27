@@ -6,6 +6,7 @@
     dig
     fd
     nmap
+    python3
     ripgrep
     traceroute
   ];
