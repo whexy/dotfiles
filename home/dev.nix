@@ -35,6 +35,7 @@
     # Quick tools
     _1password-cli
     age
+    cloudflared
     devenv
     fd
     file
