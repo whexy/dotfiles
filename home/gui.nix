@@ -3,7 +3,8 @@
 {
   imports = [
     ./gui/ghostty.nix
-    ./gui/i3.nix
+    ./gui/niri.nix
+    ./gui/waybar.nix
     ./gui/wezterm.nix
   ];
 }
