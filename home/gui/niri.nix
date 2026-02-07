@@ -5,12 +5,13 @@
   inputs,
   ...
 }:
-{
-  imports = lib.optionals (!darwin) [
-    inputs.niri.homeModules.niri
-  ];
+if darwin then
+  { }
+else
+  {
+    imports = [
+      inputs.niri.homeModules.niri
+    ];
 
-  config = lib.mkIf (!darwin) {
     programs.niri.enable = true;
-  };
-}
+  }
