@@ -1,5 +1,6 @@
 # SSH configuration
 {
+  lib,
   pkgs,
   wsl ? false,
   ...
@@ -39,4 +40,7 @@
       };
     };
   };
+
+  # Wezterm: install wezterm to support multiplexer
+  programs.wezterm.enable = lib.mkDefault true;
 }
