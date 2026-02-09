@@ -1,6 +1,5 @@
 # Neovim configuration
 {
-  lib,
   pkgs,
   inputs,
   ...
@@ -8,14 +7,14 @@
 {
   # Override base neovim configuration with full-featured dev setup
   programs.neovim = {
-    enable = lib.mkForce true;
-    package = lib.mkForce inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
-    defaultEditor = lib.mkForce true;
-    viAlias = lib.mkForce true;
-    vimAlias = lib.mkForce true;
+    enable = true;
+    package = inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
+    defaultEditor = true;
+    viAlias = true;
+    vimAlias = true;
   };
 
-  xdg.configFile."nvim" = lib.mkForce {
+  xdg.configFile."nvim" = {
     source = ./nvim;
     recursive = true;
   };

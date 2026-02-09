@@ -6,7 +6,7 @@
   ...
 }:
 {
-  programs.neovim = {
+  programs.neovim = lib.mkDefault {
     enable = true;
     package = inputs.neovim-nightly-overlay.packages.${pkgs.system}.default;
     defaultEditor = true;
@@ -14,7 +14,7 @@
     vimAlias = true;
   };
 
-  xdg.configFile."nvim" = {
+  xdg.configFile."nvim" = lib.mkDefault {
     source = ./nvim;
     recursive = true;
   };
