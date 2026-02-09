@@ -3,9 +3,14 @@
 {
   home.packages = [ pkgs.gh ];
 
+  # Disable system-level git config to prevent osxkeychain credential helper
+  # on macOS from being automatically configured
+  home.sessionVariables = {
+    GIT_CONFIG_NOSYSTEM = "1";
+  };
+
   programs.git = {
     enable = true;
-    package = pkgs.git.override { osxkeychainSupport = false; };
 
     signing = {
       key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn";
