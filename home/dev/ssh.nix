@@ -1,6 +1,5 @@
 # SSH configuration
 {
-  lib,
   pkgs,
   wsl ? false,
   ...
@@ -9,7 +8,7 @@
   # On WSL, ssh is aliased to ssh.exe which uses Windows SSH config,
   # so this config is only relevant for native Linux and macOS
   programs.ssh = {
-    enable = lib.mkForce (!wsl);
+    enable = !wsl;
     enableDefaultConfig = false;
 
     matchBlocks = {

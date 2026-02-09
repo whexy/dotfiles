@@ -1,5 +1,5 @@
 # Shell configuration
-{ pkgs, ... }:
+{ lib, pkgs, ... }:
 {
   programs.zsh = {
     enable = true;
@@ -12,7 +12,7 @@
     };
   };
 
-  programs.ssh = {
+  programs.ssh = lib.mkDefault {
     enable = true;
     matchBlocks = {
       "*" = {
