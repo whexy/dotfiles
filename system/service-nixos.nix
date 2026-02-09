@@ -5,6 +5,9 @@
 
   # Service essentials
   networking.networkmanager.enable = true;
+  services.tailscale.enable = true;
+  services.resolved.enable = true;
+  services.timesyncd.enable = true;
 
   # Caddy web server with user-managed Caddyfile
   services.caddy = {
@@ -23,16 +26,42 @@
     fi
   '';
 
-  services.openssh.enable = true;
-  services.tailscale.enable = true;
+  services.openssh = {
+    enable = true;
+    settings = {
+      PermitRootLogin = "no";
+      PasswordAuthentication = false;
+      KbdInteractiveAuthentication = false;
+      X11Forwarding = false;
+    };
+  };
 
   # Docker (without gVisor)
-  virtualisation.docker.enable = true;
+  virtualisation.docker = {
+    enable = true;
+    autoPrune.enable = true;
+    daemon.settings = {
+      "log-driver" = "json-file";
+      "log-opts" = {
+        "max-size" = "50m";
+        "max-file" = "3";
+      };
+    };
+  };
 
   # Firewall configuration
+  services.fail2ban.enable = true;
   networking.firewall.allowedTCPPorts = [
     22 # SSH
     80 # HTTP (Caddy)
     443 # HTTPS (Caddy)
   ];
+
+  # Logging
+  services.journald.extraConfig = ''
+    Storage=persistent
+    SystemMaxUse=1G
+    MaxRetentionSec=1month
+  '';
+  services.prometheus.exporters.node.enable = true;
 }
