@@ -3,11 +3,34 @@
 {
   home.packages = with pkgs; [
     # Network diagnostic tools
+    curl
+    wget
+    openssl
     dig
-    fd
-    nmap
-    python3
-    ripgrep
     traceroute
+    nmap
+    tcpdump
+    mtr
+
+    # process/fs
+    htop
+    btop
+    lsof
+    strace
+    duf
+    ncdu
+
+    # text/search
+    ripgrep
+    fd
+    jq
+    yq-go
+
+    # ops
+    git
+    rsync
+
+    # scripting
+    python3
   ];
 }
