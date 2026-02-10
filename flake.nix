@@ -161,6 +161,19 @@
             "gui"
           ];
         };
+
+        # VirtualBox image (use `nixos-rebuild build-image --flake .#gui --image-variant virtualbox`)
+        gui = mkHost {
+          system = "x86_64-linux";
+          hardware = "virtualbox";
+          hostname = "gui";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+            "gui"
+          ];
+        };
       };
 
       # Standalone home-manager configurations

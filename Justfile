@@ -74,3 +74,15 @@ build-proxmox CONFIG DISK_GB="auto":
     echo "Created: $VMA_FILE"
     echo ""
     echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
+
+# Build VirtualBox OVA image for the gui configuration
+# NOTE: Large closures may fail due to LKL memory limits in cptofs.
+#       If this happens, consider building on a NixOS system or using ISO install.
+build-virtualbox:
+    @echo "Building VirtualBox OVA image for gui..."
+    nixos-rebuild build-image --flake .#gui --image-variant virtualbox
+    @echo ""
+    @echo "Build complete!"
+    @echo "Created: result/nixos.ova"
+    @echo ""
+    @echo "Import into VirtualBox with: File -> Import Appliance -> select nixos.ova"

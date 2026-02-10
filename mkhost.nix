@@ -18,6 +18,7 @@ let
 
   # Derive nixpkgs tags from caps and platform flags
   # Mapping: base -> unstable, dev -> llm-tools + op-wrap, wsl -> op-wsl + ssh-wsl
+  # virtualbox/proxmox hardware -> lkl-bigmem (for large disk image builds)
   nixpkgsTags = lib.flatten [
     (lib.optional (builtins.elem "base" caps) "unstable")
     (lib.optionals (builtins.elem "dev" caps) [
@@ -28,6 +29,10 @@ let
       "op-wsl"
       "ssh-wsl"
     ])
+    (lib.optional (builtins.elem hardware [
+      "virtualbox"
+      "proxmox"
+    ]) "lkl-bigmem")
   ];
 
   nixpkgsSettings = import ./overlays/nixpkgs-settings.nix {
