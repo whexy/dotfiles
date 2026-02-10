@@ -162,10 +162,10 @@
           ];
         };
 
-        # VirtualBox image (use `nixos-rebuild build-image --flake .#gui --image-variant virtualbox`)
+        # VMware image (use `nixos-rebuild build-image --flake .#gui --image-variant vmware`)
         gui = mkHost {
           system = "x86_64-linux";
-          hardware = "virtualbox";
+          hardware = "vmware";
           hostname = "gui";
           username = "whexy";
           caps = [

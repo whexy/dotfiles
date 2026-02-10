@@ -37,6 +37,11 @@
     clipboard = true;
   };
 
+  # Hardware graphics (may help with OpenGL support)
+  hardware.graphics = {
+    enable = true;
+  };
+
   # Greetd display manager with auto-login to niri
   services.greetd = {
     enable = true;
