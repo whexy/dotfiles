@@ -17,13 +17,12 @@ let
   lib = inputs.nixpkgs.lib;
 
   # Derive nixpkgs tags from caps and platform flags
-  # Mapping: base -> unstable, dev -> llm-tools + op-wrap, wsl -> op-wsl + ssh-wsl
+  # Mapping: base -> unstable, dev -> llm-tools, wsl -> op-wsl + ssh-wsl
   # virtualbox/proxmox hardware -> lkl-bigmem (for large disk image builds)
   nixpkgsTags = lib.flatten [
     (lib.optional (builtins.elem "base" caps) "unstable")
     (lib.optionals (builtins.elem "dev" caps) [
       "llm-tools"
-      "op-wrap"
     ])
     (lib.optionals wsl [
       "op-wsl"
@@ -85,7 +84,9 @@ systemFunc {
       home-manager.backupFileExtension = "backup";
       home-manager.extraSpecialArgs = { inherit inputs darwin wsl; };
       home-manager.users.${username} = {
-        imports = homeConfigs;
+        imports = homeConfigs ++ [
+          inputs.agenix.homeManagerModules.default
+        ];
       };
     }
 

@@ -85,7 +85,6 @@
 
     shellAliases = {
       venv = "source .venv/bin/activate";
-      op-signin = "eval $(op signin)";
     };
 
     initContent = ''

@@ -1,12 +1,20 @@
 # AI coding agents configuration
-{ pkgs, ... }:
-let
-  # Use daily-built opencode from llm-agents.nix
-  opencode-wrapped = pkgs.mkOpWrapped pkgs.llm-agents.opencode [ "opencode" ] {
-    "ANTHROPIC_API_KEY" = "op://Developer/Anthropic API/credential";
-    "OPENAI_API_KEY" = "op://Developer/OpenAI API/credential";
-  };
-in
 {
-  home.packages = [ opencode-wrapped ];
+  pkgs,
+  config,
+  lib,
+  ...
+}:
+{
+  home.packages = [ pkgs.llm-agents.opencode ];
+
+  # Source API keys from agenix-decrypted secret into shell environment
+  # The secret file contains KEY=VALUE lines (ANTHROPIC_API_KEY, OPENAI_API_KEY)
+  programs.zsh.initContent = lib.mkAfter ''
+    if [ -f "${config.age.secrets.api-keys.path}" ]; then
+      set -a
+      source "${config.age.secrets.api-keys.path}"
+      set +a
+    fi
+  '';
 }

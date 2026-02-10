@@ -1,0 +1,21 @@
+# Secret definitions for agenix CLI
+# This file is NOT imported into NixOS/home-manager configs.
+# It's only used by the `agenix` CLI to know which public keys to encrypt for.
+#
+# Usage:
+#   cd secrets/
+#   agenix -e api-keys.age    # create/edit the encrypted secret
+#   agenix --rekey             # re-encrypt after changing public keys
+#
+# The api-keys.age file should contain KEY=VALUE lines:
+#   ANTHROPIC_API_KEY=sk-ant-...
+#   OPENAI_API_KEY=sk-...
+let
+  # Shared age public key (used across all machines)
+  # Generate with: age-keygen -o ~/.config/agenix/key.txt
+  # Replace this placeholder with the actual public key from age-keygen output
+  key = "age1tmghvzq2kq9seud5uu9hh833g0v4z2356nsqumknfnluawa6qe9qt6k886";
+in
+{
+  "api-keys.age".publicKeys = [ key ];
+}
