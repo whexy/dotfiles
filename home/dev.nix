@@ -1,5 +1,5 @@
 # Development home-manager configuration
-{ pkgs, ... }:
+{ pkgs, config, ... }:
 {
   imports = [
     ./dev/agents.nix
@@ -8,6 +8,12 @@
     ./dev/ssh.nix
     ./dev/neovim.nix
   ];
+
+  # agenix secret management
+  age = {
+    identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
+    secrets.api-keys.file = ../secrets/api-keys.age;
+  };
 
   services.gpg-agent = {
     enable = true;
@@ -33,7 +39,6 @@
     uv
 
     # Quick tools
-    _1password-cli
     age
     cloudflared
     devenv

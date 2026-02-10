@@ -61,6 +61,12 @@
     niri = {
       url = "github:sodiboo/niri-flake";
     };
+
+    # Secret management with age encryption
+    agenix = {
+      url = "github:ryantm/agenix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

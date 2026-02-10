@@ -15,13 +15,11 @@ let
   lib = inputs.nixpkgs.lib;
 
   # Derive nixpkgs tags from caps
-  # Mapping: base -> unstable, dev -> llm-tools + op-wrap
+  # Mapping: base -> unstable, dev -> llm-tools
   nixpkgsTags = lib.flatten [
     (lib.optional (builtins.elem "base" caps) "unstable")
     (lib.optionals (builtins.elem "dev" caps) [
       "llm-tools"
-      "op-wrap"
-      "op-fakeroot"
     ])
   ];
 
@@ -49,6 +47,7 @@ inputs.home-manager.lib.homeManagerConfiguration {
     inherit inputs;
   };
   modules = homeConfigs ++ [
+    inputs.agenix.homeManagerModules.default
     {
       home.username = username;
       home.homeDirectory = homeDirectory;

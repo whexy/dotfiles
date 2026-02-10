@@ -3,10 +3,8 @@
 # Tags control which overlays and settings are applied:
 #   - "unstable"    : Add nixpkgs-unstable as `pkgs.unstable`
 #   - "llm-tools"   : Add llm-agents packages as `pkgs.llm-agents`
-#   - "op-wrap"     : Add mkOpWrapped helper for 1password secret injection
 #   - "op-wsl"      : Use Windows op.exe instead of native op (for WSL)
 #   - "ssh-wsl"     : Use Windows ssh.exe instead of native ssh (for WSL)
-#   - "op-fakeroot" : Fix 1password-cli for containerized/bwrap environments
 #   - "lkl-bigmem"  : Increase LKL memory for large disk image builds (100M -> 1024M)
 #
 # Usage:
@@ -14,7 +12,7 @@
 #   let
 #     nixpkgsSettings = import ./overlays/nixpkgs-settings.nix {
 #       inherit inputs;
-#       tags = [ "unstable" "llm-tools" "op-wrap" ];
+#       tags = [ "unstable" "llm-tools" ];
 #     };
 #   in { imports = [ nixpkgsSettings.nixpkgsModule ]; }
 #
@@ -22,7 +20,7 @@
 #   let
 #     nixpkgsSettings = import ./overlays/nixpkgs-settings.nix {
 #       inherit inputs;
-#       tags = [ "unstable" "llm-tools" "op-wrap" "op-fakeroot" ];
+#       tags = [ "unstable" "llm-tools" ];
 #     };
 #     pkgs = import nixpkgs {
 #       inherit system;
@@ -56,13 +54,10 @@ let
   _ = builtins.deepSeq assertions true;
 
   # --- Compose Overlays Based on Tags ---
-  # Order matters: op-wsl and op-fakeroot must come before op-wrap
   overlays = lib.flatten [
     (lib.optional (hasTag "lkl-bigmem") (import ./lkl-bigmem.nix))
     (lib.optional (hasTag "op-wsl") (import ./op-wsl.nix))
     (lib.optional (hasTag "ssh-wsl") (import ./ssh-wsl.nix))
-    (lib.optional (hasTag "op-fakeroot") (import ./fix-1password.nix))
-    (lib.optional (hasTag "op-wrap") (import ./mk-op-wrapped.nix))
     (lib.optional (hasTag "unstable") (import ./unstable.nix { inherit (inputs) nixpkgs-unstable; }))
     (lib.optional (hasTag "llm-tools") (import ./llm-tools.nix { inherit (inputs) llm-agents; }))
   ];
