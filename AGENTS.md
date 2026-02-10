@@ -97,3 +97,5 @@ darwinConfigurations = {
 ## Verification
 
 Run `just verify` to check all flake outputs evaluate correctly.
+Before verification, remember to use `git add` to add modified code, as flake
+only use staged files.
