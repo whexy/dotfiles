@@ -14,4 +14,12 @@ else
     ];
 
     programs.niri.enable = true;
+
+    # Niri settings
+    programs.niri.settings = {
+      binds = {
+        # Use wezterm as the default terminal
+        "Mod+T".action.spawn = "wezterm";
+      };
+    };
   }
