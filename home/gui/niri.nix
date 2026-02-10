@@ -20,6 +20,10 @@ else
       # Skip the hotkey overlay on startup (we have custom binds)
       hotkey-overlay.skip-at-startup = true;
 
+      # Fast key repeat for smooth Vim navigation
+      input.keyboard.repeat-delay = 200;
+      input.keyboard.repeat-rate = 40;
+
       binds =
         let
           # Modifier prefixes matching Karabiner setup via kanata:
