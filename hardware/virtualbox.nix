@@ -1,7 +1,9 @@
 # Hardware config for VirtualBox VM images (used by nixos-rebuild build-image)
 {
   lib,
+  pkgs,
   modulesPath,
+  username,
   ...
 }:
 
@@ -20,12 +22,33 @@
     # 50GB disk size (larger closure needs more space)
     virtualisation.diskSize = 50 * 1024;
 
-    # VirtualBox guest additions for better integration
+    # VirtualBox guest additions for better integration (image-specific options)
     virtualisation.virtualbox.guest = {
       enable = true;
       clipboard = true;
       seamless = true;
       dragAndDrop = true;
+    };
+  };
+
+  # VirtualBox guest additions for the running system
+  virtualisation.virtualbox.guest = {
+    enable = true;
+    clipboard = true;
+  };
+
+  # Greetd display manager with auto-login to niri
+  services.greetd = {
+    enable = true;
+    settings = {
+      default_session = {
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd niri-session";
+        user = "greeter";
+      };
+      initial_session = {
+        command = "niri-session";
+        user = username;
+      };
     };
   };
 
