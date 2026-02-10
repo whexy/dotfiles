@@ -7,6 +7,7 @@
 #   - "op-wsl"      : Use Windows op.exe instead of native op (for WSL)
 #   - "ssh-wsl"     : Use Windows ssh.exe instead of native ssh (for WSL)
 #   - "op-fakeroot" : Fix 1password-cli for containerized/bwrap environments
+#   - "lkl-bigmem"  : Increase LKL memory for large disk image builds (100M -> 1024M)
 #
 # Usage:
 #   # For NixOS/Darwin modules:
@@ -57,6 +58,7 @@ let
   # --- Compose Overlays Based on Tags ---
   # Order matters: op-wsl and op-fakeroot must come before op-wrap
   overlays = lib.flatten [
+    (lib.optional (hasTag "lkl-bigmem") (import ./lkl-bigmem.nix))
     (lib.optional (hasTag "op-wsl") (import ./op-wsl.nix))
     (lib.optional (hasTag "ssh-wsl") (import ./ssh-wsl.nix))
     (lib.optional (hasTag "op-fakeroot") (import ./fix-1password.nix))
