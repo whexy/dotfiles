@@ -75,14 +75,16 @@ build-proxmox CONFIG DISK_GB="auto":
     echo ""
     echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
 
-# Build VirtualBox OVA image for the gui configuration
-# NOTE: Large closures may fail due to LKL memory limits in cptofs.
-#       If this happens, consider building on a NixOS system or using ISO install.
-build-virtualbox:
-    @echo "Building VirtualBox OVA image for gui..."
-    nixos-rebuild build-image --flake .#gui --image-variant virtualbox
+# Build VMware VMDK image for the gui configuration
+build-vmware:
+    @echo "Building VMware VMDK image for gui..."
+    nixos-rebuild build-image --flake .#gui --image-variant vmware
     @echo ""
     @echo "Build complete!"
-    @echo "Created: result/nixos.ova"
+    @echo "Created: result/nixos.vmdk"
     @echo ""
-    @echo "Import into VirtualBox with: File -> Import Appliance -> select nixos.ova"
+    @echo "Create a new VM in VMware and use this VMDK as the disk."
+    @echo "Recommended settings:"
+    @echo "  - Guest OS: Other Linux 6.x kernel 64-bit"
+    @echo "  - Enable 3D acceleration in Display settings"
+    @echo "  - Set clipboard/drag-drop to Bidirectional"
