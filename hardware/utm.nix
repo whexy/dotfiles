@@ -23,6 +23,9 @@
   # Allow resizing the disk in UTM after deployment
   boot.growPartition = true;
 
+  # Ensure virtio-gpu driver is loaded for display output in UTM
+  boot.initrd.kernelModules = [ "virtio_gpu" ];
+
   # Guest services
   services.qemuGuest.enable = true;
 
