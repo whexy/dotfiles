@@ -75,6 +75,28 @@ build-proxmox CONFIG DISK_GB="auto":
     echo ""
     echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
 
+# Build UTM qcow2 image for the nixos-utm configuration
+build-utm:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    echo "Building UTM qcow2 image for nixos-utm..."
+    nix build \
+        '.#nixosConfigurations."nixos-utm".config.system.build.images.qemu' \
+        -o result-utm
+
+    QCOW2_FILE=$(find -L result-utm -name '*.qcow2' -type f 2>/dev/null | head -1)
+
+    echo ""
+    echo "Build complete!"
+    echo "Created: $QCOW2_FILE"
+    echo ""
+    echo "Import into UTM:"
+    echo "  1. Create a new VM -> Emulate -> Linux"
+    echo "  2. Skip boot ISO"
+    echo "  3. In drive settings, import this qcow2 as the main disk"
+    echo "  4. Set display to SPICE for clipboard sharing"
+
 # Build VMware VMDK image for the gui configuration
 build-vmware:
     @echo "Building VMware VMDK image for gui..."
