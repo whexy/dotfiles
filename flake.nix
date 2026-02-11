@@ -180,6 +180,19 @@
             "gui"
           ];
         };
+
+        # UTM image (use `just build-utm`)
+        nixos-utm = mkHost {
+          system = "x86_64-linux";
+          hardware = "utm";
+          hostname = "nixos-utm";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+            "gui"
+          ];
+        };
       };
 
       # Standalone home-manager configurations
