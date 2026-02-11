@@ -82,7 +82,7 @@ build-utm:
 
     echo "Building UTM qcow2 image for nixos-utm..."
     nix build \
-        '.#nixosConfigurations."nixos-utm".config.system.build.images.qemu' \
+        '.#nixosConfigurations."nixos-utm".config.system.build.images.qemu-efi' \
         -o result-utm
 
     QCOW2_FILE=$(find -L result-utm -name '*.qcow2' -type f 2>/dev/null | head -1)
@@ -95,7 +95,9 @@ build-utm:
     echo "  1. Create a new VM -> Emulate -> Linux"
     echo "  2. Skip boot ISO"
     echo "  3. In drive settings, import this qcow2 as the main disk"
-    echo "  4. Set display to SPICE for clipboard sharing"
+    echo "  4. Set boot to UEFI in system settings"
+    echo "  5. Set display to virtio-gpu-pci for Wayland support"
+    echo "  6. Enable SPICE clipboard sharing"
 
 # Build VMware VMDK image for the gui configuration
 build-vmware:
