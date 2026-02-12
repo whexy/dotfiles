@@ -135,6 +135,15 @@
         export SSH_AUTH_SOCK="$HOME/.ssh/ssh-agent.sock"
       fi
 
+      # nix run nixpkg# shortcut
+      nr() {
+        if [ $# -lt 1 ]; then
+          echo "usage: nr <nixpkgs-package> [args...]" >&2
+          return 2
+        fi
+        nix run "nixpkgs#$1" -- "''${@:2}"
+      }
+
       # Dump aliases for fzf-tab preview (must be at end after all aliases are defined)
       mkdir -p "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
       alias > "''${XDG_CACHE_HOME:-$HOME/.cache}/zsh/aliases"
