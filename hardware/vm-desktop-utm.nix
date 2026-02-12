@@ -15,6 +15,11 @@
   # Ensure virtio-gpu driver is loaded for display output in UTM
   boot.initrd.kernelModules = [ "virtio_gpu" ];
 
+  boot.kernelModules = [
+    "virtio_console"
+    "virtio_rng"
+  ];
+
   # QEMU guest services
   services.qemuGuest.enable = true;
 
