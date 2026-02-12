@@ -21,6 +21,23 @@
   };
 
   home.packages = with pkgs; [
+    # Network diagnostic tools
+    openssl
+    dig
+    traceroute
+    nmap
+    tcpdump
+    mtr
+
+    # process/fs
+    htop
+    btop
+    lsof
+    strace
+    duf
+    dust
+    ncdu
+
     # Languages
     clang
     deno
