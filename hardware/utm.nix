@@ -2,9 +2,7 @@
 # Build image with: just build-utm
 {
   lib,
-  pkgs,
   modulesPath,
-  username,
   ...
 }:
 
@@ -35,21 +33,6 @@
   # Hardware graphics
   hardware.graphics = {
     enable = true;
-  };
-
-  # Greetd display manager with auto-login to niri
-  services.greetd = {
-    enable = true;
-    settings = {
-      default_session = {
-        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd niri-session";
-        user = "greeter";
-      };
-      initial_session = {
-        command = "niri-session";
-        user = username;
-      };
-    };
   };
 
   # Filesystem layout (matches disk-image.nix defaults)

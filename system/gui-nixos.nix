@@ -1,5 +1,5 @@
 # GUI NixOS system configuration
-{ pkgs, ... }:
+{ pkgs, username, ... }:
 {
   fonts.packages = [
     (pkgs.nerd-fonts.fira-code)
@@ -11,6 +11,21 @@
     "/share/applications"
     "/share/xdg-desktop-portal"
   ];
+
+  # Greetd display manager with auto-login to niri
+  services.greetd = {
+    enable = true;
+    settings = {
+      default_session = {
+        command = "${pkgs.tuigreet}/bin/tuigreet --time --cmd niri-session";
+        user = "greeter";
+      };
+      initial_session = {
+        command = "niri-session";
+        user = username;
+      };
+    };
+  };
 
   # Kanata: remap CapsLock to Hyper / CapsLock,
   #         remap Tab to Meh / Tab.

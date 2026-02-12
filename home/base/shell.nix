@@ -14,6 +14,7 @@
 
   programs.ssh = lib.mkDefault {
     enable = true;
+    enableDefaultConfig = false;
     matchBlocks = {
       "*" = {
         extraOptions = {
