@@ -168,11 +168,12 @@
           ];
         };
 
-        # VMware image (use `nixos-rebuild build-image --flake .#gui --image-variant vmware`)
-        gui = mkHost {
+        # Desktop VM images - UTM (QEMU) backend
+        # Build with: just build-desktop utm [x86_64|aarch64]
+        desktop-utm-x86_64 = mkHost {
           system = "x86_64-linux";
-          hardware = "vmware";
-          hostname = "gui";
+          hardware = "vm-desktop-utm";
+          hostname = "desktop";
           username = "whexy";
           caps = [
             "base"
@@ -181,11 +182,36 @@
           ];
         };
 
-        # UTM image (use `just build-utm`)
-        nixos-utm = mkHost {
+        desktop-utm-aarch64 = mkHost {
+          system = "aarch64-linux";
+          hardware = "vm-desktop-utm";
+          hostname = "desktop";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+            "gui"
+          ];
+        };
+
+        # Desktop VM images - VMware backend
+        # Build with: just build-desktop vmware [x86_64|aarch64]
+        desktop-vmware-x86_64 = mkHost {
           system = "x86_64-linux";
-          hardware = "utm";
-          hostname = "nixos-utm";
+          hardware = "vm-desktop-vmware";
+          hostname = "desktop";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+            "gui"
+          ];
+        };
+
+        desktop-vmware-aarch64 = mkHost {
+          system = "aarch64-linux";
+          hardware = "vm-desktop-vmware";
+          hostname = "desktop";
           username = "whexy";
           caps = [
             "base"
