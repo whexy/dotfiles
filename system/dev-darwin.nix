@@ -1,5 +1,5 @@
 # Dev Darwin system configuration
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
   time.timeZone = "America/Chicago";
   programs.zsh.enable = true;
@@ -14,8 +14,8 @@
 
     # VM resource allocation (conservative: 4 cores, 6 GB RAM)
     config = {
-      virtualisation.cores = 4;
-      virtualisation.memorySize = 6 * 1024; # 6 GB in MB
+      virtualisation.cores = lib.mkForce 4;
+      virtualisation.memorySize = lib.mkForce (6 * 1024); # 6 GB in MB
     };
 
     # Keep Nix store persistent for faster builds
