@@ -146,7 +146,9 @@ build-desktop-vmware ARCH="auto":
     mkdir -p result/desktop
 
     echo "Building VMware VMDK image for desktop ($ARCH)..."
-    nixos-rebuild build-image --flake ".#desktop-vmware-${ARCH}" --image-variant vmware -o result/desktop/vmware-${ARCH}
+    nix build \
+        ".#nixosConfigurations.desktop-vmware-${ARCH}.config.system.build.images.vmware" \
+        -o result/desktop/vmware-${ARCH}
 
     VMDK_FILE=$(find -L result/desktop/vmware-${ARCH} -name '*.vmdk' -type f 2>/dev/null | head -1)
 
