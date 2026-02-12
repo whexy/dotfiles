@@ -1,5 +1,10 @@
 # Development home-manager configuration
-{ pkgs, config, ... }:
+{
+  pkgs,
+  config,
+  darwin ? false,
+  ...
+}:
 {
   imports = [
     ./dev/agents.nix
@@ -20,79 +25,84 @@
     enableSshSupport = true;
   };
 
-  home.packages = with pkgs; [
-    # Network diagnostic tools
-    openssl
-    dig
-    traceroute
-    nmap
-    tcpdump
-    mtr
+  home.packages =
+    with pkgs;
+    [
+      # Network diagnostic tools
+      openssl
+      dig
+      nmap
+      tcpdump
+      mtr
 
-    # process/fs
-    htop
-    btop
-    lsof
-    strace
-    duf
-    dust
-    ncdu
+      # process/fs
+      htop
+      btop
+      lsof
+      duf
+      dust
+      ncdu
 
-    # Languages
-    clang
-    deno
-    go
-    nodejs
-    typst
-    zig
-    python314
+      # Languages
+      clang
+      deno
+      go
+      nodejs
+      typst
+      zig
+      python314
 
-    # Language tools
-    cmake
-    gdb
-    gnumake
-    llvm
-    rustup
-    uv
+      # Language tools
+      cmake
+      gdb
+      gnumake
+      llvm
+      rustup
+      uv
 
-    # Quick tools
-    age
-    cloudflared
-    devenv
-    fd
-    file
-    just
-    kubectl
-    mtr
-    ripgrep
-    tldr
-    tree-sitter
-    xh
-    zellij
+      # Quick tools
+      age
+      cloudflared
+      devenv
+      fd
+      file
+      just
+      kubectl
+      mtr
+      ripgrep
+      tldr
+      tree-sitter
+      xh
+      zellij
 
-    # Formatters & Linters
-    black
-    golangci-lint
-    nixfmt-rfc-style
-    shellcheck
-    shfmt
-    stylua
-    typstyle
-    yamlfmt
-    prettier
+      # Formatters & Linters
+      black
+      golangci-lint
+      nixfmt-rfc-style
+      shellcheck
+      shfmt
+      stylua
+      typstyle
+      yamlfmt
+      prettier
 
-    # LSP
-    basedpyright
-    clang-tools
-    gopls
-    lua-language-server
-    nil
-    ruff
-    tinymist
-    tombi
-    typescript-language-server
-    vscode-langservers-extracted
-    yaml-language-server
-    zls
-  ];
+      # LSP
+      basedpyright
+      clang-tools
+      gopls
+      lua-language-server
+      nil
+      ruff
+      tinymist
+      tombi
+      typescript-language-server
+      vscode-langservers-extracted
+      yaml-language-server
+      zls
+    ]
+    ++ lib.optionals (!darwin) [
+      # packages not available on macOS
+      traceroute
+      strace
+    ];
 }
