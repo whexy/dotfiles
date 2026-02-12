@@ -2,5 +2,5 @@
 # Requires: inputs.llm-agents
 { llm-agents }:
 final: prev: {
-  llm-agents = llm-agents.packages.${prev.system};
+  llm-agents = llm-agents.packages.${prev.stdenv.hostPlatform.system};
 }
