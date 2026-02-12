@@ -1,5 +1,5 @@
-# Hardware config for UTM (QEMU-based macOS VM)
-# Build image with: just build-utm
+# Base hardware configuration for desktop VM images
+# Shared by both UTM and VMware backends
 {
   lib,
   modulesPath,
@@ -8,29 +8,19 @@
 
 {
   imports = [
-    (modulesPath + "/profiles/qemu-guest.nix")
     (modulesPath + "/image/images.nix")
   ];
 
   system.stateVersion = "25.11";
 
-  # Bootloader - systemd-boot for EFI
+  # Bootloader - systemd-boot for EFI (works on both UTM and VMware)
   boot.loader.systemd-boot.enable = true;
   boot.loader.efi.canTouchEfiVariables = false;
 
-  # Allow resizing the disk in UTM after deployment
+  # Allow resizing the disk after deployment
   boot.growPartition = true;
 
-  # Ensure virtio-gpu driver is loaded for display output in UTM
-  boot.initrd.kernelModules = [ "virtio_gpu" ];
-
-  # Guest services
-  services.qemuGuest.enable = true;
-
-  # SPICE agent for clipboard sharing and dynamic display resolution
-  services.spice-vdagentd.enable = true;
-
-  # Hardware graphics
+  # Hardware graphics support
   hardware.graphics = {
     enable = true;
   };

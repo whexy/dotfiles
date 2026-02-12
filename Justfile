@@ -21,28 +21,31 @@ verify:
 
 # Build WSL tarball for import (requires sudo)
 build-wsl:
+    @mkdir -p result/wsl
     @echo "Building WSL tarball..."
-    nix build .#nixosConfigurations.wsl.config.system.build.tarballBuilder
+    nix build .#nixosConfigurations.wsl.config.system.build.tarballBuilder -o result/wsl/build
     @echo "Running tarball builder (requires sudo)..."
-    sudo ./result/bin/nixos-wsl-tarball-builder
-    @echo "WSL tarball created: nixos.wsl"
-    @echo "Import with: wsl --import NixOS <install-path> nixos.wsl"
+    cd result/wsl && sudo ../../result/wsl/build/bin/nixos-wsl-tarball-builder
+    @echo "WSL tarball created: result/wsl/nixos.wsl"
+    @echo "Import with: wsl --import NixOS <install-path> result/wsl/nixos.wsl"
 
 # Build portable neovim binary using nix-portable bundler
 build-portable-nvim:
     #!/usr/bin/env bash
     set -euo pipefail
     
+    mkdir -p result/portable-nvim
+    
     echo "Bundling portable-nvim with nix-portable (zstd-max compression)..."
-    nix bundle --bundler github:DavHau/nix-portable#zstd-max -o bundle-nvim .#packages.x86_64-linux.portable-nvim
+    nix bundle --bundler github:DavHau/nix-portable#zstd-max -o result/portable-nvim/bundle .#packages.x86_64-linux.portable-nvim
     
     echo "Creating standalone executable..."
-    cp ./bundle-nvim/bin/nvim ./nvim
-    chmod +w ./nvim
+    cp ./result/portable-nvim/bundle/bin/nvim ./result/portable-nvim/nvim
+    chmod +w ./result/portable-nvim/nvim
     
     echo ""
     echo "Build complete!"
-    echo "Created: ./nvim (portable, self-contained executable)"
+    echo "Created: result/portable-nvim/nvim (portable, self-contained executable)"
     echo ""
     echo "Distribute this single file. Users can run it on any x86_64 Linux system."
 
@@ -51,6 +54,8 @@ build-portable-nvim:
 build-proxmox CONFIG DISK_GB="auto":
     #!/usr/bin/env bash
     set -euo pipefail
+    
+    mkdir -p result/proxmox
     
     DISK_ARG=""
     if [ "{{DISK_GB}}" != "auto" ]; then
@@ -65,9 +70,9 @@ build-proxmox CONFIG DISK_GB="auto":
         --flake .#{{CONFIG}} \
         --format proxmox \
         $DISK_ARG \
-        -o result-proxmox
+        -o result/proxmox
     
-    VMA_FILE=$(find -L result-proxmox -name '*.vma.zst' -type f 2>/dev/null | head -1)
+    VMA_FILE=$(find -L result/proxmox -name '*.vma.zst' -type f 2>/dev/null | head -1)
     
     echo ""
     echo "Build complete!"
@@ -75,20 +80,42 @@ build-proxmox CONFIG DISK_GB="auto":
     echo ""
     echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
 
-# Build UTM qcow2 image for the nixos-utm configuration
-build-utm:
+# Build desktop VM image for specified backend and optional architecture
+# Usage: just build-desktop utm [x86_64|aarch64]
+#        just build-desktop vmware [x86_64|aarch64]
+# If architecture is omitted, uses host architecture
+build-desktop BACKEND ARCH="auto":
+    @just build-desktop-{{BACKEND}} {{ARCH}}
+
+# Build UTM qcow2 image for macOS virtualization
+build-desktop-utm ARCH="auto":
     #!/usr/bin/env bash
     set -euo pipefail
+    
+    # Detect architecture if not specified
+    if [ "{{ARCH}}" = "auto" ]; then
+        HOST_ARCH=$(uname -m)
+        if [ "$HOST_ARCH" = "arm64" ]; then
+            ARCH="aarch64"
+        else
+            ARCH="x86_64"
+        fi
+    else
+        ARCH="{{ARCH}}"
+    fi
+    
+    mkdir -p result/desktop
 
-    echo "Building UTM qcow2 image for nixos-utm..."
+    echo "Building UTM qcow2 image for desktop ($ARCH)..."
     nix build \
-        '.#nixosConfigurations."nixos-utm".config.system.build.images.qemu-efi' \
-        -o result-utm
+        ".#nixosConfigurations.desktop-utm-${ARCH}.config.system.build.images.qemu-efi" \
+        -o result/desktop/utm-${ARCH}
 
-    QCOW2_FILE=$(find -L result-utm -name '*.qcow2' -type f 2>/dev/null | head -1)
+    QCOW2_FILE=$(find -L result/desktop/utm-${ARCH} -name '*.qcow2' -type f 2>/dev/null | head -1)
 
     echo ""
     echo "Build complete!"
+    echo "Architecture: $ARCH"
     echo "Created: $QCOW2_FILE"
     echo ""
     echo "Import into UTM:"
@@ -99,16 +126,41 @@ build-utm:
     echo "  5. Set display to virtio-gpu-pci for Wayland support"
     echo "  6. Enable SPICE clipboard sharing"
 
-# Build VMware VMDK image for the gui configuration
-build-vmware:
-    @echo "Building VMware VMDK image for gui..."
-    nixos-rebuild build-image --flake .#gui --image-variant vmware
-    @echo ""
-    @echo "Build complete!"
-    @echo "Created: result/nixos.vmdk"
-    @echo ""
-    @echo "Create a new VM in VMware and use this VMDK as the disk."
-    @echo "Recommended settings:"
-    @echo "  - Guest OS: Other Linux 6.x kernel 64-bit"
-    @echo "  - Enable 3D acceleration in Display settings"
-    @echo "  - Set clipboard/drag-drop to Bidirectional"
+# Build VMware VMDK image for desktop
+build-desktop-vmware ARCH="auto":
+    #!/usr/bin/env bash
+    set -euo pipefail
+    
+    # Detect architecture if not specified
+    if [ "{{ARCH}}" = "auto" ]; then
+        HOST_ARCH=$(uname -m)
+        if [ "$HOST_ARCH" = "arm64" ]; then
+            ARCH="aarch64"
+        else
+            ARCH="x86_64"
+        fi
+    else
+        ARCH="{{ARCH}}"
+    fi
+    
+    mkdir -p result/desktop
+
+    echo "Building VMware VMDK image for desktop ($ARCH)..."
+    nixos-rebuild build-image --flake ".#desktop-vmware-${ARCH}" --image-variant vmware -o result/desktop/vmware-${ARCH}
+
+    VMDK_FILE=$(find -L result/desktop/vmware-${ARCH} -name '*.vmdk' -type f 2>/dev/null | head -1)
+
+    echo ""
+    echo "Build complete!"
+    echo "Architecture: $ARCH"
+    echo "Created: $VMDK_FILE"
+    echo ""
+    echo "Create a new VM in VMware and use this VMDK as the disk."
+    echo "Recommended settings:"
+    echo "  - Guest OS: Other Linux 6.x kernel 64-bit"
+    echo "  - Enable 3D acceleration in Display settings"
+    echo "  - Set clipboard/drag-drop to Bidirectional"
+
+# Backward compatibility aliases
+alias build-utm := build-desktop-utm
+alias build-vmware := build-desktop-vmware
