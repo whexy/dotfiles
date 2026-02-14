@@ -101,6 +101,23 @@ else
           # Maximize column (fill width without going fullscreen)
           "${meh}+M".action.maximize-column = [ ];
 
+          # ── Launcher & Clipboard (Hyper +) ───────────────────────
+          # App launcher (fuzzel)
+          "${hyper}+Space" = {
+            action.spawn = "fuzzel";
+            repeat = false;
+          };
+
+          # Clipboard history picker
+          "${hyper}+C" = {
+            action.spawn = [
+              "sh"
+              "-c"
+              "cliphist list | fuzzel -d | cliphist decode | wl-copy"
+            ];
+            repeat = false;
+          };
+
           # ── Essentials (Hyper +) ──────────────────────────────────
           # Terminal
           "${hyper}+T" = {
