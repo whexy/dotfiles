@@ -46,7 +46,7 @@ lib.mkIf (!darwin) {
   systemd.user.services."rclone-mount:wenxuan-private@b2".Service.Environment = lib.mkForce [
     "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
   ];
-  systemd.user.services."rclone-mount:/@nas".Service.Environment = lib.mkForce [
+  systemd.user.services."rclone-mount:.@nas".Service.Environment = lib.mkForce [
     "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
   ];
 
