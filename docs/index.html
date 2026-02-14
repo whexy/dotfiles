@@ -65,50 +65,55 @@
         Reproducible chaos across machines.
       </p>
 
-      <div class="border border-stone-300 rounded p-6">
-        <div class="flex gap-2 mb-4 text-sm">
+      <div class="border border-stone-300 rounded p-4 sm:p-6">
+        <!-- Category row -->
+        <div
+          class="flex flex-wrap gap-x-4 gap-y-1 border-b border-stone-200 pb-3"
+        >
           <button
-            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
-            data-tab="linux-x86"
-            data-command="home-manager switch --flake github:whexy/dotfiles#home --impure"
+            class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
+            data-category="home"
           >
-            Dotfiles (x86_64)
+            Home
           </button>
           <button
-            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
-            data-tab="linux-aarch64"
-            data-command="home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure"
-          >
-            Dotfiles (aarch64)
-          </button>
-          <button
-            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
-            data-tab="macos"
-            data-command="sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp"
+            class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
+            data-category="macos"
           >
             macOS
           </button>
           <button
-            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
-            data-tab="nixos"
-            data-command="sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev"
+            class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
+            data-category="nixos"
           >
             NixOS
           </button>
           <button
-            class="tab-button px-3 py-1 rounded hover:bg-stone-100 transition-colors"
-            data-tab="wsl"
-            data-command="nix build github:whexy/dotfiles#nixosConfigurations.wsl.config.system.build.tarballBuilder && sudo ./result/bin/nixos-wsl-tarball-builder"
+            class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
+            data-category="desktop"
           >
-            WSL
+            Desktop
+          </button>
+          <button
+            class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
+            data-category="packages"
+          >
+            Packages
           </button>
         </div>
-        <div class="flex border border-stone-300 rounded overflow-hidden">
+
+        <!-- Target row -->
+        <div
+          id="target-row"
+          class="flex flex-wrap gap-2 mt-3 transition-opacity duration-150"
+        ></div>
+
+        <!-- Command display -->
+        <div class="flex border border-stone-300 rounded overflow-hidden mt-3">
           <code
             id="command-display"
             class="font-mono text-sm bg-stone-50 p-3 flex-1 overflow-x-auto whitespace-nowrap"
           >
-            $ home-manager switch --flake github:whexy/dotfiles#home --impure
           </code>
           <button
             id="copy-button"
@@ -195,29 +200,155 @@
     </div>
 
     <script>
-      let currentCommand =
-        "home-manager switch --flake github:whexy/dotfiles#home --impure";
+      const categories = {
+        home: [
+          {
+            label: "Dotfiles (x86_64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home --impure",
+          },
+          {
+            label: "Dotfiles (aarch64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure",
+          },
+          {
+            label: "Base (x86_64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base --impure",
+          },
+          {
+            label: "Base (aarch64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base-aarch64 --impure",
+          },
+        ],
+        macos: [
+          {
+            label: "MacBook Pro",
+            cmd: "sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp",
+          },
+          {
+            label: "Mac Mini",
+            cmd: "sudo darwin-rebuild switch --flake github:whexy/dotfiles#mini",
+          },
+        ],
+        nixos: [
+          {
+            label: "remote-dev",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev",
+          },
+          {
+            label: "remote-basic",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-basic",
+          },
+          {
+            label: "remote-service",
+            cmd: "just build-proxmox remote-service",
+          },
+          {
+            label: "WSL",
+            cmd: "just build-wsl",
+          },
+        ],
+        desktop: [
+          {
+            label: "UTM (x86_64)",
+            cmd: "just build-desktop utm x86_64",
+          },
+          {
+            label: "UTM (aarch64)",
+            cmd: "just build-desktop utm aarch64",
+          },
+          {
+            label: "VMware (x86_64)",
+            cmd: "just build-desktop vmware x86_64",
+          },
+          {
+            label: "VMware (aarch64)",
+            cmd: "just build-desktop vmware aarch64",
+          },
+        ],
+        packages: [
+          {
+            label: "portable-nvim",
+            cmd: "just build-portable-nvim",
+          },
+        ],
+      };
 
-      // Set initial active tab
-      document
-        .querySelector('[data-tab="linux-x86"]')
-        .classList.add("bg-stone-200");
+      let currentCommand = "";
+      let activeCategory = "home";
+      let activeTargetIndex = 0;
 
-      // Tab switching
-      document.querySelectorAll(".tab-button").forEach((button) => {
-        button.addEventListener("click", () => {
-          // Remove active state from all tabs
-          document.querySelectorAll(".tab-button").forEach((btn) => {
-            btn.classList.remove("bg-stone-200");
+      const targetRow = document.getElementById("target-row");
+      const commandDisplay = document.getElementById("command-display");
+
+      function setCommand(cmd) {
+        currentCommand = cmd;
+        commandDisplay.textContent = "$ " + cmd;
+      }
+
+      function renderTargets(categoryKey, selectIndex) {
+        const targets = categories[categoryKey];
+
+        // Fade out
+        targetRow.style.opacity = "0";
+
+        setTimeout(() => {
+          targetRow.innerHTML = "";
+          targets.forEach((target, i) => {
+            const btn = document.createElement("button");
+            btn.textContent = target.label;
+            btn.className =
+              "target-button px-3 py-1.5 rounded text-sm transition-colors hover:bg-stone-100";
+            if (i === selectIndex) {
+              btn.classList.add("bg-stone-200");
+            }
+            btn.addEventListener("click", () => {
+              activeTargetIndex = i;
+              document.querySelectorAll(".target-button").forEach((b) => {
+                b.classList.remove("bg-stone-200");
+              });
+              btn.classList.add("bg-stone-200");
+              setCommand(target.cmd);
+            });
+            targetRow.appendChild(btn);
           });
 
-          // Add active state to clicked tab
-          button.classList.add("bg-stone-200");
+          setCommand(targets[selectIndex].cmd);
 
-          // Update command display
-          currentCommand = button.getAttribute("data-command");
-          document.getElementById("command-display").textContent =
-            "$ " + currentCommand;
+          // Fade in
+          targetRow.style.opacity = "1";
+        }, 100);
+      }
+
+      function selectCategory(categoryKey) {
+        activeCategory = categoryKey;
+        activeTargetIndex = 0;
+
+        // Update category button styles
+        document.querySelectorAll(".category-button").forEach((btn) => {
+          if (btn.dataset.category === categoryKey) {
+            btn.classList.add(
+              "text-stone-900",
+              "font-medium",
+              "border-stone-900",
+            );
+            btn.classList.remove("text-stone-400");
+          } else {
+            btn.classList.remove(
+              "text-stone-900",
+              "font-medium",
+              "border-stone-900",
+            );
+            btn.classList.add("text-stone-400");
+          }
+        });
+
+        renderTargets(categoryKey, 0);
+      }
+
+      // Bind category buttons
+      document.querySelectorAll(".category-button").forEach((btn) => {
+        btn.addEventListener("click", () => {
+          selectCategory(btn.dataset.category);
         });
       });
 
@@ -225,6 +356,9 @@
       document.getElementById("copy-button").addEventListener("click", () => {
         navigator.clipboard.writeText(currentCommand);
       });
+
+      // Initialize
+      selectCategory("home");
     </script>
   </body>
 </html>
