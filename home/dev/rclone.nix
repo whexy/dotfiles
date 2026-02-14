@@ -1,5 +1,6 @@
-# Rclone FUSE mount for Backblaze B2
-# Mounts the wenxuan-private bucket to ~/b2
+# Rclone FUSE mounts
+# - Backblaze B2: wenxuan-private bucket → ~/b2
+# - WebDAV: alist NAS → ~/nas
 # Linux-only (systemd user service)
 {
   config,
@@ -23,6 +24,21 @@ lib.mkIf (!darwin) {
         mountPoint = "${config.home.homeDirectory}/b2";
       };
     };
+    remotes.nas = {
+      config = {
+        type = "webdav";
+        url = "https://alist-whexyhomenas.shiwx.org/dav";
+        vendor = "other";
+      };
+      config.user = "whexy";
+      secrets = {
+        pass = config.age.secrets.nas-webdav-pass.path;
+      };
+      mounts."/" = {
+        enable = true;
+        mountPoint = "${config.home.homeDirectory}/nas";
+      };
+    };
   };
 
   # The HM rclone module hardcodes PATH=/run/wrappers/bin (NixOS-specific).
@@ -30,9 +46,13 @@ lib.mkIf (!darwin) {
   systemd.user.services."rclone-mount:wenxuan-private@b2".Service.Environment = lib.mkForce [
     "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
   ];
+  systemd.user.services."rclone-mount:/@nas".Service.Environment = lib.mkForce [
+    "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
+  ];
 
   age.secrets = {
     b2-account.file = ../../secrets/b2-account.age;
     b2-key.file = ../../secrets/b2-key.age;
+    nas-webdav-pass.file = ../../secrets/nas-webdav-pass.age;
   };
 }
