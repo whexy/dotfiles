@@ -20,4 +20,5 @@ in
   "api-keys.age".publicKeys = [ key ];
   "b2-account.age".publicKeys = [ key ];
   "b2-key.age".publicKeys = [ key ];
+  "nas-webdav-pass.age".publicKeys = [ key ];
 }
