@@ -9,6 +9,7 @@
   imports = [
     ./dev/agents.nix
     ./dev/git.nix
+    ./dev/rclone.nix
     ./dev/shell.nix
     ./dev/ssh.nix
     ./dev/neovim.nix
