@@ -3,6 +3,7 @@
 {
   imports = [
     ./gui/clipboard.nix
+    ./gui/git.nix
     ./gui/ghostty.nix
     ./gui/neovide.nix
     ./gui/niri.nix

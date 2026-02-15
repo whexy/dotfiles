@@ -27,6 +27,9 @@
     };
   };
 
+  # 1Password GUI
+  programs._1password-gui.enable = true;
+
   # Kanata: remap CapsLock to Hyper / CapsLock,
   #         remap Tab to Meh / Tab.
   # Uses tap-hold-press so the modifier activates instantly when another

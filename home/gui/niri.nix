@@ -20,6 +20,19 @@ else
       # Skip the hotkey overlay on startup (we have custom binds)
       hotkey-overlay.skip-at-startup = true;
 
+      # Scale all outputs to 150% via IPC (works across machines without
+      # knowing output names ahead of time)
+      spawn-at-startup = [
+        {
+          sh = ''
+            sleep 1
+            for output in $(niri msg --json outputs | jq -r '.[].name'); do
+              niri msg output "$output" scale 1.5
+            done
+          '';
+        }
+      ];
+
       # Fast key repeat for smooth Vim navigation
       input.keyboard.repeat-delay = 200;
       input.keyboard.repeat-rate = 40;
@@ -121,7 +134,7 @@ else
           # ── Essentials (Hyper +) ──────────────────────────────────
           # Terminal
           "${hyper}+T" = {
-            action.spawn = "wezterm";
+            action.spawn = "ghostty";
             repeat = false;
           };
 
