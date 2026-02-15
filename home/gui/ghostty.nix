@@ -7,7 +7,7 @@
 
     settings = {
       theme = "Gruvbox Dark";
-      font-size = 16;
+      font-size = 14;
       font-family = "FiraCode Nerd Font";
       background-opacity = 0.95;
       background-blur = true;

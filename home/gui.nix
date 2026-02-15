@@ -5,7 +5,6 @@
     ./gui/clipboard.nix
     ./gui/git.nix
     ./gui/ghostty.nix
-    ./gui/neovide.nix
     ./gui/niri.nix
     ./gui/waybar.nix
     ./gui/wezterm.nix
