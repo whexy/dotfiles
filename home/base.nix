@@ -8,6 +8,7 @@
 }:
 {
   imports = [
+    ./base/htop.nix
     ./base/shell.nix
     ./base/tmux.nix
     ./base/neovim.nix
