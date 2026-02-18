@@ -36,7 +36,6 @@
       mtr
 
       # process/fs
-      htop
       btop
       lsof
       duf
