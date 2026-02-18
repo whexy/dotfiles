@@ -13,17 +13,26 @@
   services.caddy = {
     enable = true;
     # Point to user-managed configuration file
-    # Users can edit /var/lib/caddy/Caddyfile and reload with: systemctl reload caddy
-    configFile = "/var/lib/caddy/Caddyfile";
+    # Users can edit /etc/caddy/Caddyfile and reload with: systemctl reload caddy
+    configFile = "/etc/caddy/Caddyfile";
   };
 
-  # Ensure Caddyfile exists before service starts
+  # Ensure Caddyfile and web root exist before service starts
   systemd.services.caddy.preStart = ''
-    if [ ! -f /var/lib/caddy/Caddyfile ]; then
-      echo "# Caddy configuration file - Edit and reload with: systemctl reload caddy" > /var/lib/caddy/Caddyfile
-      chown caddy:caddy /var/lib/caddy/Caddyfile
-      chmod 644 /var/lib/caddy/Caddyfile
-    fi
+        mkdir -p /etc/caddy
+        mkdir -p /var/www
+        if [ ! -f /etc/caddy/Caddyfile ]; then
+          cat > /etc/caddy/Caddyfile << 'CADDYEOF'
+    # Caddy configuration file
+    # Edit and reload with: systemctl reload caddy
+    :80 {
+        root * /var/www
+        file_server browse
+    }
+    CADDYEOF
+          chown caddy:caddy /etc/caddy/Caddyfile
+          chmod 644 /etc/caddy/Caddyfile
+        fi
   '';
 
   services.openssh = {
