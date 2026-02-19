@@ -101,7 +101,6 @@
             "base"
             "dev"
             "gui"
-            "macos"
           ];
         };
 
@@ -115,7 +114,6 @@
             "base"
             "dev"
             "gui"
-            "macos"
           ];
         };
       };
