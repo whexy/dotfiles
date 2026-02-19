@@ -1,6 +1,13 @@
 # GUI Darwin system configuration
 { pkgs, ... }:
 {
+  system.stateVersion = 6;
+
+  security.pam.services.sudo_local = {
+    touchIdAuth = true;
+    watchIdAuth = true;
+  };
+
   fonts.packages = [
     (pkgs.nerd-fonts.fira-code)
     (pkgs.nerd-fonts.jetbrains-mono)
