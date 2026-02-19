@@ -24,6 +24,15 @@ else
       # knowing output names ahead of time)
       spawn-at-startup = [
         {
+          command = [
+            "swaybg"
+            "--image"
+            "${./wallpaper.jpg}"
+            "--mode"
+            "fill"
+          ];
+        }
+        {
           sh = ''
             sleep 1
             for output in $(niri msg --json outputs | jq -r '.[].name'); do
@@ -32,6 +41,9 @@ else
           '';
         }
       ];
+
+      # Transparent workspace background so Ghostty's opacity shows the wallpaper
+      layout.background-color = "#00000000";
 
       # Fast key repeat for smooth Vim navigation
       input.keyboard.repeat-delay = 200;
@@ -120,6 +132,10 @@ else
             action.spawn = "fuzzel";
             repeat = false;
           };
+          "${meh}+Space" = {
+            action.spawn = "fuzzel";
+            repeat = false;
+          };
 
           # Clipboard history picker
           "${hyper}+C" = {
@@ -187,5 +203,14 @@ else
             allow-inhibiting = false;
           };
         };
+
+      # Draw the focus ring around Ghostty rather than as a filled rectangle behind it.
+      # This prevents the focus ring color from bleeding through Ghostty's transparent background.
+      window-rules = [
+        {
+          matches = [ { app-id = "^com\\.mitchellh\\.ghostty$"; } ];
+          draw-border-with-background = false;
+        }
+      ];
     };
   }
