@@ -67,11 +67,14 @@
       file
       just
       kubectl
-      mtr
+      lazygit
       ripgrep
+      sqlite
       tldr
       tree-sitter
+      watchexec
       xh
+      yq
       zellij
 
       # Formatters & Linters

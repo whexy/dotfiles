@@ -6,7 +6,10 @@
   ...
 }:
 {
-  home.packages = [ pkgs.llm-agents.opencode ];
+  home.packages = with pkgs.llm-agents; [
+    opencode
+    claude-code
+  ];
 
   # Source API keys from agenix-decrypted secret into shell environment
   # The secret file contains KEY=VALUE lines (ANTHROPIC_API_KEY, OPENAI_API_KEY)
