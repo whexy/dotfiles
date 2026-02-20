@@ -53,8 +53,9 @@
 
       # Language tools
       cmake
-      gdb
       gnumake
+      gdb
+      lldb
       llvm
       rustup
       uv
@@ -72,6 +73,7 @@
       sqlite
       tldr
       tree-sitter
+      woodpecker-cli
       watchexec
       xh
       yq

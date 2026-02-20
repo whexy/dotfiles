@@ -2,9 +2,17 @@
 {
   lib,
   pkgs,
+  darwin ? false,
   wsl ? false,
   ...
 }:
+let
+  identityAgent =
+    if darwin then
+      "\"~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock\""
+    else
+      "~/.1password/agent.sock";
+in
 {
   # On WSL, ssh is aliased to ssh.exe which uses Windows SSH config,
   # so this config is only relevant for native Linux and macOS
@@ -14,11 +22,7 @@
 
     matchBlocks = {
       "*" = {
-        identityAgent =
-          if pkgs.stdenv.isDarwin then
-            "\"~/Library/Group Containers/2BUA8C4S2C.com.1password/t/agent.sock\""
-          else
-            "~/.1password/agent.sock";
+        inherit identityAgent;
         forwardAgent = true;
         serverAliveInterval = 25;
         serverAliveCountMax = 3;
