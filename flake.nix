@@ -162,7 +162,6 @@
           caps = [
             "base"
             "dev"
-            "gui"
           ];
         };
 
