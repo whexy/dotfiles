@@ -47,6 +47,7 @@
       deno
       go
       nodejs
+      bun
       typst
       zig
       python314
