@@ -21,7 +21,13 @@
   # session, and reconnections don't trigger a new PAM session.
   # Since mosh is only enabled on NixOS (systemd-based), /run/user/<UID>
   # is guaranteed to exist, so we use it as a safe fallback.
-  programs.zsh.envExtra = lib.mkAfter ''
+  #
+  # Use initContent (.zshrc) instead of envExtra (.zshenv) to avoid a race
+  # condition on WSL: shell-wrapper spawns the first zsh simultaneously with
+  # agenix.service, so the secret file may not exist yet when .zshenv runs.
+  # Interactive shells (the only consumers of these keys) always open after
+  # the systemd user session is fully up, so .zshrc is safe.
+  programs.zsh.initContent = lib.mkAfter ''
     if [ -z "$XDG_RUNTIME_DIR" ]; then
       export XDG_RUNTIME_DIR="/run/user/$(id -u)"
     fi
