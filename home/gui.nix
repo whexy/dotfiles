@@ -22,15 +22,7 @@
     ./gui/aerospace.nix
   ];
 
-  # Wayland clipboard tools (Linux only)
-  home.packages = lib.optionals pkgs.stdenv.isLinux (
-    with pkgs;
-    [
-      swaybg
-      wl-clipboard
-    ]
-  );
-
-  # Wayland clipboard persistence (Linux only)
-  services.wl-clip-persist.enable = lib.mkIf pkgs.stdenv.isLinux true;
+  home.packages = with pkgs; [
+    mosh # mosh client
+  ];
 }

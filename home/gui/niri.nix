@@ -1,6 +1,7 @@
 # Niri Wayland compositor configuration (Linux)
 {
   inputs,
+  pkgs,
   ...
 }:
 {
@@ -8,7 +9,13 @@
     inputs.niri.homeModules.niri
   ];
 
+  home.packages = with pkgs; [
+    swaybg
+    wl-clipboard
+  ];
+
   programs.niri.enable = true;
+  services.wl-clip-persist.enable = true;
 
   # Niri settings
   programs.niri.settings = {
