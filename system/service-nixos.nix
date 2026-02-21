@@ -17,23 +17,28 @@
     configFile = "/etc/caddy/Caddyfile";
   };
 
-  # Ensure Caddyfile and web root exist before service starts
-  systemd.services.caddy.preStart = ''
-        mkdir -p /etc/caddy
-        mkdir -p /var/www
-        if [ ! -f /etc/caddy/Caddyfile ]; then
-          cat > /etc/caddy/Caddyfile << 'CADDYEOF'
-    # Caddy configuration file
-    # Edit and reload with: systemctl reload caddy
-    :80 {
-        root * /var/www
-        file_server browse
-    }
-    CADDYEOF
-          chown caddy:caddy /etc/caddy/Caddyfile
-          chmod 644 /etc/caddy/Caddyfile
-        fi
-  '';
+  # Ensure Caddy directories and default config exist
+  # Ordering: users (caddy user created) → caddy-config → caddy.service starts
+  system.activationScripts.caddy-config = {
+    deps = [ "users" ];
+    text = ''
+      mkdir -p /etc/caddy
+      mkdir -p /var/www
+      chown caddy:caddy /etc/caddy /var/www
+      if [ ! -f /etc/caddy/Caddyfile ]; then
+        cat > /etc/caddy/Caddyfile << 'CADDYEOF'
+      # Caddy configuration file
+      # Edit and reload with: systemctl reload caddy
+      :80 {
+          root * /var/www
+          file_server browse
+      }
+      CADDYEOF
+        chown caddy:caddy /etc/caddy/Caddyfile
+        chmod 644 /etc/caddy/Caddyfile
+      fi
+    '';
+  };
 
   services.openssh = {
     enable = true;
