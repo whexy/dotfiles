@@ -176,7 +176,7 @@ add-anywhere HOSTNAME:
         exit 0
     fi
 
-    echo 'throw "Run: just deploy-anywhere {{HOSTNAME}} <ip>"' > "$GENERATED"
+    echo 'throw "Run: just deploy-anywhere {{HOSTNAME}} <user@host>"' > "$GENERATED"
     git add "$GENERATED"
 
     echo "Created placeholder: $GENERATED"
@@ -192,7 +192,8 @@ add-anywhere HOSTNAME:
     echo '    };'
 
 # Deploy NixOS to a remote machine via nixos-anywhere
-deploy-anywhere HOSTNAME IP:
+# SSH_TARGET is the full SSH destination, e.g. whexy@server.com or root@192.168.1.100
+deploy-anywhere HOSTNAME SSH_TARGET:
     #!/usr/bin/env bash
     set -euo pipefail
 
@@ -206,11 +207,11 @@ deploy-anywhere HOSTNAME IP:
     # Stage all files so flake can see them
     git add -A
 
-    echo "Deploying {{HOSTNAME}} to {{IP}}..."
+    echo "Deploying {{HOSTNAME}} to {{SSH_TARGET}}..."
     nix run github:nix-community/nixos-anywhere -- \
         --generate-hardware-config nixos-generate-config "$GENERATED" \
         --flake ".#{{HOSTNAME}}" \
-        --target-host "root@{{IP}}"
+        --target-host "{{SSH_TARGET}}"
 
     echo ""
     echo "Deployment complete!"

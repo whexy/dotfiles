@@ -235,6 +235,16 @@
         #     username = "whexy";
         #     caps = [ "base" "service" ];
         #   };
+        oracle-seoul = mkHost {
+          system = "x86_64-linux";
+          hardware = "anywhere";
+          hostname = "oracle-seoul";
+          username = "whexy";
+          caps = [
+            "base"
+            "service"
+          ];
+        };
       };
 
       # Standalone home-manager configurations

@@ -52,7 +52,7 @@ sudo ./result/bin/nixos-wsl-tarball-builder
 
 ### nixos-anywhere (deploy to any machine via SSH)
 
-Install NixOS on any reachable machine using [nixos-anywhere](https://github.com/nix-community/nixos-anywhere). The target must be accessible via SSH as root (or a user with passwordless sudo).
+Install NixOS on any reachable machine using [nixos-anywhere](https://github.com/nix-community/nixos-anywhere). The target must be accessible via SSH (as root, or a user with passwordless sudo).
 
 **1. Create a placeholder for the new host:**
 
@@ -72,10 +72,10 @@ myserver = mkHost {
 };
 ```
 
-**3. Deploy:**
+**3. Deploy** (provide the full SSH target, e.g. `user@host`):
 
 ```bash
-just deploy-anywhere myserver 192.168.1.100
+just deploy-anywhere myserver whexy@server.com
 ```
 
 This will partition the disk via [disko](https://github.com/nix-community/disko), install NixOS, and generate a hardware config at `hardware/myserver-generated.nix`.
