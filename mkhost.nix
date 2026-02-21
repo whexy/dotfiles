@@ -51,6 +51,13 @@ let
 in
 systemFunc {
   inherit system;
+  specialArgs = {
+    inherit inputs self;
+    inherit system hostname;
+    inherit username;
+    inherit darwin;
+    inherit wsl;
+  };
 
   modules = [
     # Global Nix Setting
@@ -87,16 +94,6 @@ systemFunc {
         imports = homeConfigs ++ [
           inputs.agenix.homeManagerModules.default
         ];
-      };
-    }
-
-    {
-      _module.args = {
-        inherit inputs self;
-        inherit system hostname;
-        inherit username;
-        inherit darwin;
-        inherit wsl;
       };
     }
 

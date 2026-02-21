@@ -28,7 +28,9 @@
   system.stateVersion = "25.11";
 
   # Bootloader - GRUB with EFI (compatible with disko)
+  # devices is not needed; disko will add devices with EF02 partitions automatically
   boot.loader.grub = {
+    devices = [ "nodev" ];
     efiSupport = true;
     efiInstallAsRemovable = true;
   };
