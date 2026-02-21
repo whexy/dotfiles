@@ -62,6 +62,12 @@
       url = "github:sodiboo/niri-flake";
     };
 
+    # Disk partitioning (for nixos-anywhere)
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Secret management with age encryption
     agenix = {
       url = "github:ryantm/agenix";
@@ -216,6 +222,19 @@
             "gui"
           ];
         };
+
+        # nixos-anywhere targets
+        # Deploy with: just deploy-anywhere <hostname> <ip>
+        # Add new targets: just add-anywhere <hostname>
+        #
+        # Example:
+        #   myserver = mkHost {
+        #     system = "x86_64-linux";
+        #     hardware = "anywhere";
+        #     hostname = "myserver";
+        #     username = "whexy";
+        #     caps = [ "base" "service" ];
+        #   };
       };
 
       # Standalone home-manager configurations

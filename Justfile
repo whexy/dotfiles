@@ -163,6 +163,60 @@ build-desktop-vmware ARCH="auto":
     echo "  - Enable 3D acceleration in Display settings"
     echo "  - Set clipboard/drag-drop to Bidirectional"
 
+# Create a new nixos-anywhere target placeholder
+# After this, add a corresponding entry in flake.nix nixosConfigurations
+add-anywhere HOSTNAME:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    GENERATED="hardware/{{HOSTNAME}}-generated.nix"
+
+    if [ -f "$GENERATED" ]; then
+        echo "Placeholder already exists: $GENERATED"
+        exit 0
+    fi
+
+    echo 'throw "Run: just deploy-anywhere {{HOSTNAME}} <ip>"' > "$GENERATED"
+    git add "$GENERATED"
+
+    echo "Created placeholder: $GENERATED"
+    echo ""
+    echo "Now add this to flake.nix nixosConfigurations:"
+    echo ""
+    echo '    {{HOSTNAME}} = mkHost {'
+    echo '      system = "x86_64-linux";'
+    echo '      hardware = "anywhere";'
+    echo '      hostname = "{{HOSTNAME}}";'
+    echo '      username = "whexy";'
+    echo '      caps = [ "base" "service" ];'
+    echo '    };'
+
+# Deploy NixOS to a remote machine via nixos-anywhere
+deploy-anywhere HOSTNAME IP:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    GENERATED="hardware/{{HOSTNAME}}-generated.nix"
+
+    if [ ! -f "$GENERATED" ]; then
+        echo "No placeholder found. Run first: just add-anywhere {{HOSTNAME}}"
+        exit 1
+    fi
+
+    # Stage all files so flake can see them
+    git add -A
+
+    echo "Deploying {{HOSTNAME}} to {{IP}}..."
+    nix run github:nix-community/nixos-anywhere -- \
+        --generate-hardware-config nixos-generate-config "$GENERATED" \
+        --flake ".#{{HOSTNAME}}" \
+        --target-host "root@{{IP}}"
+
+    echo ""
+    echo "Deployment complete!"
+    echo "Don't forget to commit the generated hardware config:"
+    echo "  git add $GENERATED && git commit -m 'Add generated hardware config for {{HOSTNAME}}'"
+
 # Backward compatibility aliases
 alias build-utm := build-desktop-utm
 alias build-vmware := build-desktop-vmware
