@@ -24,4 +24,13 @@
       };
     };
   };
+
+  virtualisation.podman = {
+    enable = true;
+  };
+
+  virtualisation.containers = {
+    enable = true;
+    registries.search = [ "docker.io" ];
+  };
 }
