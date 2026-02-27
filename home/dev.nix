@@ -61,11 +61,6 @@
       rustup
       uv
 
-      # Haskell
-      haskell-language-server
-      ormolu
-      hlint
-
       # Quick tools
       age
       cloudflared
@@ -75,12 +70,13 @@
       just
       kubectl
       lazygit
+      qemu
       ripgrep
       sqlite
       tldr
       tree-sitter
-      woodpecker-cli
       watchexec
+      woodpecker-cli
       xh
       yq
       zellij
@@ -88,18 +84,21 @@
       # Formatters & Linters
       black
       golangci-lint
+      hlint
       nixfmt-rfc-style
+      ormolu
+      prettier
       shellcheck
       shfmt
       stylua
       typstyle
       yamlfmt
-      prettier
 
       # LSP
       basedpyright
       clang-tools
       gopls
+      haskell-language-server
       lua-language-server
       nil
       ruff
