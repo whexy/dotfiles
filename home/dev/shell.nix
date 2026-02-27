@@ -43,6 +43,21 @@
       ]) { };
     };
 
+  programs.atuin = {
+    enable = true;
+    enableZshIntegration = true;
+    settings = {
+      auto_sync = false;
+      update_check = false;
+      search_mode = "fuzzy";
+      filter_mode = "global";
+      enter_accept = true;
+      style = "compact";
+      inline_height = 30;
+      store_failed = true;
+    };
+  };
+
   programs.zoxide = {
     enable = true;
     enableZshIntegration = true;
@@ -77,7 +92,6 @@
         "git"
         "kubectl"
         "macos"
-        "per-directory-history"
         "sudo"
         "tmux"
       ];
