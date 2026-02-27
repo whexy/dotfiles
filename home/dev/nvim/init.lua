@@ -12,6 +12,7 @@ local TS_PACKAGES = {
 	"gomod",
 	"gosum",
 	"gowork",
+	"haskell",
 	"javascript",
 	"json5",
 	"lua",
@@ -31,6 +32,7 @@ local LSPS = {
 	"basedpyright",
 	"clangd",
 	"gopls",
+	"hls",
 	"jsonls",
 	"lua_ls",
 	"nil_ls",
@@ -43,6 +45,7 @@ local LSPS = {
 }
 
 local FORMATTERS = {
+	haskell = { "ormolu" },
 	html = { "prettier" },
 	json = { "prettier" },
 	lua = { "stylua" },
@@ -57,6 +60,7 @@ local FORMATTERS = {
 
 local LINTERS = {
 	go = { "golangcilint" },
+	haskell = { "hlint" },
 	sh = { "shellcheck" },
 	toml = { "tombi" },
 }

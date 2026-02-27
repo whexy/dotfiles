@@ -61,6 +61,11 @@
       rustup
       uv
 
+      # Haskell
+      haskell-language-server
+      ormolu
+      hlint
+
       # Quick tools
       age
       cloudflared
