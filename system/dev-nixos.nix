@@ -27,6 +27,7 @@
 
   virtualisation.podman = {
     enable = true;
+    extraRuntimes = [ pkgs.gvisor ];
   };
 
   virtualisation.containers = {
