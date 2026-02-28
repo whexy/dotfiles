@@ -36,17 +36,27 @@ steps:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
+    environment:
+      CACHIX_AUTH_TOKEN:
+        from_secret: CACHIX_AUTH_TOKEN
     commands:
       - echo "=== Building NixOS x86_64-linux remote-dev ==="
-      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel -L --show-trace
+      - nix-env -iA cachix -f https://cachix.org/api/v1/install
+      - cachix authtoken $CACHIX_AUTH_TOKEN
+      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel -L --show-trace --print-out-paths --no-link | cachix push whexy
       - echo "SUCCESS - Can be applied"
   build-nixos-wsl:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
+    environment:
+      CACHIX_AUTH_TOKEN:
+        from_secret: CACHIX_AUTH_TOKEN
     commands:
       - echo "=== Building NixOS x86_64-linux wsl ==="
-      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel -L --show-trace
+      - nix-env -iA cachix -f https://cachix.org/api/v1/install
+      - cachix authtoken $CACHIX_AUTH_TOKEN
+      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel -L --show-trace --print-out-paths --no-link | cachix push whexy
       - echo "SUCCESS - Can be applied"
   # Darwin aarch64 - Evaluation and instantiation only
   check-darwin-mbp:
@@ -66,9 +76,14 @@ steps:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
+    environment:
+      CACHIX_AUTH_TOKEN:
+        from_secret: CACHIX_AUTH_TOKEN
     commands:
       - echo "=== Building Home Manager home (x86_64) ==="
-      - nix build --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home.activationPackage -L --show-trace --impure
+      - nix-env -iA cachix -f https://cachix.org/api/v1/install
+      - cachix authtoken $CACHIX_AUTH_TOKEN
+      - nix build --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home.activationPackage -L --show-trace --impure --print-out-paths --no-link | cachix push whexy
       - echo "SUCCESS - Can be applied"
   # Home Manager - Check (aarch64)
   check-home-manager-aarch64:
