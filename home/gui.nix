@@ -1,6 +1,5 @@
 # GUI systems home-manager configuration
 {
-  pkgs,
   lib,
   darwin ? false,
   ...
@@ -20,9 +19,5 @@
   ++ lib.optionals (darwin) [
     # MacOS system enable aerospace for WM-like experience
     ./gui/aerospace.nix
-  ];
-
-  home.packages = with pkgs; [
-    mosh # mosh client
   ];
 }

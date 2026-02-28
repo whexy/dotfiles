@@ -23,6 +23,7 @@
       curl
       htop
       jq
+      mosh
       podman
       rsync
       wget
