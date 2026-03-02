@@ -25,10 +25,7 @@
     };
   };
 
-  virtualisation.podman = {
-    enable = true;
-    extraRuntimes = [ pkgs.gvisor ];
-  };
+  virtualisation.podman.enable = true;
 
   virtualisation.containers = {
     enable = true;
