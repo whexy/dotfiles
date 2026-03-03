@@ -100,7 +100,7 @@
       gopls
       haskell-language-server
       lua-language-server
-      nil
+      nixd
       ruff
       tinymist
       tombi

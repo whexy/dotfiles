@@ -35,7 +35,7 @@ local LSPS = {
 	"hls",
 	"jsonls",
 	"lua_ls",
-	"nil_ls",
+	"nixd",
 	"ruff",
 	"tinymist",
 	"tombi",
@@ -72,6 +72,10 @@ local LINTERS = {
 -- Leader keys
 vim.g.mapleader = " "
 vim.g.maplocalleader = ","
+
+-- Local settings
+vim.opt.exrc = true
+vim.opt.secure = true
 
 -- Line numbers
 vim.opt.number = true
