@@ -6,5 +6,6 @@
     defaultUser = "whexy";
     startMenuLaunchers = true;
     wslConf.automount.root = "/mnt";
+    interop.register = true;
   };
 }
