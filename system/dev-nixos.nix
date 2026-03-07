@@ -1,5 +1,14 @@
 # Dev NixOS system configuration
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
+let
+  host = pkgs.stdenv.hostPlatform.system;
+  universe = [
+    "x86_64-linux"
+    "aarch64-linux"
+    "riscv64-linux"
+  ];
+  emulated = lib.remove host universe;
+in
 {
   time.timeZone = "America/Chicago";
   programs.zsh.enable = true;
@@ -31,4 +40,7 @@
     enable = true;
     registries.search = [ "docker.io" ];
   };
+
+  # Emulate other platforms
+  boot.binfmt.emulatedSystems = emulated;
 }
