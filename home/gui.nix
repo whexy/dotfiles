@@ -16,7 +16,7 @@
     # Linux system use Niri as WM
     ./gui/niri.nix
   ]
-  ++ lib.optionals (darwin) [
+  ++ lib.optionals darwin [
     # MacOS system enable aerospace for WM-like experience
     ./gui/aerospace.nix
   ];

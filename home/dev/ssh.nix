@@ -1,7 +1,6 @@
 # SSH configuration
 {
   lib,
-  pkgs,
   darwin ? false,
   wsl ? false,
   ...

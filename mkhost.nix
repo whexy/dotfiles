@@ -43,8 +43,10 @@ let
   hardwareConfig = ./hardware/${hardware}.nix;
   userConfig = if darwin then ./users/${username}/darwin.nix else ./users/${username}/nixos.nix;
   platformSuffix = if darwin then "darwin" else "nixos";
-  systemConfigs = map (cap: ./system/${cap}-${platformSuffix}.nix) caps;
-  homeConfigs = map (cap: ./home/${cap}.nix) caps;
+  systemConfigs = builtins.filter builtins.pathExists (
+    map (cap: ./system/${cap}-${platformSuffix}.nix) caps
+  );
+  homeConfigs = builtins.filter builtins.pathExists (map (cap: ./home/${cap}.nix) caps);
 
   systemFunc = if darwin then inputs.nix-darwin.lib.darwinSystem else inputs.nixpkgs.lib.nixosSystem;
   hm = if darwin then inputs.home-manager-darwin.darwinModules else inputs.home-manager.nixosModules;

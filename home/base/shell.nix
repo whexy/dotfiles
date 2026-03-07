@@ -1,5 +1,5 @@
 # Shell configuration
-{ lib, pkgs, ... }:
+{ lib, ... }:
 {
   programs.zsh = {
     enable = true;

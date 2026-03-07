@@ -50,17 +50,17 @@ let
     ) "tag 'llm-tools' requires inputs.llm-agents")
   ];
 
-  # Force evaluation of assertions
-  _ = builtins.deepSeq assertions true;
-
   # --- Compose Overlays Based on Tags ---
-  overlays = lib.flatten [
-    (lib.optional (hasTag "lkl-bigmem") (import ./lkl-bigmem.nix))
-    (lib.optional (hasTag "op-wsl") (import ./op-wsl.nix))
-    (lib.optional (hasTag "ssh-wsl") (import ./ssh-wsl.nix))
-    (lib.optional (hasTag "unstable") (import ./unstable.nix { inherit (inputs) nixpkgs-unstable; }))
-    (lib.optional (hasTag "llm-tools") (import ./llm-tools.nix { inherit (inputs) llm-agents; }))
-  ];
+  # builtins.deepSeq forces assertion evaluation when overlays is referenced
+  overlays = builtins.deepSeq assertions (
+    lib.flatten [
+      (lib.optional (hasTag "lkl-bigmem") (import ./lkl-bigmem.nix))
+      (lib.optional (hasTag "op-wsl") (import ./op-wsl.nix))
+      (lib.optional (hasTag "ssh-wsl") (import ./ssh-wsl.nix))
+      (lib.optional (hasTag "unstable") (import ./unstable.nix { inherit (inputs) nixpkgs-unstable; }))
+      (lib.optional (hasTag "llm-tools") (import ./llm-tools.nix { inherit (inputs) llm-agents; }))
+    ]
+  );
 
 in
 {
