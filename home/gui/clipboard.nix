@@ -4,7 +4,6 @@
 # cliphist      – clipboard history manager (persists across app exits)
 # fuzzel        – Wayland-native app launcher (also used for clipboard picker)
 {
-  lib,
   pkgs,
   darwin,
   ...

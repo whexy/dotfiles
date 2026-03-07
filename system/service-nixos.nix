@@ -1,5 +1,5 @@
 # Service NixOS system configuration
-{ pkgs, ... }:
+{ ... }:
 {
   time.timeZone = "America/Chicago";
 
