@@ -89,6 +89,19 @@
       mkHome = import ./mkhome.nix {
         inherit inputs;
       };
+
+      mkRemoteDev =
+        hostname:
+        mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64";
+          hostname = hostname;
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+          ];
+        };
     in
     {
       # macOS (nix-darwin) configurations
@@ -122,16 +135,8 @@
 
       # NixOS configurations
       nixosConfigurations = {
-        remote-dev = mkHost {
-          system = "x86_64-linux";
-          hardware = "qemu-x86_64";
-          hostname = "remote-dev";
-          username = "whexy";
-          caps = [
-            "base"
-            "dev"
-          ];
-        };
+        remote-dev = mkRemoteDev "remote-dev";
+        mvp = mkRemoteDev "mvp";
 
         remote-basic = mkHost {
           system = "x86_64-linux";
@@ -238,14 +243,6 @@
         home-base-aarch64 = mkHome {
           system = "aarch64-linux";
           caps = [ "base" ];
-        };
-      };
-
-      # Portable packages
-      packages.x86_64-linux.portable-nvim = import ./portable-nvim.nix {
-        pkgs = import nixpkgs {
-          system = "x86_64-linux";
-          config.allowUnfree = true;
         };
       };
     };
