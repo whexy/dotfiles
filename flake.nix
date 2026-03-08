@@ -169,6 +169,18 @@
           ];
         };
 
+        ord = mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64-gui";
+          hostname = "ord";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+            "gui"
+          ];
+        };
+
         # Desktop VM images - UTM (QEMU) backend
         # Build with: just build-desktop utm [x86_64|aarch64]
         desktop-utm-x86_64 = mkHost {
