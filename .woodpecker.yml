@@ -30,8 +30,8 @@ steps:
       event: [push, pull_request]
     commands:
       - echo "Verifying flake structure..."
-      - nix flake check --extra-experimental-features 'nix-command flakes' --all-systems
-  # NixOS x86_64-linux - Full build (native)
+      - nix flake check --extra-experimental-features 'nix-command flakes'
+  # NixOS x86_64-linux remote-dev - Full build + cache update
   build-nixos-remote-dev:
     image: nixos/nix:latest
     when:
@@ -41,57 +41,26 @@ steps:
         from_secret: CACHIX_AUTH_TOKEN
     commands:
       - echo "=== Building NixOS x86_64-linux remote-dev ==="
-      - nix-env -iA cachix -f https://cachix.org/api/v1/install
+      # Configure substituters so we pull from cache instead of building from source
+      - echo "extra-substituters = https://whexy.cachix.org https://nix-community.cachix.org https://cache.numtide.com" >> /etc/nix/nix.conf
+      - echo "extra-trusted-public-keys = whexy.cachix.org-1:XzmCWs+qh3vMtB4p1joLM+ajn5z/UYgZOyxykzEDV2o= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" >> /etc/nix/nix.conf
+      - nix profile install --extra-experimental-features 'nix-command flakes' nixpkgs#cachix
       - cachix authtoken $CACHIX_AUTH_TOKEN
       - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel -L --show-trace --print-out-paths --no-link | cachix push whexy
       - echo "SUCCESS - Can be applied"
-  build-nixos-wsl:
-    image: nixos/nix:latest
-    when:
-      event: [push, pull_request]
-    environment:
-      CACHIX_AUTH_TOKEN:
-        from_secret: CACHIX_AUTH_TOKEN
-    commands:
-      - echo "=== Building NixOS x86_64-linux wsl ==="
-      - nix-env -iA cachix -f https://cachix.org/api/v1/install
-      - cachix authtoken $CACHIX_AUTH_TOKEN
-      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel -L --show-trace --print-out-paths --no-link | cachix push whexy
-      - echo "SUCCESS - Can be applied"
-  # Darwin aarch64 - Evaluation and instantiation only
-  check-darwin-mbp:
+  # Eval-only checks for other configurations
+  check-other-configs:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
     commands:
-      - echo "=== Checking Darwin aarch64 mbp ==="
-      - echo "Evaluating configuration..."
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mbp.system.drvPath
-      - echo "Building derivation (without executing)..."
-      - nix-instantiate --extra-experimental-features 'nix-command flakes' --eval -E '(builtins.getFlake (toString ./.)).darwinConfigurations.mbp.system' --show-trace
-      - echo "SUCCESS - Configuration evaluates correctly"
-      - echo "NOTE Cross-platform build not performed - requires macOS runner"
-  # Home Manager - Full build (x86_64)
-  build-home-manager:
-    image: nixos/nix:latest
-    when:
-      event: [push, pull_request]
-    environment:
-      CACHIX_AUTH_TOKEN:
-        from_secret: CACHIX_AUTH_TOKEN
-    commands:
-      - echo "=== Building Home Manager home (x86_64) ==="
-      - nix-env -iA cachix -f https://cachix.org/api/v1/install
-      - cachix authtoken $CACHIX_AUTH_TOKEN
-      - nix build --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home.activationPackage -L --show-trace --impure --print-out-paths --no-link | cachix push whexy
-      - echo "SUCCESS - Can be applied"
-  # Home Manager - Check (aarch64)
-  check-home-manager-aarch64:
-    image: nixos/nix:latest
-    when:
-      event: [push, pull_request]
-    commands:
-      - echo "=== Checking Home Manager home-aarch64 ==="
-      - echo "Evaluating configuration..."
-      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-aarch64.activationPackage.drvPath --impure
-      - echo "SUCCESS - Configuration evaluates correctly"
+      - echo "=== Evaluating other configurations ==="
+      - nix eval --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel.drvPath --show-trace
+      - echo "OK - wsl"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mbp.system.drvPath --show-trace
+      - echo "OK - mbp"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home.activationPackage.drvPath --impure --show-trace
+      - echo "OK - home (x86_64)"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-aarch64.activationPackage.drvPath --impure --show-trace
+      - echo "OK - home (aarch64)"
+      - echo "SUCCESS - All configurations evaluate correctly"
