@@ -43,6 +43,18 @@ sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp
 sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev
 ```
 
+#### Fresh Install (remote-dev)
+
+Boot a NixOS ISO on a Proxmox UEFI + q35 VM, then run:
+
+```bash
+# Partition and format the disk
+sudo nix run github:nix-community/disko -- --mode disko --flake github:whexy/dotfiles#remote-dev
+
+# Install NixOS
+sudo nixos-install --flake github:whexy/dotfiles#remote-dev
+```
+
 ### WSL
 
 ```bash

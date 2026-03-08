@@ -72,6 +72,9 @@ systemFunc {
     # Host Spec
     hardwareConfig
   ]
+  ++ lib.optionals (!darwin) [
+    inputs.disko.nixosModules.disko
+  ]
   ++ systemConfigs
   ++ [
 
