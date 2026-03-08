@@ -27,8 +27,6 @@
     };
   };
 
-  services.blueman.enable = true;
-
   # 1Password GUI
   programs._1password-gui.enable = true;
 

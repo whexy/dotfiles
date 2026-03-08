@@ -15,16 +15,27 @@
   # Enable DRM/KMS and OpenGL support required by Wayland compositors
   hardware.graphics.enable = true;
 
-  # Include redistributable firmware (covers amdgpu, nvidia, etc.) needed for
-  # GPU passthrough — without this, passed-through GPUs fail to initialize.
+  # Include redistributable firmware needed for GPU passthrough
   hardware.enableRedistributableFirmware = true;
+
+  # Enable udev rules files
+  hardware.logitech.wireless.enable = true;
 
   # SPICE agent: dynamic display resolution + clipboard sharing via Proxmox noVNC
   services.spice-vdagentd.enable = true;
 
-  # Bluetooth support (USB controller passthrough or native adapter)
+  # Bluetooth support
   hardware.bluetooth = {
     enable = true;
     powerOnBoot = true;
+    settings = {
+      General = {
+        Experimental = true;
+        FastConnectable = true;
+      };
+      Policy = {
+        AutoEnable = true;
+      };
+    };
   };
 }
