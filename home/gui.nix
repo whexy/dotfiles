@@ -1,6 +1,7 @@
 # GUI systems home-manager configuration
 {
   lib,
+  pkgs,
   darwin ? false,
   ...
 }:
@@ -19,5 +20,9 @@
   ++ lib.optionals darwin [
     # MacOS system enable aerospace for WM-like experience
     ./gui/aerospace.nix
+  ];
+
+  home.packages = with pkgs; [
+    firefox
   ];
 }
