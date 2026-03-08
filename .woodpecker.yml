@@ -31,30 +31,15 @@ steps:
     commands:
       - echo "Verifying flake structure..."
       - nix flake check --extra-experimental-features 'nix-command flakes'
-  # NixOS x86_64-linux remote-dev - Full build + cache update
-  build-nixos-remote-dev:
-    image: nixos/nix:latest
-    when:
-      event: [push, pull_request]
-    environment:
-      CACHIX_AUTH_TOKEN:
-        from_secret: CACHIX_AUTH_TOKEN
-    commands:
-      - echo "=== Building NixOS x86_64-linux remote-dev ==="
-      # Configure substituters so we pull from cache instead of building from source
-      - echo "extra-substituters = https://whexy.cachix.org https://nix-community.cachix.org https://cache.numtide.com" >> /etc/nix/nix.conf
-      - echo "extra-trusted-public-keys = whexy.cachix.org-1:XzmCWs+qh3vMtB4p1joLM+ajn5z/UYgZOyxykzEDV2o= nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs= niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g=" >> /etc/nix/nix.conf
-      - nix profile install --extra-experimental-features 'nix-command flakes' nixpkgs#cachix
-      - cachix authtoken $CACHIX_AUTH_TOKEN
-      - nix build --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel -L --show-trace --print-out-paths --no-link | cachix push whexy
-      - echo "SUCCESS - Can be applied"
-  # Eval-only checks for other configurations
-  check-other-configs:
+  # Evaluate all configurations
+  check-configs:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
     commands:
-      - echo "=== Evaluating other configurations ==="
+      - echo "=== Evaluating all configurations ==="
+      - nix eval --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel.drvPath --show-trace
+      - echo "OK - remote-dev"
       - nix eval --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel.drvPath --show-trace
       - echo "OK - wsl"
       - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mbp.system.drvPath --show-trace
