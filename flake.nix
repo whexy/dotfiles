@@ -64,6 +64,12 @@
       url = "github:sodiboo/niri-flake";
     };
 
+    # Declarative disk partitioning
+    disko = {
+      url = "github:nix-community/disko";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Secret management with age encryption
     agenix = {
       url = "github:ryantm/agenix";
