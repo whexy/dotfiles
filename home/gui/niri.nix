@@ -2,8 +2,53 @@
 {
   inputs,
   pkgs,
+  lib,
+  osConfig,
   ...
 }:
+let
+  monitors = osConfig.hardware.monitors or [ ];
+
+  # Build programs.niri.settings.outputs from hardware.monitors entries.
+  # Each entry maps to a niri output block with mode, refresh, and scale.
+  niriOutputs = lib.listToAttrs (
+    map (m: {
+      name = m.connector;
+      value = lib.filterAttrs (_: v: v != null) {
+        mode = lib.optionalAttrs (m.resolution != null) {
+          width = m.resolution.width;
+          height = m.resolution.height;
+          refresh = m.refreshRate; # null → niri picks highest for the resolution
+        };
+        scale = m.scale;
+      };
+    }) monitors
+  );
+
+  # Script to apply scale 1.5 to any output not covered by hardware.monitors.
+  fallbackScaleScript = pkgs.writeShellApplication {
+    name = "niri-fallback-scale";
+    runtimeInputs = [
+      inputs.niri.packages.${pkgs.system}.niri-stable
+      pkgs.jq
+    ];
+    text =
+      let
+        connector_list = "(${lib.concatMapStringsSep " " (c: ''"${c}"'') (map (m: m.connector) monitors)})";
+      in
+      ''
+        sleep 1
+        declared=${connector_list}
+        for output in $(niri msg --json outputs | jq -r '.[].name'); do
+          skip=0
+          for d in "''${declared[@]}"; do
+            [ "$output" = "$d" ] && skip=1 && break
+          done
+          [ "$skip" = "0" ] && niri msg output "$output" scale 1.5
+        done
+      '';
+  };
+in
 {
   imports = [
     inputs.niri.homeModules.niri
@@ -22,8 +67,10 @@
     # Skip the hotkey overlay on startup (we have custom binds)
     hotkey-overlay.skip-at-startup = true;
 
-    # Scale all outputs to 150% via IPC (works across machines without
-    # knowing output names ahead of time)
+    # Static output configuration derived from hardware.monitors declarations.
+    # Connectors not listed there fall back to the IPC script below.
+    outputs = niriOutputs;
+
     spawn-at-startup = [
       {
         command = [
@@ -34,13 +81,10 @@
           "fill"
         ];
       }
+      # Fallback: apply scale 1.5 to any output not covered by hardware.monitors.
+      # On machines with full hardware.monitors declarations this loop is a no-op.
       {
-        sh = ''
-          sleep 1
-          for output in $(niri msg --json outputs | jq -r '.[].name'); do
-            niri msg output "$output" scale 1.5
-          done
-        '';
+        command = [ "${fallbackScaleScript}/bin/niri-fallback-scale" ];
       }
     ];
 

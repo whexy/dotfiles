@@ -24,6 +24,20 @@
   # SPICE agent: dynamic display resolution + clipboard sharing via Proxmox noVNC
   services.spice-vdagentd.enable = true;
 
+  # Monitor declarations — consumed by compositor configs via osConfig.hardware.monitors
+  # Samsung Odyssey G8 (HDMI-A-1): 4K panel, max 120 Hz over HDMI
+  hardware.monitors = [
+    {
+      connector = "HDMI-A-1";
+      resolution = {
+        width = 3840;
+        height = 2160;
+      };
+      refreshRate = 120.000;
+      scale = 1.5;
+    }
+  ];
+
   # Bluetooth support
   hardware.bluetooth = {
     enable = true;
