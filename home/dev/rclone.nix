@@ -32,8 +32,4 @@ lib.mkIf (!darwin) {
   systemd.user.services."rclone-mount:.@nas".Service.Environment = lib.mkForce [
     "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
   ];
-
-  age.secrets = {
-    nas-webdav-pass.file = ../../secrets/nas-webdav-pass.age;
-  };
 }

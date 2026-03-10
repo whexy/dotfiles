@@ -2,6 +2,7 @@
 {
   pkgs,
   lib,
+  inputs,
   darwin ? false,
   wsl ? false,
   ...
@@ -22,6 +23,7 @@
       (if wsl then openssh-wsl else openssh)
       curl
       htop
+      inputs.home-manager.packages.${pkgs.system}.home-manager
       jq
       mosh
       podman

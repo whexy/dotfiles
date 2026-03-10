@@ -1,12 +1,13 @@
 # Development home-manager configuration
 {
   pkgs,
-  config,
+  inputs,
   darwin ? false,
   ...
 }:
 {
   imports = [
+    ./secrets.nix
     ./dev/agents.nix
     ./dev/git.nix
     ./dev/rclone.nix
@@ -14,12 +15,6 @@
     ./dev/ssh.nix
     ./dev/neovim.nix
   ];
-
-  # agenix secret management
-  age = {
-    identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
-    secrets.api-keys.file = ../secrets/api-keys.age;
-  };
 
   services.gpg-agent = {
     enable = true;
@@ -63,6 +58,7 @@
 
       # Quick tools
       age
+      inputs.agenix.packages.${pkgs.system}.agenix
       cloudflared
       devenv
       fd
