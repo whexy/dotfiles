@@ -55,6 +55,9 @@ systemFunc {
   inherit system;
 
   modules = [
+    # Custom NixOS options (hardware.monitors, etc.)
+    ./options/monitors.nix
+
     # Global Nix Setting
     {
       nix.settings = {

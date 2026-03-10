@@ -171,7 +171,7 @@
 
         ord = mkHost {
           system = "x86_64-linux";
-          hardware = "qemu-x86_64-gui";
+          hardware = "ord";
           hostname = "ord";
           username = "whexy";
           caps = [
