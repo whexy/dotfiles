@@ -62,6 +62,22 @@ in
   programs.niri.enable = true;
   services.wl-clip-persist.enable = true;
 
+  # Turn off all monitors after 5 minutes of inactivity via swayidle.
+  # swayidle listens to the Wayland idle protocol and runs commands on timeout.
+  # `niri msg action power-off-monitors` uses niri's built-in DPMS control.
+  # On resume (any input event), niri automatically powers monitors back on.
+  services.swayidle = {
+    enable = true;
+    timeouts = [
+      {
+        timeout = 300; # 5 minutes
+        command = "${
+          inputs.niri.packages.${pkgs.system}.niri-stable
+        }/bin/niri msg action power-off-monitors";
+      }
+    ];
+  };
+
   # Niri settings
   programs.niri.settings = {
     # Skip the hotkey overlay on startup (we have custom binds)

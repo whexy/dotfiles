@@ -25,7 +25,7 @@
   services.spice-vdagentd.enable = true;
 
   # Monitor declarations — consumed by compositor configs via osConfig.hardware.monitors
-  # Samsung Odyssey G8 (HDMI-A-1): 4K panel, max 120 Hz over HDMI
+  # Samsung Odyssey G8 (HDMI-A-1): 4K panel, 120 Hz over HDMI
   hardware.monitors = [
     {
       connector = "HDMI-A-1";
@@ -37,6 +37,15 @@
       scale = 1.5;
     }
   ];
+
+  # Use the powersave CPU frequency governor to reduce idle power draw.
+  powerManagement.cpuFreqGovernor = "powersave";
+
+  # Suspend the system after 20 minutes of logind-detected idleness.
+  services.logind.settings.Login = {
+    IdleAction = "suspend";
+    IdleActionSec = "20min";
+  };
 
   # Bluetooth support
   hardware.bluetooth = {

@@ -1,6 +1,7 @@
-# Secret definitions for agenix CLI
-# This file is NOT imported into NixOS/home-manager configs.
-# It's only used by the `agenix` CLI to know which public keys to encrypt for.
+# Recipient config for the agenix CLI — NOT imported by any Nix config.
+# This file only tells the `agenix` CLI which public keys to encrypt each
+# .age file for. The actual secret declarations (which modules consume which
+# secrets) live in home/secrets.nix.
 #
 # Usage:
 #   cd secrets/
