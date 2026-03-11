@@ -12,11 +12,11 @@
     ./gui/git.nix
     ./gui/waybar.nix
     ./gui/wezterm.nix
+    ./gui/firefox.nix
   ]
   ++ lib.optionals (!darwin) [
     # Linux system use Niri as WM
     ./gui/niri.nix
-    ./gui/firefox.nix
     ./gui/obs.nix
   ]
   ++ lib.optionals darwin [
