@@ -8,14 +8,16 @@
 {
   imports = [
     ./gui/clipboard.nix
-    ./gui/git.nix
     ./gui/ghostty.nix
+    ./gui/git.nix
+    ./gui/obs.nix
     ./gui/waybar.nix
     ./gui/wezterm.nix
   ]
   ++ lib.optionals (!darwin) [
     # Linux system use Niri as WM
     ./gui/niri.nix
+    ./gui/firefox.nix
   ]
   ++ lib.optionals darwin [
     # MacOS system enable aerospace for WM-like experience
@@ -23,6 +25,6 @@
   ];
 
   home.packages = with pkgs; [
-    firefox
+    zoom-us
   ];
 }
