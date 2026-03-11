@@ -14,10 +14,25 @@ update *INPUT:
         nix flake update {{INPUT}}; \
     fi
 
-# Verify all flake outputs evaluate correctly
+# Verify primary configurations evaluate correctly (remote-dev, ord, mba, home)
 verify:
-    @echo "Running flake checks..."
-    nix flake check --extra-experimental-features 'nix-command flakes' --all-systems
+    @echo "=== Verifying primary configurations ==="
+    @echo "Evaluating remote-dev..."
+    nix eval .#nixosConfigurations.remote-dev.config.system.build.toplevel.drvPath --show-trace
+    @echo "OK - remote-dev"
+    @echo "Evaluating ord..."
+    nix eval .#nixosConfigurations.ord.config.system.build.toplevel.drvPath --show-trace
+    @echo "OK - ord"
+    @echo "Evaluating mba..."
+    nix eval .#darwinConfigurations.mba.system.drvPath --show-trace
+    @echo "OK - mba"
+    @echo "Evaluating home (x86_64)..."
+    nix eval .#homeConfigurations.home.activationPackage.drvPath --impure --show-trace
+    @echo "OK - home (x86_64)"
+    @echo "Evaluating home (aarch64)..."
+    nix eval .#homeConfigurations.home-aarch64.activationPackage.drvPath --impure --show-trace
+    @echo "OK - home (aarch64)"
+    @echo "SUCCESS - All primary configurations evaluate correctly"
 
 # Build WSL tarball for import (requires sudo)
 build-wsl:
@@ -28,26 +43,6 @@ build-wsl:
     cd result/wsl && sudo ../../result/wsl/build/bin/nixos-wsl-tarball-builder
     @echo "WSL tarball created: result/wsl/nixos.wsl"
     @echo "Import with: wsl --import NixOS <install-path> result/wsl/nixos.wsl"
-
-# Build portable neovim binary using nix-portable bundler
-build-portable-nvim:
-    #!/usr/bin/env bash
-    set -euo pipefail
-    
-    mkdir -p result/portable-nvim
-    
-    echo "Bundling portable-nvim with nix-portable (zstd-max compression)..."
-    nix bundle --bundler github:DavHau/nix-portable#zstd-max -o result/portable-nvim/bundle .#packages.x86_64-linux.portable-nvim
-    
-    echo "Creating standalone executable..."
-    cp ./result/portable-nvim/bundle/bin/nvim ./result/portable-nvim/nvim
-    chmod +w ./result/portable-nvim/nvim
-    
-    echo ""
-    echo "Build complete!"
-    echo "Created: result/portable-nvim/nvim (portable, self-contained executable)"
-    echo ""
-    echo "Distribute this single file. Users can run it on any x86_64 Linux system."
 
 # Build Proxmox VMA image for a NixOS configuration
 # DISK_GB: disk size in GB (default: auto-sized based on closure)

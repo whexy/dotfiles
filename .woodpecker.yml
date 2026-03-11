@@ -23,29 +23,33 @@ steps:
           git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git
           git push origin HEAD:master
         fi
-  # Verify flake structure
+  # Verify flake structure and evaluate all NixOS configurations
   check-flake:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
     commands:
-      - echo "Verifying flake structure..."
-      - nix flake check --extra-experimental-features 'nix-command flakes'
-  # Evaluate all configurations
-  check-configs:
+      - echo "=== Verifying flake (all NixOS configurations) ==="
+      - nix flake check --extra-experimental-features 'nix-command flakes' --all-systems
+      - echo "OK - flake check passed"
+  # Evaluate darwin and home-manager configurations (not covered by flake check)
+  check-extra-configs:
     image: nixos/nix:latest
     when:
       event: [push, pull_request]
     commands:
-      - echo "=== Evaluating all configurations ==="
-      - nix eval --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.remote-dev.config.system.build.toplevel.drvPath --show-trace
-      - echo "OK - remote-dev"
-      - nix eval --extra-experimental-features 'nix-command flakes' .#nixosConfigurations.wsl.config.system.build.toplevel.drvPath --show-trace
-      - echo "OK - wsl"
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mbp.system.drvPath --show-trace
-      - echo "OK - mbp"
+      - echo "=== Evaluating darwin configurations ==="
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mba.system.drvPath --show-trace
+      - echo "OK - mba"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mini.system.drvPath --show-trace
+      - echo "OK - mini"
+      - echo "=== Evaluating home-manager configurations ==="
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home.activationPackage.drvPath --impure --show-trace
       - echo "OK - home (x86_64)"
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-aarch64.activationPackage.drvPath --impure --show-trace
-      - echo "OK - home (aarch64)"
+      - echo "OK - home-aarch64"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-base.activationPackage.drvPath --impure --show-trace
+      - echo "OK - home-base (x86_64)"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-base-aarch64.activationPackage.drvPath --impure --show-trace
+      - echo "OK - home-base-aarch64"
       - echo "SUCCESS - All configurations evaluate correctly"

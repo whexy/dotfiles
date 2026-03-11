@@ -94,12 +94,7 @@
           >
             Desktop
           </button>
-          <button
-            class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
-            data-category="packages"
-          >
-            Packages
-          </button>
+
         </div>
 
         <!-- Target row -->
@@ -221,8 +216,8 @@
         ],
         macos: [
           {
-            label: "MacBook Pro",
-            cmd: "sudo darwin-rebuild switch --flake github:whexy/dotfiles#mbp",
+            label: "MacBook Air",
+            cmd: "sudo darwin-rebuild switch --flake github:whexy/dotfiles#mba",
           },
           {
             label: "Mac Mini",
@@ -233,6 +228,14 @@
           {
             label: "remote-dev",
             cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev",
+          },
+          {
+            label: "mvp",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#mvp",
+          },
+          {
+            label: "ord",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#ord",
           },
           {
             label: "remote-basic",
@@ -265,12 +268,7 @@
             cmd: "just build-desktop vmware aarch64",
           },
         ],
-        packages: [
-          {
-            label: "portable-nvim",
-            cmd: "just build-portable-nvim",
-          },
-        ],
+
       };
 
       let currentCommand = "";
