@@ -30,4 +30,7 @@
 
     spaces.spans-displays = true;
   };
+
+  # 1Password GUI
+  programs._1password-gui.enable = true;
 }
