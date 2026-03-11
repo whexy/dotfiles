@@ -87,6 +87,14 @@ in
     # Connectors not listed there fall back to the IPC script below.
     outputs = niriOutputs;
 
+    # XWayland support for X11 apps that don't support Wayland natively.
+    # xwayland-satellite runs as a separate process and provides a rootless XWayland
+    # server; it starts lazily when an X11 app first requests DISPLAY.
+    xwayland-satellite = {
+      enable = true;
+      path = "${inputs.niri.packages.${pkgs.system}.xwayland-satellite-stable}/bin/xwayland-satellite";
+    };
+
     spawn-at-startup = [
       {
         command = [
