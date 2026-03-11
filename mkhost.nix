@@ -2,6 +2,7 @@
 {
   inputs,
   self,
+  nixConfig,
 }:
 {
   system,
@@ -66,7 +67,8 @@ systemFunc {
           "flakes"
         ];
         warn-dirty = false;
-      };
+      }
+      // nixConfig;
     }
 
     # Global Nixpkgs Config (overlays, ...)

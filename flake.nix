@@ -1,4 +1,4 @@
-{
+rec {
   description = "Nix Configurations";
 
   nixConfig = {
@@ -81,7 +81,7 @@
     { self, ... }@inputs:
     let
       mkHost = import ./mkhost.nix {
-        inherit inputs self;
+        inherit inputs self nixConfig;
       };
       mkHome = import ./mkhome.nix {
         inherit inputs;
