@@ -28,6 +28,8 @@
       ShowPathbar = true;
     };
 
+    trackpad.TrackpadThreeFingerDrag = true;
+
     spaces.spans-displays = true;
   };
 
