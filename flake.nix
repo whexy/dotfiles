@@ -103,10 +103,10 @@
     {
       # macOS (nix-darwin) configurations
       darwinConfigurations = {
-        mbp = mkHost {
+        mba = mkHost {
           system = "aarch64-darwin";
           hardware = "macos-laptop";
-          hostname = "mbp";
+          hostname = "mba";
           username = "whexy";
           darwin = true;
           caps = [
