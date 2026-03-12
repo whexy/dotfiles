@@ -2,6 +2,9 @@
 {
   programs.obs-studio = {
     enable = true;
-    plugins = [ pkgs.obs-studio-plugins.obs-websocket ];
+    plugins = with pkgs.obs-studio-plugins; [
+      obs-websocket
+      obs-vaapi # VA-API hardware encoder (AMD/Intel)
+    ];
   };
 }
