@@ -7,6 +7,7 @@
     bash
     zsh
   ];
+  services.tailscale.enable = true;
 
   # Enable Linux builder VM for building NixOS configurations on macOS
   nix.linux-builder = {
