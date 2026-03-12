@@ -26,6 +26,7 @@ local TS_PACKAGES = {
 	"typescript",
 	"typst",
 	"yaml",
+	"zig",
 }
 
 local LSPS = {
