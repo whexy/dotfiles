@@ -14,6 +14,7 @@
   ];
 
   system.defaults = {
+    menuExtraClock.Show24Hour = true;
     dock = {
       autohide = true;
       mru-spaces = false;
@@ -21,16 +22,23 @@
       show-recents = false;
       static-only = true;
     };
-
     finder = {
       AppleShowAllExtensions = true;
       FXEnableExtensionChangeWarning = false;
+      FXPreferredViewStyle = "Nlsv";
+      FXDefaultSearchScope = "SCcf";
       ShowPathbar = true;
+      _FXSortFoldersFirst = true;
+      _FXSortFoldersFirstOnDesktop = true;
     };
-
-    trackpad.TrackpadThreeFingerDrag = true;
-
+    CustomUserPreferences = {
+      "com.apple.desktopservices" = {
+        DSDontWriteNetworkStores = true;
+        DSDontWriteUSBStores = true;
+      };
+    };
     spaces.spans-displays = true;
+    trackpad.TrackpadThreeFingerDrag = true;
   };
 
   # 1Password GUI
