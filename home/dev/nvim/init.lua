@@ -394,6 +394,10 @@ require("conform").setup({
 	formatters_by_ft = FORMATTERS,
 })
 
+require("conform").formatters.typstyle = {
+	append_args = { "--wrap-text" },
+}
+
 -- ── Lint ─────────────────────────────────────────────────────────────────
 local lint = require("lint")
 
