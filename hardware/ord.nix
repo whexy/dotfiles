@@ -13,6 +13,8 @@
   boot.initrd.kernelModules = [ "virtio_gpu" ];
 
   # Enable DRM/KMS and OpenGL support required by Wayland compositors
+  # Mesa (pulled in by enable = true) includes the radeonsi VA-API backend and
+  # RADV Vulkan driver, which together enable hardware encoding in OBS via obs-vaapi.
   hardware.graphics.enable = true;
 
   # Include redistributable firmware needed for GPU passthrough
