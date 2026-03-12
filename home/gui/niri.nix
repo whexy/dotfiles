@@ -230,12 +230,6 @@ in
           repeat = false;
         };
 
-        # Quit niri (with confirmation dialog)
-        "${hyper}+Semicolon" = {
-          action.quit = { };
-          repeat = false;
-        };
-
         # Show hotkey overlay
         "${hyper}+Slash".action.show-hotkey-overlay = [ ];
 

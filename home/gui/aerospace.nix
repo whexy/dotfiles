@@ -90,8 +90,13 @@
         cmd-alt-ctrl-8 = "move-node-to-workspace 8";
         cmd-alt-ctrl-9 = "move-node-to-workspace 9";
         cmd-alt-ctrl-0 = "move-node-to-workspace 10";
-        cmd-alt-ctrl-left = "move-workspace-to-monitor --wrap-around prev";
-        cmd-alt-ctrl-right = "move-workspace-to-monitor --wrap-around next";
+        cmd-alt-ctrl-leftSquareBracket = "join-with left";
+        cmd-alt-ctrl-rightSquareBracket = "join-with right";
+        cmd-alt-ctrl-left = "move-node-to-monitor --wrap-around prev";
+        cmd-alt-ctrl-right = "move-node-to-monitor --wrap-around next";
+        cmd-alt-ctrl-shift-f = "layout floating tiling";
+        cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
+        cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
         cmd-alt-ctrl-shift-semicolon = "mode service";
       };
 
@@ -102,10 +107,6 @@
         ];
         r = [
           "flatten-workspace-tree"
-          "mode main"
-        ];
-        f = [
-          "layout floating tiling"
           "mode main"
         ];
         backspace = [
