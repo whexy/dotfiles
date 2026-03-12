@@ -47,11 +47,17 @@ inputs.home-manager.lib.homeManagerConfiguration {
     inherit inputs;
   };
   modules = homeConfigs ++ [
+    # Agenix
     inputs.agenix.homeManagerModules.default
+
+    # nix-index-database and comma
+    inputs.nix-index-database.homeModules.default
+
     {
       home.username = username;
       home.homeDirectory = homeDirectory;
     }
+
     {
       targets.genericLinux.enable = true;
       # Disable GPU integration - it's not needed for standalone configs (typically remote servers)

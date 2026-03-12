@@ -96,6 +96,7 @@ systemFunc {
       home-manager.users.${username} = {
         imports = homeConfigs ++ [
           inputs.agenix.homeManagerModules.default
+          inputs.nix-index-database.homeModules.default
         ];
       };
     }
