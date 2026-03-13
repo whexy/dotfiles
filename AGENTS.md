@@ -45,10 +45,7 @@ capability of a certain machine.
 `gui` cap:
     machines expected to have GUI environments. Enable GUI related setups,
     like ghostty, browser, fonts.
-
-`macos` cap:
-    macOS-specific settings like dock, finder, and Touch ID for sudo.
-    Only used on Darwin systems.
+    Also included macOS-specific settings like dock, finder, Touch ID for sudo.
 
 For example, a remote NixOS dev machine should enable base+dev.
 My macOS machines enable base+dev+gui+macos.
