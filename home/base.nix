@@ -7,6 +7,11 @@
   wsl ? false,
   ...
 }:
+let
+  p = pkgs.unstable;
+  ghostty-pkg = (if darwin then p.ghostty-bin else p.ghostty);
+  ghostty-terminfo = ghostty-pkg.terminfo;
+in
 {
   imports = [
     ./base/htop.nix
@@ -19,7 +24,7 @@
   home.packages =
     with pkgs;
     [
-      (if darwin then ghostty-bin.terminfo else ghostty.terminfo)
+      ghostty-terminfo
       (if wsl then openssh-wsl else openssh)
       curl
       htop
