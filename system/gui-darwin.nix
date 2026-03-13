@@ -37,6 +37,14 @@
         DSDontWriteUSBStores = true;
       };
     };
+    NSGlobalDomain = {
+      ApplePressAndHoldEnabled = false;
+      KeyRepeat = 2;
+      InitialKeyRepeat = 15;
+      AppleTemperatureUnit = "Celsius";
+      AppleMeasurementUnits = "Centimeters";
+      AppleMetricUnits = 1;
+    };
     spaces.spans-displays = true;
     trackpad.TrackpadThreeFingerDrag = true;
   };
