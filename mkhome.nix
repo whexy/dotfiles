@@ -5,10 +5,7 @@
 }:
 {
   system,
-  caps ? [
-    "base"
-    "dev"
-  ],
+  caps,
 }:
 
 let
