@@ -91,19 +91,6 @@ rec {
       mkHome = import ./mkhome.nix {
         inherit inputs;
       };
-
-      mkRemoteDev =
-        hostname:
-        mkHost {
-          system = "x86_64-linux";
-          hardware = "qemu-x86_64";
-          hostname = hostname;
-          username = "whexy";
-          caps = [
-            "base"
-            "dev"
-          ];
-        };
     in
     {
       # macOS (nix-darwin) configurations
@@ -137,43 +124,7 @@ rec {
 
       # NixOS configurations
       nixosConfigurations = {
-        remote-dev = mkRemoteDev "remote-dev";
-        mvp = mkRemoteDev "mvp";
-
-        remote-basic = mkHost {
-          system = "x86_64-linux";
-          hardware = "qemu-x86_64";
-          hostname = "remote-basic";
-          username = "whexy";
-          caps = [
-            "base"
-          ];
-        };
-
-        # Proxmox VM image (use `just build-proxmox remote-service`)
-        remote-service = mkHost {
-          system = "x86_64-linux";
-          hardware = "proxmox";
-          hostname = "remote-service";
-          username = "whexy";
-          caps = [
-            "base"
-            "service"
-          ];
-        };
-
-        wsl = mkHost {
-          system = "x86_64-linux";
-          hardware = "wsl";
-          hostname = "nixos-wsl";
-          username = "whexy";
-          wsl = true;
-          caps = [
-            "base"
-            "dev"
-          ];
-        };
-
+        # home - workstation (5800X)
         ord = mkHost {
           system = "x86_64-linux";
           hardware = "ord";
@@ -186,8 +137,70 @@ rec {
           ];
         };
 
-        # Desktop VM images - UTM (QEMU) backend
-        # Build with: just build-desktop utm [x86_64|aarch64]
+        # lab - b3srv0 (9995WX)
+        remote-dev = mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64";
+          hostname = "remote-dev";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+          ];
+        };
+
+        # lab - workstation (5700X)
+        mvp = mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64";
+          hostname = "mvp";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+          ];
+        };
+
+        # home - desktop (7800X3D)
+        wsl = mkHost {
+          system = "x86_64-linux";
+          hardware = "wsl";
+          hostname = "nixos-wsl";
+          username = "whexy";
+          wsl = true;
+          caps = [
+            "base"
+            "dev"
+          ];
+        };
+
+        # ------------------------
+        # --- ARTIFICIAL HOSTS ---
+        # ------------------------
+
+        remote-basic = mkHost {
+          system = "x86_64-linux";
+          hardware = "qemu-x86_64";
+          hostname = "remote-basic";
+          username = "whexy";
+          caps = [
+            "base"
+          ];
+        };
+
+        # `just build-proxmox remote-service`
+        remote-service = mkHost {
+          system = "x86_64-linux";
+          hardware = "proxmox";
+          hostname = "remote-service";
+          username = "whexy";
+          caps = [
+            "base"
+            "service"
+          ];
+        };
+
+        # `just build-desktop utm x86_64`
         desktop-utm-x86_64 = mkHost {
           system = "x86_64-linux";
           hardware = "vm-desktop-utm";
@@ -200,6 +213,7 @@ rec {
           ];
         };
 
+        # `just build-desktop utm aarch64`
         desktop-utm-aarch64 = mkHost {
           system = "aarch64-linux";
           hardware = "vm-desktop-utm";
@@ -212,8 +226,7 @@ rec {
           ];
         };
 
-        # Desktop VM images - VMware backend
-        # Build with: just build-desktop vmware [x86_64|aarch64]
+        # `just build-desktop vmware x86_64`
         desktop-vmware-x86_64 = mkHost {
           system = "x86_64-linux";
           hardware = "vm-desktop-vmware";
@@ -226,6 +239,7 @@ rec {
           ];
         };
 
+        # `just build-desktop vmware aarch64`
         desktop-vmware-aarch64 = mkHost {
           system = "aarch64-linux";
           hardware = "vm-desktop-vmware";
@@ -243,10 +257,18 @@ rec {
       homeConfigurations = {
         home = mkHome {
           system = "x86_64-linux";
+          caps = [
+            "base"
+            "dev"
+          ];
         };
 
         home-aarch64 = mkHome {
           system = "aarch64-linux";
+          caps = [
+            "base"
+            "dev"
+          ];
         };
 
         home-base = mkHome {
