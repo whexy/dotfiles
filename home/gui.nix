@@ -24,12 +24,4 @@
     ./gui/aerospace.nix
     ./gui/karabiner.nix
   ];
-
-  home.packages =
-    lib.optionals (pkgs.stdenv.hostPlatform.isx86_64 && !darwin) [
-      pkgs.zoom-us
-    ]
-    ++ lib.optionals darwin [
-      pkgs.raycast
-    ];
 }
