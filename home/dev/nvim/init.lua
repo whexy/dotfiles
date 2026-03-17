@@ -184,7 +184,8 @@ vim.pack.add({
 
 	-- Visual guides
 	"https://github.com/lukas-reineke/indent-blankline.nvim",
-	"https://github.com/HiPhish/rainbow-delimiters.nvim",
+	-- TODO: Taking this out since it has bug on recent nightly neovim 0.12
+	-- "https://github.com/HiPhish/rainbow-delimiters.nvim",
 
 	-- Formatting & linting
 	"https://github.com/stevearc/conform.nvim",
