@@ -1,8 +1,7 @@
 # Ghostty terminal configuration
 { pkgs, darwin, ... }:
 let
-  p = pkgs.unstable;
-  ghostty-pkg = if darwin then p.ghostty-bin else p.ghostty;
+  ghostty-pkg = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
 in
 {
   programs.ghostty = {
