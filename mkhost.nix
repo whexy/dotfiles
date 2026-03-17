@@ -58,6 +58,7 @@ systemFunc {
   modules = [
     # Custom NixOS options (hardware.monitors, etc.)
     ./options/monitors.nix
+    ./options/keyboards.nix
 
     # Global Nix Setting
     {

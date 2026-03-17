@@ -5,7 +5,13 @@
 #
 # Hyper = Ctrl+Alt+Shift+Cmd (held CapsLock)
 # Meh   = Ctrl+Alt+Cmd       (held Tab)
-{ ... }:
+{
+  osConfig,
+  ...
+}:
+let
+  keyboards = osConfig.hardware.keyboards or [ ];
+in
 {
   xdg.configFile."karabiner/karabiner.json".text = builtins.toJSON {
     global = {
@@ -15,6 +21,15 @@
       {
         name = "Default";
         selected = true;
+        devices = map (keyboard: {
+          identifiers = {
+            is_keyboard = true;
+            is_pointing_device = keyboard.isPointingDevice;
+            product_id = keyboard.productId;
+            vendor_id = keyboard.vendorId;
+          };
+          ignore = false;
+        }) keyboards;
         complex_modifications = {
           parameters = {
             "basic.to_if_alone_timeout_milliseconds" = 200;
