@@ -110,6 +110,14 @@ in
       {
         command = [ "${fallbackScaleScript}/bin/niri-fallback-scale" ];
       }
+      # Input method framework (fcitx5) – needs explicit launch since niri
+      # doesn't process XDG autostart entries.
+      {
+        command = [
+          "fcitx5"
+          "-d"
+        ];
+      }
     ];
 
     # Transparent workspace background so Ghostty's opacity shows the wallpaper
