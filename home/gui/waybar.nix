@@ -70,13 +70,13 @@ lib.mkIf (!darwin) {
         };
 
         cpu = {
-          format = " {usage}%";
+          format = "󰍛 {usage}%";
           interval = 5;
           tooltip-format = "{avg_frequency} GHz";
         };
 
         memory = {
-          format = " {used:0.1f}G/{total:0.1f}G";
+          format = "󰘚 {used:0.1f}G/{total:0.1f}G";
           interval = 5;
           tooltip-format = "{percentage}% used";
         };
