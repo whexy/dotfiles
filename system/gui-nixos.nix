@@ -1,6 +1,18 @@
 # GUI NixOS system configuration
 { pkgs, username, ... }:
 {
+  i18n.inputMethod = {
+    enable = true;
+    type = "fcitx5";
+    fcitx5.waylandFrontend = true;
+    fcitx5.addons = with pkgs; [
+      fcitx5-fluent
+      (fcitx5-rime.override {
+        rimeDataPkgs = [ pkgs.rime-ice ];
+      })
+    ];
+  };
+
   fonts.packages = [
     (pkgs.nerd-fonts.fira-code)
     (pkgs.nerd-fonts.jetbrains-mono)
@@ -81,10 +93,13 @@
   # 1Password GUI
   programs._1password-gui.enable = true;
 
-  # Kanata: remap CapsLock to Hyper / CapsLock,
+  # Kanata: remap CapsLock to Hyper / Hangul,
   #         remap Tab to Meh / Tab.
   # Uses tap-hold-press so the modifier activates instantly when another
   # key is pressed, and the tap fires on release if pressed alone.
+  # CapsLock tap emits Hangul (evdev KEY_HANGEUL=122, XKB keysym Hangul)
+  # which fcitx5 uses as the input method toggle — mimicking macOS
+  # CapsLock input switching.
   # This mirrors the Karabiner setup on macOS.
   services.kanata = {
     enable = true;
@@ -92,6 +107,9 @@
       devices = [ ]; # empty = all keyboards
       extraDefCfg = "process-unmapped-keys yes";
       config = ''
+        (deflocalkeys-linux
+          hgl 122  ;; KEY_HANGEUL: no built-in alias in kanata on Linux
+        )
         (defsrc
           caps tab
         )
@@ -100,7 +118,7 @@
           hold-time 200
         )
         (defalias
-          hyper (tap-hold-press $tap-time $hold-time caps (multi lctl lalt lsft lmet))
+          hyper (tap-hold-press $tap-time $hold-time hgl (multi lctl lalt lsft lmet))
           meh   (tap-hold-press $tap-time $hold-time tab  (multi lctl lalt lmet))
         )
         (deflayer default
