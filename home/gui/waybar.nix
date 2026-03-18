@@ -13,75 +13,253 @@ lib.mkIf (!darwin) {
       mainBar = {
         layer = "top";
         position = "bottom";
-        height = 24;
+        height = 30;
+        spacing = 4;
 
-        modules-left = [ "niri/workspaces" ];
-        modules-center = [ ];
+        modules-left = [
+          "niri/workspaces"
+          "idle_inhibitor"
+          "niri/window"
+        ];
+        modules-center = [
+          "clock"
+        ];
         modules-right = [
+          "tray"
+          "network"
           "cpu"
           "memory"
           "disk"
-          "clock"
         ];
 
         "niri/workspaces" = {
-          format = "{icon}";
-          format-icons = {
-            active = "";
-            default = "";
+          format = "{index}";
+        };
+
+        "niri/window" = {
+          format = "{}";
+          max-length = 50;
+          rewrite = {
+            "(.*) — Mozilla Firefox" = "󰈹 $1";
+            "(.*) - fish" = " $1";
+            "(.*)" = "$1";
           };
         };
 
-        cpu = {
-          format = "cpu: {usage}%";
+        idle_inhibitor = {
+          format = "{icon}";
+          format-icons = {
+            activated = "󰅶";
+            deactivated = "󰾪";
+          };
+          tooltip-format-activated = "Idle inhibitor: on";
+          tooltip-format-deactivated = "Idle inhibitor: off";
+        };
+
+        tray = {
+          icon-size = 14;
+          spacing = 8;
+        };
+
+        network = {
+          format-wifi = "󰤨 {essid} ({signalStrength}%)";
+          format-ethernet = "󰈀 {ipaddr}";
+          format-disconnected = "󰤭 disconnected";
+          tooltip-format = "{ipaddr}/{cidr} via {gwaddr}";
           interval = 5;
+        };
+
+        cpu = {
+          format = " {usage}%";
+          interval = 5;
+          tooltip-format = "{avg_frequency} GHz";
         };
 
         memory = {
-          format = "mem: {used:0.1f}G/{total:0.1f}G";
+          format = " {used:0.1f}G/{total:0.1f}G";
           interval = 5;
+          tooltip-format = "{percentage}% used";
         };
 
         disk = {
-          format = "disk: {free}";
+          format = "󰋊 {free}";
           path = "/";
           interval = 30;
+          tooltip-format = "{used} used / {total} total";
         };
 
         clock = {
-          format = "{:%Y-%m-%d %H:%M:%S}";
+          format = "{:%H:%M:%S}";
+          format-alt = "{:%Y-%m-%d %A}";
           interval = 1;
+          tooltip-format = "<tt><small>{calendar}</small></tt>";
+          calendar = {
+            mode = "year";
+            mode-mon-col = 3;
+            weeks-pos = "right";
+            on-scroll = 1;
+            format = {
+              months = "<span color='#d79921'><b>{}</b></span>";
+              days = "<span color='#ebdbb2'>{}</span>";
+              weekdays = "<span color='#458588'><b>{}</b></span>";
+              weeks = "<span color='#928374'>W{}</span>";
+              today = "<span color='#cc241d'><b><u>{}</u></b></span>";
+            };
+          };
         };
       };
     };
 
-    # Gruvbox-inspired styling
+    # Gruvbox-inspired pill styling
     style = ''
       * {
         font-family: "JetBrainsMono Nerd Font", monospace;
         font-size: 12px;
+        min-height: 0;
       }
 
       window#waybar {
-        background-color: #282828;
+        background-color: rgba(40, 40, 40, 0.9);
         color: #ebdbb2;
+      }
+
+      /* Pill-shaped module styling */
+      #workspaces,
+      #window,
+      #idle_inhibitor,
+      #tray,
+      #network,
+      #cpu,
+      #memory,
+      #disk,
+      #clock {
+        padding: 2px 10px;
+        margin: 3px 2px;
+        border-radius: 10px;
+        background-color: #3c3836;
+        transition: all 0.3s ease;
+      }
+
+      /* Workspaces */
+      #workspaces {
+        padding: 0;
+        background-color: transparent;
       }
 
       #workspaces button {
-        padding: 0 5px;
+        padding: 2px 8px;
+        margin: 3px 1px;
+        border-radius: 10px;
         color: #928374;
-        background-color: transparent;
+        background-color: #3c3836;
         border: none;
+        transition: all 0.3s ease;
+      }
+
+      #workspaces button:hover {
+        background-color: #504945;
+        color: #ebdbb2;
       }
 
       #workspaces button.active {
-        color: #ebdbb2;
+        color: #282828;
         background-color: #458588;
+        font-weight: bold;
       }
 
-      #cpu, #memory, #disk, #clock {
-        padding: 0 10px;
+      /* Window title */
+      #window {
+        color: #a89984;
+        font-style: italic;
+      }
+
+      /* Idle inhibitor */
+      #idle_inhibitor {
+        color: #928374;
+      }
+
+      #idle_inhibitor.activated {
+        color: #282828;
+        background-color: #d79921;
+      }
+
+      /* Tray */
+      #tray {
+        background-color: #3c3836;
+      }
+
+      #tray > .passive {
+        -gtk-icon-effect: dim;
+      }
+
+      #tray > .needs-attention {
+        -gtk-icon-effect: highlight;
+        background-color: #cc241d;
+        border-radius: 10px;
+      }
+
+      /* Network */
+      #network {
+        color: #689d6a;
+      }
+
+      #network.disconnected {
+        color: #cc241d;
+        background-color: #3c3836;
+      }
+
+      #network:hover {
+        background-color: #689d6a;
+        color: #282828;
+      }
+
+      /* CPU */
+      #cpu {
+        color: #d79921;
+      }
+
+      #cpu:hover {
+        background-color: #d79921;
+        color: #282828;
+      }
+
+      /* Memory */
+      #memory {
+        color: #458588;
+      }
+
+      #memory:hover {
+        background-color: #458588;
+        color: #282828;
+      }
+
+      /* Disk */
+      #disk {
+        color: #b16286;
+      }
+
+      #disk:hover {
+        background-color: #b16286;
+        color: #282828;
+      }
+
+      /* Clock */
+      #clock {
         color: #ebdbb2;
+        font-weight: bold;
+        background-color: #504945;
+      }
+
+      #clock:hover {
+        background-color: #ebdbb2;
+        color: #282828;
+      }
+
+      /* Blink animation for critical states */
+      @keyframes blink {
+        to {
+          background-color: #fb4934;
+        }
       }
     '';
   };
