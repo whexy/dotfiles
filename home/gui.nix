@@ -30,7 +30,11 @@
   home.packages =
     with pkgs;
     lib.optionals (!darwin) [
+      # Linux only
       obsidian
+    ]
+    ++ lib.optionals (!darwin && pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
+      # x86-64 Linux only
       zoom-us
     ];
 }
