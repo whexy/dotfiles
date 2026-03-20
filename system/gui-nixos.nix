@@ -69,6 +69,13 @@
     </fontconfig>
   '';
 
+  # XDG Desktop Portal: provides file chooser dialogs, etc. for GUI apps
+  xdg.portal = {
+    enable = true;
+    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
+    config.common.default = [ "gtk" ];
+  };
+
   # Required for xdg-desktop-portal with home-manager
   environment.pathsToLink = [
     "/share/applications"
