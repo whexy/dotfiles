@@ -251,6 +251,7 @@ in
         "Print".action.screenshot = [ ];
         "Ctrl+Print".action.screenshot-screen = [ ];
         "Alt+Print".action.screenshot-window = [ ];
+        "${hyper}+A".action.screenshot = [ ];
 
         # ── Monitor focus (Hyper + arrow keys) ────────────────────
         "${hyper}+Left".action.focus-monitor-left = [ ];
