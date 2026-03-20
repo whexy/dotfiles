@@ -77,5 +77,15 @@
     SystemMaxUse=1G
     MaxRetentionSec=1month
   '';
-  services.prometheus.exporters.node.enable = true;
+
+  # Export metrics
+  services.prometheus.exporters.node = {
+    enable = true;
+    listenAddress = "0.0.0.0";
+    port = 9100;
+    enabledCollectors = [
+      "systemd"
+      "processes"
+    ];
+  };
 }
