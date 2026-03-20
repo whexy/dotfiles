@@ -26,4 +26,11 @@
     ./gui/aerospace.nix
     ./gui/karabiner.nix
   ];
+
+  home.packages =
+    with pkgs;
+    lib.optionals (!darwin) [
+      obsidian
+      zoom-us
+    ];
 }
