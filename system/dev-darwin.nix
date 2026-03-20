@@ -35,4 +35,10 @@
     # Native Apple Silicon support only (fastest)
     systems = [ "aarch64-linux" ];
   };
+
+  services.prometheus.exporters.node = {
+    enable = true;
+    listenAddress = "0.0.0.0";
+    port = 9100;
+  };
 }
