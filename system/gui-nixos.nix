@@ -69,11 +69,14 @@
     </fontconfig>
   '';
 
-  # XDG Desktop Portal: provides file chooser dialogs, etc. for GUI apps
+  # GNOME Keyring: implements the Secret portal for apps that need credentials
+  services.gnome.gnome-keyring.enable = true;
+
+  # XDG Desktop Portal: provides file chooser, screen cast, notifications, etc.
   xdg.portal = {
     enable = true;
-    extraPortals = [ pkgs.xdg-desktop-portal-gtk ];
-    config.common.default = [ "gtk" ];
+    extraPortals = [ pkgs.xdg-desktop-portal-gnome ];
+    config.common.default = [ "gnome" ];
   };
 
   # Required for xdg-desktop-portal with home-manager
