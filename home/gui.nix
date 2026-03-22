@@ -32,6 +32,7 @@
     lib.optionals (!darwin) [
       # Linux only
       obsidian
+      nautilus # required by xdg-desktop-portal-gnome for FileChooser
     ]
     ++ lib.optionals (!darwin && pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
       # x86-64 Linux only
