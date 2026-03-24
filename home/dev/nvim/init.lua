@@ -8,6 +8,7 @@
 local TS_PACKAGES = {
 	"bash",
 	"cpp",
+	"glsl",
 	"go",
 	"gomod",
 	"gosum",
