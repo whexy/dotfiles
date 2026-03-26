@@ -115,7 +115,16 @@ vim.opt.signcolumn = "yes"
 vim.opt.ruler = true
 vim.opt.laststatus = 3
 vim.opt.termguicolors = true
+vim.opt.textwidth = 80
 vim.opt.colorcolumn = "80"
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = { "rust", "zig" },
+	callback = function()
+		-- Wider ruler for languages with longer line conventions
+		vim.opt_local.colorcolumn = "100"
+		vim.opt_local.textwidth = 100
+	end,
+})
 vim.opt.showmode = false
 
 -- Scrolling & windows
