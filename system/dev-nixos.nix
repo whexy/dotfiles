@@ -10,6 +10,8 @@ let
   emulated = lib.remove host universe;
 in
 {
+  documentation.dev.enable = true; # man pages for syscalls & libc (sections 2, 3)
+
   time.timeZone = "America/Chicago";
   programs.zsh.enable = true;
   security.sudo.wheelNeedsPassword = false;

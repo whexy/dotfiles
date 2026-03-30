@@ -50,6 +50,8 @@
       python314
 
       # Language tools
+      man-pages # Linux API man pages (sections 2-7)
+      man-pages-posix # POSIX man pages (listen, socket, etc.)
       cmake
       gnumake
       gdb
