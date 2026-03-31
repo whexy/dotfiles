@@ -45,7 +45,7 @@
       AppleMeasurementUnits = "Centimeters";
       AppleMetricUnits = 1;
     };
-    spaces.spans-displays = true;
+    spaces.spans-displays = false;
     trackpad.TrackpadThreeFingerDrag = true;
   };
 
@@ -58,6 +58,7 @@
     casks = [
       "firefox"
       "raycast"
+      "obs"
     ];
     onActivation = {
       autoUpdate = true;
