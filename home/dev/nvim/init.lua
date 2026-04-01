@@ -42,7 +42,7 @@ local LSPS = {
 	"tinymist",
 	"tombi",
 	"ts_ls",
-	"yaml-language-server",
+	"yamlls",
 	"zls",
 }
 
