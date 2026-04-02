@@ -125,6 +125,14 @@ vim.api.nvim_create_autocmd("FileType", {
 		vim.opt_local.textwidth = 100
 	end,
 })
+vim.api.nvim_create_autocmd("FileType", {
+	pattern = { "python" },
+	callback = function()
+		-- Wider ruler for languages with longer line conventions
+		vim.opt_local.colorcolumn = "88"
+		vim.opt_local.textwidth = 88
+	end,
+})
 vim.opt.showmode = false
 
 -- Scrolling & windows
