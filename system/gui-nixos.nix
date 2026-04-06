@@ -100,6 +100,16 @@
     };
   };
 
+  # OBS Studio with virtual camera support
+  programs.obs-studio = {
+    enable = true;
+    enableVirtualCamera = true;
+    plugins = with pkgs.obs-studio-plugins; [
+      obs-websocket
+      obs-vaapi # VA-API hardware encoder (AMD/Intel)
+    ];
+  };
+
   # 1Password GUI
   programs._1password-gui.enable = true;
 

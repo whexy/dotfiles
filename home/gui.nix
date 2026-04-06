@@ -17,7 +17,6 @@
   ++ lib.optionals (!darwin) [
     # Linux system use Niri as WM
     ./gui/niri.nix
-    ./gui/obs.nix
     # Input method (fcitx5 + rime)
     ./gui/fcitx5.nix
   ]
