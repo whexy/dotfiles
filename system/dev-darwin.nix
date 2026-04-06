@@ -1,12 +1,7 @@
 # Dev Darwin system configuration
-{ pkgs, lib, ... }:
+{ lib, ... }:
 {
   time.timeZone = "America/Chicago";
-  programs.zsh.enable = true;
-  environment.shells = with pkgs; [
-    bash
-    zsh
-  ];
   services.tailscale.enable = true;
 
   # Enable Linux builder VM for building NixOS configurations on macOS
