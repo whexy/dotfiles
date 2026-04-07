@@ -78,6 +78,7 @@
       watchexec
       woodpecker-cli
       xh
+      yazi
       yq
       zellij
 
