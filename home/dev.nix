@@ -61,6 +61,7 @@
       uv
 
       # Quick tools
+      _1password-cli
       age
       inputs.agenix.packages.${pkgs.system}.agenix
       cloudflared
