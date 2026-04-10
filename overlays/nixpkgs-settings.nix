@@ -6,6 +6,7 @@
 #   - "op-wsl"      : Use Windows op.exe instead of native op (for WSL)
 #   - "ssh-wsl"     : Use Windows ssh.exe instead of native ssh (for WSL)
 #   - "lkl-bigmem"  : Increase LKL memory for large disk image builds (100M -> 1024M)
+#   - "direnv-darwin": Workaround for direnv test-fish failure on darwin (NixOS/nixpkgs#507531)
 #
 # Usage:
 #   # For NixOS/Darwin modules:
@@ -54,6 +55,7 @@ let
   # builtins.deepSeq forces assertion evaluation when overlays is referenced
   overlays = builtins.deepSeq assertions (
     lib.flatten [
+      (lib.optional (hasTag "direnv-darwin") (import ./direnv-darwin.nix))
       (lib.optional (hasTag "lkl-bigmem") (import ./lkl-bigmem.nix))
       (lib.optional (hasTag "op-wsl") (import ./op-wsl.nix))
       (lib.optional (hasTag "ssh-wsl") (import ./ssh-wsl.nix))
