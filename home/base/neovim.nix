@@ -2,13 +2,12 @@
 {
   lib,
   pkgs,
-  inputs,
   ...
 }:
 {
   programs.neovim = lib.mkDefault {
     enable = true;
-    package = inputs.neovim-nightly-overlay.packages.${pkgs.stdenv.hostPlatform.system}.default;
+    package = pkgs.unstable.neovim-unwrapped;
     defaultEditor = true;
     viAlias = true;
     vimAlias = true;

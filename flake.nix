@@ -54,11 +54,6 @@ rec {
       url = "github:numtide/llm-agents.nix";
     };
 
-    # Neovim nightly builds
-    neovim-nightly-overlay = {
-      url = "github:nix-community/neovim-nightly-overlay";
-    };
-
     # Niri Wayland compositor
     niri = {
       url = "github:sodiboo/niri-flake";
