@@ -57,8 +57,8 @@
     enable = true;
     casks = [
       "firefox"
-      "raycast"
       "obs"
+      "snipaste"
     ];
     onActivation = {
       autoUpdate = true;
