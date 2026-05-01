@@ -29,6 +29,7 @@ let
       "op-wsl"
       "ssh-wsl"
     ])
+    (lib.optional darwin "container-darwin") # workaround: NixOS/nixpkgs#445648
     (lib.optional darwin "direnv-darwin") # workaround: NixOS/nixpkgs#507531
     (lib.optional (builtins.elem hardware [
       "virtualbox"
