@@ -109,6 +109,10 @@
       yaml-language-server
       zls
     ]
+    ++ lib.optionals (darwin) [
+      # packages only available on macOS
+      container
+    ]
     ++ lib.optionals (!darwin) [
       # packages not available on macOS
       traceroute
