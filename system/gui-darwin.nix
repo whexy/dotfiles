@@ -56,6 +56,7 @@
   homebrew = {
     enable = true;
     casks = [
+      "alfred"
       "firefox"
       "obs"
       "snipaste"
