@@ -86,7 +86,6 @@
       # Formatters & Linters
       black
       golangci-lint
-      hlint
       nixfmt-rfc-style
       ormolu
       prettier
@@ -100,7 +99,6 @@
       basedpyright
       clang-tools
       gopls
-      haskell-language-server
       lua-language-server
       nixd
       ruff
