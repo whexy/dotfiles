@@ -12,21 +12,21 @@ lib.mkIf (!darwin) {
     enable = true;
 
     # -- NAS WebDAV (currently not working) --
-    # remotes.nas = {
-    #   config = {
-    #     type = "webdav";
-    #     url = "https://alist-whexyhomenas.shiwx.org/dav";
-    #     vendor = "other";
-    #   };
-    #   config.user = "whexy";
-    #   secrets = {
-    #     pass = config.age.secrets.nas-webdav-pass.path;
-    #   };
-    #   mounts."/" = {
-    #     enable = true;
-    #     mountPoint = "${config.home.homeDirectory}/nas";
-    #   };
-    # };
+    remotes.nas = {
+      config = {
+        type = "webdav";
+        url = "https://nas-storage.shiwx.org/";
+        vendor = "other";
+      };
+      config.user = "whexy";
+      secrets = {
+        pass = config.age.secrets.nas-webdav-pass.path;
+      };
+      mounts."/" = {
+        enable = true;
+        mountPoint = "${config.home.homeDirectory}/mnt/nas";
+      };
+    };
 
     # -- Backblaze B2 (raw, used as backend for the crypt layer) --
     remotes.b2private-raw = {
@@ -59,11 +59,9 @@ lib.mkIf (!darwin) {
 
   # The HM rclone module hardcodes PATH=/run/wrappers/bin (NixOS-specific).
   # On non-NixOS hosts, fusermount3 lives in /usr/bin, so we override the PATH.
-
-  # -- NAS PATH override (currently not working) --
-  # systemd.user.services."rclone-mount:.@nas".Service.Environment = lib.mkForce [
-  #   "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
-  # ];
+  systemd.user.services."rclone-mount:.@nas".Service.Environment = lib.mkForce [
+    "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
+  ];
 
   systemd.user.services."rclone-mount:.@b2private".Service.Environment = lib.mkForce [
     "PATH=/run/wrappers/bin:/usr/bin:/usr/sbin"
