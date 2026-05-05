@@ -55,14 +55,43 @@ let
   # Generates ~/.config/rclone/rclone.conf with secrets injected at
   # runtime via `rclone config update` (which handles password obscuring
   # for crypt remotes automatically — same approach as the HM module on Linux).
+  secretFiles = [
+    config.age.secrets.nas-webdav-pass.path
+    config.age.secrets.b2-account.path
+    config.age.secrets.b2-key.path
+    config.age.secrets.b2-crypt-password.path
+  ];
+
   rcloneConfigScript = pkgs.writeShellScript "rclone-config-gen" ''
     set -euo pipefail
     export PATH="${lib.makeBinPath [ config.programs.rclone.package ]}:$PATH"
     conf_dir="${homeDir}/.config/rclone"
+    conf="$conf_dir/rclone.conf"
+
+    # Abort without touching existing config if any secret file is missing.
+    # Agenix HM secrets live under $TMPDIR and are only decrypted during
+    # activation (darwin-rebuild switch), not after reboot.
+    missing=0
+    for f in ${lib.concatStringsSep " " (map (f: ''"${f}"'') secretFiles)}; do
+      if [ ! -f "$f" ]; then
+        echo "Secret not available: $f" >&2
+        missing=1
+      fi
+    done
+    if [ "$missing" -eq 1 ]; then
+      if [ -f "$conf" ]; then
+        echo "Keeping existing rclone.conf (secrets not available after reboot)" >&2
+        exit 0
+      else
+        echo "No existing config and secrets unavailable — cannot proceed" >&2
+        exit 1
+      fi
+    fi
+
     mkdir -p "$conf_dir"
 
     # 1. Write base config with static keys (no secrets)
-    cat > "$conf_dir/rclone.conf" <<'CONF'
+    cat > "$conf" <<'CONF'
     [nas]
     type = webdav
     url = https://nas-storage.shiwx.org/
@@ -79,24 +108,15 @@ let
     directory_name_encryption = true
     CONF
     # strip leading whitespace from heredoc
-    sed -i "" 's/^    //' "$conf_dir/rclone.conf"
+    sed -i "" 's/^    //' "$conf"
 
-    chmod 600 "$conf_dir/rclone.conf"
+    chmod 600 "$conf"
 
     # 2. Inject secrets via rclone config update (handles obscuring)
-    inject() {
-      local remote="$1" key="$2" file="$3"
-      if [ -f "$file" ]; then
-        rclone config update "$remote" "$key" "$(cat "$file")"
-      else
-        echo "WARNING: secret file not found: $file" >&2
-      fi
-    }
-
-    inject nas pass "${config.age.secrets.nas-webdav-pass.path}"
-    inject b2private-raw account "${config.age.secrets.b2-account.path}"
-    inject b2private-raw key "${config.age.secrets.b2-key.path}"
-    inject b2private password "${config.age.secrets.b2-crypt-password.path}"
+    rclone config update nas pass "$(cat "${config.age.secrets.nas-webdav-pass.path}")"
+    rclone config update b2private-raw account "$(cat "${config.age.secrets.b2-account.path}")"
+    rclone config update b2private-raw key "$(cat "${config.age.secrets.b2-key.path}")"
+    rclone config update b2private password "$(cat "${config.age.secrets.b2-crypt-password.path}")"
   '';
 
   # ── macOS: mount script wrapper ─────────────────────────────────────
@@ -107,13 +127,13 @@ let
       set -euo pipefail
       conf="${homeDir}/.config/rclone/rclone.conf"
 
-      # Wait for config to be generated (up to 30s)
+      # Wait for config with actual remote sections (up to 30s)
       for i in $(seq 1 30); do
-        [ -f "$conf" ] && break
+        [ -f "$conf" ] && grep -q '\[${remoteName}\]' "$conf" && break
         sleep 1
       done
-      if [ ! -f "$conf" ]; then
-        echo "rclone.conf not found after 30s, aborting" >&2
+      if [ ! -f "$conf" ] || ! grep -q '\[${remoteName}\]' "$conf"; then
+        echo "rclone.conf missing or incomplete after 30s, aborting" >&2
         exit 1
       fi
 
