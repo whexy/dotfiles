@@ -27,8 +27,6 @@
   };
 
   # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
-  # Unlike starship (which uses promptsubst + command substitution), p10k renders
-  # the prompt natively in zsh, avoiding conflicts with fzf-tab and other plugins.
   home.file.".p10k.zsh".source = ./p10k.zsh;
 
   programs.atuin = {
@@ -164,6 +162,36 @@
       # p10k config: source at the end after everything is loaded.
       (lib.mkOrder 1500 ''
         [[ ! -f ~/.p10k.zsh ]] || source ~/.p10k.zsh
+      '')
+
+      # Fix fzf-tab leaking raw PROMPT variables into scrollback.
+      # When fzf-tab triggers completion, it does `echoti cud1` which pushes the
+      # current prompt into scrollback. If PROMPT contains unevaluated variables
+      # (as with p10k, starship, etc. using promptsubst), the raw text leaks.
+      # Fix: wrap the fzf-tab-complete ZLE widget to pre-evaluate PROMPT before
+      # fzf runs, then restore promptsubst after completion finishes.
+      (lib.mkOrder 1500 ''
+        # Save the original fzf-tab-complete function body
+        functions[_orig_fzf_tab_complete]=$functions[fzf-tab-complete]
+        # Replace fzf-tab-complete with a wrapper
+        fzf-tab-complete() {
+          local _ftb_saved_prompt _ftb_saved_rprompt
+          if [[ -o promptsubst ]]; then
+            _ftb_saved_prompt="$PROMPT"
+            _ftb_saved_rprompt="$RPROMPT"
+            PROMPT="''${(e)PROMPT}"
+            RPROMPT="''${(e)RPROMPT}"
+            unsetopt promptsubst
+          fi
+          _orig_fzf_tab_complete "$@"
+          local ret=$?
+          if [[ -n "$_ftb_saved_prompt" ]]; then
+            PROMPT="$_ftb_saved_prompt"
+            RPROMPT="$_ftb_saved_rprompt"
+            setopt promptsubst
+          fi
+          return $ret
+        }
       '')
     ];
 
