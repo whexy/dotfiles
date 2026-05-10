@@ -34,14 +34,14 @@
       enable_mouse = 1;
       delay = 10;
       header_layout = "two_50_50";
-      tree_view = 1;
+      tree_view = 0;
       sort_key = 46;
       sort_direction = -1;
     }
     // (
       with config.lib.htop;
       leftMeters [
-        (bar "AllCPUs4")
+        (bar "CPU")
         (bar "Memory")
         (text "DiskIO")
         (text "NetworkIO")
