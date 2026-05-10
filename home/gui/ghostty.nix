@@ -18,6 +18,7 @@ in
       keybind = [
         "alt+left=unbind"
         "alt+right=unbind"
+        "ctrl+shift+zero=set_font_size:19"
       ];
     };
   };
