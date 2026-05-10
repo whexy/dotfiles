@@ -13,6 +13,7 @@
     ./gui/waybar.nix
     ./gui/wezterm.nix
     ./gui/firefox.nix
+    ./gui/streaming.nix
   ]
   ++ lib.optionals (!darwin) [
     # Linux system use Niri as WM
