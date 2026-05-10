@@ -275,6 +275,13 @@ in
           action.toggle-keyboard-shortcuts-inhibit = [ ];
           allow-inhibiting = false;
         };
+
+        # ── Dynamic Cast ──────────────────────────────────────────
+        "${hyper}+D" = {
+          action.set-dynamic-cast-window = [ ];
+          repeat = false;
+        };
+        "${meh}+D".action.clear-dynamic-cast-target = [ ];
       };
 
     # Draw the focus ring around Ghostty rather than as a filled rectangle behind it.
@@ -283,6 +290,20 @@ in
       {
         matches = [ { app-id = "^com\\.mitchellh\\.ghostty$"; } ];
         draw-border-with-background = false;
+      }
+      # Indicate screencasted windows with red colors.
+      {
+        matches = [ { is-window-cast-target = true; } ];
+        focus-ring = {
+          active = { color = "#f38ba8"; };
+          inactive = { color = "#7d0d2d"; };
+        };
+        border = {
+          inactive = { color = "#7d0d2d"; };
+        };
+        shadow = {
+          color = "#7d0d2d70";
+        };
       }
     ];
   };
