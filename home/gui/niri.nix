@@ -10,6 +10,12 @@
 let
   monitors = osConfig.hardware.monitors or [ ];
 
+  # Detect VMware guest so we can eagerly start xwayland-satellite on a
+  # known DISPLAY (:0). vmware-user (started by home/gui/clipboard.nix)
+  # then has a stable X server to attach to for host<->guest clipboard.
+  isVmware = osConfig.virtualisation.vmware.guest.enable or false;
+  xDisplay = ":0";
+
   # Build programs.niri.settings.outputs from hardware.monitors entries.
   # Each entry maps to a niri output block with mode, refresh, and scale.
   niriOutputs = lib.listToAttrs (
@@ -92,10 +98,18 @@ in
 
     # XWayland support for X11 apps that don't support Wayland natively.
     # xwayland-satellite runs as a separate process and provides a rootless XWayland
-    # server; it starts lazily when an X11 app first requests DISPLAY.
+    # server. On non-VMware hosts we let niri start it lazily on first X11
+    # client connection. On VMware guests we disable niri's lazy launcher and
+    # spawn it eagerly on a fixed DISPLAY (:0) below, so vmware-user has a
+    # stable X server to talk to for host<->guest clipboard sync.
     xwayland-satellite = {
-      enable = true;
+      enable = !isVmware;
       path = "${pkgs.xwayland-satellite}/bin/xwayland-satellite";
+    };
+
+    # Ensure XWayland-using children inherit a known DISPLAY on VMware.
+    environment = lib.mkIf isVmware {
+      DISPLAY = xDisplay;
     };
 
     spawn-at-startup = [
@@ -119,6 +133,16 @@ in
         command = [
           "fcitx5"
           "-d"
+        ];
+      }
+    ]
+    ++ lib.optionals isVmware [
+      # Eagerly start xwayland-satellite on a fixed DISPLAY so vmware-user
+      # (launched as a systemd user service) can attach predictably.
+      {
+        command = [
+          "${pkgs.xwayland-satellite}/bin/xwayland-satellite"
+          xDisplay
         ];
       }
     ];
