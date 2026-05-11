@@ -16,10 +16,7 @@
   ...
 }:
 let
-  isVmware =
-    !darwin
-    && osConfig != null
-    && (osConfig.virtualisation.vmware.guest.enable or false);
+  isVmware = !darwin && osConfig != null && (osConfig.virtualisation.vmware.guest.enable or false);
   xDisplay = ":0";
 in
 if !isVmware then
@@ -133,13 +130,9 @@ else
       Install.WantedBy = [ "graphical-session.target" ];
     };
 
-    systemd.user.services.clipboard-wayland-to-x11 = mkSyncUnit
-      "Sync Wayland clipboard to X11 (for VMware host integration)"
-      "${waylandToX11}/bin/clipboard-wayland-to-x11";
+    systemd.user.services.clipboard-wayland-to-x11 = mkSyncUnit "Sync Wayland clipboard to X11 (for VMware host integration)" "${waylandToX11}/bin/clipboard-wayland-to-x11";
 
-    systemd.user.services.clipboard-x11-to-wayland = mkSyncUnit
-      "Sync X11 clipboard to Wayland (for VMware host integration)"
-      "${x11ToWayland}/bin/clipboard-x11-to-wayland";
+    systemd.user.services.clipboard-x11-to-wayland = mkSyncUnit "Sync X11 clipboard to Wayland (for VMware host integration)" "${x11ToWayland}/bin/clipboard-x11-to-wayland";
 
     # vmtoolsd's dndcp plugin needs a stable X server, so override niri's
     # lazy xwayland-satellite with an eager launch on a known DISPLAY.
