@@ -1,6 +1,7 @@
 # Niri Wayland compositor configuration (Linux)
 {
   inputs,
+  config,
   pkgs,
   lib,
   osConfig,
@@ -29,7 +30,7 @@ let
   fallbackScaleScript = pkgs.writeShellApplication {
     name = "niri-fallback-scale";
     runtimeInputs = [
-      inputs.niri.packages.${pkgs.system}.niri-stable
+      config.programs.niri.package
       pkgs.jq
     ];
     text =
@@ -60,6 +61,10 @@ in
   ];
 
   programs.niri.enable = true;
+  # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
+  # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
+  # avoid pulling an extra rebuild-from-source derivation into the closure.
+  programs.niri.package = pkgs.niri;
   services.wl-clip-persist.enable = true;
 
   # Turn off all monitors after 5 minutes of inactivity via swayidle.
@@ -71,9 +76,7 @@ in
     timeouts = [
       {
         timeout = 300; # 5 minutes
-        command = "${
-          inputs.niri.packages.${pkgs.system}.niri-stable
-        }/bin/niri msg action power-off-monitors";
+        command = "${config.programs.niri.package}/bin/niri msg action power-off-monitors";
       }
     ];
   };
@@ -92,7 +95,7 @@ in
     # server; it starts lazily when an X11 app first requests DISPLAY.
     xwayland-satellite = {
       enable = true;
-      path = "${inputs.niri.packages.${pkgs.system}.xwayland-satellite-stable}/bin/xwayland-satellite";
+      path = "${pkgs.xwayland-satellite}/bin/xwayland-satellite";
     };
 
     spawn-at-startup = [
