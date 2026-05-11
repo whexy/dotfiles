@@ -33,6 +33,12 @@
     headless = false;
   };
 
+  # Workaround for unreliable VMware host DNS — prepend public resolvers
+  networking.networkmanager.insertNameservers = [
+    "1.1.1.1"
+    "8.8.8.8"
+  ];
+
   # Kernel modules for VMware
   boot.initrd.availableKernelModules = [
     "mptspi" # SCSI controller
