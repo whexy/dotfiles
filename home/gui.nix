@@ -20,6 +20,8 @@
     ./gui/niri.nix
     # Input method (fcitx5 + rime)
     ./gui/fcitx5.nix
+    # VMware host<->guest clipboard (no-op on non-VMware hosts)
+    ./gui/vmware.nix
   ]
   ++ lib.optionals darwin [
     # MacOS system enable aerospace for WM-like experience
