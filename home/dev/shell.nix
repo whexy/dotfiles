@@ -27,7 +27,7 @@
   };
 
   # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
-  home.file.".p10k.zsh".source = ./p10k.zsh;
+  home.file.".p10k.zsh".source = ./zsh/p10k.zsh;
 
   programs.atuin = {
     enable = true;
