@@ -33,21 +33,37 @@ else
     # Two tiny watcher loops form a bidirectional X11<->Wayland clipboard
     # bridge. We avoid `clipboard-sync` (not in nixpkgs) and `wl-clipboard-x11`
     # (one-shot wrapper, not a daemon).
-    waylandToX11 = pkgs.writeShellApplication {
-      name = "clipboard-wayland-to-x11";
+    #
+    # The watcher scripts are split in two:
+    #   - an "inner" one-shot script invoked per clipboard change (so we don't
+    #     need to nest a `sh -c '...'` inside `wl-paste --watch`, which trips
+    #     shellcheck SC2016 inside writeShellApplication);
+    #   - an "outer" long-running script that drives the watch loop.
+    waylandToX11Once = pkgs.writeShellApplication {
+      name = "clipboard-wayland-to-x11-once";
       runtimeInputs = [
         pkgs.wl-clipboard
         pkgs.xclip
       ];
       text = ''
         export DISPLAY=${xDisplay}
-        exec wl-paste --watch sh -c '
-          data=$(wl-paste --no-newline 2>/dev/null || true)
-          [ -z "$data" ] && exit 0
-          cur=$(xclip -o -selection clipboard 2>/dev/null || true)
-          [ "$data" = "$cur" ] && exit 0
-          printf %s "$data" | xclip -i -selection clipboard
-        '
+        data=$(wl-paste --no-newline 2>/dev/null || true)
+        [ -z "$data" ] && exit 0
+        cur=$(xclip -o -selection clipboard 2>/dev/null || true)
+        [ "$data" = "$cur" ] && exit 0
+        printf %s "$data" | xclip -i -selection clipboard
+      '';
+    };
+
+    waylandToX11 = pkgs.writeShellApplication {
+      name = "clipboard-wayland-to-x11";
+      runtimeInputs = [
+        pkgs.wl-clipboard
+        waylandToX11Once
+      ];
+      text = ''
+        export DISPLAY=${xDisplay}
+        exec wl-paste --watch clipboard-wayland-to-x11-once
       '';
     };
 
