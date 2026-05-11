@@ -18,6 +18,7 @@ System configs are operating-system settings, for example:
 - some "heavy" system packages, e.g., whether to enable docker, openssh
 
 System configs are platform-specific. For each cap, there are two files:
+
 - `system/{cap}-nixos.nix` - NixOS-specific settings
 - `system/{cap}-darwin.nix` - Darwin-specific settings
 
@@ -36,16 +37,16 @@ I have so many systems managed by nix, so I define "caps" to describe the
 capability of a certain machine.
 
 `base` cap:
-    very basic settings, all system should have them. For example, zsh.
+very basic settings, all system should have them. For example, zsh.
 
 `dev` cap:
-    machines used for development. dev setups like fancy NeoVim, LSPs, Linters,
-    Formatters, direnv, everything for better developer experience.
+machines used for development. dev setups like fancy NeoVim, LSPs, Linters,
+Formatters, direnv, everything for better developer experience.
 
 `gui` cap:
-    machines expected to have GUI environments. Enable GUI related setups,
-    like ghostty, browser, fonts.
-    Also included macOS-specific settings like dock, finder, Touch ID for sudo.
+machines expected to have GUI environments. Enable GUI related setups,
+like ghostty, browser, fonts.
+Also included macOS-specific settings like dock, finder, Touch ID for sudo.
 
 For example, a remote NixOS dev machine should enable base+dev.
 My macOS machines enable base+dev+gui+macos.

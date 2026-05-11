@@ -20,11 +20,13 @@
 ### Dotfiles-only
 
 For x86_64 Linux:
+
 ```bash
 home-manager switch --flake github:whexy/dotfiles#home --impure
 ```
 
 For aarch64 Linux:
+
 ```bash
 home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure
 ```
@@ -61,4 +63,3 @@ sudo nixos-install --flake github:whexy/dotfiles#remote-dev
 nix build github:whexy/dotfiles#nixosConfigurations.wsl.config.system.build.tarballBuilder
 sudo ./result/bin/nixos-wsl-tarball-builder
 ```
-
