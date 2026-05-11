@@ -1,13 +1,13 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "anthropic/claude-opus-4-6",
+  "model": "anthropic/claude-opus-4-7",
   "small_model": "anthropic/claude-haiku-4-5",
   "autoupdate": false,
   "default_agent": "plan",
   "share": "disabled",
   "server": {
     "port": 4096,
-    "hostname": "0.0.0.0"
+    "hostname": "127.0.0.1"
   },
   "permission": {
     "external_directory": {
