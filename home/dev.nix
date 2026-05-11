@@ -75,7 +75,7 @@
       ripgrep
       sqlite
       tldr
-      tree-sitter
+      pkgs.unstable.tree-sitter
       watchexec
       woodpecker-cli
       xh
