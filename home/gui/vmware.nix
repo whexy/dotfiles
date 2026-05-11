@@ -33,6 +33,10 @@ else
     # CLIPBOARD selection. Split out so we don't nest `sh -c '...'` inside
     # writeShellApplication (would trip shellcheck SC2016).
     #
+    # Only text/plain is synced: binary payloads (images, rich text) would
+    # corrupt under bash's command substitution (which strips NUL bytes)
+    # and confuse vmtoolsd's dndcp plugin, breaking the whole chain.
+    #
     # `xsel -b -i` forks a background owner of the selection; successive
     # invocations transfer ownership cleanly and fire XFIXES notifications
     # that vmtoolsd's dndcp plugin listens for.
@@ -44,7 +48,9 @@ else
       ];
       text = ''
         export DISPLAY=${xDisplay}
-        data=$(wl-paste --no-newline 2>/dev/null || true)
+        # Skip non-text clipboard payloads.
+        wl-paste --list-types 2>/dev/null | grep -q "^text/" || exit 0
+        data=$(wl-paste --no-newline --type text/plain 2>/dev/null || true)
         [ -z "$data" ] && exit 0
         cur=$(xsel -b -o 2>/dev/null || true)
         [ "$data" = "$cur" ] && exit 0
@@ -66,6 +72,7 @@ else
 
     # `clipnotify` blocks until the X11 CLIPBOARD selection changes, so the
     # loop only does work when there's actually something new from the host.
+    # Text-only for symmetry with the Wayland->X11 direction (see above).
     x11ToWayland = pkgs.writeShellApplication {
       name = "clipboard-x11-to-wayland";
       runtimeInputs = [
@@ -79,16 +86,16 @@ else
           clipnotify || sleep 1
           data=$(xsel -b -o 2>/dev/null || true)
           [ -z "$data" ] && continue
-          cur=$(wl-paste --no-newline 2>/dev/null || true)
+          cur=$(wl-paste --no-newline --type text/plain 2>/dev/null || true)
           [ "$data" = "$cur" ] && continue
-          printf %s "$data" | wl-copy
+          printf %s "$data" | wl-copy --type text/plain
         done
       '';
     };
 
     mkSyncUnit = description: exe: {
       Unit = {
-        inherit description;
+        Description = description;
         After = [ "graphical-session.target" ];
         PartOf = [ "graphical-session.target" ];
       };
