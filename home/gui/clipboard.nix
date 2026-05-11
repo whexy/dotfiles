@@ -27,8 +27,22 @@ else
     # XWayland-satellite display we pin (see home/gui/niri.nix).
     xDisplay = ":0";
 
-    # Path to the SUID wrapper installed by the NixOS vmware-guest module.
-    vmwareUserWrapper = "/run/wrappers/bin/vmware-user-suid-wrapper";
+    # open-vm-tools package used by the system (matches the NixOS module so
+    # we don't pull a second copy into the closure).
+    openVmTools = osConfig.virtualisation.vmware.guest.package or pkgs.open-vm-tools;
+
+    # The user-mode vmtoolsd plugin host. Handles clipboard, DnD, resolution
+    # sync, etc. via X11. We invoke it directly rather than via
+    # `vmware-user-suid-wrapper` because:
+    #   - The wrapper's only purpose was kernel /proc/fs/vmblock access (legacy);
+    #     on modern open-vm-tools the vmblock-fuse mount replaces it.
+    #   - The wrapper double-forks and detaches, so systemd Type=simple loses
+    #     track of the actual daemon and marks the unit "inactive (dead)"
+    #     immediately after the wrapper exits, even though vmtoolsd is alive
+    #     (but orphaned outside the cgroup).
+    # Running vmtoolsd -n vmusr directly keeps it in the unit's cgroup,
+    # gives us proper Restart=on-failure handling, and surfaces logs.
+    vmwareUserExe = "${openVmTools}/bin/vmtoolsd";
 
     # Two tiny watcher loops form a bidirectional X11<->Wayland clipboard
     # bridge. We avoid `clipboard-sync` (not in nixpkgs) and `wl-clipboard-x11`
@@ -115,11 +129,10 @@ else
           Description = "VMware user agent (clipboard/DnD via XWayland)";
           After = [ "graphical-session.target" ];
           PartOf = [ "graphical-session.target" ];
-          ConditionPathExists = vmwareUserWrapper;
         };
         Service = {
           Environment = [ "DISPLAY=${xDisplay}" ];
-          ExecStart = vmwareUserWrapper;
+          ExecStart = "${vmwareUserExe} -n vmusr";
           Restart = "on-failure";
           RestartSec = 3;
         };
