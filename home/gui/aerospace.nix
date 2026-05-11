@@ -97,6 +97,7 @@
         cmd-alt-ctrl-shift-f = "layout floating tiling";
         cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
         cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
+        cmd-alt-ctrl-shift-t = "exec-and-forget open -a Ghostty";
         cmd-alt-ctrl-shift-semicolon = "mode service";
       };
 
