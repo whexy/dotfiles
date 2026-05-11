@@ -33,7 +33,6 @@
       mtr
 
       # process/fs
-      btop
       lsof
       duf
       dust

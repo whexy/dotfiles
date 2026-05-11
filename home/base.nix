@@ -16,6 +16,7 @@ in
 {
   imports = [
     ./base/htop.nix
+    ./base/btop.nix
     ./base/shell.nix
     ./base/tmux.nix
     ./base/neovim.nix
@@ -29,7 +30,6 @@ in
       witr-pkg
       (if wsl then openssh-wsl else openssh)
       curl
-      htop
       inputs.home-manager.packages.${pkgs.system}.home-manager
       jq
       mosh
