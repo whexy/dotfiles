@@ -1,11 +1,6 @@
 {
   "permissions": {
-    "allow": [
-      "Read(/nix/store/**)"
-    ],
-    "deny": [
-      "Edit(/nix/store/**)",
-      "Write(/nix/store/**)"
-    ]
+    "allow": ["Read(/nix/store/**)"],
+    "deny": ["Edit(/nix/store/**)", "Write(/nix/store/**)"]
   }
 }

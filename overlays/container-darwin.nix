@@ -12,15 +12,13 @@ prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
   container = prev.container.overrideAttrs (old: {
     nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.makeWrapper ];
 
-    postInstall =
-      (old.postInstall or "")
-      + ''
-        # Wrap binaries so they can find plugins regardless of symlink resolution
-        for bin in $out/bin/container $out/bin/container-apiserver; do
-          if [ -f "$bin" ]; then
-            wrapProgram "$bin" --set CONTAINER_INSTALL_ROOT "$out"
-          fi
-        done
-      '';
+    postInstall = (old.postInstall or "") + ''
+      # Wrap binaries so they can find plugins regardless of symlink resolution
+      for bin in $out/bin/container $out/bin/container-apiserver; do
+        if [ -f "$bin" ]; then
+          wrapProgram "$bin" --set CONTAINER_INSTALL_ROOT "$out"
+        fi
+      done
+    '';
   });
 }

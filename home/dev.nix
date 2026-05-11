@@ -109,7 +109,7 @@
       yaml-language-server
       zls
     ]
-    ++ lib.optionals (darwin) [
+    ++ lib.optionals darwin [
       # packages only available on macOS
       container
     ]
