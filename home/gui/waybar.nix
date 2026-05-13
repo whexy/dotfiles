@@ -26,6 +26,7 @@ lib.mkIf (!darwin) {
         ];
         modules-right = [
           "tray"
+          "battery"
           "network"
           "cpu"
           "memory"
@@ -59,6 +60,31 @@ lib.mkIf (!darwin) {
         tray = {
           icon-size = 14;
           spacing = 8;
+        };
+
+        battery = {
+          format = "{icon} {capacity}%";
+          format-charging = "󰂄 {capacity}%";
+          format-plugged = "󰚥 {capacity}%";
+          format-full = "󰁹 {capacity}%";
+          format-icons = [
+            "󰁺"
+            "󰁻"
+            "󰁼"
+            "󰁽"
+            "󰁾"
+            "󰁿"
+            "󰂀"
+            "󰂁"
+            "󰂂"
+            "󰁹"
+          ];
+          states = {
+            warning = 30;
+            critical = 15;
+          };
+          interval = 30;
+          tooltip-format = "{timeTo} ({power}W)";
         };
 
         network = {
@@ -128,6 +154,7 @@ lib.mkIf (!darwin) {
       #window,
       #idle_inhibitor,
       #tray,
+      #battery,
       #network,
       #cpu,
       #memory,
@@ -240,6 +267,30 @@ lib.mkIf (!darwin) {
 
       #disk:hover {
         background-color: #b16286;
+        color: #282828;
+      }
+
+      /* Battery */
+      #battery {
+        color: #98971a;
+      }
+
+      #battery.charging,
+      #battery.plugged {
+        color: #b8bb26;
+      }
+
+      #battery.warning:not(.charging) {
+        color: #d79921;
+      }
+
+      #battery.critical:not(.charging) {
+        color: #fb4934;
+        animation: blink 1s linear infinite alternate;
+      }
+
+      #battery:hover {
+        background-color: #98971a;
         color: #282828;
       }
 
