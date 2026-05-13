@@ -191,6 +191,19 @@ rec {
           ];
         };
 
+        # mba-nixos - laptop (Apple M5)
+        mba-nixos = mkHost {
+          system = "aarch64-linux";
+          hardware = "mba-nixos";
+          hostname = "mba-nixos";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+            "gui"
+          ];
+        };
+
         # ------------------------
         # --- ARTIFICIAL HOSTS ---
         # ------------------------
