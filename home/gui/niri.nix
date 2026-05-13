@@ -123,8 +123,11 @@ in
       }
     ];
 
-    # Transparent workspace background so Ghostty's opacity shows the wallpaper
+    # Transparent workspace background
     layout.background-color = "#00000000";
+
+    # Thin focus ring (niri default is 4)
+    layout.focus-ring.width = 1;
 
     # Fast key repeat for smooth Vim navigation
     input.keyboard.repeat-delay = 200;
