@@ -33,11 +33,43 @@
     headless = false;
   };
 
-  # Workaround for unreliable VMware host DNS — prepend public resolvers
-  networking.networkmanager.insertNameservers = [
-    "1.1.1.1"
-    "8.8.8.8"
-  ];
+  # Networking for VMware guests.
+  #
+  # The dev cap enables NetworkManager. On this hardware, NM + raw /etc/resolv.conf
+  # conflicts with Tailscale: both try to own the resolver, and the previous
+  # "insertNameservers = [1.1.1.1 8.8.8.8]" workaround for unreliable VMware host
+  # DNS kept overwriting Tailscale's MagicDNS entries. The result was that
+  # Tailscale DNS (100.100.100.100) and 1.1.1.1 could not coexist.
+  #
+  # Fix, scoped to this hardware only: disable NetworkManager and use
+  # systemd-networkd + systemd-resolved. Tailscale's NixOS module integrates with
+  # resolved over D-Bus, installing per-link DNS and routed domains (~ts.net),
+  # so MagicDNS lookups go to 100.100.100.100 on tailscale0 while everything else
+  # uses the DHCP-supplied DNS with 1.1.1.1 / 8.8.8.8 as a fallback.
+  networking.networkmanager.enable = lib.mkForce false;
+  networking.useNetworkd = true;
+  networking.useDHCP = false;
+  systemd.network.enable = true;
+  systemd.network.networks."10-wired" = {
+    matchConfig.Type = "ether";
+    networkConfig = {
+      DHCP = "yes";
+      IPv6AcceptRA = true;
+    };
+  };
+
+  services.resolved = {
+    enable = true;
+    # Tailscale MagicDNS responses are not DNSSEC-signed; disabling avoids
+    # spurious SERVFAILs on tailnet lookups.
+    dnssec = "false";
+    # Workaround for unreliable VMware host DNS — used only when the link's
+    # DHCP-supplied DNS returns nothing, so it does not override Tailscale.
+    fallbackDns = [
+      "1.1.1.1"
+      "8.8.8.8"
+    ];
+  };
 
   # Kernel modules for VMware
   boot.initrd.availableKernelModules = [
