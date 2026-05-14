@@ -4,6 +4,9 @@
 #
 # Linux:  systemd user services via HM rclone module (FUSE)
 # macOS:  launchd agents with rclone nfsmount (built-in NFS server)
+#         Secrets are injected into rclone.conf via `rclone config update`
+#         during `darwin-rebuild switch` (HM activation script).
+#         The config persists across reboots at ~/.config/rclone/rclone.conf.
 {
   config,
   darwin ? false,
@@ -15,6 +18,7 @@ let
   homeDir = config.home.homeDirectory;
   rcloneBin = lib.getExe config.programs.rclone.package;
 
+  # ── Remote definitions (shared across platforms) ─────────────────────
   remoteConfigs = {
     nas = {
       type = "webdav";
@@ -51,92 +55,46 @@ let
     b2private = "${homeDir}/mnt/b2private";
   };
 
-  # ── macOS: config-generation script ─────────────────────────────────
-  # Generates ~/.config/rclone/rclone.conf with secrets injected at
-  # runtime via `rclone config update` (which handles password obscuring
-  # for crypt remotes automatically — same approach as the HM module on Linux).
-  secretFiles = [
-    config.age.secrets.nas-webdav-pass.path
-    config.age.secrets.b2-account.path
-    config.age.secrets.b2-key.path
-    config.age.secrets.b2-crypt-password.path
-  ];
-
+  # ── macOS: config-generation script ──────────────────────────────────
+  # Runs during `darwin-rebuild switch` as a HM activation script (after
+  # agenix decrypts secrets). Writes a base rclone.conf with static keys,
+  # then injects secrets via `rclone config update` which handles password
+  # obscuring automatically (same approach as the HM rclone module on Linux).
   rcloneConfigScript = pkgs.writeShellScript "rclone-config-gen" ''
     set -euo pipefail
     export PATH="${lib.makeBinPath [ config.programs.rclone.package ]}:$PATH"
-    conf_dir="${homeDir}/.config/rclone"
-    conf="$conf_dir/rclone.conf"
+    conf="${homeDir}/.config/rclone/rclone.conf"
+    mkdir -p "$(dirname "$conf")"
 
-    # Abort without touching existing config if any secret file is missing.
-    # Agenix HM secrets live under $TMPDIR and are only decrypted during
-    # activation (darwin-rebuild switch), not after reboot.
-    missing=0
-    for f in ${lib.concatStringsSep " " (map (f: ''"${f}"'') secretFiles)}; do
-      if [ ! -f "$f" ]; then
-        echo "Secret not available: $f" >&2
-        missing=1
-      fi
-    done
-    if [ "$missing" -eq 1 ]; then
-      if [ -f "$conf" ]; then
-        echo "Keeping existing rclone.conf (secrets not available after reboot)" >&2
-        exit 0
-      else
-        echo "No existing config and secrets unavailable — cannot proceed" >&2
-        exit 1
-      fi
-    fi
-
-    mkdir -p "$conf_dir"
-
-    # 1. Write base config with static keys (no secrets)
     cat > "$conf" <<'CONF'
-    [nas]
-    type = webdav
-    url = https://nas-storage.shiwx.org/
-    vendor = other
-    user = whexy
+[nas]
+type = webdav
+url = https://nas-storage.shiwx.org/
+vendor = other
+user = whexy
 
-    [b2private-raw]
-    type = b2
+[b2private-raw]
+type = b2
 
-    [b2private]
-    type = crypt
-    remote = b2private-raw:wenxuan-private
-    filename_encryption = standard
-    directory_name_encryption = true
-    CONF
-    # strip leading whitespace from heredoc
-    sed -i "" 's/^    //' "$conf"
-
+[b2private]
+type = crypt
+remote = b2private-raw:wenxuan-private
+filename_encryption = standard
+directory_name_encryption = true
+CONF
     chmod 600 "$conf"
 
-    # 2. Inject secrets via rclone config update (handles obscuring)
     rclone config update nas pass "$(cat "${config.age.secrets.nas-webdav-pass.path}")"
     rclone config update b2private-raw account "$(cat "${config.age.secrets.b2-account.path}")"
     rclone config update b2private-raw key "$(cat "${config.age.secrets.b2-key.path}")"
     rclone config update b2private password "$(cat "${config.age.secrets.b2-crypt-password.path}")"
   '';
 
-  # ── macOS: mount script wrapper ─────────────────────────────────────
-  # Waits for rclone.conf to exist, then mounts via NFS (rclone nfsmount).
+  # ── macOS: mount script ─────────────────────────────────────────────
   mkMountScript =
     remoteName: mountPoint:
     pkgs.writeShellScript "rclone-mount-${remoteName}" ''
       set -euo pipefail
-      conf="${homeDir}/.config/rclone/rclone.conf"
-
-      # Wait for config with actual remote sections (up to 30s)
-      for i in $(seq 1 30); do
-        [ -f "$conf" ] && grep -q '\[${remoteName}\]' "$conf" && break
-        sleep 1
-      done
-      if [ ! -f "$conf" ] || ! grep -q '\[${remoteName}\]' "$conf"; then
-        echo "rclone.conf missing or incomplete after 30s, aborting" >&2
-        exit 1
-      fi
-
       mkdir -p "${mountPoint}"
       exec ${rcloneBin} nfsmount \
         --vfs-cache-mode full \
@@ -146,11 +104,12 @@ let
 
 in
 lib.mkMerge [
+  # ── Common ────────────────────────────────────────────────────────
   {
     programs.rclone.enable = true;
   }
 
-  # Linux: HM rclone module handles systemd services
+  # ── Linux: HM rclone module handles systemd services ──────────────
   (lib.mkIf (!darwin) {
     programs.rclone = {
       remotes.nas = {
@@ -187,23 +146,13 @@ lib.mkMerge [
     ];
   })
 
-  # macOS: custom launchd agents with NFS-mode mounts
+  # ── macOS: activation + launchd agents with NFS mounts ────────────
   (lib.mkIf darwin {
-    # Config generation agent — runs at login, injects secrets into rclone.conf
-    launchd.agents.rclone-config = {
-      enable = true;
-      config = {
-        ProgramArguments = [ "${rcloneConfigScript}" ];
-        RunAtLoad = true;
-        # Re-run if it crashes (e.g. secrets not yet available)
-        KeepAlive = {
-          SuccessfulExit = false;
-        };
-        StandardOutPath = "${homeDir}/Library/Logs/rclone-config.log";
-        StandardErrorPath = "${homeDir}/Library/Logs/rclone-config.log";
-        ProcessType = "Background";
-      };
-    };
+    # Generate rclone.conf with secrets during activation (after agenix).
+    # The config persists across reboots so mount agents can use it.
+    home.activation.rclone-config = lib.hm.dag.entryAfter [ "agenix" ] ''
+      run ${rcloneConfigScript}
+    '';
 
     # NAS WebDAV mount
     launchd.agents.rclone-mount-nas = {
