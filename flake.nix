@@ -120,7 +120,7 @@ rec {
           darwin = true;
           caps = [
             "base"
-            "dev"
+            "dev-lite"
             "gui"
           ];
         };
@@ -133,7 +133,7 @@ rec {
           darwin = true;
           caps = [
             "base"
-            "dev"
+            "dev-lite"
             "gui"
           ];
         };
