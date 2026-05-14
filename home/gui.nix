@@ -11,7 +11,6 @@
     ./gui/ghostty.nix
     ./gui/git.nix
     ./gui/waybar.nix
-    ./gui/wezterm.nix
     ./gui/firefox.nix
     ./gui/streaming.nix
   ]
