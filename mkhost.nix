@@ -100,6 +100,11 @@ systemFunc {
         imports = homeConfigs ++ [
           inputs.agenix.homeManagerModules.default
           inputs.nix-index-database.homeModules.default
+
+          # Cross-platform replacement for upstream HM programs.rclone
+          # (adds launchd support for Darwin). Loaded for all hosts so the
+          # `programs.rclone` option set is consistent everywhere.
+          ./home/modules/programs/rclone.nix
         ];
       };
     }
