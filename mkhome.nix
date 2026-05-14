@@ -50,6 +50,10 @@ inputs.home-manager.lib.homeManagerConfiguration {
     # nix-index-database and comma
     inputs.nix-index-database.homeModules.default
 
+    # Cross-platform replacement for upstream HM programs.rclone
+    # (adds launchd support for Darwin). Kept in sync with mkhost.nix.
+    ./home/modules/programs/rclone.nix
+
     {
       home.username = username;
       home.homeDirectory = homeDirectory;
