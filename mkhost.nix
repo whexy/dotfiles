@@ -22,7 +22,7 @@ let
   # virtualbox/proxmox hardware -> lkl-bigmem (for large disk image builds)
   nixpkgsTags = lib.flatten [
     (lib.optional (builtins.elem "base" caps) "unstable")
-    (lib.optionals (builtins.elem "dev" caps) [
+    (lib.optionals (builtins.elem "dev" caps || builtins.elem "dev-lite" caps) [
       "llm-tools"
     ])
     (lib.optionals wsl [
