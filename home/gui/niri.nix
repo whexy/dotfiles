@@ -204,6 +204,9 @@ in
         "${hyper}+F".action.toggle-window-floating = [ ];
         "${hyper}+V".action.switch-focus-between-floating-and-tiling = [ ];
 
+        # Toggle stacking ("Tabs")
+        "${hyper}+S".action.toggle-column-tabbed-display = [ ];
+
         # Center column
         "${meh}+C".action.center-column = [ ];
 
@@ -274,6 +277,14 @@ in
           action.focus-workspace-up = [ ];
           cooldown-ms = 150;
         };
+        "${hyper}+WheelScrollRight" = {
+          action.focus-column-right = [ ];
+          cooldown-ms = 150;
+        };
+        "${hyper}+WheelScrollLeft" = {
+          action.focus-column-left = [ ];
+          cooldown-ms = 150;
+        };
 
         # ── Power & Escape ────────────────────────────────────────
         "${hyper}+P".action.power-off-monitors = [ ];
@@ -296,6 +307,12 @@ in
       {
         matches = [ { app-id = "^com\\.mitchellh\\.ghostty$"; } ];
         draw-border-with-background = false;
+        # Workaround: Ghostty's window-width/window-height config doesn't work
+        # on tiling Wayland compositors due to a GTK bootstrap bug.
+        # https://github.com/ghostty-org/ghostty/issues/6092
+        default-column-width = {
+          proportion = 0.5;
+        };
       }
       # Indicate screencasted windows with red colors.
       {
