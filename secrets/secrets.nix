@@ -23,5 +23,7 @@ in
   "b2-key.age".publicKeys = [ key ];
   "b2-crypt-password.age".publicKeys = [ key ];
   "nas-webdav-pass.age".publicKeys = [ key ];
+  "cf-access-nas-client-id.age".publicKeys = [ key ];
+  "cf-access-nas-client-secret.age".publicKeys = [ key ];
   "renpho-creds.age".publicKeys = [ key ];
 }
