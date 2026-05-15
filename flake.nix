@@ -108,6 +108,17 @@ rec {
       # for `nix flake check`
       checks = eachSystem (pkgs: {
         formatting = treefmtEval.${pkgs.system}.config.build.check self;
+        statix =
+          pkgs.runCommand "statix-check"
+            {
+              nativeBuildInputs = [ pkgs.statix ];
+            }
+            ''
+              cp -r ${self} source
+              chmod -R +w source
+              statix check source
+              touch $out
+            '';
       });
 
       # macOS (nix-darwin) configurations

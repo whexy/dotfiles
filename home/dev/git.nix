@@ -1,12 +1,18 @@
 # Git configuration
 { pkgs, lib, ... }:
 {
-  home.packages = [ pkgs.gh ];
+  home = {
+    packages = [ pkgs.gh ];
 
-  # Disable system-level git config to prevent osxkeychain credential helper
-  # on macOS from being automatically configured
-  home.sessionVariables = {
-    GIT_CONFIG_NOSYSTEM = "1";
+    # Disable system-level git config to prevent osxkeychain credential helper
+    # on macOS from being automatically configured
+    sessionVariables = {
+      GIT_CONFIG_NOSYSTEM = "1";
+    };
+
+    file.".git_allowed_signers".text = ''
+      whexy@outlook.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn
+    '';
   };
 
   programs.git = {
@@ -51,8 +57,4 @@
       side-by-side = true;
     };
   };
-
-  home.file.".git_allowed_signers".text = ''
-    whexy@outlook.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn
-  '';
 }

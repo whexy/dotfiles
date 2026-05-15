@@ -12,33 +12,50 @@
   # Load virtio-gpu early so the display is available before the compositor starts
   boot.initrd.kernelModules = [ "virtio_gpu" ];
 
-  # Enable DRM/KMS and OpenGL support required by Wayland compositors
-  # Mesa (pulled in by enable = true) includes the radeonsi VA-API backend and
-  # RADV Vulkan driver, which together enable hardware encoding in OBS via obs-vaapi.
-  hardware.graphics.enable = true;
+  hardware = {
+    # Enable DRM/KMS and OpenGL support required by Wayland compositors
+    # Mesa (pulled in by enable = true) includes the radeonsi VA-API backend and
+    # RADV Vulkan driver, which together enable hardware encoding in OBS via obs-vaapi.
+    graphics.enable = true;
 
-  # Include redistributable firmware needed for GPU passthrough
-  hardware.enableRedistributableFirmware = true;
+    # Include redistributable firmware needed for GPU passthrough
+    enableRedistributableFirmware = true;
 
-  # Enable udev rules files
-  hardware.logitech.wireless.enable = true;
+    # Enable udev rules files
+    logitech.wireless.enable = true;
+
+    # Monitor declarations — consumed by compositor configs via osConfig.hardware.monitors
+    # Samsung Odyssey G8 (HDMI-A-1): 4K panel, 120 Hz over HDMI
+    monitors = [
+      {
+        connector = "HDMI-A-1";
+        resolution = {
+          width = 3840;
+          height = 2160;
+        };
+        refreshRate = 120.000;
+        scale = 1.5;
+      }
+    ];
+
+    # Bluetooth support
+    bluetooth = {
+      enable = true;
+      powerOnBoot = true;
+      settings = {
+        General = {
+          Experimental = true;
+          FastConnectable = true;
+        };
+        Policy = {
+          AutoEnable = true;
+        };
+      };
+    };
+  };
 
   # SPICE agent: dynamic display resolution + clipboard sharing via Proxmox noVNC
   services.spice-vdagentd.enable = true;
-
-  # Monitor declarations — consumed by compositor configs via osConfig.hardware.monitors
-  # Samsung Odyssey G8 (HDMI-A-1): 4K panel, 120 Hz over HDMI
-  hardware.monitors = [
-    {
-      connector = "HDMI-A-1";
-      resolution = {
-        width = 3840;
-        height = 2160;
-      };
-      refreshRate = 120.000;
-      scale = 1.5;
-    }
-  ];
 
   # Use the powersave CPU frequency governor to reduce idle power draw.
   powerManagement.cpuFreqGovernor = "powersave";
@@ -47,20 +64,5 @@
   services.logind.settings.Login = {
     IdleAction = "suspend";
     IdleActionSec = "20min";
-  };
-
-  # Bluetooth support
-  hardware.bluetooth = {
-    enable = true;
-    powerOnBoot = true;
-    settings = {
-      General = {
-        Experimental = true;
-        FastConnectable = true;
-      };
-      Policy = {
-        AutoEnable = true;
-      };
-    };
   };
 }

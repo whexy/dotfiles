@@ -10,7 +10,7 @@
 let
   p = pkgs.unstable;
   witr-pkg = p.witr;
-  ghostty-pkg = (if darwin then p.ghostty-bin else p.ghostty);
+  ghostty-pkg = if darwin then p.ghostty-bin else p.ghostty;
   ghostty-terminfo = ghostty-pkg.terminfo;
 in
 {

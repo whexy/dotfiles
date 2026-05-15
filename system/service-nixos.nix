@@ -1,20 +1,58 @@
 # Service NixOS system configuration
-{ ... }:
-{
+_: {
   time.timeZone = "America/Chicago";
 
-  # Service essentials
-  networking.networkmanager.enable = true;
-  services.tailscale.enable = true;
-  services.resolved.enable = true;
-  services.timesyncd.enable = true;
+  networking = {
+    networkmanager.enable = true;
+    firewall.allowedTCPPorts = [
+      22 # SSH
+      80 # HTTP (Caddy)
+      443 # HTTPS (Caddy)
+    ];
+  };
 
-  # Caddy web server with user-managed Caddyfile
-  services.caddy = {
-    enable = true;
-    # Point to user-managed configuration file
-    # Users can edit /etc/caddy/Caddyfile and reload with: systemctl reload caddy
-    configFile = "/etc/caddy/Caddyfile";
+  services = {
+    # Service essentials
+    tailscale.enable = true;
+    resolved.enable = true;
+    timesyncd.enable = true;
+    fail2ban.enable = true;
+
+    # Caddy web server with user-managed Caddyfile
+    caddy = {
+      enable = true;
+      # Point to user-managed configuration file
+      # Users can edit /etc/caddy/Caddyfile and reload with: systemctl reload caddy
+      configFile = "/etc/caddy/Caddyfile";
+    };
+
+    openssh = {
+      enable = true;
+      settings = {
+        PermitRootLogin = "no";
+        PasswordAuthentication = false;
+        KbdInteractiveAuthentication = false;
+        X11Forwarding = false;
+      };
+    };
+
+    # Logging
+    journald.extraConfig = ''
+      Storage=persistent
+      SystemMaxUse=1G
+      MaxRetentionSec=1month
+    '';
+
+    # Export metrics
+    prometheus.exporters.node = {
+      enable = true;
+      listenAddress = "0.0.0.0";
+      port = 9100;
+      enabledCollectors = [
+        "systemd"
+        "processes"
+      ];
+    };
   };
 
   # Ensure Caddy directories and default config exist
@@ -40,16 +78,6 @@
     '';
   };
 
-  services.openssh = {
-    enable = true;
-    settings = {
-      PermitRootLogin = "no";
-      PasswordAuthentication = false;
-      KbdInteractiveAuthentication = false;
-      X11Forwarding = false;
-    };
-  };
-
   # Docker (without gVisor)
   virtualisation.docker = {
     enable = true;
@@ -61,31 +89,5 @@
         "max-file" = "3";
       };
     };
-  };
-
-  # Firewall configuration
-  services.fail2ban.enable = true;
-  networking.firewall.allowedTCPPorts = [
-    22 # SSH
-    80 # HTTP (Caddy)
-    443 # HTTPS (Caddy)
-  ];
-
-  # Logging
-  services.journald.extraConfig = ''
-    Storage=persistent
-    SystemMaxUse=1G
-    MaxRetentionSec=1month
-  '';
-
-  # Export metrics
-  services.prometheus.exporters.node = {
-    enable = true;
-    listenAddress = "0.0.0.0";
-    port = 9100;
-    enabledCollectors = [
-      "systemd"
-      "processes"
-    ];
   };
 }
