@@ -53,6 +53,13 @@ inputs.home-manager.lib.homeManagerConfiguration {
     # Cross-platform replacement for upstream HM programs.rclone
     # (adds launchd support for Darwin). Kept in sync with mkhost.nix.
     ./home/modules/programs/rclone.nix
+  ]
+  ++ lib.optionals (builtins.elem "gui" caps) [
+    # Renpho health (gui cap only). Mirrors mkhost.nix.
+    inputs.renpho-health.homeModules.default
+    inputs.renpho-health.homeModules.waybar
+  ]
+  ++ [
 
     {
       home.username = username;

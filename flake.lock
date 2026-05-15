@@ -48,6 +48,28 @@
         "type": "github"
       }
     },
+    "blueprint_2": {
+      "inputs": {
+        "nixpkgs": [
+          "renpho-health",
+          "nixpkgs"
+        ],
+        "systems": "systems_3"
+      },
+      "locked": {
+        "lastModified": 1776249299,
+        "narHash": "sha256-Dt9t1TGRmJFc0xVYhttNBD6QsAgHOHCArqGa0AyjrJY=",
+        "owner": "numtide",
+        "repo": "blueprint",
+        "rev": "56131e8628f173d24a27f6d27c0215eff57e40dd",
+        "type": "github"
+      },
+      "original": {
+        "owner": "numtide",
+        "repo": "blueprint",
+        "type": "github"
+      }
+    },
     "bun2nix": {
       "inputs": {
         "flake-parts": [
@@ -477,6 +499,44 @@
         "type": "github"
       }
     },
+    "renpho-api": {
+      "flake": false,
+      "locked": {
+        "lastModified": 1777924782,
+        "narHash": "sha256-L6AtI5qKr2z8DE6Mufp4V6zerbwbkZII76btoCCl/Ag=",
+        "owner": "danvaneijck",
+        "repo": "renpho-api",
+        "rev": "b259e499f125d82fa2b73b1f6eaf7be8df1775f1",
+        "type": "github"
+      },
+      "original": {
+        "owner": "danvaneijck",
+        "repo": "renpho-api",
+        "type": "github"
+      }
+    },
+    "renpho-health": {
+      "inputs": {
+        "blueprint": "blueprint_2",
+        "nixpkgs": [
+          "nixpkgs"
+        ],
+        "renpho-api": "renpho-api"
+      },
+      "locked": {
+        "lastModified": 1778852627,
+        "narHash": "sha256-1VGZIZD+90b5wUml4v8kF1L/mxT0JjIXvv06DPZccis=",
+        "owner": "whexy",
+        "repo": "renpho-health-nix",
+        "rev": "932544debec3234e1deb2640bcb864e1967ee3d8",
+        "type": "github"
+      },
+      "original": {
+        "owner": "whexy",
+        "repo": "renpho-health-nix",
+        "type": "github"
+      }
+    },
     "root": {
       "inputs": {
         "agenix": "agenix",
@@ -491,7 +551,8 @@
         "nixpkgs": "nixpkgs_3",
         "nixpkgs-darwin": "nixpkgs-darwin",
         "nixpkgs-unstable": "nixpkgs-unstable",
-        "systems": "systems_3",
+        "renpho-health": "renpho-health",
+        "systems": "systems_4",
         "treefmt-nix": "treefmt-nix_2"
       }
     },
@@ -526,6 +587,21 @@
       }
     },
     "systems_3": {
+      "locked": {
+        "lastModified": 1681028828,
+        "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",
+        "owner": "nix-systems",
+        "repo": "default",
+        "rev": "da67096a3b9bf56a91d16901293e51ba5b49a27e",
+        "type": "github"
+      },
+      "original": {
+        "owner": "nix-systems",
+        "repo": "default",
+        "type": "github"
+      }
+    },
+    "systems_4": {
       "locked": {
         "lastModified": 1681028828,
         "narHash": "sha256-Vy1rq5AaRuLzOxct8nz4T6wlgyUR7zLU309k9mBC768=",

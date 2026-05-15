@@ -21,6 +21,8 @@
     ./gui/fcitx5.nix
     # VMware host<->guest clipboard (no-op on non-VMware hosts)
     ./gui/vmware.nix
+    # Renpho smart-scale CLI + waybar pill (wires the renpho-health flake)
+    ./gui/renpho.nix
   ]
   ++ lib.optionals darwin [
     # MacOS system enable aerospace for WM-like experience
