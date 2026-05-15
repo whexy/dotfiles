@@ -19,6 +19,8 @@
     ./gui/niri.nix
     # Input method (fcitx5 + rime)
     ./gui/fcitx5.nix
+    # Desktop notification daemon (mako)
+    ./gui/mako.nix
     # VMware host<->guest clipboard (no-op on non-VMware hosts)
     ./gui/vmware.nix
     # Renpho smart-scale CLI + waybar pill (wires the renpho-health flake)
