@@ -43,34 +43,36 @@ inputs.home-manager.lib.homeManagerConfiguration {
     wsl = false;
     inherit inputs;
   };
-  modules = homeConfigs ++ [
-    # Agenix
-    inputs.agenix.homeManagerModules.default
+  modules =
+    homeConfigs
+    ++ [
+      # Agenix
+      inputs.agenix.homeManagerModules.default
 
-    # nix-index-database and comma
-    inputs.nix-index-database.homeModules.default
+      # nix-index-database and comma
+      inputs.nix-index-database.homeModules.default
 
-    # Cross-platform replacement for upstream HM programs.rclone
-    # (adds launchd support for Darwin). Kept in sync with mkhost.nix.
-    ./home/modules/programs/rclone.nix
-  ]
-  ++ lib.optionals (builtins.elem "gui" caps) [
-    # Renpho health (gui cap only). Mirrors mkhost.nix.
-    inputs.renpho-health.homeModules.default
-    inputs.renpho-health.homeModules.waybar
-  ]
-  ++ [
+      # Cross-platform replacement for upstream HM programs.rclone
+      # (adds launchd support for Darwin). Kept in sync with mkhost.nix.
+      ./home/modules/programs/rclone.nix
+    ]
+    ++ lib.optionals (builtins.elem "gui" caps) [
+      # Renpho health (gui cap only). Mirrors mkhost.nix.
+      inputs.renpho-health.homeModules.default
+      inputs.renpho-health.homeModules.waybar
+    ]
+    ++ [
 
-    {
-      home.username = username;
-      home.homeDirectory = homeDirectory;
-    }
+      {
+        home.username = username;
+        home.homeDirectory = homeDirectory;
+      }
 
-    {
-      targets.genericLinux.enable = true;
-      # Disable GPU integration - it's not needed for standalone configs (typically remote servers)
-      # and some GPU packages (like libvdpau-va-gl) have dependencies not available on aarch64
-      targets.genericLinux.gpu.enable = false;
-    }
-  ];
+      {
+        targets.genericLinux.enable = true;
+        # Disable GPU integration - it's not needed for standalone configs (typically remote servers)
+        # and some GPU packages (like libvdpau-va-gl) have dependencies not available on aarch64
+        targets.genericLinux.gpu.enable = false;
+      }
+    ];
 }
