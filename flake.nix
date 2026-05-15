@@ -80,6 +80,12 @@ rec {
     # Treefmt, code formatter for all
     treefmt-nix.url = "github:numtide/treefmt-nix";
     systems.url = "github:nix-systems/default";
+
+    # Renpho smart-scale CLI + home-manager module
+    renpho-health = {
+      url = "github:whexy/renpho-health-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
