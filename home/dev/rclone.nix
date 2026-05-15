@@ -55,8 +55,11 @@ let
       exit 1
     fi
 
-    cf_id=$(cat "${cfIdPath}")
-    cf_secret=$(cat "${cfSecretPath}")
+    # Use bash's `$(<file)` builtin instead of `cat` to avoid depending on
+    # PATH at runtime — the systemd unit's Environment override below
+    # sanitizes PATH and `cat` isn't available in `/usr/bin` on NixOS.
+    cf_id=$(<"${cfIdPath}")
+    cf_secret=$(<"${cfSecretPath}")
 
     # rclone's `RCLONE_HEADER` env var doesn't reliably CSV-split into
     # multiple header entries (it ends up either as one mashed string or
