@@ -35,22 +35,19 @@
 
   # Networking for VMware guests.
   #
-  # The dev cap enables NetworkManager. On this hardware, NM + raw /etc/resolv.conf
-  # conflicts with Tailscale: both try to own the resolver, and the previous
-  # "insertNameservers = [1.1.1.1 8.8.8.8]" workaround for unreliable VMware host
-  # DNS kept overwriting Tailscale's MagicDNS entries. The result was that
-  # Tailscale DNS (100.100.100.100) and 1.1.1.1 could not coexist.
+  # The dev cap enables NetworkManager. On this hardware, NM + raw
+  # /etc/resolv.conf conflicts with Tailscale: both try to own the resolver.
   #
-  # Fix, scoped to this hardware only: disable NetworkManager and use
-  # systemd-networkd + systemd-resolved. Tailscale's NixOS module integrates with
-  # resolved over D-Bus, installing per-link DNS and routed domains (~ts.net),
-  # so MagicDNS lookups go to 100.100.100.100 on tailscale0 while everything else
-  # uses the DHCP-supplied DNS with 1.1.1.1 / 8.8.8.8 as a fallback.
+  # NixOS enable firewall by default. Since VMs are behind the NAT on host, host
+  # is the only machine that can access the VM. We allow host to access guest
+  # network to make dev easier.
   networking = {
     networkmanager.enable = lib.mkForce false;
     useNetworkd = true;
     useDHCP = false;
+    firewall.enable = lib.mkForce false;
   };
+
   systemd.network = {
     enable = true;
     networks."10-wired" = {
