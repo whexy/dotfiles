@@ -18,7 +18,7 @@
   #urlbar {
     top: unset !important;
     bottom: calc(
-      var(--urlbar-container-height) + 2 * var(--urlbar-padding-block)
+      (var(--urlbar-container-height) - var(--urlbar-height)) / 2
     ) !important;
     box-shadow: none !important;
     display: flex !important;
@@ -46,6 +46,9 @@
   }
   #navigator-toolbox::after {
     border: none;
+  }
+  #TabsToolbar {
+    visibility: collapse !important;
   }
   #TabsToolbar .tabbrowser-arrowscrollbox,
   #tabbrowser-tabs,

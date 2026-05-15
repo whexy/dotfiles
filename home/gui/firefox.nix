@@ -43,7 +43,11 @@ in
             "sidebar.verticalTabs" = true;
           }
         else
-          { }
+          {
+            # Disable tarbar and open a new window for each webpage
+            "browser.link.open_newwindow" = 2;
+            "browser.tabs.closeWindowWithLastTab" = false;
+          }
       )
       // (
         if macbookScreen then
