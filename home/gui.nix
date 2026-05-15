@@ -25,6 +25,9 @@
     ./gui/vmware.nix
     # Renpho smart-scale CLI + waybar pill (wires the renpho-health flake)
     ./gui/renpho.nix
+    # GTK DPI compensation on hosts sharing a MacBook Retina panel
+    # (no-op when hardware.display.macbookScreen is not enabled)
+    ./gui/macbook-screen-density.nix
   ]
   ++ lib.optionals darwin [
     # MacOS system enable aerospace for WM-like experience

@@ -61,6 +61,7 @@ systemFunc {
     # Custom NixOS options (hardware.monitors, etc.)
     ./options/monitors.nix
     ./options/keyboards.nix
+    ./options/display.nix
 
     # Global Nix Setting
     {

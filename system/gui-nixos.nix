@@ -152,5 +152,10 @@
 
     # 1Password GUI
     _1password-gui.enable = true;
+
+    # dconf: GSettings storage backend. Required for home-manager's
+    # dconf.settings to take effect (used by macbook-screen-density.nix to
+    # set text-scaling-factor on hosts sharing a MacBook Retina panel).
+    dconf.enable = true;
   };
 }
