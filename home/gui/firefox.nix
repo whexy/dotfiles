@@ -1,8 +1,18 @@
 {
   pkgs,
   darwin ? false,
+  osConfig ? null,
   ...
 }:
+let
+  # See home/gui/macbook-screen-density.nix for the full story. When that
+  # compensation is active, GTK text-scaling-factor = 0.75 also shrinks
+  # Firefox content (Firefox folds GTK font scaling into its CSS px → device
+  # px conversion). Pinning layout.css.devPixelsPerPx to "2.0" forces Firefox
+  # content to render at the same ratio Safari uses on the paired macOS host,
+  # bypassing the GTK text-scaling-factor influence for web content.
+  macbookScreen = !darwin && (osConfig.hardware.display.macbookScreen or false);
+in
 {
   programs.firefox = {
     enable = true;
@@ -31,6 +41,20 @@
             # Firefox's vertical tabs live behind the sidebar revamp prefs.
             "sidebar.revamp" = true;
             "sidebar.verticalTabs" = true;
+          }
+        else
+          { }
+      )
+      // (
+        if macbookScreen then
+          {
+            # Counteract GTK text-scaling-factor = 0.75 (set by
+            # macbook-screen-density.nix) for Firefox web content, so a CSS
+            # pixel renders at the same physical size as on the paired macOS
+            # host running Safari. Chrome (tabs, menus) still follows GTK
+            # scaling, which keeps it consistent with other Linux apps on
+            # this machine.
+            "layout.css.devPixelsPerPx" = "2.0";
           }
         else
           { }
