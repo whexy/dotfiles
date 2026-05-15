@@ -524,11 +524,11 @@
         "renpho-api": "renpho-api"
       },
       "locked": {
-        "lastModified": 1778852627,
-        "narHash": "sha256-1VGZIZD+90b5wUml4v8kF1L/mxT0JjIXvv06DPZccis=",
+        "lastModified": 1778854221,
+        "narHash": "sha256-7tSXDMToe2n/HKreezTpsS7k1gL3ANi4vuGbzbTXkRg=",
         "owner": "whexy",
         "repo": "renpho-health-nix",
-        "rev": "932544debec3234e1deb2640bcb864e1967ee3d8",
+        "rev": "5a61620ba1a4a69f66c87f88f224b354a2a6e68f",
         "type": "github"
       },
       "original": {
