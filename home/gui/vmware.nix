@@ -110,29 +110,31 @@ else
       clipnotify
     ];
 
-    # The user-mode vmtoolsd plugin host. Invoked directly rather than via
-    # `vmware-user-suid-wrapper`: the wrapper double-forks and exits, which
-    # makes systemd lose track of the actual daemon. The wrapper's setuid
-    # was only needed for legacy /proc/fs/vmblock access; the fuse mount
-    # at /run/vmblock-fuse replaces it.
-    systemd.user.services.vmware-user = {
-      Unit = {
-        Description = "VMware user agent (clipboard/DnD via XWayland)";
-        After = [ "graphical-session.target" ];
-        PartOf = [ "graphical-session.target" ];
+    systemd.user.services = {
+      # The user-mode vmtoolsd plugin host. Invoked directly rather than via
+      # `vmware-user-suid-wrapper`: the wrapper double-forks and exits, which
+      # makes systemd lose track of the actual daemon. The wrapper's setuid
+      # was only needed for legacy /proc/fs/vmblock access; the fuse mount
+      # at /run/vmblock-fuse replaces it.
+      vmware-user = {
+        Unit = {
+          Description = "VMware user agent (clipboard/DnD via XWayland)";
+          After = [ "graphical-session.target" ];
+          PartOf = [ "graphical-session.target" ];
+        };
+        Service = {
+          Environment = [ "DISPLAY=${xDisplay}" ];
+          ExecStart = "${openVmTools}/bin/vmtoolsd -n vmusr";
+          Restart = "on-failure";
+          RestartSec = 3;
+        };
+        Install.WantedBy = [ "graphical-session.target" ];
       };
-      Service = {
-        Environment = [ "DISPLAY=${xDisplay}" ];
-        ExecStart = "${openVmTools}/bin/vmtoolsd -n vmusr";
-        Restart = "on-failure";
-        RestartSec = 3;
-      };
-      Install.WantedBy = [ "graphical-session.target" ];
+
+      clipboard-wayland-to-x11 = mkSyncUnit "Sync Wayland clipboard to X11 (for VMware host integration)" "${waylandToX11}/bin/clipboard-wayland-to-x11";
+
+      clipboard-x11-to-wayland = mkSyncUnit "Sync X11 clipboard to Wayland (for VMware host integration)" "${x11ToWayland}/bin/clipboard-x11-to-wayland";
     };
-
-    systemd.user.services.clipboard-wayland-to-x11 = mkSyncUnit "Sync Wayland clipboard to X11 (for VMware host integration)" "${waylandToX11}/bin/clipboard-wayland-to-x11";
-
-    systemd.user.services.clipboard-x11-to-wayland = mkSyncUnit "Sync X11 clipboard to Wayland (for VMware host integration)" "${x11ToWayland}/bin/clipboard-x11-to-wayland";
 
     # vmtoolsd's dndcp plugin needs a stable X server, so override niri's
     # lazy xwayland-satellite with an eager launch on a known DISPLAY.

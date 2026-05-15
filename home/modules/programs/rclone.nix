@@ -41,8 +41,8 @@
 let
   cfg = config.programs.rclone;
   iniFormat = pkgs.formats.ini { };
-  isDarwin = pkgs.stdenv.hostPlatform.isDarwin;
-  isLinux = pkgs.stdenv.hostPlatform.isLinux;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
+  inherit (pkgs.stdenv.hostPlatform) isLinux;
   replaceSlashes = builtins.replaceStrings [ "/" ] [ "." ];
   homeDir = config.home.homeDirectory;
 
@@ -74,9 +74,7 @@ let
       fi
     '') (remote.value.secrets or { });
 
-  injectAllSecrets = lib.concatMap injectSecret (
-    lib.mapAttrsToList lib.nameValuePair cfg.remotes
-  );
+  injectAllSecrets = lib.concatMap injectSecret (lib.mapAttrsToList lib.nameValuePair cfg.remotes);
 
   # ── Shared: oneshot config-writer (used by both systemd + launchd) ───
   rcloneConfigApp = pkgs.writeShellApplication {
@@ -112,10 +110,7 @@ let
   # to the canonical macOS cache location.
   darwinCacheDir = "${homeDir}/Library/Caches/rclone";
   rewriteDarwinCacheDir =
-    opts:
-    lib.mapAttrs (
-      k: v: if k == "cache-dir" && v == "%C/rclone" then darwinCacheDir else v
-    ) opts;
+    opts: lib.mapAttrs (k: v: if k == "cache-dir" && v == "%C/rclone" then darwinCacheDir else v) opts;
 
   # ── Darwin: per-mount wrapper script ────────────────────────────────
   # Wraps `rclone nfsmount` in a small shell script so we can `mkdir -p`
@@ -378,129 +373,131 @@ in
     };
   };
 
-  config = lib.mkIf cfg.enable (lib.mkMerge [
-    { home.packages = [ cfg.package ]; }
+  config = lib.mkIf cfg.enable (
+    lib.mkMerge [
+      { home.packages = [ cfg.package ]; }
 
-    # ── Linux: systemd user services (identical to upstream HM) ───────
-    (lib.mkIf isLinux {
-      systemd.user.services = lib.mkMerge [
-        (lib.mkIf (cfg.remotes != { }) {
-          rclone-config = {
-            Unit = lib.mkMerge [
-              { Description = "Install rclone configuration to ${rcloneConfigPath}"; }
-              (lib.optionalAttrs (cfg.requiresUnit != null) {
-                Requires = [ cfg.requiresUnit ];
-                After = [ cfg.requiresUnit ];
-              })
-            ];
+      # ── Linux: systemd user services (identical to upstream HM) ───────
+      (lib.mkIf isLinux {
+        systemd.user.services = lib.mkMerge [
+          (lib.mkIf (cfg.remotes != { }) {
+            rclone-config = {
+              Unit = lib.mkMerge [
+                { Description = "Install rclone configuration to ${rcloneConfigPath}"; }
+                (lib.optionalAttrs (cfg.requiresUnit != null) {
+                  Requires = [ cfg.requiresUnit ];
+                  After = [ cfg.requiresUnit ];
+                })
+              ];
 
-            Service = {
-              Type = "oneshot";
-              ExecStart = lib.getExe rcloneConfigApp;
-              Restart = "on-abnormal";
+              Service = {
+                Type = "oneshot";
+                ExecStart = lib.getExe rcloneConfigApp;
+                Restart = "on-abnormal";
+              };
+
+              Install.WantedBy = [ "default.target" ];
             };
+          })
 
-            Install.WantedBy = [ "default.target" ];
-          };
-        })
-
-        (lib.listToAttrs (
-          lib.concatMap (
-            { name, value }:
-            let
-              remoteName = name;
-              remote = value;
-            in
+          (lib.listToAttrs (
             lib.concatMap (
               { name, value }:
               let
-                mountPath = name;
-                mount = value;
+                remoteName = name;
+                remote = value;
               in
-              [
-                (lib.nameValuePair "rclone-mount:${replaceSlashes mountPath}@${remoteName}" {
-                  Unit = {
-                    Description = "Rclone FUSE daemon for ${remoteName}:${mountPath}";
-                  };
+              lib.concatMap (
+                { name, value }:
+                let
+                  mountPath = name;
+                  mount = value;
+                in
+                [
+                  (lib.nameValuePair "rclone-mount:${replaceSlashes mountPath}@${remoteName}" {
+                    Unit = {
+                      Description = "Rclone FUSE daemon for ${remoteName}:${mountPath}";
+                    };
 
-                  Service = {
-                    Type = "notify";
-                    Environment = [
-                      "PATH=/run/wrappers/bin"
-                    ]
-                    ++ lib.optional (mount.logLevel != null) "RCLONE_LOG_LEVEL=${mount.logLevel}";
+                    Service = {
+                      Type = "notify";
+                      Environment = [
+                        "PATH=/run/wrappers/bin"
+                      ]
+                      ++ lib.optional (mount.logLevel != null) "RCLONE_LOG_LEVEL=${mount.logLevel}";
 
-                    ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p ${mount.mountPoint}";
-                    ExecStart = lib.concatStringsSep " " [
-                      (lib.getExe cfg.package)
-                      "mount"
-                      (lib.cli.toGNUCommandLineShell { } mount.options)
-                      "${remoteName}:${mountPath}"
-                      "${mount.mountPoint}"
-                    ];
-                    Restart = "on-failure";
-                  };
+                      ExecStartPre = "${pkgs.coreutils}/bin/mkdir -p ${mount.mountPoint}";
+                      ExecStart = lib.concatStringsSep " " [
+                        (lib.getExe cfg.package)
+                        "mount"
+                        (lib.cli.toGNUCommandLineShell { } mount.options)
+                        "${remoteName}:${mountPath}"
+                        "${mount.mountPoint}"
+                      ];
+                      Restart = "on-failure";
+                    };
 
-                  Install.WantedBy = [ "default.target" ];
-                })
-              ]
-            ) (lib.attrsToList remote.mounts)
-          ) remotesWithMounts
-        ))
-      ];
-    })
+                    Install.WantedBy = [ "default.target" ];
+                  })
+                ]
+              ) (lib.attrsToList remote.mounts)
+            ) remotesWithMounts
+          ))
+        ];
+      })
 
-    # ── Darwin: launchd agents ────────────────────────────────────────
-    (lib.mkIf isDarwin {
-      launchd.agents = lib.mkMerge [
-        # Config agent: symmetric with the Linux rclone-config service.
-        # See header comment for the ordering / retry strategy.
-        (lib.mkIf (cfg.remotes != { }) {
-          rclone-config = {
-            enable = true;
-            config = {
-              ProgramArguments = [ (lib.getExe rcloneConfigApp) ];
-              RunAtLoad = true;
-              KeepAlive = {
-                SuccessfulExit = false;
-              };
-              StandardOutPath = "${homeDir}/Library/Logs/rclone-config.log";
-              StandardErrorPath = "${homeDir}/Library/Logs/rclone-config.log";
-            }
-            // lib.optionalAttrs (allSecretPaths != [ ]) {
-              WatchPaths = allSecretPaths;
-            };
-          };
-        })
-
-        # One launchd agent per remote.mounts entry.
-        (lib.listToAttrs (
-          lib.concatMap (
-            { name, value }:
-            let
-              remoteName = name;
-              remote = value;
-            in
-            lib.mapAttrsToList (
-              mountPath: mount:
-              lib.nameValuePair "rclone-mount:${replaceSlashes mountPath}@${remoteName}" {
-                enable = mount.enable;
-                config = {
-                  ProgramArguments = [ "${mkDarwinMountScript remoteName mountPath mount}" ];
-                  RunAtLoad = true;
-                  KeepAlive = {
-                    Crashed = true;
-                    SuccessfulExit = false;
-                  };
-                  StandardOutPath = "${homeDir}/Library/Logs/rclone-mount-${remoteName}.log";
-                  StandardErrorPath = "${homeDir}/Library/Logs/rclone-mount-${remoteName}.log";
-                  ProcessType = "Background";
+      # ── Darwin: launchd agents ────────────────────────────────────────
+      (lib.mkIf isDarwin {
+        launchd.agents = lib.mkMerge [
+          # Config agent: symmetric with the Linux rclone-config service.
+          # See header comment for the ordering / retry strategy.
+          (lib.mkIf (cfg.remotes != { }) {
+            rclone-config = {
+              enable = true;
+              config = {
+                ProgramArguments = [ (lib.getExe rcloneConfigApp) ];
+                RunAtLoad = true;
+                KeepAlive = {
+                  SuccessfulExit = false;
                 };
+                StandardOutPath = "${homeDir}/Library/Logs/rclone-config.log";
+                StandardErrorPath = "${homeDir}/Library/Logs/rclone-config.log";
               }
-            ) remote.mounts
-          ) remotesWithMounts
-        ))
-      ];
-    })
-  ]);
+              // lib.optionalAttrs (allSecretPaths != [ ]) {
+                WatchPaths = allSecretPaths;
+              };
+            };
+          })
+
+          # One launchd agent per remote.mounts entry.
+          (lib.listToAttrs (
+            lib.concatMap (
+              { name, value }:
+              let
+                remoteName = name;
+                remote = value;
+              in
+              lib.mapAttrsToList (
+                mountPath: mount:
+                lib.nameValuePair "rclone-mount:${replaceSlashes mountPath}@${remoteName}" {
+                  inherit (mount) enable;
+                  config = {
+                    ProgramArguments = [ "${mkDarwinMountScript remoteName mountPath mount}" ];
+                    RunAtLoad = true;
+                    KeepAlive = {
+                      Crashed = true;
+                      SuccessfulExit = false;
+                    };
+                    StandardOutPath = "${homeDir}/Library/Logs/rclone-mount-${remoteName}.log";
+                    StandardErrorPath = "${homeDir}/Library/Logs/rclone-mount-${remoteName}.log";
+                    ProcessType = "Background";
+                  };
+                }
+              ) remote.mounts
+            ) remotesWithMounts
+          ))
+        ];
+      })
+    ]
+  );
 }

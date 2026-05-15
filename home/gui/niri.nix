@@ -17,11 +17,11 @@ let
       name = m.connector;
       value = lib.filterAttrs (_: v: v != null) {
         mode = lib.optionalAttrs (m.resolution != null) {
-          width = m.resolution.width;
-          height = m.resolution.height;
+          inherit (m.resolution) width;
+          inherit (m.resolution) height;
           refresh = m.refreshRate; # null → niri picks highest for the resolution
         };
-        scale = m.scale;
+        inherit (m) scale;
       };
     }) monitors
   );
@@ -60,11 +60,13 @@ in
     wl-clipboard
   ];
 
-  programs.niri.enable = true;
-  # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
-  # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
-  # avoid pulling an extra rebuild-from-source derivation into the closure.
-  programs.niri.package = pkgs.niri;
+  programs.niri = {
+    enable = true;
+    # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
+    # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
+    # avoid pulling an extra rebuild-from-source derivation into the closure.
+    package = pkgs.niri;
+  };
   services.wl-clip-persist.enable = true;
 
   # Turn off all monitors after 5 minutes of inactivity via swayidle.

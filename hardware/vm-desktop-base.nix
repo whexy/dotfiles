@@ -13,12 +13,14 @@
 
   system.stateVersion = "25.11";
 
-  # Bootloader - systemd-boot for EFI (works on both UTM and VMware)
-  boot.loader.systemd-boot.enable = true;
-  boot.loader.efi.canTouchEfiVariables = false;
+  boot = {
+    # Bootloader - systemd-boot for EFI (works on both UTM and VMware)
+    loader.systemd-boot.enable = true;
+    loader.efi.canTouchEfiVariables = false;
 
-  # Allow resizing the disk after deployment
-  boot.growPartition = true;
+    # Allow resizing the disk after deployment
+    growPartition = true;
+  };
 
   # Hardware graphics support
   hardware.graphics = {

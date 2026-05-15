@@ -10,9 +10,11 @@
 
     # VM resource allocation (4 cores, 6 GB RAM, 50 GB disk)
     config = {
-      virtualisation.cores = lib.mkForce 4;
-      virtualisation.memorySize = lib.mkForce (6 * 1024); # 6 GB in MB
-      virtualisation.diskSize = lib.mkForce (50 * 1024); # 50 GB in MB
+      virtualisation = {
+        cores = lib.mkForce 4;
+        memorySize = lib.mkForce (6 * 1024); # 6 GB in MB
+        diskSize = lib.mkForce (50 * 1024); # 50 GB in MB
+      };
     };
 
     # Keep Nix store persistent for faster builds

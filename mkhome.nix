@@ -9,7 +9,7 @@
 }:
 
 let
-  lib = inputs.nixpkgs.lib;
+  inherit (inputs.nixpkgs) lib;
 
   # Derive nixpkgs tags from caps
   # Mapping: base -> unstable, dev -> llm-tools

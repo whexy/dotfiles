@@ -1,6 +1,5 @@
 # macOS-specific system configuration
-{ ... }:
-{
+_: {
   # Power settings: save battery life
   power = {
     sleep = {

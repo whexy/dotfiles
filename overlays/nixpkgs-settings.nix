@@ -33,7 +33,7 @@
 { inputs, tags }:
 
 let
-  lib = inputs.nixpkgs.lib;
+  inherit (inputs.nixpkgs) lib;
 
   hasTag = tag: builtins.elem tag tags;
 

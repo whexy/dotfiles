@@ -46,15 +46,19 @@
   # resolved over D-Bus, installing per-link DNS and routed domains (~ts.net),
   # so MagicDNS lookups go to 100.100.100.100 on tailscale0 while everything else
   # uses the DHCP-supplied DNS with 1.1.1.1 / 8.8.8.8 as a fallback.
-  networking.networkmanager.enable = lib.mkForce false;
-  networking.useNetworkd = true;
-  networking.useDHCP = false;
-  systemd.network.enable = true;
-  systemd.network.networks."10-wired" = {
-    matchConfig.Type = "ether";
-    networkConfig = {
-      DHCP = "yes";
-      IPv6AcceptRA = true;
+  networking = {
+    networkmanager.enable = lib.mkForce false;
+    useNetworkd = true;
+    useDHCP = false;
+  };
+  systemd.network = {
+    enable = true;
+    networks."10-wired" = {
+      matchConfig.Type = "ether";
+      networkConfig = {
+        DHCP = "yes";
+        IPv6AcceptRA = true;
+      };
     };
   };
 
@@ -72,20 +76,22 @@
   };
 
   # Kernel modules for VMware
-  boot.initrd.availableKernelModules = [
-    "mptspi" # SCSI controller
-    "ahci" # SATA controller
-    "sd_mod" # SCSI disk
-    "sr_mod" # SCSI CD-ROM
-  ];
+  boot = {
+    initrd.availableKernelModules = [
+      "mptspi" # SCSI controller
+      "ahci" # SATA controller
+      "sd_mod" # SCSI disk
+      "sr_mod" # SCSI CD-ROM
+    ];
 
-  # x86-only paravirtualized SCSI driver
-  boot.initrd.kernelModules = lib.optionals pkgs.stdenv.hostPlatform.isx86 [
-    "vmw_pvscsi" # Paravirtualized SCSI
-  ];
+    # x86-only paravirtualized SCSI driver
+    initrd.kernelModules = lib.optionals pkgs.stdenv.hostPlatform.isx86 [
+      "vmw_pvscsi" # Paravirtualized SCSI
+    ];
 
-  boot.kernelModules = [
-    "vmw_balloon" # Memory ballooning
-    "vmw_vmci" # Guest-host communication
-  ];
+    kernelModules = [
+      "vmw_balloon" # Memory ballooning
+      "vmw_vmci" # Guest-host communication
+    ];
+  };
 }

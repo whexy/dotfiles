@@ -15,7 +15,7 @@
 }:
 
 let
-  lib = inputs.nixpkgs.lib;
+  inherit (inputs.nixpkgs) lib;
 
   # Derive nixpkgs tags from caps and platform flags
   # Mapping: base -> unstable, dev -> llm-tools, wsl -> op-wsl + ssh-wsl
@@ -92,20 +92,22 @@ systemFunc {
     # Home Manager
     hm.home-manager
     {
-      home-manager.useGlobalPkgs = true;
-      home-manager.useUserPackages = true;
-      home-manager.backupFileExtension = "backup";
-      home-manager.extraSpecialArgs = { inherit inputs darwin wsl; };
-      home-manager.users.${username} = {
-        imports = homeConfigs ++ [
-          inputs.agenix.homeManagerModules.default
-          inputs.nix-index-database.homeModules.default
+      home-manager = {
+        useGlobalPkgs = true;
+        useUserPackages = true;
+        backupFileExtension = "backup";
+        extraSpecialArgs = { inherit inputs darwin wsl; };
+        users.${username} = {
+          imports = homeConfigs ++ [
+            inputs.agenix.homeManagerModules.default
+            inputs.nix-index-database.homeModules.default
 
-          # Cross-platform replacement for upstream HM programs.rclone
-          # (adds launchd support for Darwin). Loaded for all hosts so the
-          # `programs.rclone` option set is consistent everywhere.
-          ./home/modules/programs/rclone.nix
-        ];
+            # Cross-platform replacement for upstream HM programs.rclone
+            # (adds launchd support for Darwin). Loaded for all hosts so the
+            # `programs.rclone` option set is consistent everywhere.
+            ./home/modules/programs/rclone.nix
+          ];
+        };
       };
     }
 
