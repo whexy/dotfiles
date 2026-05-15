@@ -58,7 +58,7 @@ in
             # host running Safari. Chrome (tabs, menus) still follows GTK
             # scaling, which keeps it consistent with other Linux apps on
             # this machine.
-            "layout.css.devPixelsPerPx" = "2.0";
+            "layout.css.devPixelsPerPx" = "2.67";
           }
         else
           { }
