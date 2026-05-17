@@ -15,10 +15,11 @@ in
       background-opacity = 0.90;
       background-blur = true;
       macos-option-as-alt = "left";
+      window-decoration = "none";
       keybind = [
         "alt+left=unbind"
         "alt+right=unbind"
-        "ctrl+shift+zero=set_font_size:25"
+        "ctrl+shift+zero=set_font_size:23"
       ];
     };
   };
