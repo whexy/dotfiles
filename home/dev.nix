@@ -26,55 +26,57 @@
     with pkgs;
     [
       # Network diagnostic tools
-      openssl
       dig
-      nmap
-      tcpdump
+      iperf3
       mtr
+      nmap
+      openssl
+      socat
+      tcpdump
 
       # process/fs
-      lsof
       duf
       dust
+      lsof
       ncdu
 
       # Languages
+      bun
       clang
       deno
       go
       nodejs
-      bun
+      python314
       typst
       zig
-      python314
 
       # Language tools
-      man-pages # Linux API man pages (sections 2-7)
-      man-pages-posix # POSIX man pages (listen, socket, etc.)
       cmake
-      gnumake
       gdb
+      gnumake
       lldb
       llvm
+      man-pages # Linux API man pages (sections 2-7)
+      man-pages-posix # POSIX man pages (listen, socket, etc.)
       rustup
       uv
 
       # Quick tools
       _1password-cli
       age
-      inputs.agenix.packages.${pkgs.system}.agenix
       cloudflared
       devenv
       fd
       file
+      inputs.agenix.packages.${pkgs.system}.agenix
       just
       kubectl
       lazygit
+      pkgs.unstable.tree-sitter
       qemu
       ripgrep
       sqlite
       tldr
-      pkgs.unstable.tree-sitter
       watchexec
       woodpecker-cli
       xh
@@ -113,8 +115,17 @@
       container
     ]
     ++ lib.optionals (!darwin) [
-      # packages not available on macOS
-      traceroute
+      # packages only available on Linux
+      aflplusplus
+      bpftrace
+      ltrace
+      perf
+      rr
       strace
+      traceroute
+    ]
+    ++ lib.optionals (pkgs.stdenv.isx86_64 && pkgs.stdenv.isLinux) [
+      # packages only available on x86_64 Linux
+      valgrind
     ];
 }
