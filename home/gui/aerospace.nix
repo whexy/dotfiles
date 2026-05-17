@@ -56,8 +56,7 @@
       };
 
       mode.main.binding = {
-        cmd-alt-ctrl-slash = "layout tiles horizontal vertical";
-        cmd-alt-ctrl-comma = "layout accordion horizontal vertical";
+        cmd-alt-ctrl-shift-s = "layout tiles accordion";
         cmd-alt-ctrl-shift-h = "focus left --boundaries all-monitors-outer-frame";
         cmd-alt-ctrl-shift-j = "focus down --boundaries all-monitors-outer-frame";
         cmd-alt-ctrl-shift-k = "focus up --boundaries all-monitors-outer-frame";
@@ -98,6 +97,9 @@
         cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
         cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
         cmd-alt-ctrl-shift-t = "exec-and-forget open -a Ghostty";
+        cmd-alt-ctrl-shift-q = "close";
+
+        # service binding
         cmd-alt-ctrl-shift-semicolon = "mode service";
       };
 
