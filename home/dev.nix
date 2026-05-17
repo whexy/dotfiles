@@ -14,6 +14,7 @@
     ./dev/shell.nix
     ./dev/ssh.nix
     ./dev/neovim.nix
+    ./dev/zellij.nix
   ];
 
   services.gpg-agent = {
@@ -82,7 +83,6 @@
       xh
       yazi
       yq
-      zellij
 
       # Formatters & Linters
       black

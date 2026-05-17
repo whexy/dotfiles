@@ -16,6 +16,7 @@
     ./dev/shell.nix
     ./dev/ssh.nix
     ./dev/neovim.nix
+    ./dev/zellij.nix
   ];
 
   services.gpg-agent = {
@@ -57,7 +58,6 @@
       ripgrep
       tldr
       pkgs.unstable.tree-sitter
-      zellij
     ]
     ++ lib.optionals darwin [
       container
