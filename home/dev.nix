@@ -116,7 +116,6 @@
     ]
     ++ lib.optionals (!darwin) [
       # packages only available on Linux
-      aflplusplus
       bpftrace
       ltrace
       perf
@@ -126,6 +125,7 @@
     ]
     ++ lib.optionals (pkgs.stdenv.isx86_64 && pkgs.stdenv.isLinux) [
       # packages only available on x86_64 Linux
+      aflplusplus
       valgrind
     ];
 }

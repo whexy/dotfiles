@@ -4,15 +4,14 @@
   programs.zellij = {
     enable = true;
 
-    # UI tweaks: hide the top tab-bar (use the bottom compact bar) and remove
-    # pane frames so streamed/recorded sessions don't waste vertical space.
     settings = {
-      default_layout = "compact";
       pane_frames = false;
+      simplified_ui = true;
+      default_mode = "locked";
+      show_startup_tips = false;
+      show_release_notes = false;
     };
 
-    # Ported verbatim from the previous ~/.config/zellij/config.kdl so that
-    # keybindings, plugin aliases and web_client settings keep working.
     extraConfig = ''
       keybinds clear-defaults=true {
           locked {
@@ -260,11 +259,25 @@
           }
       }
 
+      // Hide the session name from any UI elements that would otherwise show it
+      // (keeps the top compact-bar prefix shorter).
+      ui {
+          pane_frames {
+              hide_session_name true
+          }
+      }
+
       // Plugin aliases - can be used to change the implementation of Zellij
       // changing these requires a restart to take effect
       plugins {
           about location="zellij:about"
-          compact-bar location="zellij:compact-bar"
+          // Pass `tooltip "F1"` so compact-bar auto-spawns a floating
+          // tooltip pane with key hints whenever we leave Locked mode, and
+          // closes it again when we return. F1 also toggles a persisted
+          // tooltip on demand.
+          compact-bar location="zellij:compact-bar" {
+              tooltip "F1"
+          }
           configuration location="zellij:configuration"
           filepicker location="zellij:strider" {
               cwd "/"
@@ -287,4 +300,13 @@
       }
     '';
   };
+
+  xdg.configFile."zellij/layouts/default.kdl".text = ''
+    layout {
+        pane size=1 borderless=true {
+            plugin location="compact-bar"
+        }
+        pane
+    }
+  '';
 }
