@@ -14,6 +14,19 @@ update *INPUT:
         nix flake update {{INPUT}}; \
     fi
 
+# Run formatting + statix lint checks (skips NixOS/Darwin config eval)
+check:
+    #!/usr/bin/env bash
+    set -euo pipefail
+    SYSTEM=$(nix eval --raw --impure --expr 'builtins.currentSystem')
+    echo "=== Running formatting check ($SYSTEM) ==="
+    nix build ".#checks.${SYSTEM}.formatting" -L --no-link
+    echo "OK - formatting"
+    echo "=== Running statix check ($SYSTEM) ==="
+    nix build ".#checks.${SYSTEM}.statix" -L --no-link
+    echo "OK - statix"
+    echo "SUCCESS - All lint checks passed"
+
 # Verify primary configurations evaluate correctly (remote-dev, ord, mba, home)
 verify:
     @echo "=== Verifying primary configurations ==="
