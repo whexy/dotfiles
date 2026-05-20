@@ -1,6 +1,5 @@
 # Zellij terminal multiplexer configuration
-{ ... }:
-{
+_: {
   programs.zellij = {
     enable = true;
 
