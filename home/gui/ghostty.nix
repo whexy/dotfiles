@@ -1,5 +1,10 @@
 # Ghostty terminal configuration
-{ pkgs, darwin, ... }:
+{
+  pkgs,
+  lib,
+  darwin,
+  ...
+}:
 let
   ghostty-pkg = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
 in
@@ -14,13 +19,18 @@ in
       font-family = "FiraCode Nerd Font";
       background-opacity = 0.90;
       background-blur = true;
-      macos-option-as-alt = "left";
-      window-decoration = "none";
-      keybind = [
-        "alt+left=unbind"
-        "alt+right=unbind"
-        "ctrl+shift+zero=set_font_size:23"
-      ];
+      keybind =
+        lib.optionals (!darwin) [
+          "ctrl+shift+zero=set_font_size:23"
+        ]
+        ++ lib.optionals darwin [
+          "alt+left=unbind"
+          "alt+right=unbind"
+          "cmd+shift+zero=set_font_size:23"
+        ];
+    }
+    // {
+      window-decoration = if darwin then "auto" else "none";
     };
   };
 }
