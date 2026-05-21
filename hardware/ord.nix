@@ -54,36 +54,38 @@
     };
   };
 
-  # SPICE agent: dynamic display resolution + clipboard sharing via Proxmox noVNC
-  services.spice-vdagentd.enable = true;
-
   # Use the powersave CPU frequency governor to reduce idle power draw.
   powerManagement.cpuFreqGovernor = "powersave";
 
-  # Suspend the system after 20 minutes of logind-detected idleness.
-  services.logind.settings.Login = {
-    IdleAction = "suspend";
-    IdleActionSec = "20min";
-  };
+  services = {
+    # SPICE agent: dynamic display resolution + clipboard sharing via Proxmox noVNC
+    spice-vdagentd.enable = true;
 
-  # AirPlay sender support (ord-only). The GUI cap already provides the
-  # baseline PipeWire stack; here we add what's needed to discover AirPlay
-  # receivers on the LAN:
-  #   - Avahi for mDNS / .local resolution (required for RAOP discovery)
-  #   - PipeWire's module-raop-discover, dropped in as 50-raop-discover.conf
-  #   - the `avahi` package (avahi-browse) for diagnosing discovery
-  # Sender-only: we do not load module-raop-sink (server) or open RAOP
-  # server firewall ports.
-  services.avahi = {
-    enable = true;
-    nssmdns4 = true;
-    openFirewall = true; # UDP/5353 inbound for mDNS responses
-  };
+    # Suspend the system after 20 minutes of logind-detected idleness.
+    logind.settings.Login = {
+      IdleAction = "suspend";
+      IdleActionSec = "20min";
+    };
 
-  services.pipewire.extraConfig.pipewire."50-raop-discover" = {
-    "context.modules" = [
-      { name = "libpipewire-module-raop-discover"; }
-    ];
+    # AirPlay sender support (ord-only). The GUI cap already provides the
+    # baseline PipeWire stack; here we add what's needed to discover AirPlay
+    # receivers on the LAN:
+    #   - Avahi for mDNS / .local resolution (required for RAOP discovery)
+    #   - PipeWire's module-raop-discover, dropped in as 50-raop-discover.conf
+    #   - the `avahi` package (avahi-browse) for diagnosing discovery
+    # Sender-only: we do not load module-raop-sink (server) or open RAOP
+    # server firewall ports.
+    avahi = {
+      enable = true;
+      nssmdns4 = true;
+      openFirewall = true; # UDP/5353 inbound for mDNS responses
+    };
+
+    pipewire.extraConfig.pipewire."50-raop-discover" = {
+      "context.modules" = [
+        { name = "libpipewire-module-raop-discover"; }
+      ];
+    };
   };
 
   environment.systemPackages = [ pkgs.avahi ];

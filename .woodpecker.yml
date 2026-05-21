@@ -53,3 +53,32 @@ steps:
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-base-aarch64.activationPackage.drvPath --impure --show-trace
       - echo "OK - home-base-aarch64"
       - echo "SUCCESS - All configurations evaluate correctly"
+  # Build docs (tailwindcss) only when docs/ changes on master
+  build-docs:
+    image: nixos/nix:latest
+    when:
+      - event: push
+        branch: master
+        path: "docs/**"
+    commands:
+      - echo "=== Building docs/output.css with tailwindcss ==="
+      - nix run --extra-experimental-features 'nix-command flakes' nixpkgs#tailwindcss_4 -- -i docs/input.css -o docs/output.css --minify
+      - echo "OK - docs built"
+  # Deploy docs to Cloudflare Workers (static assets) only when docs/ changes on master
+  deploy-docs:
+    image: node:22-alpine
+    when:
+      - event: push
+        branch: master
+        path: "docs/**"
+    environment:
+      CLOUDFLARE_API_TOKEN:
+        from_secret: cloudflare_api_token
+      CLOUDFLARE_ACCOUNT_ID:
+        from_secret: cloudflare_account_id
+    commands:
+      - echo "=== Deploying docs to Cloudflare Workers ==="
+      - cd docs
+      - npx --yes wrangler@latest deploy
+      - echo "OK - deployed"
+    depends_on: [build-docs]
