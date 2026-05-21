@@ -17,6 +17,7 @@
 
   programs.git = {
     enable = true;
+    lfs.enable = true;
 
     signing = {
       key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn";
