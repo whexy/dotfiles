@@ -68,13 +68,13 @@
       <div class="border border-stone-300 rounded p-4 sm:p-6">
         <!-- Category row -->
         <div
-          class="flex flex-wrap gap-x-4 gap-y-1 border-b border-stone-200 pb-3"
+          class="flex flex-wrap items-center gap-x-4 gap-y-1 border-b border-stone-200 pb-3"
         >
           <button
             class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
-            data-category="home"
+            data-category="nixos"
           >
-            Home
+            NixOS
           </button>
           <button
             class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
@@ -84,16 +84,28 @@
           </button>
           <button
             class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
-            data-category="nixos"
+            data-category="home"
           >
-            NixOS
+            Home Manager
           </button>
           <button
             class="category-button text-sm py-1 border-b-2 border-transparent transition-colors"
-            data-category="desktop"
+            data-category="vm"
           >
-            Desktop
+            VM Images
           </button>
+
+          <label
+            id="nh-toggle-wrapper"
+            class="ml-auto inline-flex items-center gap-2 text-sm text-stone-600 cursor-pointer select-none"
+          >
+            <input
+              id="nh-toggle"
+              type="checkbox"
+              class="accent-stone-700 cursor-pointer"
+            />
+            <span>Use <code class="font-mono">nh</code></span>
+          </label>
         </div>
 
         <!-- Target row -->
@@ -131,6 +143,12 @@
             </svg>
           </button>
         </div>
+
+        <!-- Description -->
+        <p
+          id="command-description"
+          class="text-sm text-stone-500 mt-2 min-h-5"
+        ></p>
       </div>
 
       <footer class="mt-12 pb-8 flex justify-center gap-4">
@@ -195,90 +213,149 @@
 
     <script>
       const categories = {
-        home: [
+        nixos: [
           {
-            label: "Dotfiles (x86_64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home --impure",
+            label: "ord",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#ord",
+            nhCmd: "nh os switch --hostname ord github:whexy/dotfiles",
+            description: "Home workstation (Ryzen 5800X) - base + dev + gui.",
           },
           {
-            label: "Dotfiles (aarch64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure",
+            label: "remote-dev",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev",
+            nhCmd: "nh os switch --hostname remote-dev github:whexy/dotfiles",
+            description:
+              "Lab dev VM on b3srv0 (Threadripper 9995WX) - base + dev.",
           },
           {
-            label: "Base (x86_64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base --impure",
+            label: "mvp",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#mvp",
+            nhCmd: "nh os switch --hostname mvp github:whexy/dotfiles",
+            description: "Lab workstation VM (Ryzen 5700X) - base + dev.",
           },
           {
-            label: "Base (aarch64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base-aarch64 --impure",
+            label: "mba-nixos",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#mba-nixos",
+            nhCmd: "nh os switch --hostname mba-nixos github:whexy/dotfiles",
+            description:
+              "Apple M5 MacBook Air running NixOS - base + dev + gui.",
+          },
+          {
+            label: "remote-basic",
+            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-basic",
+            nhCmd: "nh os switch --hostname remote-basic github:whexy/dotfiles",
+            description: "Minimal generic remote host - base only.",
           },
         ],
         macos: [
           {
             label: "MacBook Air",
             cmd: "sudo darwin-rebuild switch --flake github:whexy/dotfiles#mba",
+            nhCmd: "nh darwin switch --hostname mba github:whexy/dotfiles",
+            description: "MacBook Air - base + dev-lite + gui.",
           },
           {
             label: "Mac Mini",
             cmd: "sudo darwin-rebuild switch --flake github:whexy/dotfiles#mini",
+            nhCmd: "nh darwin switch --hostname mini github:whexy/dotfiles",
+            description: "Mac Mini desktop - base + dev-lite + gui.",
           },
         ],
-        nixos: [
+        home: [
           {
-            label: "remote-dev",
-            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev",
+            label: "Dotfiles (x86_64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home --impure",
+            nhCmd:
+              "nh home switch github:whexy/dotfiles --no-nom --impure -c home -b backup",
+            description:
+              "Full dotfiles (base + dev) for x86_64 Linux. Requires --impure for $USER/$HOME.",
           },
           {
-            label: "mvp",
-            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#mvp",
+            label: "Dotfiles (aarch64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure",
+            nhCmd:
+              "nh home switch github:whexy/dotfiles --no-nom --impure -c home-aarch64 -b backup",
+            description:
+              "Full dotfiles (base + dev) for aarch64 Linux. Requires --impure for $USER/$HOME.",
           },
           {
-            label: "ord",
-            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#ord",
+            label: "Base (x86_64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base --impure",
+            nhCmd:
+              "nh home switch github:whexy/dotfiles --no-nom --impure -c home-base -b backup",
+            description: "Minimal dotfiles (base only) for x86_64 Linux.",
           },
           {
-            label: "remote-basic",
-            cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-basic",
+            label: "Base (aarch64)",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base-aarch64 --impure",
+            nhCmd:
+              "nh home switch github:whexy/dotfiles --no-nom --impure -c home-base-aarch64 -b backup",
+            description: "Minimal dotfiles (base only) for aarch64 Linux.",
           },
+        ],
+        vm: [
           {
-            label: "remote-service",
-            cmd: "just build-proxmox remote-service",
-          },
-          {
-            label: "WSL",
+            label: "WSL tarball",
             cmd: "just build-wsl",
+            description:
+              "NixOS-WSL importable tarball (base + dev). Import with: wsl --import NixOS <path> result/wsl/nixos.wsl.",
           },
-        ],
-        desktop: [
+          {
+            label: "Proxmox (remote-service)",
+            cmd: "just build-proxmox remote-service",
+            description:
+              "Proxmox VMA image for the remote-service host (base + service).",
+          },
           {
             label: "UTM (x86_64)",
             cmd: "just build-desktop utm x86_64",
+            description:
+              "UTM qcow2 desktop image for x86_64 (base + dev + gui).",
           },
           {
             label: "UTM (aarch64)",
             cmd: "just build-desktop utm aarch64",
+            description:
+              "UTM qcow2 desktop image for aarch64 (base + dev + gui).",
           },
           {
             label: "VMware (x86_64)",
             cmd: "just build-desktop vmware x86_64",
+            description:
+              "VMware VMDK desktop image for x86_64 (base + dev + gui).",
           },
           {
             label: "VMware (aarch64)",
             cmd: "just build-desktop vmware aarch64",
+            description:
+              "VMware VMDK desktop image for aarch64 (base + dev + gui).",
           },
         ],
       };
 
       let currentCommand = "";
-      let activeCategory = "home";
+      let activeCategory = "nixos";
       let activeTargetIndex = 0;
+      let useNh = false;
 
       const targetRow = document.getElementById("target-row");
       const commandDisplay = document.getElementById("command-display");
+      const commandDescription = document.getElementById("command-description");
+      const nhToggle = document.getElementById("nh-toggle");
+      const nhToggleWrapper = document.getElementById("nh-toggle-wrapper");
 
-      function setCommand(cmd) {
-        currentCommand = cmd;
-        commandDisplay.textContent = "$ " + cmd;
+      function resolveCommand(target) {
+        if (activeCategory === "vm") return target.cmd;
+        if (useNh && target.nhCmd) return target.nhCmd;
+        return target.cmd;
+      }
+
+      function renderActiveTarget() {
+        const target = categories[activeCategory][activeTargetIndex];
+        if (!target) return;
+        currentCommand = resolveCommand(target);
+        commandDisplay.textContent = "$ " + currentCommand;
+        commandDescription.textContent = target.description || "";
       }
 
       function renderTargets(categoryKey, selectIndex) {
@@ -303,16 +380,24 @@
                 b.classList.remove("bg-stone-200");
               });
               btn.classList.add("bg-stone-200");
-              setCommand(target.cmd);
+              renderActiveTarget();
             });
             targetRow.appendChild(btn);
           });
 
-          setCommand(targets[selectIndex].cmd);
+          renderActiveTarget();
 
           // Fade in
           targetRow.style.opacity = "1";
         }, 100);
+      }
+
+      function updateNhToggleVisibility() {
+        if (activeCategory === "vm") {
+          nhToggleWrapper.classList.add("hidden");
+        } else {
+          nhToggleWrapper.classList.remove("hidden");
+        }
       }
 
       function selectCategory(categoryKey) {
@@ -338,6 +423,7 @@
           }
         });
 
+        updateNhToggleVisibility();
         renderTargets(categoryKey, 0);
       }
 
@@ -348,13 +434,19 @@
         });
       });
 
+      // nh toggle
+      nhToggle.addEventListener("change", (e) => {
+        useNh = e.target.checked;
+        renderActiveTarget();
+      });
+
       // Copy button
       document.getElementById("copy-button").addEventListener("click", () => {
         navigator.clipboard.writeText(currentCommand);
       });
 
       // Initialize
-      selectCategory("home");
+      selectCategory("nixos");
     </script>
   </body>
 </html>
