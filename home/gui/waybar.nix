@@ -1,10 +1,120 @@
 # Waybar status bar configuration (Linux)
 {
   lib,
+  pkgs,
   darwin,
   ...
 }:
-lib.mkIf (!darwin) {
+lib.mkIf (!darwin) (
+let
+  # Sink picker: list PipeWire audio sinks via wpctl, pipe through fuzzel,
+  # then set the chosen one as the default. Uses node.description (the
+  # human-friendly name shown in `wpctl status`) so RAOP/AirPlay sinks
+  # whose node.name embeds a DHCP IP still pick correctly.
+  audioPickSink = pkgs.writeShellScript "waybar-audio-pick-sink" ''
+    set -euo pipefail
+    PATH=${
+      lib.makeBinPath [
+        pkgs.wireplumber
+        pkgs.fuzzel
+        pkgs.gawk
+        pkgs.gnused
+        pkgs.coreutils
+      ]
+    }:$PATH
+
+    # Parse `wpctl status`: each Sink line looks like
+    #   " │  *  61. HomePod                          [vol: 1.00]"
+    # We want id + description, with a marker for the current default.
+    lines=$(wpctl status \
+      | awk '
+          /^Audio/ { in_audio = 1; next }
+          /^[A-Z]/  { in_audio = 0 }
+          in_audio && /Sinks:/ { in_sinks = 1; next }
+          in_audio && /Sources:|Filters:|Streams:/ { in_sinks = 0 }
+          in_sinks && /[0-9]+\./ {
+            # strip leading box-drawing/tree chars
+            sub(/^[^0-9*]*/, "")
+            star = ""
+            if ($1 == "*") { star = "* "; $1 = "" }
+            # rejoin into "id. desc [vol: ...]"
+            line = $0
+            sub(/^[ \t]+/, "", line)
+            # drop trailing volume bracket
+            sub(/[ \t]*\[vol:[^]]*\][ \t]*$/, "", line)
+            print star line
+          }
+        ')
+
+    [ -n "$lines" ] || exit 0
+
+    choice=$(printf '%s\n' "$lines" | fuzzel --dmenu --prompt 'Audio sink ❯ ')
+    [ -n "$choice" ] || exit 0
+
+    # Extract numeric id (first token after optional "* ")
+    id=$(printf '%s' "$choice" | sed -E 's/^\* //; s/^([0-9]+)\..*/\1/')
+    [ -n "$id" ] || exit 1
+
+    wpctl set-default "$id"
+  '';
+
+  # Brief textual status of current default sink for the waybar tooltip.
+  audioStatus = pkgs.writeShellScript "waybar-audio-status" ''
+    set -euo pipefail
+    PATH=${
+      lib.makeBinPath [
+        pkgs.wireplumber
+        pkgs.gawk
+        pkgs.jq
+        pkgs.coreutils
+      ]
+    }:$PATH
+
+    # Find the description of the * (default) Audio Sink.
+    sink=$(wpctl status \
+      | awk '
+          /^Audio/ { in_audio = 1; next }
+          /^[A-Z]/  { in_audio = 0 }
+          in_audio && /Sinks:/ { in_sinks = 1; next }
+          in_audio && /Sources:|Filters:|Streams:/ { in_sinks = 0 }
+          in_sinks && /\*/ {
+            sub(/^[^*]*\* +/, "")
+            sub(/^[0-9]+\. +/, "")
+            sub(/[ \t]*\[vol:[^]]*\][ \t]*$/, "")
+            print
+            exit
+          }
+        ')
+    [ -n "$sink" ] || sink="(no sink)"
+
+    # Volume of @DEFAULT_AUDIO_SINK@: "Volume: 1.00 [MUTED]"
+    vol_line=$(wpctl get-volume @DEFAULT_AUDIO_SINK@ 2>/dev/null || echo "Volume: 0.00")
+    vol=$(printf '%s' "$vol_line" | awk '{ printf "%d", $2 * 100 }')
+    muted=false
+    case "$vol_line" in *MUTED*) muted=true ;; esac
+
+    icon="󰕾"
+    class="default"
+    if [ "$muted" = true ]; then
+      icon="󰖁"
+      class="muted"
+    elif [ "$vol" -eq 0 ]; then
+      icon="󰸈"
+    elif [ "$vol" -lt 34 ]; then
+      icon="󰕿"
+    elif [ "$vol" -lt 67 ]; then
+      icon="󰖀"
+    fi
+
+    text="$icon $sink"
+    tooltip="$sink — $vol%"
+    [ "$muted" = true ] && tooltip="$tooltip (muted)"
+
+    jq -nc --arg t "$text" --arg tt "$tooltip" --arg c "$class" \
+      '{text: $t, tooltip: $tt, class: $c, alt: $c}'
+  '';
+in
+{
   programs.waybar = {
     enable = true;
     systemd.enable = true;
@@ -26,6 +136,7 @@ lib.mkIf (!darwin) {
         ];
         modules-right = [
           "tray"
+          "custom/audio"
           "battery"
           "network"
           "cpu"
@@ -114,6 +225,23 @@ lib.mkIf (!darwin) {
           tooltip-format = "{used} used / {total} total";
         };
 
+        # Audio sink picker. Shows the current default sink (PipeWire),
+        # left-click opens a fuzzel chooser to switch sinks, right-click
+        # opens pavucontrol for per-stream routing, scroll adjusts volume,
+        # middle-click toggles mute.
+        "custom/audio" = {
+          exec = "${audioStatus}";
+          return-type = "json";
+          interval = 3;
+          format = "{}";
+          on-click = "${audioPickSink}";
+          on-click-right = "${pkgs.pavucontrol}/bin/pavucontrol";
+          on-click-middle = "${pkgs.wireplumber}/bin/wpctl set-mute @DEFAULT_AUDIO_SINK@ toggle";
+          on-scroll-up = "${pkgs.wireplumber}/bin/wpctl set-volume -l 1.0 @DEFAULT_AUDIO_SINK@ 5%+";
+          on-scroll-down = "${pkgs.wireplumber}/bin/wpctl set-volume @DEFAULT_AUDIO_SINK@ 5%-";
+          tooltip = true;
+        };
+
         clock = {
           format = "{:%H:%M:%S}";
           format-alt = "{:%Y-%m-%d %A}";
@@ -159,6 +287,7 @@ lib.mkIf (!darwin) {
       #cpu,
       #memory,
       #disk,
+      #custom-audio,
       #clock {
         padding: 2px 10px;
         margin: 3px 2px;
@@ -270,6 +399,20 @@ lib.mkIf (!darwin) {
         color: #282828;
       }
 
+      /* Audio sink picker */
+      #custom-audio {
+        color: #d3869b;
+      }
+
+      #custom-audio.muted {
+        color: #928374;
+      }
+
+      #custom-audio:hover {
+        background-color: #d3869b;
+        color: #282828;
+      }
+
       /* Battery */
       #battery {
         color: #98971a;
@@ -315,3 +458,4 @@ lib.mkIf (!darwin) {
     '';
   };
 }
+)

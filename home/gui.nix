@@ -41,6 +41,7 @@
       # Linux only
       obsidian
       nautilus # required by xdg-desktop-portal-gnome for FileChooser
+      pavucontrol # PipeWire/Pulse per-stream routing GUI (waybar audio module)
     ]
     ++ lib.optionals (!darwin && pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
       # x86-64 Linux only
