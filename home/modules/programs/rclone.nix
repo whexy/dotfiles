@@ -417,6 +417,22 @@ in
                   (lib.nameValuePair "rclone-mount:${replaceSlashes mountPath}@${remoteName}" {
                     Unit = {
                       Description = "Rclone FUSE daemon for ${remoteName}:${mountPath}";
+                      # Mount units must not start until rclone-config.service
+                      # has finished writing rclone.conf AND injecting all
+                      # secrets via `rclone config update`. Without this
+                      # ordering, the mount can win the race against the
+                      # config service and start with a stub config that
+                      # lacks credential fields (e.g. WebDAV `pass`). For
+                      # remotes where a missing secret isn't fatal (rclone
+                      # happily mounts an unauthenticated WebDAV remote),
+                      # this silently produces a "successful" mount that
+                      # 401s on every request. `Requires=` also chains in
+                      # `agenix.service` / `sops-nix.service` transitively
+                      # via rclone-config's own dependency, so any
+                      # per-mount wrappers that read secret files directly
+                      # (e.g. for CF Access headers) are also safe.
+                      After = [ "rclone-config.service" ];
+                      Requires = [ "rclone-config.service" ];
                     };
 
                     Service = {
