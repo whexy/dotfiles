@@ -126,6 +126,21 @@
     };
   };
 
+  # Audio stack: PipeWire with PulseAudio + ALSA compatibility shims and
+  # WirePlumber as the session manager. Required by the waybar audio module
+  # (wpctl) and by any desktop app that produces sound.
+  # Host-specific extensions (e.g. RAOP/AirPlay discovery on ord) live in
+  # the corresponding hardware/<host>.nix.
+  services.pulseaudio.enable = false;
+  security.rtkit.enable = true;
+  services.pipewire = {
+    enable = true;
+    alsa.enable = true;
+    alsa.support32Bit = true;
+    pulse.enable = true;
+    wireplumber.enable = true;
+  };
+
   # XDG Desktop Portal: provides file chooser, screen cast, notifications, etc.
   xdg.portal = {
     enable = true;
