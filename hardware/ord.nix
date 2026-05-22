@@ -2,7 +2,7 @@
 # Extends qemu-x86_64 with virtio-gpu, hardware graphics, and SPICE agent.
 # Used for hosts that run a Wayland compositor (e.g. niri) inside a QEMU/Proxmox VM,
 # including GPU passthrough setups (e.g. AMD RX 6000 series requiring firmware blobs).
-{ pkgs, ... }:
+{ ... }:
 
 {
   imports = [
@@ -66,27 +66,5 @@
       IdleAction = "suspend";
       IdleActionSec = "20min";
     };
-
-    # AirPlay sender support (ord-only). The GUI cap already provides the
-    # baseline PipeWire stack; here we add what's needed to discover AirPlay
-    # receivers on the LAN:
-    #   - Avahi for mDNS / .local resolution (required for RAOP discovery)
-    #   - PipeWire's module-raop-discover, dropped in as 50-raop-discover.conf
-    #   - the `avahi` package (avahi-browse) for diagnosing discovery
-    # Sender-only: we do not load module-raop-sink (server) or open RAOP
-    # server firewall ports.
-    avahi = {
-      enable = true;
-      nssmdns4 = true;
-      openFirewall = true; # UDP/5353 inbound for mDNS responses
-    };
-
-    pipewire.extraConfig.pipewire."50-raop-discover" = {
-      "context.modules" = [
-        { name = "libpipewire-module-raop-discover"; }
-      ];
-    };
   };
-
-  environment.systemPackages = [ pkgs.avahi ];
 }
