@@ -219,6 +219,9 @@ vim.pack.add({
 
 	-- Browser integration
 	"https://github.com/glacambre/firenvim",
+
+  -- Hardtime (get rid of bad habits)
+  "https://github.com/m4xshen/hardtime.nvim",
 })
 
 -- ╭──────────────────────────────────────────────────────────────────────╮
@@ -496,6 +499,9 @@ vim.g.firenvim_config = {
 		},
 	},
 }
+
+-- ── Hardtime ─────────────────────────────────────────────────────────────
+require("hardtime").setup()
 
 -- ╭──────────────────────────────────────────────────────────────────────╮
 -- │                            LSP CONFIG                                │
