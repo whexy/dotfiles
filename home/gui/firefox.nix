@@ -20,9 +20,7 @@ in
     # Home Manager only manages profile configuration.
     package = if darwin then null else pkgs.firefox;
     profiles.default = {
-      # On macOS, the bottom address bar customization would block AeroSpace.
-      # We ignore it but to enable vertical tabs.
-      userChrome = if darwin then "" else builtins.readFile ./firefox/userChrome.css;
+      userChrome = builtins.readFile ./firefox/userChrome.css;
       settings = {
         "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
       }
@@ -38,9 +36,12 @@ in
             "full-screen-api.transition-duration.enter" = "0 0";
             "full-screen-api.transition-duration.leave" = "0 0";
 
-            # Firefox's vertical tabs live behind the sidebar revamp prefs.
-            "sidebar.revamp" = true;
-            "sidebar.verticalTabs" = true;
+            # Disable tabs-in-titlebar so the macOS traffic-light indicators
+            # remain in a dedicated titlebar at the top of the window. This
+            # is required because userChrome.css moves the tab strip to the
+            # bottom; without a separate titlebar the indicators would be
+            # dragged along with the tabs.
+            "browser.tabs.inTitlebar" = 0;
           }
         else
           { }
@@ -48,12 +49,6 @@ in
       // (
         if macbookScreen then
           {
-            # Counteract GTK text-scaling-factor = 0.75 (set by
-            # macbook-screen-density.nix) for Firefox web content, so a CSS
-            # pixel renders at the same physical size as on the paired macOS
-            # host running Safari. Chrome (tabs, menus) still follows GTK
-            # scaling, which keeps it consistent with other Linux apps on
-            # this machine.
             "layout.css.devPixelsPerPx" = "2.67";
           }
         else
