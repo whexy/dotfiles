@@ -8,12 +8,15 @@
 local TS_PACKAGES = {
 	"bash",
 	"cpp",
+	"css",
 	"glsl",
 	"go",
 	"gomod",
 	"gosum",
 	"gowork",
+	"html",
 	"javascript",
+	"jsdoc",
 	"json5",
 	"lua",
 	"ninja",
@@ -23,6 +26,7 @@ local TS_PACKAGES = {
 	"ron",
 	"rst",
 	"rust",
+	"tsx",
 	"typescript",
 	"typst",
 	"yaml",
@@ -32,21 +36,26 @@ local TS_PACKAGES = {
 local LSPS = {
 	"basedpyright",
 	"clangd",
+	"cssls",
+	"eslint",
 	"gopls",
 	"hls",
+	"html",
 	"jsonls",
 	"lua_ls",
 	"nixd",
 	"ruff",
 	"tinymist",
 	"tombi",
-	"ts_ls",
+	"vtsls",
 	"yamlls",
 	"zls",
 }
 
 local FORMATTERS = {
 	html = { "prettier" },
+	javascript = { "prettier" },
+	javascriptreact = { "prettier" },
 	json = { "prettier" },
 	lua = { "stylua" },
 	nix = { "nixfmt" },
@@ -54,6 +63,8 @@ local FORMATTERS = {
 	rust = { "rustfmt" },
 	sh = { "shfmt" },
 	toml = { "tombi" },
+	typescript = { "prettier" },
+	typescriptreact = { "prettier" },
 	typst = { "typstyle" },
 	yaml = { "yamlfmt" },
 }
@@ -538,6 +549,14 @@ vim.lsp.config("jsonls", {
 	},
 })
 
+vim.lsp.config("cssls", {
+	settings = {
+		css = { validate = true, lint = { unknownAtRules = "ignore" } },
+		scss = { validate = true },
+		less = { validate = true },
+	},
+})
+
 vim.lsp.config("gopls", {
 	settings = {
 		gopls = {
@@ -573,6 +592,63 @@ vim.lsp.config("gopls", {
 			directoryFilters = { "-.git", "-.vscode", "-.idea", "-.vscode-test", "-node_modules" },
 			semanticTokens = true,
 		},
+	},
+})
+
+vim.lsp.config("vtsls", {
+	settings = {
+		typescript = {
+			inlayHints = {
+				parameterNames = { enabled = "literals" },
+				parameterTypes = { enabled = true },
+				variableTypes = { enabled = true },
+				propertyDeclarationTypes = { enabled = true },
+				functionLikeReturnTypes = { enabled = true },
+				enumMemberValues = { enabled = true },
+			},
+			updateImportsOnFileMove = { enabled = "always" },
+			suggest = { completeFunctionCalls = true },
+		},
+		javascript = {
+			inlayHints = {
+				parameterNames = { enabled = "all" },
+				parameterTypes = { enabled = true },
+				variableTypes = { enabled = true },
+				propertyDeclarationTypes = { enabled = true },
+				functionLikeReturnTypes = { enabled = true },
+				enumMemberValues = { enabled = true },
+			},
+			updateImportsOnFileMove = { enabled = "always" },
+			suggest = { completeFunctionCalls = true },
+		},
+		vtsls = {
+			enableMoveToFileCodeAction = true,
+			autoUseWorkspaceTsdk = true,
+			experimental = {
+				completion = { enableServerSideFuzzyMatch = true },
+			},
+		},
+	},
+})
+
+vim.lsp.config("eslint", {
+	root_markers = {
+		".eslintrc",
+		".eslintrc.js",
+		".eslintrc.cjs",
+		".eslintrc.mjs",
+		".eslintrc.json",
+		".eslintrc.yaml",
+		".eslintrc.yml",
+		"eslint.config.js",
+		"eslint.config.mjs",
+		"eslint.config.cjs",
+		"eslint.config.ts",
+		"package.json",
+	},
+	settings = {
+		workingDirectories = { mode = "auto" },
+		format = false,
 	},
 })
 
