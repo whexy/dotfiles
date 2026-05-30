@@ -19,27 +19,29 @@ in
     enable = !wsl;
     enableDefaultConfig = false;
 
-    matchBlocks = {
+    # HM 26.05 deprecated `matchBlocks`; entries now live under `settings`
+    # and use OpenSSH directive names (camelCase aliases dropped).
+    settings = {
       "*" = {
-        inherit identityAgent;
-        forwardAgent = true;
-        serverAliveInterval = 25;
-        serverAliveCountMax = 3;
+        IdentityAgent = identityAgent;
+        ForwardAgent = true;
+        ServerAliveInterval = 25;
+        ServerAliveCountMax = 3;
       };
 
       "mars" = {
-        hostname = "mars.cs.northwestern.edu";
-        user = "wenxuan";
+        HostName = "mars.cs.northwestern.edu";
+        User = "wenxuan";
       };
 
       "venus" = {
-        hostname = "venus.cs.northwestern.edu";
-        user = "wenxuan";
+        HostName = "venus.cs.northwestern.edu";
+        User = "wenxuan";
       };
 
       "moore" = {
-        hostname = "moore.wot.eecs.northwestern.edu";
-        user = "wsk9140";
+        HostName = "moore.wot.eecs.northwestern.edu";
+        User = "wsk9140";
       };
     };
   };

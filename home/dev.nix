@@ -69,7 +69,7 @@
       devenv
       fd
       file
-      inputs.agenix.packages.${pkgs.system}.agenix
+      inputs.agenix.packages.${pkgs.stdenv.hostPlatform.system}.agenix
       just
       kubectl
       lazygit
@@ -87,7 +87,7 @@
       # Formatters & Linters
       black
       golangci-lint
-      nixfmt-rfc-style
+      nixfmt
       ormolu
       prettier
       shellcheck

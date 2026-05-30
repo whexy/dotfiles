@@ -22,7 +22,7 @@ in
     ./base/neovim.nix
   ];
 
-  home.stateVersion = "25.11";
+  home.stateVersion = "26.05";
   home.packages =
     with pkgs;
     [
@@ -30,7 +30,7 @@ in
       witr-pkg
       (if wsl then openssh-wsl else openssh)
       curl
-      inputs.home-manager.packages.${pkgs.system}.home-manager
+      inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.home-manager
       jq
       mosh
       podman

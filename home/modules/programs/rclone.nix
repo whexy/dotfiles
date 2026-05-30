@@ -120,7 +120,7 @@ let
     remoteName: mountPath: mount:
     let
       opts = rewriteDarwinCacheDir mount.options;
-      cliArgs = lib.cli.toGNUCommandLineShell { } opts;
+      cliArgs = lib.cli.toCommandLineShellGNU { } opts;
     in
     pkgs.writeShellScript "rclone-mount-${remoteName}" ''
       set -euo pipefail
@@ -290,7 +290,7 @@ in
                             An attribute set of option values passed to `rclone mount`
                             (Linux) / `rclone nfsmount` (Darwin). To set a boolean option,
                             assign it `true` or `false`. See
-                            <https://nixos.org/manual/nixpkgs/stable/#function-library-lib.cli.toGNUCommandLineShell>
+                            <https://nixos.org/manual/nixpkgs/stable/#function-library-lib.cli.toCommandLineShellGNU>
                             for more details on the format.
 
                             Some caching options are set by default, namely
@@ -446,7 +446,7 @@ in
                       ExecStart = lib.concatStringsSep " " [
                         (lib.getExe cfg.package)
                         "mount"
-                        (lib.cli.toGNUCommandLineShell { } mount.options)
+                        (lib.cli.toCommandLineShellGNU { } mount.options)
                         "${remoteName}:${mountPath}"
                         "${mount.mountPoint}"
                       ];

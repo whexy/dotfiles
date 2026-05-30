@@ -5,7 +5,12 @@
     enable = true;
     package = pkgs.unstable.aerospace;
 
-    userSettings = {
+    # Let Home Manager manage Aerospace's launchd agent. Required by HM
+    # 26.05 when `start-at-login = true` is set in userSettings, otherwise
+    # an assertion fails to avoid conflicting startup mechanisms.
+    launchd.enable = true;
+
+    settings = {
       config-version = 2;
       after-startup-command = [ ];
       start-at-login = true;
