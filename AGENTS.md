@@ -94,6 +94,8 @@ darwinConfigurations = {
 
 ## Verification
 
+(Before verification, remember to use `git add` to add new files, as flake
+only see files tracked by git.)
+
 Run `just verify` to check all flake outputs evaluate correctly.
-Before verification, remember to use `git add` to add modified code, as flake
-only use staged files.
+Run `just check` to run formatters and linters checklists.
