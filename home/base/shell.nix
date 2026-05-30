@@ -15,11 +15,11 @@
   programs.ssh = lib.mkDefault {
     enable = true;
     enableDefaultConfig = false;
-    matchBlocks = {
+    # HM 26.05 deprecated `matchBlocks`; entries now live under `settings`
+    # using OpenSSH directive names directly (no `extraOptions` wrapper).
+    settings = {
       "*" = {
-        extraOptions = {
-          AddKeysToAgent = "yes";
-        };
+        AddKeysToAgent = "yes";
       };
     };
   };

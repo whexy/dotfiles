@@ -19,6 +19,11 @@ in
     # On macOS, Firefox is installed via Homebrew cask (properly signed for 1Password).
     # Home Manager only manages profile configuration.
     package = if darwin then null else pkgs.firefox;
+    # Pin the legacy profile path. HM 26.05 changed the default to
+    # `$XDG_CONFIG_HOME/mozilla/firefox`, but existing profiles live at
+    # `~/.mozilla/firefox`. Keeping the legacy location avoids a forced
+    # manual migration across all hosts.
+    configPath = ".mozilla/firefox";
     profiles.default = {
       userChrome = builtins.readFile ./firefox/userChrome.css;
       settings = {

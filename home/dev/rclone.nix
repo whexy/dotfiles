@@ -95,7 +95,7 @@ let
     "${cfAccessWrapper}"
     rcloneBin
     "mount"
-    (lib.cli.toGNUCommandLineShell { } nasMountOptions)
+    (lib.cli.toCommandLineShellGNU { } nasMountOptions)
     "nas:/"
     nasMountPoint
   ];
@@ -107,7 +107,7 @@ let
     set -euo pipefail
     mkdir -p "${nasMountPoint}"
     exec ${cfAccessWrapper} ${rcloneBin} nfsmount \
-      ${lib.cli.toGNUCommandLineShell { } nasMountOptionsDarwin} \
+      ${lib.cli.toCommandLineShellGNU { } nasMountOptionsDarwin} \
       "nas:/" "${nasMountPoint}"
   '';
 in
