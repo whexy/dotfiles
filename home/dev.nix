@@ -73,6 +73,7 @@
       just
       kubectl
       lazygit
+      magic-wormhole-rs
       pkgs.unstable.tree-sitter
       qemu
       ripgrep
