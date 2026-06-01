@@ -1,4 +1,5 @@
 {
+  lib,
   pkgs,
   darwin ? false,
   osConfig ? null,
@@ -23,7 +24,7 @@ in
     # `$XDG_CONFIG_HOME/mozilla/firefox`, but existing profiles live at
     # `~/.mozilla/firefox`. Keeping the legacy location avoids a forced
     # manual migration across all hosts.
-    configPath = ".mozilla/firefox";
+    configPath = lib.mkIf (!darwin) ".mozilla/firefox";
     profiles.default = {
       userChrome = builtins.readFile ./firefox/userChrome.css;
       settings = {
