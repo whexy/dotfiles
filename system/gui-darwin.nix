@@ -49,13 +49,11 @@
     trackpad.TrackpadThreeFingerDrag = true;
   };
 
-  # 1Password GUI
-  programs._1password-gui.enable = true;
-
   # Homebrew casks for apps that need to be properly signed
   homebrew = {
     enable = true;
     casks = [
+      "1password"
       "alfred"
       "firefox"
       "obs"
