@@ -40,4 +40,10 @@ in
     ++ lib.optionals (!darwin) [
       git # macOS: use native git to avoid keychain prompt
     ];
+
+  nix.gc = {
+    automatic = true;
+    dates = "weekly";
+    options = "--delete-older-than 30d";
+  };
 }
