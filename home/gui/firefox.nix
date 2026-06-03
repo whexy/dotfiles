@@ -29,6 +29,7 @@ in
       userChrome = builtins.readFile ./firefox/userChrome.css;
       settings = {
         "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
+        "browser.urlbar.scotchBonnet.enableOverride" = false;
       }
       // (
         if darwin then
