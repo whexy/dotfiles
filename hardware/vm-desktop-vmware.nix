@@ -55,6 +55,15 @@
       networkConfig = {
         DHCP = "yes";
         IPv6AcceptRA = true;
+        # The DHCP-supplied VMware host DNS stays primary, but it is
+        # unreliable and frequently times out. Add public resolvers as
+        # same-link secondaries so resolved fails over to them when the
+        # host DNS goes dark. (fallbackDns does not help here: it only
+        # fires when a link has *no* DNS at all.)
+        DNS = [
+          "1.1.1.1"
+          "8.8.8.8"
+        ];
       };
     };
   };
@@ -64,12 +73,6 @@
     # Tailscale MagicDNS responses are not DNSSEC-signed; disabling avoids
     # spurious SERVFAILs on tailnet lookups.
     dnssec = "false";
-    # Workaround for unreliable VMware host DNS — used only when the link's
-    # DHCP-supplied DNS returns nothing, so it does not override Tailscale.
-    fallbackDns = [
-      "1.1.1.1"
-      "8.8.8.8"
-    ];
   };
 
   # Kernel modules for VMware
