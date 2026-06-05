@@ -2,17 +2,16 @@
 {
   pkgs,
   lib,
-  darwin,
   ...
 }:
-let
-  ghostty-pkg = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
-in
 {
   # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
   home.file.".p10k.zsh".source = ./zsh/p10k.zsh;
 
   programs = {
+    fzf.enable = true;
+    zoxide.enable = true;
+
     bat = {
       enable = true;
       extraPackages = with pkgs.bat-extras; [
@@ -23,14 +22,8 @@ in
       ];
     };
 
-    fzf = {
-      enable = true;
-      enableZshIntegration = true;
-    };
-
     eza = {
       enable = true;
-      enableZshIntegration = true;
       icons = "auto";
       extraOptions = [
         "--group-directories-first"
@@ -40,7 +33,6 @@ in
 
     atuin = {
       enable = true;
-      enableZshIntegration = true;
       settings = {
         auto_sync = false;
         update_check = false;
@@ -53,22 +45,10 @@ in
       };
     };
 
-    zoxide = {
-      enable = true;
-      enableZshIntegration = true;
-    };
-
     direnv = {
       enable = true;
       silent = true;
       nix-direnv.enable = true;
-      enableZshIntegration = true;
-    };
-
-    ghostty = {
-      enable = true;
-      package = lib.mkDefault ghostty-pkg;
-      enableZshIntegration = true;
     };
 
     zsh = {

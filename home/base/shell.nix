@@ -3,8 +3,12 @@
   config,
   pkgs,
   lib,
+  darwin,
   ...
 }:
+let
+  ghostty-pkg = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
+in
 {
   programs.zsh = {
     enable = true;
@@ -16,21 +20,28 @@
       share = true;
     };
 
-    # On non-NixOS Linux the login shell is the distro's /bin/zsh. We avoid
-    # `chsh`-ing to the nix-managed zsh since gc/rename would break it, so
-    # instead re-exec into it from the distro zsh's .zshrc.
-    initContent = lib.mkIf config.targets.genericLinux.enable (
-      lib.mkOrder 100 ''
-        # Re-exec into the nix-managed zsh once, before any output.
-        # Guard against re-exec loops (the same .zshrc is sourced by both shells).
-        if [[ -z "$IN_NIX_ZSH" && "''${SHELL:-}" != "${pkgs.zsh}/bin/zsh" \
-              && -x "${pkgs.zsh}/bin/zsh" ]]; then
-          export IN_NIX_ZSH=1
-          export SHELL="${pkgs.zsh}/bin/zsh"
-          exec "${pkgs.zsh}/bin/zsh" -l
-        fi
+    initContent = lib.mkMerge [
+      # On non-NixOS Linux the login shell is the distro's /bin/zsh. We avoid
+      # `chsh`-ing to the nix-managed zsh since gc/rename would break it, so
+      # instead re-exec into it from the distro zsh's .zshrc.
+      (lib.mkIf config.targets.genericLinux.enable (
+        lib.mkOrder 100 ''
+          # Re-exec into the nix-managed zsh once, before any output.
+          # Guard against re-exec loops (the same .zshrc is sourced by both shells).
+          if [[ -z "$IN_NIX_ZSH" && "''${SHELL:-}" != "${pkgs.zsh}/bin/zsh" \
+                && -x "${pkgs.zsh}/bin/zsh" ]]; then
+            export IN_NIX_ZSH=1
+            export SHELL="${pkgs.zsh}/bin/zsh"
+            exec "${pkgs.zsh}/bin/zsh" -l
+          fi
+        ''
+      ))
+
+      # Manually trigger ghostty integration (global)
       ''
-    );
+        source "${ghostty-pkg.shell_integration}/zsh/ghostty-integration"
+      ''
+    ];
   };
 
   programs.ssh = lib.mkDefault {
