@@ -1,5 +1,13 @@
 # Shell configuration (zsh, fzf, direnv, etc.)
-{ pkgs, lib, ... }:
+{
+  pkgs,
+  lib,
+  darwin,
+  ...
+}:
+let
+  ghostty-pkg = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
+in
 {
   # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
   home.file.".p10k.zsh".source = ./zsh/p10k.zsh;
@@ -54,6 +62,12 @@
       enable = true;
       silent = true;
       nix-direnv.enable = true;
+      enableZshIntegration = true;
+    };
+
+    ghostty = {
+      enable = true;
+      package = lib.mkDefault ghostty-pkg;
       enableZshIntegration = true;
     };
 
