@@ -22,11 +22,13 @@ in
       keybind =
         lib.optionals (!darwin) [
           "ctrl+shift+zero=set_font_size:23"
+          "ctrl+shift+r=reset"
         ]
         ++ lib.optionals darwin [
           "alt+left=unbind"
           "alt+right=unbind"
           "cmd+shift+zero=set_font_size:23"
+          "cmd+shift+r=reset"
         ];
     }
     // {
