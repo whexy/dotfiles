@@ -40,7 +40,7 @@ let
   # --- Input validation ---
   # Assert required inputs are present for each tag
   assertInput =
-    name: cond: msg:
+    _name: cond: msg:
     if cond then true else throw "nixpkgs-settings: ${msg}";
 
   assertions = [

@@ -1,6 +1,6 @@
 # Override 1password-cli to use Windows op.exe in WSL
 # Dynamically locates op.exe via WinGet or PATH, with caching for performance
-final: prev: {
+_final: prev: {
   _1password-cli = prev.writeShellScriptBin "op" ''
     set -euo pipefail
 

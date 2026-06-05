@@ -1,6 +1,5 @@
 # SSH configuration
 {
-  lib,
   darwin ? false,
   wsl ? false,
   ...

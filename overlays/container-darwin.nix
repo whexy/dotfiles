@@ -7,7 +7,7 @@
 #
 # Fix: set CONTAINER_INSTALL_ROOT so the apiserver always finds its plugins.
 # Remove this overlay once the upstream package wraps the binaries itself.
-final: prev:
+_final: prev:
 prev.lib.optionalAttrs prev.stdenv.hostPlatform.isDarwin {
   container = prev.container.overrideAttrs (old: {
     nativeBuildInputs = (old.nativeBuildInputs or [ ]) ++ [ prev.makeWrapper ];

@@ -99,3 +99,16 @@ only see files tracked by git.)
 
 Run `just verify` to check all flake outputs evaluate correctly.
 Run `just check` to run formatters and linters checklists.
+
+## Dev environment
+
+A `devShell` provides the formatters and linters on `PATH` (treefmt, nixfmt,
+statix, nil, nixd, deadnix, stylua, prettier, shfmt, taplo).
+
+Enter it with `nix develop`, or automatically via `direnv allow` (uses
+`.envrc`). Entering the shell installs git pre-commit hooks (`git-hooks.nix`)
+that run treefmt + statix + nil + deadnix before each commit. The same checks
+run in CI via `nix flake check` / `just check` (`checks.<system>.pre-commit`).
+
+Formatter definitions live in `treefmt.nix` (single source of truth, shared by
+`nix fmt`, the pre-commit hook, and the flake check).

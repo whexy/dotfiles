@@ -4,7 +4,7 @@
 #
 # Note: This creates a SEPARATE package (openssh-wsl), not replacing openssh,
 # because the system still needs real openssh for sshd.
-final: prev: {
+_final: prev: {
   openssh-wsl = prev.symlinkJoin {
     name = "openssh-wsl";
     paths = [
