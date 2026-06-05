@@ -56,7 +56,6 @@ in
   ];
 
   home.packages = with pkgs; [
-    swaybg
     wl-clipboard
   ];
 
@@ -101,15 +100,6 @@ in
     };
 
     spawn-at-startup = [
-      {
-        command = [
-          "swaybg"
-          "--image"
-          "${./wallpaper.jpg}"
-          "--mode"
-          "fill"
-        ];
-      }
       # Fallback: apply scale 1.5 to any output not covered by hardware.monitors.
       # On machines with full hardware.monitors declarations this loop is a no-op.
       {
