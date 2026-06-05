@@ -1,6 +1,5 @@
 # Dev-lite Darwin system configuration
-{ lib, ... }:
-{
+_: {
   time.timeZone = "America/Chicago";
   services.tailscale.enable = true;
 

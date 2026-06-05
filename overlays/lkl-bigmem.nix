@@ -2,7 +2,7 @@
 # The cptofs tool uses LKL to run a kernel as a library for filesystem operations
 # during disk image creation. The default 100M causes OOM for large disk images.
 # Reference: https://github.com/nix-community/nixos-generators/issues/443#issuecomment-3697547318
-final: prev: {
+_final: prev: {
   lkl = prev.lkl.overrideAttrs (old: {
     postPatch = (old.postPatch or "") + ''
       # Increase LKL kernel memory for large disk image builds

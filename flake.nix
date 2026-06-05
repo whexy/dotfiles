@@ -81,6 +81,12 @@ rec {
     treefmt-nix.url = "github:numtide/treefmt-nix";
     systems.url = "github:nix-systems/default";
 
+    # Git pre-commit hooks (format + lint before commit)
+    git-hooks = {
+      url = "github:cachix/git-hooks.nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
     # Renpho smart-scale CLI + home-manager module
     renpho-health = {
       url = "github:whexy/renpho-health-nix";
@@ -106,6 +112,27 @@ rec {
 
       eachSystem = f: nixpkgs.lib.genAttrs (import systems) (system: f nixpkgs.legacyPackages.${system});
       treefmtEval = eachSystem (pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
+
+      # Single source of truth for format + lint, shared by the devShell
+      # (installs hooks on entry) and `checks.<system>.pre-commit` (CI).
+      preCommit = eachSystem (
+        pkgs:
+        let
+          inherit (pkgs.stdenv.hostPlatform) system;
+        in
+        inputs.git-hooks.lib.${system}.run {
+          src = self;
+          hooks = {
+            treefmt = {
+              enable = true;
+              package = treefmtEval.${system}.config.build.wrapper;
+            };
+            statix.enable = true;
+            nil.enable = true;
+            deadnix.enable = true;
+          };
+        }
+      );
     in
     {
       # for `nix fmt`
@@ -113,19 +140,35 @@ rec {
 
       # for `nix flake check`
       checks = eachSystem (pkgs: {
-        formatting = treefmtEval.${pkgs.stdenv.hostPlatform.system}.config.build.check self;
-        statix =
-          pkgs.runCommand "statix-check"
-            {
-              nativeBuildInputs = [ pkgs.statix ];
-            }
-            ''
-              cp -r ${self} source
-              chmod -R +w source
-              statix check source
-              touch $out
-            '';
+        pre-commit = preCommit.${pkgs.stdenv.hostPlatform.system};
       });
+
+      # `nix develop` / direnv: tools on PATH + installs git pre-commit hooks
+      devShells = eachSystem (
+        pkgs:
+        let
+          inherit (pkgs.stdenv.hostPlatform) system;
+        in
+        {
+          default = pkgs.mkShell {
+            packages = [
+              pkgs.just
+              # Nix
+              pkgs.nixfmt
+              pkgs.statix
+              pkgs.nil
+              pkgs.nixd
+              pkgs.deadnix
+              # Other languages present in this repo
+              pkgs.stylua
+              pkgs.prettier
+              pkgs.shfmt
+              pkgs.taplo
+            ];
+            shellHook = preCommit.${system}.shellHook;
+          };
+        }
+      );
 
       # macOS (nix-darwin) configurations
       darwinConfigurations = {

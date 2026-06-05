@@ -231,8 +231,8 @@ vim.pack.add({
 	-- Browser integration
 	"https://github.com/glacambre/firenvim",
 
-  -- Hardtime (get rid of bad habits)
-  "https://github.com/m4xshen/hardtime.nvim",
+	-- Hardtime (get rid of bad habits)
+	"https://github.com/m4xshen/hardtime.nvim",
 })
 
 -- ╭──────────────────────────────────────────────────────────────────────╮
