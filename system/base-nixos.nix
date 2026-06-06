@@ -2,7 +2,6 @@
 {
   lib,
   wsl,
-  pkgs,
   ...
 }:
 {
@@ -12,8 +11,4 @@
   # enable envFS (shabang)
   # disable envFS for WSL, because Windows expect /bin/mount exists
   services.envfs.enable = lib.mkIf (!wsl) true;
-
-  environment.defaultPackages = with pkgs; [
-    nh
-  ];
 }
