@@ -7,4 +7,6 @@ _: {
       display = 10; # turn off display after 10 minutes idle
     };
   };
+
+  hardware.display.macbookScreen = true;
 }
