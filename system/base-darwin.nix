@@ -7,8 +7,4 @@
     bash
     zsh
   ];
-
-  environment.defaultPackages = with pkgs; [
-    nh
-  ];
 }

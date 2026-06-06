@@ -36,6 +36,7 @@ in
       podman
       rsync
       wget
+      nh
     ]
     ++ lib.optionals (!darwin) [
       git # macOS: use native git to avoid keychain prompt
