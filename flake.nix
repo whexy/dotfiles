@@ -209,6 +209,22 @@ rec {
           ];
         };
 
+        # lab - moore server dev VM (unprivileged user, nix-portable + KVM)
+        # Run on moore with:
+        #   export NIX_DISK_IMAGE=/tmp/moore-vm-$USER.qcow2
+        #   nix run .#nixosConfigurations.moore.config.system.build.vm
+        # Then: ssh -p 2222 whexy@localhost
+        moore = mkHost {
+          system = "x86_64-linux";
+          hardware = "moore-vm";
+          hostname = "moore-vm";
+          username = "whexy";
+          caps = [
+            "base"
+            "dev"
+          ];
+        };
+
         # lab - workstation (5700X)
         mvp = mkHost {
           system = "x86_64-linux";
