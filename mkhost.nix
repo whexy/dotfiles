@@ -104,16 +104,11 @@ systemFunc {
             ++ [
               inputs.agenix.homeManagerModules.default
               inputs.nix-index-database.homeModules.default
+              inputs.hunk.homeManagerModules.default
 
-              # Cross-platform replacement for upstream HM programs.rclone
-              # (adds launchd support for Darwin). Loaded for all hosts so the
-              # `programs.rclone` option set is consistent everywhere.
               ./home/modules/programs/rclone.nix
             ]
             ++ lib.optionals (builtins.elem "gui" caps) [
-              # Renpho health: CLI + systemd timer (Linux) + waybar pill.
-              # Modules are no-ops on Darwin so they can be imported on every
-              # gui-cap host without further gating.
               inputs.renpho-health.homeModules.default
               inputs.renpho-health.homeModules.waybar
             ];
