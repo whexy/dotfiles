@@ -75,7 +75,6 @@
       kubectl
       lazygit
       magic-wormhole-rs
-      pkgs.unstable.tree-sitter
       qemu
       ripgrep
       sqlite
@@ -90,7 +89,6 @@
       black
       golangci-lint
       nixfmt
-      ormolu
       prettier
       shellcheck
       shfmt
