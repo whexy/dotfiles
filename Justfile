@@ -35,6 +35,9 @@ verify:
     @echo "Evaluating mba..."
     nix eval .#darwinConfigurations.mba.system.drvPath --show-trace
     @echo "OK - mba"
+    @echo "Evaluating moore VM..."
+    nix eval .#nixosConfigurations.moore.config.system.build.vm.drvPath --show-trace
+    @echo "OK - moore VM"
     @echo "Evaluating home (x86_64)..."
     nix eval .#homeConfigurations.home.activationPackage.drvPath --impure --show-trace
     @echo "OK - home (x86_64)"
@@ -166,6 +169,23 @@ build-desktop-vmware ARCH="auto":
     echo "  - Guest OS: Other Linux 6.x kernel 64-bit"
     echo "  - Enable 3D acceleration in Display settings"
     echo "  - Set clipboard/drag-drop to Bidirectional"
+
+# Build the moore server dev VM launcher (run on moore via nix-portable)
+# After building, run on moore:
+#   export NIX_DISK_IMAGE=/tmp/moore-vm-$USER.qcow2
+#   ./result/moore/bin/run-moore-vm-vm
+# Then: ssh -p 2222 whexy@localhost
+build-moore-vm:
+    @mkdir -p result
+    @echo "Building moore VM launcher..."
+    nix build .#nixosConfigurations.moore.config.system.build.vm -o result/moore
+    @echo ""
+    @echo "Build complete! Launcher: result/moore/bin/run-moore-vm-vm"
+    @echo ""
+    @echo "Run on moore:"
+    @echo "  export NIX_DISK_IMAGE=/tmp/moore-vm-\$USER.qcow2"
+    @echo "  ./result/moore/bin/run-moore-vm-vm"
+    @echo "Then: ssh -p 2222 whexy@localhost"
 
 # Backward compatibility aliases
 alias build-utm := build-desktop-utm
