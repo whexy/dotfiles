@@ -16,4 +16,9 @@
     source = ./nvim;
     recursive = true;
   };
+
+  # Include unstable tree-sitter since NeoVim requires it
+  home.packages = [
+    pkgs.unstable.tree-sitter
+  ];
 }

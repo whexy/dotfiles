@@ -46,6 +46,20 @@
       tinymist
       typstyle
 
+      # Config files
+      nixfmt
+      prettier
+      shellcheck
+      shfmt
+      stylua
+      yamlfmt
+
+      lua-language-server
+      nixd
+      tombi
+      vscode-langservers-extracted
+      yaml-language-server
+
       # Quick tools
       _1password-cli
       age
@@ -58,7 +72,6 @@
       lazygit
       ripgrep
       tldr
-      pkgs.unstable.tree-sitter
     ]
     ++ lib.optionals darwin [
       container
