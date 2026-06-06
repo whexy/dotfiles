@@ -17,22 +17,15 @@ rec {
   };
 
   inputs = {
-    # NixOS / Linux
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
-
-    # Darwin (macOS)
     nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
-
-    # Shared unstable overlay input
     nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
 
-    # Home Manager (NixOS/Linux)
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Home Manager (Darwin)
     home-manager-darwin = {
       url = "github:nix-community/home-manager/release-26.05";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
@@ -43,55 +36,45 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs-darwin";
     };
 
-    # WSL installer
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # AI coding agents (daily builds)
-    llm-agents = {
-      url = "github:numtide/llm-agents.nix";
-    };
-
-    # Niri Wayland compositor
-    niri = {
-      url = "github:sodiboo/niri-flake";
-    };
-
-    # Declarative disk partitioning
     disko = {
       url = "github:nix-community/disko";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Secret management with age encryption
     agenix = {
       url = "github:ryantm/agenix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Nix index database for quick command search
     nix-index-database = {
       url = "github:nix-community/nix-index-database";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Treefmt, code formatter for all
-    treefmt-nix.url = "github:numtide/treefmt-nix";
-    systems.url = "github:nix-systems/default";
-
-    # Git pre-commit hooks (format + lint before commit)
     git-hooks = {
       url = "github:cachix/git-hooks.nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    # Renpho smart-scale CLI + home-manager module
     renpho-health = {
       url = "github:whexy/renpho-health-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    hunk = {
+      url = "github:modem-dev/hunk";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
+
+    systems.url = "github:nix-systems/default";
+    llm-agents.url = "github:numtide/llm-agents.nix";
+    niri.url = "github:sodiboo/niri-flake";
+    treefmt-nix.url = "github:numtide/treefmt-nix";
   };
 
   outputs =
