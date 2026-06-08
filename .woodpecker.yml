@@ -1,3 +1,14 @@
+# Pin heavy Nix steps to the big node (k8s-3). Referenced via YAML anchor below.
+variables:
+  - &k8s_heavy
+    kubernetes:
+      resources:
+        requests:
+          memory: 8Gi # only k8s-3 (~45Gi) can satisfy -> pinned to the big node
+          cpu: "4"
+        limits:
+          memory: 12Gi # <= LimitRange max
+          cpu: "16" # <= LimitRange max; let nix use many of k8s-3's 24 cores
 when:
   event: [push, pull_request, cron]
   cron: nightly
@@ -26,6 +37,7 @@ steps:
   # Verify flake structure and evaluate all NixOS configurations
   check-flake:
     image: nixos/nix:latest
+    backend_options: *k8s_heavy
     when:
       event: [push, pull_request]
     commands:
@@ -35,6 +47,7 @@ steps:
   # Evaluate darwin and home-manager configurations (not covered by flake check)
   check-extra-configs:
     image: nixos/nix:latest
+    backend_options: *k8s_heavy
     when:
       event: [push, pull_request]
     commands:
@@ -56,6 +69,7 @@ steps:
   # Build docs (tailwindcss) only when docs/ changes on master
   build-docs:
     image: nixos/nix:latest
+    backend_options: *k8s_heavy
     when:
       - event: push
         branch: master
