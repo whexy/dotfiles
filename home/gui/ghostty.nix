@@ -23,6 +23,10 @@ in
       background-opacity = 0.90;
       background-blur = true;
 
+      # Allow OSC 9 / OSC 777 sequences (emitted by tools like OpenCode over SSH)
+      # to trigger desktop notifications in Ghostty.
+      desktop-notifications = true;
+
       notify-on-command-finish = "unfocused";
       notify-on-command-finish-action = "bell,notify";
 
