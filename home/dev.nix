@@ -1,6 +1,8 @@
 # Development home-manager configuration
 {
+  config,
   pkgs,
+  lib,
   inputs,
   darwin ? false,
   ...
@@ -64,7 +66,6 @@
       uv
 
       # Quick tools
-      _1password-cli
       age
       cloudflared
       devenv
@@ -109,6 +110,9 @@
       vtsls
       yaml-language-server
       zls
+    ]
+    ++ lib.optionals config.targets.genericLinux.enable [
+      _1password-cli
     ]
     ++ lib.optionals darwin [
       # packages only available on macOS

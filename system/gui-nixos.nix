@@ -166,7 +166,10 @@
     };
 
     # 1Password GUI
-    _1password-gui.enable = true;
+    _1password-gui = {
+      enable = true;
+      polkitPolicyOwners = [ username ];
+    };
 
     # dconf: GSettings storage backend. Required for home-manager's
     # dconf.settings to take effect (used by macbook-screen-density.nix to

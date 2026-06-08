@@ -18,12 +18,16 @@ in
   documentation.dev.enable = true; # man pages for syscalls & libc (sections 2, 3)
 
   time.timeZone = "America/Chicago";
-  programs.zsh.enable = true;
+  programs = {
+    zsh.enable = true;
+    _1password.enable = true;
+    nix-ld.enable = true;
+  };
+
   security.sudo.wheelNeedsPassword = false;
 
   # Dev services
   networking.networkmanager.enable = true;
-  programs.nix-ld.enable = true;
 
   services = {
     openssh.enable = true;

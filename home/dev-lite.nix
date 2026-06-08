@@ -2,7 +2,9 @@
 # Terminal UX, git, ssh, AI agents, and essential CLI tools.
 # Heavy compilers, LSPs, and formatters are in the full "dev" cap.
 {
+  config,
   pkgs,
+  lib,
   inputs,
   darwin ? false,
   ...
@@ -61,7 +63,6 @@
       yaml-language-server
 
       # Quick tools
-      _1password-cli
       age
       inputs.agenix.packages.${pkgs.stdenv.hostPlatform.system}.agenix
       cloudflared
@@ -72,6 +73,9 @@
       lazygit
       ripgrep
       tldr
+    ]
+    ++ lib.optionals config.targets.genericLinux.enable [
+      _1password-cli
     ]
     ++ lib.optionals darwin [
       container
