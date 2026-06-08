@@ -7,6 +7,7 @@
   };
 
   time.timeZone = "America/Chicago";
+  programs._1password.enable = true;
   services.tailscale.enable = true;
 
   # Enable Linux builder VM for building NixOS configurations on macOS
