@@ -14,6 +14,9 @@ let
   claude_code_settings = builtins.fromJSON claude_code_config;
 in
 {
+  # Deploy the OpenCode notification plugin so it is auto-loaded by OpenCode.
+  home.file.".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
+
   programs = {
     opencode = {
       enable = true;
