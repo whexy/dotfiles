@@ -35,6 +35,11 @@ let
   homeDirectory = builtins.getEnv "HOME";
 
   homeConfigs = map (cap: ./home/${cap}.nix) caps;
+  # root path anchors ./home/modules/... relative to the flake root, not lib/
+  commonHomeModules = import ./lib/home-modules.nix {
+    inherit inputs;
+    root = ./.;
+  } { inherit caps; };
 in
 inputs.home-manager.lib.homeManagerConfiguration {
   inherit pkgs;
@@ -45,25 +50,11 @@ inputs.home-manager.lib.homeManagerConfiguration {
   };
   modules =
     homeConfigs
+    ++ commonHomeModules
     ++ [
-      inputs.agenix.homeManagerModules.default
-      inputs.nix-index-database.homeModules.default
-      inputs.hunk.homeManagerModules.default
-
-      ./home/modules/programs/rclone.nix
-    ]
-    ++ lib.optionals (builtins.elem "gui" caps) [
-      inputs.renpho-health.homeModules.default
-      inputs.renpho-health.homeModules.waybar
-    ]
-    ++ [
-
       {
         home.username = username;
         home.homeDirectory = homeDirectory;
-      }
-
-      {
         targets.genericLinux.enable = true;
         # Disable GPU integration - it's not needed for standalone configs (typically remote servers)
         # and some GPU packages (like libvdpau-va-gl) have dependencies not available on aarch64
