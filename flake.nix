@@ -64,6 +64,7 @@ rec {
     renpho-health = {
       url = "github:whexy/renpho-health-nix";
       inputs.nixpkgs.follows = "nixpkgs";
+      inputs.blueprint.follows = "blueprint";
     };
 
     hunk = {
@@ -71,17 +72,35 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    systems.url = "github:nix-systems/default";
-    llm-agents.url = "github:numtide/llm-agents.nix";
-    niri.url = "github:sodiboo/niri-flake";
-    treefmt-nix.url = "github:numtide/treefmt-nix";
+    blueprint = {
+      url = "github:numtide/blueprint";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    llm-agents = {
+      url = "github:numtide/llm-agents.nix";
+      inputs = {
+        nixpkgs.follows = "nixpkgs-unstable";
+        blueprint.follows = "blueprint";
+        treefmt-nix.follows = "treefmt-nix";
+      };
+    };
+
+    niri = {
+      url = "github:sodiboo/niri-flake";
+      inputs.nixpkgs.follows = "nixpkgs-unstable";
+    };
+
+    treefmt-nix = {
+      url = "github:numtide/treefmt-nix";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =
     {
       self,
       nixpkgs,
-      systems,
       treefmt-nix,
       ...
     }@inputs:
@@ -93,7 +112,13 @@ rec {
         inherit inputs;
       };
 
-      eachSystem = f: nixpkgs.lib.genAttrs (import systems) (system: f nixpkgs.legacyPackages.${system});
+      eachSystem =
+        f:
+        nixpkgs.lib.genAttrs [
+          "x86_64-linux"
+          "aarch64-linux"
+          "aarch64-darwin"
+        ] (system: f nixpkgs.legacyPackages.${system});
       treefmtEval = eachSystem (pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
 
       # Single source of truth for format + lint, shared by the devShell
