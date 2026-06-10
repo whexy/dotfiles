@@ -112,8 +112,7 @@ rec {
         inherit inputs;
       };
 
-      # eachSystem f calls f system pkgs for each supported system.
-      # Darwin x86_64 is intentionally excluded (no supported hardware).
+      # (eachSystem f) calls (f system pkgs) for each supported system.
       eachSystem =
         f:
         nixpkgs.lib.genAttrs [
@@ -123,8 +122,6 @@ rec {
         ] (system: f system nixpkgs.legacyPackages.${system});
       treefmtEval = eachSystem (_system: pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
 
-      # Single source of truth for format + lint, shared by the devShell
-      # (installs hooks on entry) and `checks.<system>.pre-commit` (CI).
       preCommit = eachSystem (
         system: _pkgs:
         inputs.git-hooks.lib.${system}.run {
@@ -142,33 +139,29 @@ rec {
       );
     in
     {
-      # for `nix fmt`
       formatter = eachSystem (system: _pkgs: treefmtEval.${system}.config.build.wrapper);
-
-      # for `nix flake check`
       checks = eachSystem (
         system: _pkgs: {
           pre-commit = preCommit.${system};
         }
       );
 
-      # `nix develop` / direnv: tools on PATH + installs git pre-commit hooks
       devShells = eachSystem (
         system: pkgs: {
           default = pkgs.mkShell {
-            packages = [
-              pkgs.just
+            packages = with pkgs; [
+              just
               # Nix
-              pkgs.nixfmt
-              pkgs.statix
-              pkgs.nil
-              pkgs.nixd
-              pkgs.deadnix
+              nixfmt
+              statix
+              nil
+              nixd
+              deadnix
               # Other languages present in this repo
-              pkgs.stylua
-              pkgs.prettier
-              pkgs.shfmt
-              pkgs.taplo
+              stylua
+              prettier
+              shfmt
+              taplo
             ];
             shellHook = preCommit.${system}.shellHook;
           };
@@ -284,10 +277,6 @@ rec {
             "gui"
           ];
         };
-
-        # ------------------------
-        # --- ARTIFICIAL HOSTS ---
-        # ------------------------
 
         remote-basic = mkHost {
           system = "x86_64-linux";
