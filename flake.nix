@@ -112,22 +112,21 @@ rec {
         inherit inputs;
       };
 
+      # eachSystem f calls f system pkgs for each supported system.
+      # Darwin x86_64 is intentionally excluded (no supported hardware).
       eachSystem =
         f:
         nixpkgs.lib.genAttrs [
           "x86_64-linux"
           "aarch64-linux"
           "aarch64-darwin"
-        ] (system: f nixpkgs.legacyPackages.${system});
-      treefmtEval = eachSystem (pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
+        ] (system: f system nixpkgs.legacyPackages.${system});
+      treefmtEval = eachSystem (_system: pkgs: treefmt-nix.lib.evalModule pkgs ./treefmt.nix);
 
       # Single source of truth for format + lint, shared by the devShell
       # (installs hooks on entry) and `checks.<system>.pre-commit` (CI).
       preCommit = eachSystem (
-        pkgs:
-        let
-          inherit (pkgs.stdenv.hostPlatform) system;
-        in
+        system: _pkgs:
         inputs.git-hooks.lib.${system}.run {
           src = self;
           hooks = {
@@ -144,20 +143,18 @@ rec {
     in
     {
       # for `nix fmt`
-      formatter = eachSystem (pkgs: treefmtEval.${pkgs.stdenv.hostPlatform.system}.config.build.wrapper);
+      formatter = eachSystem (system: _pkgs: treefmtEval.${system}.config.build.wrapper);
 
       # for `nix flake check`
-      checks = eachSystem (pkgs: {
-        pre-commit = preCommit.${pkgs.stdenv.hostPlatform.system};
-      });
+      checks = eachSystem (
+        system: _pkgs: {
+          pre-commit = preCommit.${system};
+        }
+      );
 
       # `nix develop` / direnv: tools on PATH + installs git pre-commit hooks
       devShells = eachSystem (
-        pkgs:
-        let
-          inherit (pkgs.stdenv.hostPlatform) system;
-        in
-        {
+        system: pkgs: {
           default = pkgs.mkShell {
             packages = [
               pkgs.just

@@ -51,6 +51,11 @@ let
   );
   homeConfigs = builtins.filter builtins.pathExists (map (cap: ./home/${cap}.nix) caps);
 
+  commonHomeModules = import ./lib/home-modules.nix {
+    inherit inputs;
+    root = self;
+  } { inherit caps; };
+
   systemFunc = if darwin then inputs.nix-darwin.lib.darwinSystem else inputs.nixpkgs.lib.nixosSystem;
   hm = if darwin then inputs.home-manager-darwin.darwinModules else inputs.home-manager.nixosModules;
 in
@@ -64,15 +69,17 @@ systemFunc {
     ./options/display.nix
 
     # Global Nix Setting
+    # nixConfig (substituters, trusted keys) is the base; hardcoded settings
+    # take precedence so critical flags like experimental-features cannot be
+    # silently overridden by nixConfig.
     {
-      nix.settings = {
+      nix.settings = nixConfig // {
         experimental-features = [
           "nix-command"
           "flakes"
         ];
         warn-dirty = false;
-      }
-      // nixConfig;
+      };
     }
 
     # Global Nixpkgs Config (overlays, ...)
@@ -98,31 +105,13 @@ systemFunc {
         useUserPackages = true;
         backupFileExtension = "backup";
         extraSpecialArgs = { inherit inputs darwin wsl; };
-        users.${username} = {
-          imports =
-            homeConfigs
-            ++ [
-              inputs.agenix.homeManagerModules.default
-              inputs.nix-index-database.homeModules.default
-              inputs.hunk.homeManagerModules.default
-
-              ./home/modules/programs/rclone.nix
-            ]
-            ++ lib.optionals (builtins.elem "gui" caps) [
-              inputs.renpho-health.homeModules.default
-              inputs.renpho-health.homeModules.waybar
-            ];
-        };
+        users.${username}.imports = homeConfigs ++ commonHomeModules;
       };
     }
 
     {
       _module.args = {
-        inherit inputs self;
-        inherit system hostname;
-        inherit username;
-        inherit darwin;
-        inherit wsl;
+        inherit username wsl;
       };
     }
 
@@ -130,7 +119,6 @@ systemFunc {
     {
       networking.hostName = hostname;
     }
-
-    (if wsl then inputs.nixos-wsl.nixosModules.wsl else { })
-  ];
+  ]
+  ++ lib.optionals wsl [ inputs.nixos-wsl.nixosModules.wsl ];
 }
