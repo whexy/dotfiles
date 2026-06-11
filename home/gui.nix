@@ -38,7 +38,10 @@
 
   home.packages =
     with pkgs;
-    lib.optionals (!darwin) [
+    [
+      moonlight-qt
+    ]
+    ++ lib.optionals (!darwin) [
       # Linux only
       nautilus # required by xdg-desktop-portal-gnome for FileChooser
       obsidian
