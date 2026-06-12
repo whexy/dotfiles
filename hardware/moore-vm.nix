@@ -30,31 +30,23 @@
     (modulesPath + "/virtualisation/qemu-vm.nix")
   ];
 
-  system.stateVersion = "25.11";
+  system.stateVersion = "26.05";
 
   virtualisation = {
-    # Resources (host has 48 cores / 251 GB RAM).
-    cores = 8;
-    memorySize = 16384;
-
-    # Writable scratch disk size for `/`. Lives on /tmp via NIX_DISK_IMAGE.
-    diskSize = 8192;
-
-    # Headless: serial console only.
+    cores = 16;
+    memorySize = 32768;
+    diskSize = 32768;
     graphics = false;
 
-    # Use a Nix-managed qemu so we do not depend on the host qemu for the
-    # first run. KVM acceleration is enabled by the generated launcher.
     qemu.package = pkgs.qemu_kvm;
 
-    # SSH into the guest from the host: host 2222 -> guest 22.
-    forwardPorts = [
-      {
-        from = "host";
-        host.port = 2222;
-        guest.port = 22;
-      }
-    ];
+    # forwardPorts = [
+    #   {
+    #     from = "host";
+    #     host.port = 2222;
+    #     guest.port = 22;
+    #   }
+    # ];
 
     # Share the NFS home into the guest over 9p for file access.
     sharedDirectories.hosthome = {
@@ -63,10 +55,10 @@
     };
   };
 
-  # Allow password SSH login (user has a hashedPassword set).
+  # Disable password login.
   services.openssh = {
     enable = true;
-    settings.PasswordAuthentication = lib.mkDefault true;
+    settings.PasswordAuthentication = false;
   };
 
   # Serial console for `nix run` headless boot.
