@@ -66,21 +66,6 @@ steps:
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.home-base-aarch64.activationPackage.drvPath --impure --show-trace
       - echo "OK - home-base-aarch64"
       - echo "SUCCESS - All configurations evaluate correctly"
-  # Build hunk (not in nixpkgs) and push to whexy.cachix for x86_64-linux
-  cache-hunk:
-    image: nixos/nix:latest
-    backend_options: *k8s_heavy
-    when:
-      event: push
-      branch: master
-      path: "flake.lock"
-    environment:
-      CACHIX_AUTH_TOKEN:
-        from_secret: CACHIX_AUTH_TOKEN
-    commands:
-      - nix-env -iA cachix -f https://cachix.org/api/v1/install
-      - nix build .#packages.x86_64-linux.hunk --extra-experimental-features 'nix-command flakes'
-      - cachix push whexy ./result
   # Build docs (tailwindcss) only when docs/ changes on master
   build-docs:
     image: nixos/nix:latest

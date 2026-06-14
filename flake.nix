@@ -139,12 +139,6 @@ rec {
       );
     in
     {
-      packages = eachSystem (
-        system: _pkgs: {
-          hunk = inputs.hunk.packages.${system}.default;
-        }
-      );
-
       formatter = eachSystem (system: _pkgs: treefmtEval.${system}.config.build.wrapper);
       checks = eachSystem (
         system: _pkgs: {
