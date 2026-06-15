@@ -37,9 +37,11 @@ in
         ''
       ))
 
-      # Manually trigger ghostty integration (global)
+      # Manually trigger ghostty integration (only when running inside Ghostty)
       ''
-        source "${ghostty-pkg.shell_integration}/zsh/ghostty-integration"
+        if [[ "$TERM" == "xterm-ghostty" ]]; then
+          source "${ghostty-pkg.shell_integration}/zsh/ghostty-integration"
+        fi
       ''
     ];
   };
