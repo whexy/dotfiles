@@ -19,7 +19,9 @@ rec {
   inputs = {
     nixpkgs.url = "github:NixOS/nixpkgs/nixos-26.05";
     nixpkgs-darwin.url = "github:NixOS/nixpkgs/nixpkgs-26.05-darwin";
-    nixpkgs-unstable.url = "github:NixOS/nixpkgs/nixos-unstable";
+
+    # cooldown version, all packages are on probation for 7 days.
+    nixpkgs-unstable.url = "https://flakehub.com/f/DeterminateSystems/nixpkgs-weekly/0.1";
 
     home-manager = {
       url = "github:nix-community/home-manager/release-26.05";
