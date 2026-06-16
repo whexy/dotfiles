@@ -11,7 +11,6 @@
 [
   inputs.agenix.homeManagerModules.default
   inputs.nix-index-database.homeModules.default
-  inputs.hunk.homeManagerModules.default
 
   "${root}/home/modules/programs/rclone.nix"
 ]

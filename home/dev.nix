@@ -11,7 +11,6 @@
   imports = [
     ./dev/agents.nix
     ./dev/git.nix
-    ./dev/hunk.nix
     ./dev/neovim.nix
     ./dev/rclone.nix
     ./dev/shell.nix
