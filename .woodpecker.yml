@@ -87,9 +87,9 @@ steps:
         path: "docs/**"
     environment:
       CLOUDFLARE_API_TOKEN:
-        from_secret: cloudflare_api_token
+        from_secret: CLOUDFLARE_API_TOKEN
       CLOUDFLARE_ACCOUNT_ID:
-        from_secret: cloudflare_account_id
+        from_secret: CLOUDFLARE_ACCOUNT_ID
     commands:
       - echo "=== Deploying docs to Cloudflare Workers ==="
       - cd docs
