@@ -21,7 +21,6 @@ local TS_PACKAGES = {
 	"lua",
 	"markdown",
 	"markdown_inline",
-	"mdx",
 	"ninja",
 	"nix",
 	"python",
@@ -86,6 +85,8 @@ local LINTERS = {
 
 -- Filetype detection
 vim.filetype.add({ extension = { mdx = "mdx" } })
+-- MDX: use the markdown treesitter parser (no dedicated mdx grammar in nvim-treesitter)
+vim.treesitter.language.register("markdown", "mdx")
 
 -- Leader keys
 vim.g.mapleader = " "
