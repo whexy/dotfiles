@@ -19,6 +19,9 @@ local TS_PACKAGES = {
 	"jsdoc",
 	"json5",
 	"lua",
+	"markdown",
+	"markdown_inline",
+	"mdx",
 	"ninja",
 	"nix",
 	"python",
@@ -43,6 +46,7 @@ local LSPS = {
 	"html",
 	"jsonls",
 	"lua_ls",
+	"mdx_analyzer",
 	"nixd",
 	"ruff",
 	"tinymist",
@@ -56,6 +60,7 @@ local FORMATTERS = {
 	html = { "prettier" },
 	javascript = { "prettier" },
 	javascriptreact = { "prettier" },
+	mdx = { "prettier" },
 	json = { "prettier" },
 	lua = { "stylua" },
 	nix = { "nixfmt" },
@@ -78,6 +83,9 @@ local LINTERS = {
 -- ╭──────────────────────────────────────────────────────────────────────╮
 -- │                              OPTIONS                                 │
 -- ╰──────────────────────────────────────────────────────────────────────╯
+
+-- Filetype detection
+vim.filetype.add({ extension = { mdx = "mdx" } })
 
 -- Leader keys
 vim.g.mapleader = " "
