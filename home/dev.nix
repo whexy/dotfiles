@@ -105,6 +105,7 @@
       ruff
       tinymist
       tombi
+      mdx-language-server
       vscode-langservers-extracted
       vtsls
       yaml-language-server
