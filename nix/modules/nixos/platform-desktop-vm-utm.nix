@@ -8,7 +8,7 @@
 
 {
   imports = [
-    ./vm-desktop-base.nix
+    ./platform-desktop-vm-base.nix
     (modulesPath + "/profiles/qemu-guest.nix")
   ];
 

@@ -9,7 +9,7 @@
 
 {
   imports = [
-    ./vm-desktop-base.nix
+    ./platform-desktop-vm-base.nix
   ];
 
   # Configure the VMware image module

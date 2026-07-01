@@ -1,12 +1,15 @@
 # Hardware config for Proxmox VM images (used by nixos-generators)
 # Provides fallback values that get overridden by proxmox-image.nix
 {
+  flake,
   lib,
   modulesPath,
   ...
 }:
 
 {
+  nixpkgs.overlays = [ flake.lib.overlays.lkl-bigmem ];
+
   imports = [
     (modulesPath + "/profiles/qemu-guest.nix")
   ];

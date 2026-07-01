@@ -1,5 +1,10 @@
 # Dev NixOS system configuration
-{ pkgs, lib, ... }:
+{
+  flake,
+  pkgs,
+  lib,
+  ...
+}:
 let
   host = pkgs.stdenv.hostPlatform.system;
   universe = [
@@ -10,6 +15,8 @@ let
   emulated = lib.remove host universe;
 in
 {
+  nixpkgs.overlays = [ flake.lib.overlays.llm-tools ];
+
   nix = {
     optimise.automatic = true;
     settings.auto-optimise-store = true;
