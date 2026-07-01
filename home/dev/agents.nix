@@ -12,8 +12,8 @@ let
   opencode_tui_config = builtins.readFile ./opencode/tui.json;
   opencode_tui = builtins.fromJSON opencode_tui_config;
 
-  claude_code_config = builtins.readFile ./claude-code/settings.json;
-  claude_code_settings = builtins.fromJSON claude_code_config;
+  # claude_code_config = builtins.readFile ./claude-code/settings.json;
+  # claude_code_settings = builtins.fromJSON claude_code_config;
 in
 {
   # Deploy the OpenCode notification plugin so it is auto-loaded by OpenCode.
@@ -27,11 +27,11 @@ in
       tui = opencode_tui;
     };
 
-    claude-code = {
-      enable = true;
-      package = pkgs.llm-agents.claude-code;
-      settings = claude_code_settings;
-    };
+    # claude-code = {
+    #   enable = true;
+    #   package = pkgs.llm-agents.claude-code;
+    #   settings = claude_code_settings;
+    # };
 
     # Source API keys from agenix-decrypted secret into shell environment.
     # The secret file contains KEY=VALUE lines (ANTHROPIC_API_KEY, OPENAI_API_KEY).
