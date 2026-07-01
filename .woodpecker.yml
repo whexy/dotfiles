@@ -56,7 +56,7 @@ steps:
           remote-service
         do
           echo "Evaluating $config..."
-          nix eval --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.${config}.config.system.build.toplevel.drvPath" --show-trace
+          nix eval --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.$config.config.system.build.toplevel.drvPath" --show-trace
           echo "OK - $config"
         done
       - echo "OK - representative NixOS configurations evaluate correctly"
