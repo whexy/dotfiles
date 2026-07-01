@@ -72,7 +72,7 @@
     enable = true;
     # Tailscale MagicDNS responses are not DNSSEC-signed; disabling avoids
     # spurious SERVFAILs on tailnet lookups.
-    dnssec = "false";
+    settings.Resolve.DNSSEC = "false";
   };
 
   # Kernel modules for VMware
