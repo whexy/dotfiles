@@ -4,8 +4,8 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 ## Layout
 
 - `/nix/hosts` - Blueprint host definitions
-- `/nix/modules/nixos` - NixOS modules, including hardware and capability modules
-- `/nix/modules/darwin` - nix-darwin modules, including hardware and capability modules
+- `/nix/modules/nixos` - NixOS modules, including capability and reusable platform modules
+- `/nix/modules/darwin` - nix-darwin modules, including capability modules
 - `/nix/modules/home` - Home Manager modules shared by integrated and standalone homes
 - `/nix/overlays` - nixpkgs overlays
 
@@ -55,10 +55,10 @@ My macOS machines enable base+dev+gui+macos.
 
 ## Putting them together
 
-Blueprint discovers hosts from `nix/hosts/<name>`. Each host has a `profile.nix`
-with `system`, `hardware`, `hostname`, `username`, and `caps`. NixOS hosts use
+Blueprint discovers hosts from `nix/hosts/<name>`. NixOS hosts use
 `configuration.nix`; Darwin hosts use `default.nix` so they can keep using the
-Darwin-specific Home Manager input.
+Darwin-specific Home Manager input. Host-specific hardware lives beside the host
+as `hardware.nix`; reusable VM/image/platform modules live in `nix/modules/nixos`.
 
 ## Verification
 
