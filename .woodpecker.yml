@@ -44,8 +44,9 @@ steps:
       event: [push, pull_request]
     commands:
       - echo "=== Running pre-commit checks ==="
-      - SYSTEM=$(nix eval --raw --impure --expr 'builtins.currentSystem' --extra-experimental-features 'nix-command flakes')
-      - nix build --extra-experimental-features 'nix-command flakes' ".#checks.${SYSTEM}.pre-commit" -L --no-link
+      - |
+        SYSTEM=$(nix eval --accept-flake-config --raw --impure --expr 'builtins.currentSystem' --extra-experimental-features 'nix-command flakes')
+        nix build --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#checks.${SYSTEM}.pre-commit" -L --no-link
       - echo "=== Evaluating representative NixOS configurations ==="
       - |
         for config in \
@@ -55,7 +56,7 @@ steps:
           remote-service
         do
           echo "Evaluating $config..."
-          nix eval --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.${config}.config.system.build.toplevel.drvPath" --show-trace
+          nix eval --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.${config}.config.system.build.toplevel.drvPath" --show-trace
           echo "OK - $config"
         done
       - echo "OK - representative NixOS configurations evaluate correctly"
