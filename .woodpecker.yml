@@ -46,7 +46,7 @@ steps:
       - echo "=== Running pre-commit checks ==="
       - |
         SYSTEM=$(nix eval --accept-flake-config --raw --impure --expr 'builtins.currentSystem' --extra-experimental-features 'nix-command flakes')
-        nix build --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#checks.${SYSTEM}.pre-commit" -L --no-link
+        nix build --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#checks.$SYSTEM.pre-commit" -L --no-link
       - echo "=== Evaluating representative NixOS configurations ==="
       - |
         for config in \
