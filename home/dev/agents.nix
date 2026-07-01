@@ -19,6 +19,10 @@ in
   # Deploy the OpenCode notification plugin so it is auto-loaded by OpenCode.
   home.file.".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
 
+  home.shellAliases = {
+    oc = "opencode";
+  };
+
   programs = {
     opencode = {
       enable = true;
