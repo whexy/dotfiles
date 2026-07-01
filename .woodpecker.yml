@@ -34,16 +34,31 @@ steps:
           git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git
           git push origin HEAD:master
         fi
-  # Verify flake structure and evaluate all NixOS configurations
+  # Run lint checks and evaluate NixOS configurations without building every
+  # Blueprint-generated host closure. `nix flake check --all-systems` is too
+  # memory-heavy for this repo after Blueprint host discovery.
   check-flake:
     image: nixos/nix:latest
     backend_options: *k8s_heavy
     when:
       event: [push, pull_request]
     commands:
-      - echo "=== Verifying flake (all NixOS configurations) ==="
-      - nix flake check --extra-experimental-features 'nix-command flakes' --all-systems
-      - echo "OK - flake check passed"
+      - echo "=== Running pre-commit checks ==="
+      - SYSTEM=$(nix eval --raw --impure --expr 'builtins.currentSystem' --extra-experimental-features 'nix-command flakes')
+      - nix build --extra-experimental-features 'nix-command flakes' ".#checks.${SYSTEM}.pre-commit" -L --no-link
+      - echo "=== Evaluating representative NixOS configurations ==="
+      - |
+        for config in \
+          remote-dev \
+          ord \
+          wsl \
+          remote-service
+        do
+          echo "Evaluating $config..."
+          nix eval --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.${config}.config.system.build.toplevel.drvPath" --show-trace
+          echo "OK - $config"
+        done
+      - echo "OK - representative NixOS configurations evaluate correctly"
   # Evaluate darwin and home-manager configurations (not covered by flake check)
   check-extra-configs:
     image: nixos/nix:latest
