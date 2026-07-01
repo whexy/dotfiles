@@ -1,7 +1,4 @@
 { inputs, ... }:
 {
-  imports = with inputs.self.homeModules; [
-    base
-    service
-  ];
+  imports = [ inputs.self.homeModules.host-user ];
 }

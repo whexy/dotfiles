@@ -51,7 +51,7 @@ like ghostty, browser, fonts.
 Also included macOS-specific settings like dock, finder, Touch ID for sudo.
 
 For example, a remote NixOS dev machine should enable base+dev.
-My macOS machines enable base+dev+gui+macos.
+My macOS machines enable base+dev-lite+gui.
 
 ## Putting them together
 
@@ -59,6 +59,10 @@ Blueprint discovers hosts from `nix/hosts/<name>`. NixOS hosts use
 `configuration.nix`; Darwin hosts use `default.nix` so they can keep using the
 Darwin-specific Home Manager input. Host-specific hardware lives beside the host
 as `hardware.nix`; reusable VM/image/platform modules live in `nix/modules/nixos`.
+Host files should call `flake.lib.nixosHost` or `flake.lib.darwinHost` with their
+local `system`, `hostName`, `caps`, optional extra `modules`, and optional extra
+`overlays`. These helpers expose host metadata as `config.dotfiles.host.*`, which
+integrated Home Manager users consume via `homeModules.host-user`.
 
 ## Verification
 
