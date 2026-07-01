@@ -1,6 +1,12 @@
 # Dev Darwin system configuration
-{ lib, ... }:
+{ flake, lib, ... }:
 {
+  nixpkgs.overlays = [
+    flake.lib.overlays.llm-tools
+    flake.lib.overlays.container-darwin
+    flake.lib.overlays.direnv-darwin
+  ];
+
   nix = {
     optimise.automatic = true;
     settings.auto-optimise-store = true;

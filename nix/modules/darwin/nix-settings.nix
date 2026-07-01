@@ -1,4 +1,6 @@
 {
+  nixpkgs.config.allowUnfree = true;
+
   nix.settings = {
     extra-substituters = [
       "https://cache.numtide.com"

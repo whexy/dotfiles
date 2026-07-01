@@ -1,10 +1,13 @@
 # Base NixOS system configuration
 {
+  flake,
   lib,
   wsl,
   ...
 }:
 {
+  nixpkgs.overlays = [ flake.lib.overlays.unstable ];
+
   # Enable zsh at system level (required for user shell)
   programs.zsh.enable = true;
 

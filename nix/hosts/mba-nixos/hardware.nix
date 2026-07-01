@@ -3,7 +3,7 @@
 
 {
   imports = [
-    ./vm-desktop-vmware.nix
+    ../../modules/nixos/platform-desktop-vm-vmware.nix
   ];
 
   # Uses VMware's "Use full resolution for Retina Display" + fullscreen,

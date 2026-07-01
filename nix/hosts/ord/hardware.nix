@@ -6,7 +6,7 @@
 
 {
   imports = [
-    ./qemu-x86_64.nix
+    ../../modules/nixos/platform-qemu-guest-uefi-disko.nix
   ];
 
   # Load virtio-gpu early so the display is available before the compositor starts

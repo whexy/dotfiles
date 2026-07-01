@@ -1,5 +1,6 @@
 # Hardware config for VirtualBox VM images (used by nixos-rebuild build-image)
 {
+  flake,
   lib,
   pkgs,
   modulesPath,
@@ -8,6 +9,8 @@
 }:
 
 {
+  nixpkgs.overlays = [ flake.lib.overlays.lkl-bigmem ];
+
   imports = [
     (modulesPath + "/image/images.nix")
   ];
