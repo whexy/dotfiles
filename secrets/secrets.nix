@@ -1,7 +1,7 @@
 # Recipient config for the agenix CLI — NOT imported by any Nix config.
 # This file only tells the `agenix` CLI which public keys to encrypt each
 # .age file for. The actual secret declarations (which modules consume which
-# secrets) live in home/secrets.nix.
+# secrets) live in nix/modules/home/secrets.nix.
 #
 # Usage:
 #   cd secrets/
