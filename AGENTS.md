@@ -3,11 +3,11 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 
 ## Layout
 
-- `/hardware` - hardware configs (NixOS and Darwin)
-- `/system` - system configs (platform-specific per cap)
-- `/home` - home manager configs
-- `/users` - user account definitions
-- `/overlays` - nixpkgs overlays
+- `/nix/hosts` - Blueprint host definitions
+- `/nix/modules/nixos` - NixOS modules, including hardware and capability modules
+- `/nix/modules/darwin` - nix-darwin modules, including hardware and capability modules
+- `/nix/modules/home` - Home Manager modules shared by integrated and standalone homes
+- `/nix/overlays` - nixpkgs overlays
 
 ### System configs
 
@@ -17,10 +17,10 @@ System configs are operating-system settings, for example:
 - power settings, e.g., how long should sleep after idle
 - some "heavy" system packages, e.g., whether to enable docker, openssh
 
-System configs are platform-specific. For each cap, there are two files:
+System configs are platform-specific Blueprint modules:
 
-- `system/{cap}-nixos.nix` - NixOS-specific settings
-- `system/{cap}-darwin.nix` - Darwin-specific settings
+- `nix/modules/nixos/{cap}.nix` - NixOS-specific settings
+- `nix/modules/darwin/{cap}.nix` - Darwin-specific settings
 
 ### Home configs
 
@@ -29,7 +29,9 @@ Home configs are user space settings, for example:
 - packages, e.g., enable zsh, neovim, ripgrep
 - software settings, e.g., zshrc, neovim init.lua, tmux config
 
-Home configs are cross-platform and shared between NixOS and Darwin.
+Home configs are cross-platform Blueprint modules exposed as
+`homeModules.<name>`. They are shared between NixOS, Darwin, and standalone
+Home Manager outputs.
 
 ## Capabilities
 
@@ -53,44 +55,10 @@ My macOS machines enable base+dev+gui+macos.
 
 ## Putting them together
 
-A special function `mkHost` is defined in `mkhost.nix` file.
-This function takes:
-
-- `system`: e.g., `x86_64-linux` or `aarch64-darwin`
-- `hardware`: e.g., `qemu-x86_64` or `macos-laptop`
-- `hostname`: the machine's hostname
-- `username`: the primary user
-- `caps`: list of capabilities to enable
-- `darwin`: set to `true` for macOS systems
-
-Example NixOS configuration:
-
-```nix
-nixosConfigurations = {
-    remote-dev = mkHost {
-        system = "x86_64-linux";
-        hardware = "qemu-x86_64";
-        hostname = "remote-dev";
-        username = "whexy";
-        caps = [ "base" "dev" ];
-    };
-};
-```
-
-Example Darwin configuration:
-
-```nix
-darwinConfigurations = {
-    mbp = mkHost {
-        system = "aarch64-darwin";
-        hardware = "macos-laptop";
-        hostname = "mbp";
-        username = "whexy";
-        darwin = true;
-        caps = [ "base" "dev" "gui" "macos" ];
-    };
-};
-```
+Blueprint discovers hosts from `nix/hosts/<name>`. Each host has a `profile.nix`
+with `system`, `hardware`, `hostname`, `username`, and `caps`. NixOS hosts use
+`configuration.nix`; Darwin hosts use `default.nix` so they can keep using the
+Darwin-specific Home Manager input.
 
 ## Verification
 
@@ -110,5 +78,5 @@ Enter it with `nix develop`, or automatically via `direnv allow` (uses
 that run treefmt + statix + nil + deadnix before each commit. The same checks
 run in CI via `nix flake check` / `just check` (`checks.<system>.pre-commit`).
 
-Formatter definitions live in `treefmt.nix` (single source of truth, shared by
+Formatter definitions live in `nix/treefmt.nix` (single source of truth, shared by
 `nix fmt`, the pre-commit hook, and the flake check).
