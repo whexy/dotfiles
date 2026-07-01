@@ -1,8 +1,4 @@
 { inputs, ... }:
 {
-  imports = with inputs.self.homeModules; [
-    base
-    dev
-    gui
-  ];
+  imports = [ inputs.self.homeModules.host-user ];
 }
