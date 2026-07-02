@@ -22,16 +22,9 @@
 For x86_64 Linux:
 
 ```bash
-home-manager switch --flake github:whexy/dotfiles#home --impure
+home-manager switch --flake github:whexy/dotfiles#wenxuan@mars
+home-manager switch --flake github:whexy/dotfiles#wenxuan@venus
 ```
-
-For aarch64 Linux:
-
-```bash
-home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure
-```
-
-> **Note:** The `--impure` flag is required because this configuration reads your username and home directory path from environment variables (`$USER` and `$HOME`).
 
 ### macOS
 

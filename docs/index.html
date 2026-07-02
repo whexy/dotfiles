@@ -263,34 +263,20 @@
         ],
         home: [
           {
-            label: "Dotfiles (x86_64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home --impure",
+            label: "venus",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#wenxuan@venus",
             nhCmd:
-              "nh home switch github:whexy/dotfiles --no-nom --impure -c home -b backup",
+              "nh home switch github:whexy/dotfiles --no-nom -c wenxuan@venus -b backup",
             description:
-              "Full dotfiles (base + dev) for x86_64 Linux. Requires --impure for $USER/$HOME.",
+              "Standalone Home Manager config for venus - wenxuan at /home/wenxuan, base + dev.",
           },
           {
-            label: "Dotfiles (aarch64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home-aarch64 --impure",
+            label: "mars",
+            cmd: "home-manager switch --flake github:whexy/dotfiles#wenxuan@mars",
             nhCmd:
-              "nh home switch github:whexy/dotfiles --no-nom --impure -c home-aarch64 -b backup",
+              "nh home switch github:whexy/dotfiles --no-nom -c wenxuan@mars -b backup",
             description:
-              "Full dotfiles (base + dev) for aarch64 Linux. Requires --impure for $USER/$HOME.",
-          },
-          {
-            label: "Base (x86_64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base --impure",
-            nhCmd:
-              "nh home switch github:whexy/dotfiles --no-nom --impure -c home-base -b backup",
-            description: "Minimal dotfiles (base only) for x86_64 Linux.",
-          },
-          {
-            label: "Base (aarch64)",
-            cmd: "home-manager switch --flake github:whexy/dotfiles#home-base-aarch64 --impure",
-            nhCmd:
-              "nh home switch github:whexy/dotfiles --no-nom --impure -c home-base-aarch64 -b backup",
-            description: "Minimal dotfiles (base only) for aarch64 Linux.",
+              "Standalone Home Manager config for mars - wenxuan at /data/wenxuan, base + dev.",
           },
         ],
         vm: [

@@ -96,83 +96,13 @@ rec {
 
   outputs =
     inputs:
-    let
-      bp = inputs.blueprint {
-        inherit inputs;
-        prefix = "nix/";
-        systems = [
-          "x86_64-linux"
-          "aarch64-linux"
-          "aarch64-darwin"
-        ];
-      };
-    in
-    bp
-    // {
-      homeConfigurations = {
-        home = bp.lib.mkStandaloneHome {
-          system = "x86_64-linux";
-          modules = [
-            bp.homeModules.base
-            bp.homeModules.dev
-            {
-              home.username = builtins.getEnv "USER";
-              home.homeDirectory = builtins.getEnv "HOME";
-              targets.genericLinux.enable = true;
-              targets.genericLinux.gpu.enable = false;
-            }
-          ];
-          overlays = [
-            bp.lib.overlays.unstable
-            bp.lib.overlays.llm-tools
-          ];
-        };
-
-        home-aarch64 = bp.lib.mkStandaloneHome {
-          system = "aarch64-linux";
-          modules = [
-            bp.homeModules.base
-            bp.homeModules.dev
-            {
-              home.username = builtins.getEnv "USER";
-              home.homeDirectory = builtins.getEnv "HOME";
-              targets.genericLinux.enable = true;
-              targets.genericLinux.gpu.enable = false;
-            }
-          ];
-          overlays = [
-            bp.lib.overlays.unstable
-            bp.lib.overlays.llm-tools
-          ];
-        };
-
-        home-base = bp.lib.mkStandaloneHome {
-          system = "x86_64-linux";
-          modules = [
-            bp.homeModules.base
-            {
-              home.username = builtins.getEnv "USER";
-              home.homeDirectory = builtins.getEnv "HOME";
-              targets.genericLinux.enable = true;
-              targets.genericLinux.gpu.enable = false;
-            }
-          ];
-          overlays = [ bp.lib.overlays.unstable ];
-        };
-
-        home-base-aarch64 = bp.lib.mkStandaloneHome {
-          system = "aarch64-linux";
-          modules = [
-            bp.homeModules.base
-            {
-              home.username = builtins.getEnv "USER";
-              home.homeDirectory = builtins.getEnv "HOME";
-              targets.genericLinux.enable = true;
-              targets.genericLinux.gpu.enable = false;
-            }
-          ];
-          overlays = [ bp.lib.overlays.unstable ];
-        };
-      };
+    inputs.blueprint {
+      inherit inputs;
+      prefix = "nix/";
+      systems = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
+      ];
     };
 }
