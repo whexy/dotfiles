@@ -73,7 +73,7 @@ steps:
       - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mini.system.drvPath --show-trace
       - echo "OK - mini"
       - echo "=== Evaluating home-manager configurations ==="
-      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.mars.activationPackage.drvPath --impure --show-trace
+      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.wenxuan@mars.activationPackage.drvPath --impure --show-trace
       - echo "OK - mars (x86_64)"
       - echo "SUCCESS - All configurations evaluate correctly"
   # Build docs (tailwindcss) only when docs/ changes on master
