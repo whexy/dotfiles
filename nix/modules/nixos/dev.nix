@@ -34,7 +34,10 @@ in
   security.sudo.wheelNeedsPassword = false;
 
   # Dev services
-  networking.networkmanager.enable = true;
+  networking = {
+    networkmanager.enable = true;
+    nftables.enable = true;
+  };
 
   services = {
     openssh.enable = true;
@@ -68,6 +71,7 @@ in
     };
 
     podman.enable = true;
+    incus.enable = true;
 
     containers = {
       enable = true;
