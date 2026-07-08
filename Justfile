@@ -23,7 +23,7 @@ check:
     nix build ".#checks.${SYSTEM}.pre-commit" -L --no-link
     echo "SUCCESS - All lint checks passed"
 
-# Verify primary configurations evaluate correctly (remote-dev, ord, mba, home)
+# Verify primary configurations evaluate correctly (remote-dev, ord, mba)
 verify:
     @echo "=== Verifying primary configurations ==="
     @echo "Evaluating remote-dev..."
@@ -38,12 +38,6 @@ verify:
     @echo "Evaluating moore VM..."
     nix eval .#nixosConfigurations.moore.config.system.build.vm.drvPath --show-trace
     @echo "OK - moore VM"
-    @echo "Evaluating home (x86_64)..."
-    nix eval .#homeConfigurations.home.activationPackage.drvPath --impure --show-trace
-    @echo "OK - home (x86_64)"
-    @echo "Evaluating home (aarch64)..."
-    nix eval .#homeConfigurations.home-aarch64.activationPackage.drvPath --impure --show-trace
-    @echo "OK - home (aarch64)"
     @echo "SUCCESS - All primary configurations evaluate correctly"
 
 # Build WSL tarball for import (requires sudo)
