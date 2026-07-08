@@ -4,9 +4,25 @@
   lib,
   ...
 }:
+let
+  incusCompletionAvailable = pkgs ? incus && lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.incus;
+  incusZshCompletion =
+    pkgs.runCommand "incus-zsh-completion" { nativeBuildInputs = [ pkgs.incus ]; }
+      ''
+        export HOME=$TMPDIR
+        mkdir -p $out/share/zsh/site-functions
+        incus completion zsh > $out/share/zsh/site-functions/_incus
+      '';
+in
 {
   # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
-  home.file.".p10k.zsh".source = ./zsh/p10k.zsh;
+  home.file = {
+    ".p10k.zsh".source = ./zsh/p10k.zsh;
+  }
+  // lib.optionalAttrs incusCompletionAvailable {
+    ".local/share/zsh/site-functions/_incus".source =
+      "${incusZshCompletion}/share/zsh/site-functions/_incus";
+  };
 
   programs = {
     fzf.enable = true;
@@ -90,6 +106,12 @@
             source "''${XDG_CACHE_HOME:-$HOME/.cache}/p10k-instant-prompt-''${(%):-%n}.zsh"
           fi
         '')
+
+        (lib.mkIf incusCompletionAvailable (
+          lib.mkOrder 550 ''
+            fpath=("$HOME/.local/share/zsh/site-functions" $fpath)
+          ''
+        ))
 
         # Main shell configuration (default order 1000).
         ''
