@@ -36,6 +36,7 @@
     # =========================[ Line #1 ]=========================
     context                   # user@host
     dir                       # current directory
+    jj_status                 # jujutsu status
     vcs                       # git status
     command_execution_time    # previous command duration
     # =========================[ Line #2 ]=========================
@@ -105,6 +106,29 @@
 
   # Grey Git prompt. This makes stale prompts indistinguishable from up-to-date ones.
   typeset -g POWERLEVEL9K_VCS_FOREGROUND=$grey
+
+  # jj status prompt. The p10k-jj-status plugin defines this by default, but this
+  # config intentionally resets POWERLEVEL9K_* above, so keep the command here.
+  typeset -g POWERLEVEL9K_JJ_STATUS_COMMAND=(
+    jj log --ignore-working-copy --color always --revisions @ --no-graph --template '
+    if(root,
+      "root",
+      concat(
+        separate(" ",
+          if(immutable, label("immutable", "◆")),
+          if(conflict, label("conflict", "×")),
+          change_id.shortest(4),
+          truncate_end(18, bookmarks, "…"),
+          if(empty, label("empty", "∅")),
+          if(description,
+            truncate_end(24, description.first_line(), "…"),
+            label(if(empty, "empty", "description placeholder"), "#"),
+          ),
+        ),
+        "\n"
+      ),
+    )'
+  )
 
   # Disable async loading indicator to make directories that aren't Git repositories
   # indistinguishable from large Git repositories without known state.

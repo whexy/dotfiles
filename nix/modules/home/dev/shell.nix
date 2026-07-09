@@ -13,6 +13,28 @@ let
         mkdir -p $out/share/zsh/site-functions
         incus completion zsh > $out/share/zsh/site-functions/_incus
       '';
+  p10kJjStatus = pkgs.stdenvNoCC.mkDerivation {
+    pname = "p10k-jj-status";
+    version = "2025-11-23";
+
+    src = pkgs.fetchFromGitHub {
+      owner = "xs5871";
+      repo = "p10k-jj-status";
+      rev = "a98672e1cd23f1010875bf6fb376a33b1740a484";
+      hash = "sha256-hTKzE7hNgKwASC4RbyCW8S9F7KaTqqyLBKtkTM7Sz/w=";
+    };
+
+    installPhase = ''
+      runHook preInstall
+
+      mkdir -p $out
+      cp -R . $out/
+      substituteInPlace $out/p10k-jj-status.plugin.zsh \
+        --replace-fail "sed -r" "sed -E"
+
+      runHook postInstall
+    '';
+  };
 in
 {
   # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
@@ -222,6 +244,11 @@ in
           name = "fzf-tab";
           src = pkgs.zsh-fzf-tab;
           file = "share/fzf-tab/fzf-tab.zsh";
+        }
+        {
+          name = "p10k-jj-status";
+          src = p10kJjStatus;
+          file = "p10k-jj-status.plugin.zsh";
         }
       ];
     };
