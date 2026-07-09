@@ -32,7 +32,13 @@ in
   # macOS: tell Finder to set the desktop picture on each activation.
   home.activation = lib.optionalAttrs darwin {
     setWallpaper = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      /usr/bin/osascript -e 'tell application "Finder" to set desktop picture to POSIX file "${wallpaper}"'
+      /usr/bin/osascript <<'EOF'
+      tell application "System Events"
+        repeat with d in desktops
+          set picture of d to POSIX file "${wallpaper}"
+        end repeat
+      end tell
+      EOF
     '';
   };
 }
