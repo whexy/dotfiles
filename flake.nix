@@ -28,11 +28,6 @@ rec {
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    home-manager-darwin = {
-      url = "github:nix-community/home-manager/release-26.05";
-      inputs.nixpkgs.follows = "nixpkgs-darwin";
-    };
-
     nix-darwin = {
       url = "github:nix-darwin/nix-darwin/nix-darwin-26.05";
       inputs.nixpkgs.follows = "nixpkgs-darwin";
@@ -104,5 +99,6 @@ rec {
         "aarch64-linux"
         "aarch64-darwin"
       ];
+      nixpkgs.config.allowUnfree = true;
     };
 }
