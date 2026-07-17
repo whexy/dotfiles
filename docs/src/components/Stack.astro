@@ -1,0 +1,16 @@
+---
+import { stack } from "../data/hosts";
+---
+
+<div class="reveal grid sm:grid-cols-2 sm:gap-x-12">
+  {
+    stack.map((item) => (
+      <div class="border-line group flex items-baseline justify-between gap-4 border-b py-2.5 text-sm transition-colors">
+        <span class="text-snow group-hover:text-nix transition-colors">
+          {item.name}
+        </span>
+        <span class="text-dim text-right text-xs">{item.note}</span>
+      </div>
+    ))
+  }
+</div>

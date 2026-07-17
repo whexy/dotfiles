@@ -76,17 +76,18 @@ steps:
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.wenxuan@mars.activationPackage.drvPath --impure --show-trace
       - echo "OK - mars (x86_64)"
       - echo "SUCCESS - All configurations evaluate correctly"
-  # Build docs (tailwindcss) only when docs/ changes on master
+  # Build docs (astro) only when docs/ changes on master
   build-docs:
-    image: nixos/nix:latest
-    backend_options: *k8s_heavy
+    image: node:22-alpine
     when:
       - event: push
         branch: master
         path: "docs/**"
     commands:
-      - echo "=== Building docs/output.css with tailwindcss ==="
-      - nix run --extra-experimental-features 'nix-command flakes' nixpkgs#tailwindcss_4 -- -i docs/input.css -o docs/output.css --minify
+      - echo "=== Building docs with astro ==="
+      - cd docs
+      - npm ci
+      - npm run build
       - echo "OK - docs built"
   # Deploy docs to Cloudflare Workers (static assets) only when docs/ changes on master
   deploy-docs:

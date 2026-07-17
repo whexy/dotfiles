@@ -1,0 +1,183 @@
+---
+import { categories } from "../data/hosts";
+---
+
+<div
+  class="reveal border-line bg-panel overflow-hidden rounded-lg border"
+  id="builder"
+>
+  <div class="border-line flex items-center gap-2 border-b px-4 py-3">
+    <span class="bg-raised border-line size-3 rounded-full border"></span>
+    <span class="bg-raised border-line size-3 rounded-full border"></span>
+    <span class="bg-raised border-line size-3 rounded-full border"></span>
+    <span class="text-dim ml-2 text-xs">rebuild — pick a target</span>
+    <label
+      id="nh-wrap"
+      class="text-fog ml-auto inline-flex cursor-pointer items-center gap-2 text-xs select-none"
+    >
+      <input
+        id="nh-toggle"
+        type="checkbox"
+        class="accent-nix-deep cursor-pointer"
+      />
+      <span>use nh</span>
+    </label>
+  </div>
+
+  <div class="p-4 sm:p-6">
+    <!-- Category tabs -->
+    <div
+      class="border-line flex flex-wrap items-center gap-x-5 gap-y-1 border-b pb-3"
+    >
+      {
+        categories.map((cat, i) => (
+          <button
+            class="cat-tab border-b-2 border-transparent py-1 text-sm transition-colors"
+            data-idx={i}
+            type="button"
+          >
+            {cat.label}
+          </button>
+        ))
+      }
+    </div>
+
+    <!-- Target chips -->
+    <div
+      id="target-row"
+      class="mt-4 flex flex-wrap gap-2 transition-opacity duration-150"
+    >
+    </div>
+
+    <!-- Command display -->
+    <div
+      class="border-line bg-ink mt-4 flex items-stretch overflow-hidden rounded border"
+    >
+      <code
+        class="flex-1 overflow-x-auto p-3 text-sm whitespace-nowrap"
+        id="cmd-display"
+      ></code>
+      <button
+        id="copy-btn"
+        class="text-fog hover:text-nix border-line w-16 shrink-0 cursor-pointer border-l text-xs transition-colors"
+        type="button"
+        aria-label="Copy command to clipboard"
+      >
+        copy
+      </button>
+    </div>
+
+    <p id="cmd-note" class="text-dim mt-2 min-h-4 text-xs"></p>
+  </div>
+</div>
+
+<script>
+  import { categories } from "../data/hosts";
+
+  let activeCategory = 0;
+  let activeTarget = 0;
+  let useNh = false;
+  let currentCommand = "";
+
+  const tabs = document.querySelectorAll<HTMLButtonElement>(".cat-tab");
+  const targetRow = document.getElementById("target-row")!;
+  const cmdDisplay = document.getElementById("cmd-display")!;
+  const cmdNote = document.getElementById("cmd-note")!;
+  const nhToggle = document.getElementById("nh-toggle")! as HTMLInputElement;
+  const nhWrap = document.getElementById("nh-wrap")!;
+  const copyBtn = document.getElementById("copy-btn")!;
+
+  function resolveCommand(): string {
+    const host = categories[activeCategory].hosts[activeTarget];
+    if (useNh && host.nhCmd) return host.nhCmd;
+    return host.cmd;
+  }
+
+  function renderCommand() {
+    const host = categories[activeCategory].hosts[activeTarget];
+    if (!host) return;
+    currentCommand = resolveCommand();
+    cmdDisplay.textContent = "";
+    const prompt = document.createElement("span");
+    prompt.className = "text-prompt";
+    prompt.textContent = "$ ";
+    const cmd = document.createElement("span");
+    cmd.className = "text-snow";
+    cmd.textContent = currentCommand;
+    cmdDisplay.append(prompt, cmd);
+    cmdNote.textContent = host.note;
+  }
+
+  function renderTargets() {
+    targetRow.style.opacity = "0";
+    setTimeout(() => {
+      targetRow.innerHTML = "";
+      categories[activeCategory].hosts.forEach((host, i) => {
+        const btn = document.createElement("button");
+        btn.type = "button";
+        btn.textContent = host.label;
+        btn.className =
+          "rounded border px-3 py-1.5 text-xs transition-colors " +
+          (i === activeTarget
+            ? "border-nix/50 bg-raised text-nix"
+            : "border-line text-fog hover:text-snow hover:border-fog");
+        btn.addEventListener("click", () => {
+          activeTarget = i;
+          renderTargets();
+          renderCommand();
+        });
+        targetRow.appendChild(btn);
+      });
+      targetRow.style.opacity = "1";
+    }, 100);
+  }
+
+  function renderTabs() {
+    tabs.forEach((tab, i) => {
+      if (i === activeCategory) {
+        tab.classList.add("text-snow", "border-nix");
+        tab.classList.remove("text-dim");
+      } else {
+        tab.classList.remove("text-snow", "border-nix");
+        tab.classList.add("text-dim");
+      }
+    });
+  }
+
+  function selectCategory(i: number) {
+    activeCategory = i;
+    activeTarget = 0;
+    nhWrap.classList.toggle(
+      "hidden",
+      !categories[i].hosts.some((h) => h.nhCmd),
+    );
+    renderTabs();
+    renderTargets();
+    setTimeout(renderCommand, 100);
+  }
+
+  tabs.forEach((tab) => {
+    tab.addEventListener("click", () => selectCategory(Number(tab.dataset.idx)));
+  });
+
+  nhToggle.addEventListener("change", () => {
+    useNh = nhToggle.checked;
+    renderCommand();
+  });
+
+  copyBtn.addEventListener("click", async () => {
+    try {
+      await navigator.clipboard.writeText(currentCommand);
+      copyBtn.textContent = "copied";
+      copyBtn.classList.add("text-nix");
+      setTimeout(() => {
+        copyBtn.textContent = "copy";
+        copyBtn.classList.remove("text-nix");
+      }, 1200);
+    } catch {
+      copyBtn.textContent = "error";
+    }
+  });
+
+  selectCategory(0);
+</script>

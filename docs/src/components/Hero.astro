@@ -1,0 +1,49 @@
+---
+import Snowflake from "./Snowflake.astro";
+import Terminal from "./Terminal.astro";
+---
+
+<header class="relative mx-auto max-w-5xl px-6 pt-24 pb-16 sm:pt-32">
+  <div class="flex flex-col items-start">
+    <Snowflake class="text-nix mb-8 size-12" />
+
+    <p class="text-dim mb-3 text-sm">whexy/dotfiles</p>
+    <h1
+      class="text-snow text-5xl font-bold tracking-tighter sm:text-7xl"
+    >
+      dotfiles<span class="text-nix animate-blink">_</span>
+    </h1>
+    <p class="text-fog mt-5 max-w-xl text-lg leading-relaxed sm:text-xl">
+      Reproducible chaos across machines. One flake — NixOS workstations,
+      MacBooks, headless servers and VM images, all from the same source.
+    </p>
+
+    <div class="mt-8 flex flex-wrap items-center gap-3">
+      <a
+        href="https://github.com/whexy/dotfiles"
+        target="_blank"
+        rel="noopener noreferrer"
+        class="border-nix/40 text-nix hover:bg-nix hover:text-ink rounded border px-5 py-2.5 text-sm transition-colors"
+      >
+        view on github ↗
+      </a>
+      <a
+        href="#rebuild"
+        class="border-line text-fog hover:text-snow hover:border-fog rounded border px-5 py-2.5 text-sm transition-colors"
+      >
+        rebuild a machine ↓
+      </a>
+    </div>
+
+    <div class="mt-14 w-full">
+      <Terminal />
+    </div>
+
+    <div class="text-dim mt-6 flex flex-wrap gap-x-6 gap-y-1 text-xs">
+      <span><span class="text-nix">16</span> hosts</span>
+      <span><span class="text-nix">3</span> platforms</span>
+      <span><span class="text-nix">1</span> flake</span>
+      <span><span class="text-nix">0</span> snowflakes</span>
+    </div>
+  </div>
+</header>

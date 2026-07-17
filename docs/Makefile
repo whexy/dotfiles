@@ -1,9 +1,12 @@
-all: output.css pretty
+all: build
 
-output.css: index.html input.css
-	nix run nixpkgs#tailwindcss_4 -- -i input.css -o output.css --minify
+node_modules: package.json package-lock.json
+	npm ci
 
-pretty: index.html
-	nix shell nixpkgs#prettier -c prettier index.html --write
+build: node_modules
+	npm run build
 
-.phony: all pretty
+dev: node_modules
+	npm run dev
+
+.PHONY: all build dev
