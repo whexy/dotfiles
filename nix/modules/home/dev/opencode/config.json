@@ -1,7 +1,6 @@
 {
   "$schema": "https://opencode.ai/config.json",
-  "model": "openai/gpt-5.6-sol",
-  "small_model": "openai/gpt-5.6-luna",
+  "model": "moonshotai/kimi-k3",
   "autoupdate": false,
   "default_agent": "plan",
   "share": "disabled",
@@ -16,6 +15,14 @@
     },
     "edit": {
       "/nix/store/**": "deny"
+    }
+  },
+  "provider": {
+    "moonshotai": {
+      "options": {
+        "baseURL": "https://ai-proxy.at-basking.ts.net/v1",
+        "apiKey": "kfc-vivo-50"
+      }
     }
   }
 }
