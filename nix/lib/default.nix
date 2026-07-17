@@ -96,10 +96,13 @@ in
 
         _module.args = { inherit username wsl; };
 
+        # blueprint wires home-manager for this host: it imports the HM NixOS
+        # module, discovers users from hosts/<host>/users/*, injects perSystem
+        # via sharedModules, and sets extraSpecialArgs { inputs, flake }.
         home-manager = {
           backupFileExtension = "backup";
           extraSpecialArgs = {
-            inherit inputs flake wsl;
+            inherit wsl;
             darwin = false;
           };
         };
@@ -117,73 +120,48 @@ in
       caps,
       modules ? [ ],
       overlays ? [ ],
-      home,
     }:
-    {
-      class = "nix-darwin";
-      value = inputs.nix-darwin.lib.darwinSystem {
-        inherit system;
-        modules = [
-          flake.darwinModules.nix-settings
-          flake.darwinModules.options-keyboards
-          flake.darwinModules.options-display
-          flake.darwinModules.user-whexy
-          inputs.home-manager-darwin.darwinModules.home-manager
-          (hostOptionsModule {
-            inherit caps hostName username;
-            wsl = false;
-          })
-          {
-            nixpkgs = {
-              hostPlatform = system;
-              inherit overlays;
-            };
-            networking.hostName = hostName;
-
-            _module.args = {
-              inherit username;
-              wsl = false;
-            };
-
-            home-manager = {
-              useGlobalPkgs = true;
-              useUserPackages = true;
-              backupFileExtension = "backup";
-              extraSpecialArgs = {
-                inherit inputs flake;
-                darwin = true;
-                wsl = false;
-              };
-              users.${username}.imports = [ home ];
-            };
-          }
-        ]
-        ++ moduleValuesForCaps flake.darwinModules caps
-        ++ modules;
-        specialArgs = {
-          inherit inputs flake hostName;
-        };
-      };
-    };
-
-  mkStandaloneHome =
-    {
-      system,
-      modules,
-      overlays ? [ ],
-    }:
-    let
-      pkgs = import inputs.nixpkgs {
-        inherit system overlays;
-        config.allowUnfree = true;
-      };
-    in
-    inputs.home-manager.lib.homeManagerConfiguration {
-      inherit pkgs modules;
-      extraSpecialArgs = {
-        inherit inputs flake;
-        darwin = false;
+    [
+      flake.darwinModules.nix-settings
+      flake.darwinModules.options-keyboards
+      flake.darwinModules.options-display
+      flake.darwinModules.user-whexy
+      (hostOptionsModule {
+        inherit caps hostName username;
         wsl = false;
-      };
-    };
+      })
+      {
+        nixpkgs = {
+          hostPlatform = system;
+          # blueprint injects nixpkgs.pkgs built from inputs.nixpkgs (the NixOS
+          # branch) with mkDefault priority; keep darwin hosts on the
+          # nixpkgs-darwin branch instead.
+          pkgs = import inputs.nixpkgs-darwin {
+            inherit system;
+            config.allowUnfree = true;
+          };
+          inherit overlays;
+        };
+        networking.hostName = hostName;
+
+        _module.args = {
+          inherit username;
+          wsl = false;
+        };
+
+        # blueprint wires home-manager for this host: it imports the HM darwin
+        # module, discovers users from hosts/<host>/users/*, injects perSystem
+        # via sharedModules, sets useGlobalPkgs/useUserPackages, and sets
+        # extraSpecialArgs { inputs, flake }.
+        home-manager = {
+          backupFileExtension = "backup";
+          extraSpecialArgs = {
+            darwin = true;
+            wsl = false;
+          };
+        };
+      }
+    ]
+    ++ moduleValuesForCaps flake.darwinModules caps
+    ++ modules;
 }

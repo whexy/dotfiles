@@ -6,6 +6,8 @@
   pkgs,
   lib,
   inputs,
+  # Injected by blueprint into every home-manager evaluation.
+  perSystem,
   darwin ? false,
   ...
 }:
@@ -78,5 +80,6 @@
     ]
     ++ lib.optionals darwin [
       container
+      perSystem.self.doordash-cli
     ];
 }

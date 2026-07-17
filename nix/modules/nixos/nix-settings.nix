@@ -1,6 +1,7 @@
 {
-  nixpkgs.config.allowUnfree = true;
-
+  # nixpkgs.config.allowUnfree is set at the blueprint level in flake.nix;
+  # setting it here would trip the "nixpkgs.config with nixpkgs.pkgs" assertion
+  # since blueprint injects nixpkgs.pkgs into every host.
   nix.settings = {
     extra-substituters = [
       "https://cache.numtide.com"
