@@ -1,0 +1,63 @@
+---
+import { heroCommands } from "../data/hosts";
+---
+
+<div
+  class="scanlines border-line bg-panel shadow-nix-deep/10 relative overflow-hidden rounded-lg border shadow-2xl"
+>
+  <div class="border-line flex items-center gap-2 border-b px-4 py-3">
+    <span class="bg-raised border-line size-3 rounded-full border"></span>
+    <span class="bg-raised border-line size-3 rounded-full border"></span>
+    <span class="bg-raised border-line size-3 rounded-full border"></span>
+    <span class="text-dim ml-2 text-xs">whexy@ord ~ — zsh</span>
+  </div>
+  <div class="min-h-24 p-5 text-sm leading-7">
+    <div class="break-all">
+      <span class="text-prompt">❯ </span><span id="typed"></span><span
+        class="text-nix animate-blink">▋</span
+      >
+    </div>
+    <div id="term-out" class="text-dim"></div>
+  </div>
+</div>
+
+<script define:vars={{ commands: heroCommands }}>
+  const typed = document.getElementById("typed");
+  const out = document.getElementById("term-out");
+  const reduced = window.matchMedia("(prefers-reduced-motion: reduce)").matches;
+
+  if (reduced) {
+    typed.textContent = commands[0];
+    out.textContent = "exit 0";
+  } else {
+    let ci = 0;
+    let pos = 0;
+    let phase = "typing";
+    const rand = (a, b) => a + Math.random() * (b - a);
+
+    function step() {
+      const cmd = commands[ci];
+      if (phase === "typing") {
+        pos += 1;
+        typed.textContent = cmd.slice(0, pos);
+        if (pos >= cmd.length) {
+          phase = "output";
+          setTimeout(step, 450);
+        } else {
+          setTimeout(step, rand(22, 65));
+        }
+      } else if (phase === "output") {
+        out.textContent = "exit 0";
+        phase = "hold";
+        setTimeout(step, 2200);
+      } else {
+        out.textContent = "";
+        pos = 0;
+        ci = (ci + 1) % commands.length;
+        phase = "typing";
+        setTimeout(step, 400);
+      }
+    }
+    step();
+  }
+</script>

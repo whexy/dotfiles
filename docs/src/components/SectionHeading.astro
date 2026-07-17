@@ -1,0 +1,18 @@
+---
+interface Props {
+  index: string;
+  name: string;
+  comment?: string;
+}
+
+const { index, name, comment } = Astro.props;
+---
+
+<div class="reveal mb-10 flex items-center gap-4">
+  <span class="text-nix text-sm">{index}</span>
+  <h2 class="text-xl font-bold tracking-tight text-snow sm:text-2xl">
+    {name}
+  </h2>
+  <span class="h-px flex-1 bg-line"></span>
+  {comment && <span class="text-dim hidden text-xs sm:block">// {comment}</span>}
+</div>

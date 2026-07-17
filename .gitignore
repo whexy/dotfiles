@@ -2,3 +2,8 @@ result/
 .direnv/
 .envrc.local
 .pre-commit-config.yaml
+
+# docs site (astro)
+docs/node_modules/
+docs/dist/
+docs/.astro/

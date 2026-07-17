@@ -1,0 +1,104 @@
+@import "tailwindcss";
+
+@theme {
+  --color-ink: #0a0a0b;
+  --color-panel: #101013;
+  --color-raised: #16161a;
+  --color-line: #212126;
+  --color-fog: #8b8b94;
+  --color-dim: #5b5b64;
+  --color-snow: #e4e4e7;
+  --color-nix: #7ebae4;
+  --color-nix-deep: #5277c3;
+  --color-prompt: #e8b86d;
+
+  --font-mono:
+    ui-monospace, "SF Mono", "Cascadia Code", "JetBrains Mono", Menlo, Consolas,
+    "Liberation Mono", monospace;
+
+  --animate-blink: blink 1.06s step-end infinite;
+
+  @keyframes blink {
+    0%,
+    100% {
+      opacity: 1;
+    }
+    50% {
+      opacity: 0;
+    }
+  }
+}
+
+html {
+  scroll-behavior: smooth;
+}
+
+body {
+  background-color: var(--color-ink);
+  color: var(--color-snow);
+  font-family: var(--font-mono);
+  -webkit-font-smoothing: antialiased;
+  text-rendering: optimizeLegibility;
+}
+
+::selection {
+  background: var(--color-nix-deep);
+  color: #fff;
+}
+
+/* Subtle blueprint grid over the whole page. */
+.grid-bg {
+  background-image:
+    linear-gradient(to right, rgb(126 186 228 / 0.035) 1px, transparent 1px),
+    linear-gradient(to bottom, rgb(126 186 228 / 0.035) 1px, transparent 1px);
+  background-size: 44px 44px;
+  mask-image: radial-gradient(
+    ellipse 90% 70% at 50% 0%,
+    black 30%,
+    transparent 100%
+  );
+}
+
+/* Faint scanlines inside terminal windows. */
+.scanlines::after {
+  content: "";
+  position: absolute;
+  inset: 0;
+  pointer-events: none;
+  background: repeating-linear-gradient(
+    to bottom,
+    transparent 0,
+    transparent 2px,
+    rgb(0 0 0 / 0.12) 3px,
+    transparent 4px
+  );
+  border-radius: inherit;
+}
+
+/* Scroll reveal — hidden state only when JS is available. */
+.js .reveal {
+  opacity: 0;
+  translate: 0 14px;
+  transition:
+    opacity 0.7s cubic-bezier(0.22, 1, 0.36, 1),
+    translate 0.7s cubic-bezier(0.22, 1, 0.36, 1);
+}
+
+.reveal.is-visible {
+  opacity: 1;
+  translate: 0 0;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  html {
+    scroll-behavior: auto;
+  }
+  .js .reveal {
+    opacity: 1;
+    translate: 0 0;
+    transition: none;
+  }
+  .animate-blink {
+    animation: none;
+  }
+}
