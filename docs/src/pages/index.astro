@@ -1,0 +1,54 @@
+---
+import Base from "../layouts/Base.astro";
+import Hero from "../components/Hero.astro";
+import SectionHeading from "../components/SectionHeading.astro";
+import CommandBuilder from "../components/CommandBuilder.astro";
+import Fleet from "../components/Fleet.astro";
+import Caps from "../components/Caps.astro";
+import Stack from "../components/Stack.astro";
+import Footer from "../components/Footer.astro";
+---
+
+<Base>
+  <Hero />
+
+  <main class="mx-auto max-w-5xl px-6">
+    <section id="rebuild" class="scroll-mt-8 py-14">
+      <SectionHeading
+        index="01"
+        name="rebuild"
+        comment="pick a target, copy the command"
+      />
+      <CommandBuilder />
+    </section>
+
+    <section id="fleet" class="scroll-mt-8 py-14">
+      <SectionHeading
+        index="02"
+        name="the fleet"
+        comment="every machine, one flake"
+      />
+      <Fleet />
+    </section>
+
+    <section id="caps" class="scroll-mt-8 py-14">
+      <SectionHeading
+        index="03"
+        name="capabilities"
+        comment="caps describe what a machine can do"
+      />
+      <Caps />
+    </section>
+
+    <section id="stack" class="scroll-mt-8 py-14">
+      <SectionHeading
+        index="04"
+        name="the stack"
+        comment="declared, pinned, reproducible"
+      />
+      <Stack />
+    </section>
+  </main>
+
+  <Footer />
+</Base>
