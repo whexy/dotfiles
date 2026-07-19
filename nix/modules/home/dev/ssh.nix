@@ -28,6 +28,11 @@ in
         ServerAliveCountMax = 3;
       };
 
+      "dev" = {
+        HostName = "remote-dev";
+        User = "whexy";
+      };
+
       "mars" = {
         HostName = "mars.cs.northwestern.edu";
         User = "wenxuan";
