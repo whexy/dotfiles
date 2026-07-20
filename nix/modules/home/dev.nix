@@ -84,6 +84,7 @@
       xh
       yazi
       yq
+      unstable.hunk
 
       # Formatters & Linters
       black

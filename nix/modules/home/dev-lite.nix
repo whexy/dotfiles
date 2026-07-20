@@ -74,6 +74,7 @@
       lazygit
       ripgrep
       tldr
+      unstable.hunk
     ]
     ++ lib.optionals config.targets.genericLinux.enable [
       _1password-cli
