@@ -37,6 +37,7 @@ in
   networking = {
     networkmanager.enable = true;
     nftables.enable = true;
+    firewall.trustedInterfaces = [ "tailscale0" ];
   };
 
   services = {
