@@ -12,7 +12,6 @@
     ./dev/agents.nix
     ./dev/git.nix
     ./dev/neovim.nix
-    ./dev/rclone.nix
     ./dev/shell.nix
     ./dev/ssh.nix
     ./dev/zellij.nix
