@@ -73,7 +73,6 @@ rec {
       url = "github:numtide/llm-agents.nix";
       inputs = {
         nixpkgs.follows = "nixpkgs-unstable";
-        blueprint.follows = "blueprint";
         treefmt-nix.follows = "treefmt-nix";
       };
     };
