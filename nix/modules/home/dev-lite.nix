@@ -72,6 +72,7 @@
       just
       kubectl
       lazygit
+      nix-output-monitor
       ripgrep
       tldr
     ]

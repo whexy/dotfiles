@@ -73,6 +73,7 @@
       just
       kubectl
       lazygit
+      nix-output-monitor
       magic-wormhole-rs
       qemu
       ripgrep
