@@ -8,7 +8,10 @@
       "base"
       "dev"
     ];
-    modules = [ ./hardware.nix ];
+    modules = [
+      ./hardware.nix
+      ./nvidia.nix
+    ];
     overlays = [
       flake.lib.overlays.op-wsl
       flake.lib.overlays.ssh-wsl
