@@ -30,6 +30,8 @@ in
       settings = {
         "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
         "browser.urlbar.scotchBonnet.enableOverride" = false;
+        "browser.search.suggest.enabled" = true;
+        "browser.urlbar.suggest.searches" = true;
       }
       // (
         if darwin then
@@ -62,6 +64,7 @@ in
           { }
       );
     };
+
     profiles.default.search = {
       force = true;
       default = "Unduck";
@@ -70,8 +73,9 @@ in
       engines = {
         "Unduck" = {
           urls = [
+            # Actual search
             {
-              template = "https://s.dunkirk.sh";
+              template = "https://flashbang.tech";
               params = [
                 {
                   name = "q";
@@ -79,9 +83,26 @@ in
                 }
               ];
             }
+
+            # Search suggestions
+            {
+              template = "https://flashbang.tech/suggest";
+              type = "application/x-suggestions+json";
+              params = [
+                {
+                  name = "q";
+                  value = "{searchTerms}";
+                }
+                {
+                  name = "sp";
+                  value = "google";
+                }
+              ];
+            }
           ];
         };
       };
     };
+
   };
 }
