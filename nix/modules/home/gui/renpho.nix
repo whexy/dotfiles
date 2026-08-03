@@ -11,19 +11,27 @@
 # because the .age file location and decryption flow differ on macOS and
 # we have no consumer for it there.
 {
+  inputs,
   config,
   lib,
   darwin,
   ...
 }:
 
-lib.mkIf (!darwin) {
-  age.secrets.renpho-creds.file = ../../../../secrets/renpho-creds.age;
+{
+  imports = [
+    inputs.renpho-health.homeModules.default
+    inputs.renpho-health.homeModules.waybar
+  ];
 
-  services.renpho-health = {
-    enable = true;
-    credsFile = config.age.secrets.renpho-creds.path;
+  config = lib.mkIf (!darwin) {
+    age.secrets.renpho-creds.file = ../../../../secrets/renpho-creds.age;
+
+    services.renpho-health = {
+      enable = true;
+      credsFile = config.age.secrets.renpho-creds.path;
+    };
+
+    programs.waybar.renpho.enable = true;
   };
-
-  programs.waybar.renpho.enable = true;
 }
