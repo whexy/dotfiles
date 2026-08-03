@@ -1,6 +1,5 @@
 # GUI systems home-manager configuration
 {
-  inputs,
   lib,
   pkgs,
   darwin ? false,
@@ -8,8 +7,6 @@
 }:
 {
   imports = [
-    inputs.renpho-health.homeModules.default
-    inputs.renpho-health.homeModules.waybar
     ./gui/clipboard.nix
     ./gui/ghostty.nix
     ./gui/git.nix
