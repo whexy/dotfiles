@@ -1,0 +1,31 @@
+{ config }:
+{
+  "$schema" = "https://opencode.ai/config.json";
+  model = "moonshotai/kimi-k3";
+  autoupdate = false;
+  default_agent = "plan";
+  share = "disabled";
+
+  server = {
+    port = 4096;
+    hostname = "127.0.0.1";
+  };
+
+  permission = {
+    external_directory = {
+      "/nix/store/**" = "allow";
+      "/tmp/**" = "allow";
+    };
+    edit."/nix/store/**" = "deny";
+  };
+
+  provider = {
+    moonshotai.options = {
+      baseURL = "https://ai-proxy.at-basking.ts.net/v1";
+      apiKey = "kfc-vivo-50";
+    };
+    openai.options.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
+    anthropic.options.apiKey = "{file:${config.age.secrets.anthropic-api-key.path}}";
+    deepseek.options.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
+  };
+}

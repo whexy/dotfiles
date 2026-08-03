@@ -26,4 +26,7 @@ in
   "cf-access-nas-client-id.age".publicKeys = [ key ];
   "cf-access-nas-client-secret.age".publicKeys = [ key ];
   "renpho-creds.age".publicKeys = [ key ];
+  "anthropic-api-key.age".publicKeys = [ key ];
+  "openai-api-key.age".publicKeys = [ key ];
+  "deepseek-api-key.age".publicKeys = [ key ];
 }
