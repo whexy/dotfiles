@@ -7,16 +7,26 @@
 let
   opencode_settings = import ./opencode/config.nix { inherit config; };
   opencode_tui = import ./opencode/tui.nix;
+  pi_settings = import ./pi/settings.nix;
+  pi_models = import ./pi/models.nix { inherit config pkgs; };
 
   # claude_code_config = builtins.readFile ./claude-code/settings.json;
   # claude_code_settings = builtins.fromJSON claude_code_config;
 in
 {
-  # Deploy the OpenCode notification plugin so it is auto-loaded by OpenCode.
-  home.file.".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
+  home = {
+    file = {
+      # Deploy the notification plugin so it is auto-loaded by OpenCode.
+      ".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
+      ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
+      ".pi/agent/models.json".text = builtins.toJSON pi_models;
+    };
 
-  home.shellAliases = {
-    oc = "opencode";
+    packages = [ pkgs.llm-agents.pi ];
+
+    shellAliases = {
+      oc = "opencode";
+    };
   };
 
   age = {
