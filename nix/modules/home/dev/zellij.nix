@@ -1,5 +1,9 @@
 # Zellij terminal multiplexer configuration
 _: {
+  home.shellAliases = {
+    zd = ''zellij attach --create "$(basename "$PWD")" options --default-cwd "$PWD"'';
+  };
+
   programs.zellij = {
     enable = true;
 
