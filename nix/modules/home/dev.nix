@@ -63,6 +63,10 @@
       rustup
       uv
 
+      # decompressors
+      unrar
+      p7zip
+
       # Quick tools
       age
       cloudflared

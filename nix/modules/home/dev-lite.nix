@@ -63,6 +63,10 @@
       vscode-langservers-extracted
       yaml-language-server
 
+      # decompressors
+      xz
+      bzip2
+
       # Quick tools
       age
       inputs.agenix.packages.${pkgs.stdenv.hostPlatform.system}.agenix
