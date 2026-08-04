@@ -8,7 +8,7 @@
 let
   opencode_settings = import ./opencode/config.nix { inherit config lib; };
   opencode_tui = import ./opencode/tui.nix;
-  pi_settings = import ./pi/settings.nix { inherit config; };
+  pi_settings = import ./pi/settings.nix { inherit config lib; };
   pi_models = import ./pi/models.nix { inherit config pkgs lib; };
 
   # claude_code_config = builtins.readFile ./claude-code/settings.json;
