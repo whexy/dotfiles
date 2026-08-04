@@ -17,6 +17,7 @@ in
   imports = [
     inputs.agenix.homeManagerModules.default
     inputs.nix-index-database.homeModules.default
+    ./options.nix
     ./rclone.nix
     ./base/htop.nix
     ./base/btop.nix

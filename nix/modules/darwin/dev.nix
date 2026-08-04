@@ -1,5 +1,10 @@
 # Dev Darwin system configuration
-{ flake, lib, ... }:
+{
+  config,
+  flake,
+  lib,
+  ...
+}:
 {
   nixpkgs.overlays = [
     flake.lib.overlays.llm-tools
@@ -14,7 +19,7 @@
 
   time.timeZone = "America/Chicago";
   programs._1password.enable = true;
-  services.tailscale.enable = true;
+  services.tailscale.enable = config.dotfiles.host.tailscale;
 
   # Enable Linux builder VM for building NixOS configurations on macOS
   nix.linux-builder = {

@@ -1,5 +1,6 @@
 # Service NixOS system configuration
-_: {
+{ config, ... }:
+{
   time.timeZone = "America/Chicago";
 
   networking = {
@@ -13,7 +14,7 @@ _: {
 
   services = {
     # Service essentials
-    tailscale.enable = true;
+    tailscale.enable = config.dotfiles.host.tailscale;
     resolved.enable = true;
     timesyncd.enable = true;
     fail2ban.enable = true;

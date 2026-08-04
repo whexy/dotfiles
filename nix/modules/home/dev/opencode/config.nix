@@ -1,7 +1,11 @@
-{ config }:
+{ config, lib }:
+let
+  inherit (config.dotfiles) tailscale;
+in
 {
   "$schema" = "https://opencode.ai/config.json";
-  model = "moonshotai/kimi-k3";
+  # kimi-k3 goes through the tailnet AI proxy; fall back to OpenAI without Tailscale.
+  model = if tailscale then "moonshotai/kimi-k3" else "openai/gpt-5.6-sol";
   autoupdate = false;
   default_agent = "plan";
   share = "disabled";
@@ -20,12 +24,15 @@
   };
 
   provider = {
+    openai.options.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
+    anthropic.options.apiKey = "{file:${config.age.secrets.anthropic-api-key.path}}";
+    deepseek.options.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
+  }
+  # The AI proxy lives on the tailnet; only reachable with Tailscale.
+  // lib.optionalAttrs tailscale {
     moonshotai.options = {
       baseURL = "https://ai-proxy.at-basking.ts.net/v1";
       apiKey = "kfc-vivo-50";
     };
-    openai.options.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
-    anthropic.options.apiKey = "{file:${config.age.secrets.anthropic-api-key.path}}";
-    deepseek.options.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
   };
 }
