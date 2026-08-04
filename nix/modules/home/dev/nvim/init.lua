@@ -508,7 +508,7 @@ require("crates").setup({
 })
 
 -- ── Typst Preview ────────────────────────────────────────────────────────
-require("typst-preview").setup({ port = 19260 })
+require("typst-preview").setup({})
 
 -- ── Firenvim ─────────────────────────────────────────────────────────────
 vim.g.firenvim_config = {
