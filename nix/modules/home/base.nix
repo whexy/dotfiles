@@ -41,6 +41,8 @@ in
       rsync
       wget
       nh
+      unzip
+      zstd
     ]
     ++ lib.optionals (!darwin) [
       git # macOS: use native git to avoid keychain prompt
