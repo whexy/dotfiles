@@ -6,7 +6,10 @@
   ...
 }:
 {
-  nixpkgs.overlays = [ flake.lib.overlays.unstable ];
+  nixpkgs.overlays = [
+    flake.lib.overlays.unstable
+    flake.lib.overlays.tailscale-security
+  ];
 
   # Enable zsh at system level (required for user shell)
   programs.zsh.enable = true;
