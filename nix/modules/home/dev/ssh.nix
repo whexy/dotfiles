@@ -1,5 +1,7 @@
 # SSH configuration
 {
+  config,
+  lib,
   darwin ? false,
   wsl ? false,
   ...
@@ -28,7 +30,8 @@ in
         ServerAliveCountMax = 3;
       };
 
-      "dev" = {
+      # "remote-dev" is a MagicDNS name on the tailnet; only reachable with Tailscale.
+      "dev" = lib.mkIf config.dotfiles.tailscale {
         HostName = "remote-dev";
         User = "whexy";
       };

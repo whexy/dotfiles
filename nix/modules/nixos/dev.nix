@@ -1,5 +1,6 @@
 # Dev NixOS system configuration
 {
+  config,
   flake,
   pkgs,
   lib,
@@ -37,12 +38,12 @@ in
   networking = {
     networkmanager.enable = true;
     nftables.enable = true;
-    firewall.trustedInterfaces = [ "tailscale0" ];
+    firewall.trustedInterfaces = lib.mkIf config.dotfiles.host.tailscale [ "tailscale0" ];
   };
 
   services = {
     openssh.enable = true;
-    tailscale.enable = true;
+    tailscale.enable = config.dotfiles.host.tailscale;
 
     # Export metrics
     prometheus.exporters.node = {

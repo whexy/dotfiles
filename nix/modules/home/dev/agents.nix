@@ -2,13 +2,14 @@
 {
   pkgs,
   config,
+  lib,
   ...
 }:
 let
-  opencode_settings = import ./opencode/config.nix { inherit config; };
+  opencode_settings = import ./opencode/config.nix { inherit config lib; };
   opencode_tui = import ./opencode/tui.nix;
-  pi_settings = import ./pi/settings.nix;
-  pi_models = import ./pi/models.nix { inherit config pkgs; };
+  pi_settings = import ./pi/settings.nix { inherit config; };
+  pi_models = import ./pi/models.nix { inherit config pkgs lib; };
 
   # claude_code_config = builtins.readFile ./claude-code/settings.json;
   # claude_code_settings = builtins.fromJSON claude_code_config;

@@ -20,6 +20,7 @@ let
       hostName,
       username,
       wsl,
+      tailscale,
     }:
     { lib, ... }:
     {
@@ -43,6 +44,12 @@ let
           type = lib.types.bool;
           description = "Whether this host runs under WSL.";
         };
+
+        tailscale = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = "Whether this host is connected to the tailnet (Tailscale).";
+        };
       };
 
       config.dotfiles.host = {
@@ -51,6 +58,7 @@ let
           hostName
           username
           wsl
+          tailscale
           ;
       };
     };
@@ -71,6 +79,7 @@ in
       modules ? [ ],
       overlays ? [ ],
       wsl ? false,
+      tailscale ? true,
     }:
     [
       inputs.disko.nixosModules.disko
@@ -85,6 +94,7 @@ in
           hostName
           username
           wsl
+          tailscale
           ;
       })
       {
@@ -120,6 +130,7 @@ in
       caps,
       modules ? [ ],
       overlays ? [ ],
+      tailscale ? true,
     }:
     [
       flake.darwinModules.nix-settings
@@ -127,7 +138,12 @@ in
       flake.darwinModules.options-display
       flake.darwinModules.user-whexy
       (hostOptionsModule {
-        inherit caps hostName username;
+        inherit
+          caps
+          hostName
+          username
+          tailscale
+          ;
         wsl = false;
       })
       {

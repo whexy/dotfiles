@@ -13,6 +13,9 @@
     darwin = false;
     wsl = false;
   };
+  # Not connected to the tailnet (no Tailscale on this host).
+  dotfiles.tailscale = false;
+
   targets.genericLinux.enable = true;
   targets.genericLinux.gpu.enable = false;
 }

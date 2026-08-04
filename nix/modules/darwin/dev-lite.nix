@@ -1,5 +1,5 @@
 # Dev-lite Darwin system configuration
-{ flake, ... }:
+{ config, flake, ... }:
 {
   nixpkgs.overlays = [
     flake.lib.overlays.llm-tools
@@ -9,7 +9,7 @@
 
   time.timeZone = "America/Chicago";
   programs._1password.enable = true;
-  services.tailscale.enable = true;
+  services.tailscale.enable = config.dotfiles.host.tailscale;
 
   nix = {
     optimise.automatic = true;
