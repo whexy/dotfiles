@@ -46,8 +46,12 @@ in
           "cmd+shift+arrow_up=jump_to_prompt:-1"
         ];
     }
-    // {
-      window-decoration = if darwin then "auto" else "none";
+    // lib.optionalAttrs darwin {
+      macos-option-as-alt = true;
+      window-decoration = "auto";
+    }
+    // lib.optionalAttrs (!darwin) {
+      window-decoration = "none";
     };
   };
 }
