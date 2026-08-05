@@ -508,7 +508,11 @@ require("crates").setup({
 })
 
 -- ── Typst Preview ────────────────────────────────────────────────────────
-require("typst-preview").setup({})
+require("typst-preview").setup({
+	dependencies_bin = {
+		["tinymist"] = "tinymist",
+	},
+})
 
 -- ── Firenvim ─────────────────────────────────────────────────────────────
 vim.g.firenvim_config = {
