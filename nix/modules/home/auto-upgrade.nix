@@ -70,14 +70,13 @@ in
       Service = {
         Type = "oneshot";
         # nh shells out to nix; the user manager on generic-Linux hosts does
-        # not inherit the login PATH.
+        # not inherit the login PATH. nix.package is null on these hosts (HM
+        # does not manage the Nix installation), so include the standard
+        # profile locations explicitly.
         Environment = [
           "PATH=${
-            lib.makeBinPath [
-              pkgs.git
-              config.nix.package
-            ]
-          }:/usr/local/bin:/usr/bin:/bin"
+            lib.makeBinPath ([ pkgs.git ] ++ lib.optional (config.nix.package != null) config.nix.package)
+          }:${config.home.homeDirectory}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/bin:/usr/bin:/bin"
         ];
         ExecStart = toString [
           (lib.getExe pkgs.nh)
