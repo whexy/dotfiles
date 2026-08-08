@@ -17,5 +17,10 @@ in
     "deepseek/deepseek-v4-flash"
     "anthropic/claude-opus-5"
     "anthropic/claude-fable-5"
+    # OpenCode Go subscription
+    "opencode-go/deepseek-v4-flash"
+    "opencode-go/grok-4.5"
+    "opencode-go/gpt-5.6-luna"
+    "opencode-go/qwen3.8-max"
   ];
 }

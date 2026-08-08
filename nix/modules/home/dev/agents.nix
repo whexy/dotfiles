@@ -44,6 +44,10 @@ in
         file = ../../../../secrets/deepseek-api-key.age;
         path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
       };
+      opencode-api-key = {
+        file = ../../../../secrets/opencode-api-key.age;
+        path = "${config.home.homeDirectory}/.secrets/opencode-api-key";
+      };
     };
   };
 
