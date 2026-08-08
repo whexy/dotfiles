@@ -14,4 +14,5 @@ in
   "anthropic-api-key.age".publicKeys = [ key ];
   "openai-api-key.age".publicKeys = [ key ];
   "deepseek-api-key.age".publicKeys = [ key ];
+  "opencode-api-key.age".publicKeys = [ key ];
 }

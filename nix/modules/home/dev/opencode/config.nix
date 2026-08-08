@@ -27,6 +27,16 @@ in
     openai.options.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
     anthropic.options.apiKey = "{file:${config.age.secrets.anthropic-api-key.path}}";
     deepseek.options.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
+    # OpenCode Go subscription (https://opencode.ai/zen/go).
+    opencode-go = {
+      options.apiKey = "{file:${config.age.secrets.opencode-api-key.path}}";
+      whitelist = [
+        "deepseek-v4-flash"
+        "grok-4.5"
+        "gpt-5.6-luna"
+        "qwen3.8-max"
+      ];
+    };
   }
   # The AI proxy lives on the tailnet; only reachable with Tailscale.
   // lib.optionalAttrs tailscale {
