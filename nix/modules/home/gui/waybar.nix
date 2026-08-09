@@ -2,6 +2,7 @@
 {
   lib,
   darwin,
+  pkgs,
   ...
 }:
 lib.mkIf (!darwin) {
@@ -27,6 +28,7 @@ lib.mkIf (!darwin) {
         modules-right = [
           "tray"
           "battery"
+          "bluetooth"
           "network"
           "cpu"
           "memory"
@@ -60,6 +62,16 @@ lib.mkIf (!darwin) {
         tray = {
           icon-size = 14;
           spacing = 8;
+        };
+
+        bluetooth = {
+          format = "󰂯";
+          format-disabled = "";
+          format-off = "󰂲";
+          format-connected = "󰂱 {device_alias}";
+          tooltip-format = "{controller_alias}\t{controller_address}";
+          tooltip-format-connected = "{device_enumerate}";
+          on-click = "${pkgs.blueman}/bin/blueman-manager";
         };
 
         battery = {
@@ -155,6 +167,7 @@ lib.mkIf (!darwin) {
       #idle_inhibitor,
       #tray,
       #battery,
+      #bluetooth,
       #network,
       #cpu,
       #memory,
@@ -267,6 +280,16 @@ lib.mkIf (!darwin) {
 
       #disk:hover {
         background-color: #b16286;
+        color: #282828;
+      }
+
+      /* Bluetooth */
+      #bluetooth {
+        color: #83a598;
+      }
+
+      #bluetooth:hover {
+        background-color: #83a598;
         color: #282828;
       }
 
