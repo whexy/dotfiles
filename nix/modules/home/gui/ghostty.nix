@@ -62,7 +62,7 @@ in
   programs.ghostty = {
     enable = true;
     package = ghostty-pkg;
-    systemd.enable = true;
+    systemd.enable = !darwin;
 
     settings = {
       config-file = themeFile;
