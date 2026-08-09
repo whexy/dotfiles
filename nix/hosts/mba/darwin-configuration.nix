@@ -5,7 +5,7 @@
     hostName = "mba";
     caps = [
       "base"
-      "dev-lite"
+      "dev"
       "gui"
     ];
     modules = [ ./hardware.nix ];
