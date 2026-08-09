@@ -2,6 +2,7 @@
 {
   pkgs,
   lib,
+  config,
   darwin,
   osConfig ? null,
   ...
@@ -10,14 +11,63 @@ let
   ghostty-pkg = if darwin then pkgs.ghostty-bin else pkgs.ghostty;
   macbookScreen = osConfig.hardware.display.macbookScreen or false;
 
+  # Ghostty has no action to switch themes, and its built-in light/dark
+  # selection follows the OS theme. Instead, the theme lives in a small
+  # mutable file (theme.conf, included via `config-file`) that the
+  # ghostty-toggle-theme script rewrites before asking Ghostty to reload
+  # its config. A keybind types that command into the shell, giving a
+  # keyboard-driven, OS-independent theme toggle.
+  darkTheme = "Gruvbox Dark";
+  # lightTheme = "Catppuccin Latte";
+  lightTheme = "Gruvbox Light";
+  themeFile = "${config.home.homeDirectory}/.config/ghostty/theme.conf";
+
+  ghostty-toggle-theme = pkgs.writeShellScriptBin "ghostty-toggle-theme" ''
+    theme_file="''${GHOSTTY_THEME_FILE:-$HOME/.config/ghostty/theme.conf}"
+    dark="${darkTheme}"
+    light="${lightTheme}"
+
+    current=$(sed -n 's/^[[:space:]]*theme[[:space:]]*=[[:space:]]*//p' "$theme_file" 2>/dev/null | head -n1)
+    if [ "$current" = "$dark" ]; then
+      next="$light"
+    else
+      next="$dark"
+    fi
+
+    printf 'theme = %s\n' "$next" > "$theme_file"
+    echo "ghostty theme -> $next"
+
+    # Ask every running Ghostty instance to reload its configuration.
+    # Linux (GTK) reloads on SIGUSR2. macOS has no reload signal (SIGUSR1
+    # kills the app), so simulate the reload_config keybind via AppleScript.
+    # That requires accessibility permission for Ghostty; macOS prompts once.
+    if [ "$(uname)" = "Darwin" ]; then
+      if ! osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.mitchellh.ghostty") to keystroke "," using {command down, shift down}' 2>/dev/null; then
+        echo "press cmd+shift+, in Ghostty to apply the new theme" >&2
+      fi
+    else
+      pkill -USR2 -x ghostty 2>/dev/null || true
+    fi
+  '';
+
 in
 {
+  home.packages = [ ghostty-toggle-theme ];
+
+  # Seed the mutable theme file (never overwrite an existing one).
+  home.activation.ghosttyThemeFile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+    if [ ! -f "${themeFile}" ]; then
+      mkdir -p "$(dirname "${themeFile}")"
+      echo "theme = ${darkTheme}" > "${themeFile}"
+    fi
+  '';
+
   programs.ghostty = {
     enable = true;
     package = ghostty-pkg;
 
     settings = {
-      theme = "Gruvbox Dark";
+      config-file = themeFile;
       font-size = if macbookScreen then 16 else 14;
       font-family = "FiraCode Nerd Font";
       background-opacity = 0.90;
@@ -36,6 +86,7 @@ in
           "ctrl+shift+r=reset"
           "ctrl+shift+arrow_down=jump_to_prompt:1"
           "ctrl+shift+arrow_up=jump_to_prompt:-1"
+          "ctrl+alt+t=text:ghostty-toggle-theme\\n"
         ]
         ++ lib.optionals darwin [
           "alt+left=unbind"
@@ -44,6 +95,8 @@ in
           "cmd+shift+r=reset"
           "cmd+shift+arrow_down=jump_to_prompt:1"
           "cmd+shift+arrow_up=jump_to_prompt:-1"
+          "cmd+shift+comma=reload_config"
+          "cmd+shift+t=text:ghostty-toggle-theme\\n"
         ];
     }
     // lib.optionalAttrs darwin {
