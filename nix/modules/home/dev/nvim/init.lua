@@ -1,6 +1,8 @@
 -- Neovim Configuration (Single File) - vim.pack API (Neovim 0.12+)
 -- Run after install: :TSUpdate, :call firenvim#install(0)
 
+local is_neovide = vim.g.neovide
+
 -- ╭──────────────────────────────────────────────────────────────────────╮
 -- │                         LANGUAGE CONFIG                              │
 -- ╰──────────────────────────────────────────────────────────────────────╯
@@ -251,6 +253,10 @@ vim.pack.add({
 -- ── Colorscheme ──────────────────────────────────────────────────────────
 vim.cmd.colorscheme("gruvbox")
 
+if is_neovide then
+	vim.opt.background = "dark"
+end
+
 -- ── Lualine ──────────────────────────────────────────────────────────────
 require("lualine").setup()
 
@@ -396,7 +402,6 @@ require("mini.surround").setup({
 -- OSC 52 in plain terminals (never OSC 52 read: those queries can hang in
 -- terminals without read support); Neovide uses its own functions and gets an
 -- explicit key for pasting from the system clipboard.
-local is_neovide = vim.g.neovide
 if is_neovide then
 	vim.g.clipboard = {
 		name = "Neovide Clipboard Sync",
