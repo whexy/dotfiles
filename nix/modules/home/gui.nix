@@ -9,6 +9,7 @@
   imports = [
     ./gui/clipboard.nix
     ./gui/ghostty.nix
+    ./gui/neovide.nix
     ./gui/git.nix
     ./gui/waybar.nix
     ./gui/firefox.nix
@@ -40,7 +41,6 @@
     with pkgs;
     [
       moonlight-qt
-      neovide
     ]
     ++ lib.optionals (!darwin) [
       # Linux only
