@@ -40,6 +40,7 @@
     with pkgs;
     [
       moonlight-qt
+      neovide
     ]
     ++ lib.optionals (!darwin) [
       # Linux only
