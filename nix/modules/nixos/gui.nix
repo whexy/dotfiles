@@ -72,6 +72,11 @@
   };
 
   services = {
+    # Blueman: GTK Bluetooth manager (blueman-manager) plus a tray applet
+    # for pairing and managing devices from the waybar tray. The applet is
+    # launched by niri's spawn-at-startup (niri doesn't process XDG autostart).
+    blueman.enable = true;
+
     # GNOME Keyring: implements the Secret portal for apps that need credentials
     gnome.gnome-keyring.enable = true;
 

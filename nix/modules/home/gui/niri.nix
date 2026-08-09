@@ -113,6 +113,10 @@ in
           "-d"
         ];
       }
+      # Bluetooth tray applet (blueman) – same XDG autostart reason as fcitx5.
+      {
+        command = [ "${pkgs.blueman}/bin/blueman-applet" ];
+      }
     ];
 
     # Transparent workspace background
