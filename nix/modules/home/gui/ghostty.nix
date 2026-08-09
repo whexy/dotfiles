@@ -38,15 +38,12 @@ let
     echo "ghostty theme -> $next"
 
     # Ask every running Ghostty instance to reload its configuration.
-    # Linux (GTK) reloads on SIGUSR2. macOS has no reload signal (SIGUSR1
-    # kills the app), so simulate the reload_config keybind via AppleScript.
-    # That requires accessibility permission for Ghostty; macOS prompts once.
     if [ "$(uname)" = "Darwin" ]; then
       if ! osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.mitchellh.ghostty") to keystroke "," using {command down, shift down}' 2>/dev/null; then
         echo "press cmd+shift+, in Ghostty to apply the new theme" >&2
       fi
     else
-      pkill -USR2 -x ghostty 2>/dev/null || true
+      systemctl reload --user app-com.mitchellh.ghostty.service
     fi
   '';
 
@@ -65,6 +62,7 @@ in
   programs.ghostty = {
     enable = true;
     package = ghostty-pkg;
+    systemd.enable = true;
 
     settings = {
       config-file = themeFile;
