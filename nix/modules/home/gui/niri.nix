@@ -227,9 +227,18 @@ in
         };
 
         # ── Essentials (Hyper +) ──────────────────────────────────
-        # Terminal
+        # Terminal: use `ghostty +new-window` so new windows go through D-Bus
+        # activation (com.mitchellh.ghostty) instead of spawning a plain
+        # process. This makes Ghostty run as the `app-com.mitchellh.ghostty`
+        # systemd user service, giving instant window creation, single-instance
+        # semantics, and a running unit so `systemctl reload --user
+        # app-com.mitchellh.ghostty.service` (used by ghostty-toggle-theme)
+        # actually works.
         "${hyper}+T" = {
-          action.spawn = "ghostty";
+          action.spawn = [
+            "ghostty"
+            "+new-window"
+          ];
           repeat = false;
         };
 
