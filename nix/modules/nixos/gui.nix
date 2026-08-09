@@ -143,7 +143,14 @@
     alsa.enable = true;
     alsa.support32Bit = true;
     pulse.enable = true;
-    wireplumber.enable = true;
+    wireplumber = {
+      enable = true;
+      extraConfig."51-bluez-headphones"."monitor.bluez.properties"."bluez5.roles" = [
+        "a2dp_source"
+        "hsp_ag"
+        "hfp_ag"
+      ];
+    };
   };
 
   # XDG Desktop Portal: provides file chooser, screen cast, notifications, etc.
