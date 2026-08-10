@@ -1,6 +1,6 @@
 # Nvidia GPU support in WSL
 # https://yomaq.github.io/posts/nvidia-on-nixos-wsl-ollama-up-24-7-on-your-gaming-pc/
-{ pkgs, ... }:
+{ pkgs, lib, ... }:
 {
   environment.sessionVariables = {
     CUDA_PATH = "${pkgs.cudatoolkit}";
@@ -17,6 +17,15 @@
   };
 
   systemd.services = {
+    # The nixpkgs nvidia-container-toolkit module ships its own CDI
+    # generator (wantedBy multi-user.target) whose auto-discovery can't
+    # find the driver on WSL (it lives in /usr/lib/wsl/lib, mounted by
+    # Windows), so it fails on every activation. Our custom generator
+    # below already handles CDI for docker; neutralize the module's unit.
+    nvidia-container-toolkit-cdi-generator = {
+      wantedBy = lib.mkForce [ ];
+      requiredBy = lib.mkForce [ ];
+    };
     nvidia-cdi-generator = {
       description = "Generate nvidia cdi";
       wantedBy = [ "docker.service" ];
