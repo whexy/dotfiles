@@ -10,27 +10,34 @@ variables:
           memory: 12Gi # <= LimitRange max
           cpu: "16" # <= LimitRange max; let nix use many of k8s-3's 24 cores
 when:
-  event: [push, pull_request, cron]
+  event: [push, pull_request, cron, manual]
   cron: nightly
 steps:
   # Update flake inputs (cron only)
   update-flake:
     image: nixos/nix:latest
     when:
-      event: cron
+      event: [cron, manual]
     environment:
-      GITHUB_TOKEN:
-        from_secret: github_token
+      GITHUB_APP_ID:
+        from_secret: github_app_id
+      GITHUB_APP_INSTALLATION_ID:
+        from_secret: github_app_installation_id
+      GITHUB_APP_PRIVATE_KEY:
+        from_secret: github_app_private_key
+      NIX_CONFIG: |
+        experimental-features = nix-command flakes
     commands:
       - git config user.name "whexy-bot[bot]"
       - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
-      - nix flake update --extra-experimental-features 'nix-command flakes'
+      - nix flake update
       - |
         if git diff --quiet flake.lock; then
           echo "No changes to flake.lock"
         else
           git add flake.lock
           git commit -m "chore: update flake inputs"
+          GITHUB_TOKEN="$(nix run .#github-app-token)"
           git remote set-url origin https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git
           git push origin HEAD:master
         fi
