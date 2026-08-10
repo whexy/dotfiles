@@ -395,49 +395,6 @@ require("mini.surround").setup({
 
 -- ── Yanky & clipboard ────────────────────────────────────────────────────
 
--- Unified clipboard semantics:
---   y  -> unnamed register + system clipboard (bridged via "+")
---   p  -> unnamed register only
---   "+ -> system clipboard through the provider below
--- OSC 52 in plain terminals (never OSC 52 read: those queries can hang in
--- terminals without read support); Neovide uses its own functions and gets an
--- explicit key for pasting from the system clipboard.
-if is_neovide then
-	vim.g.clipboard = {
-		name = "Neovide Clipboard Sync",
-		copy = {
-			["+"] = "NeovideClipboardCopy",
-			["*"] = "NeovideClipboardCopy",
-		},
-		paste = {
-			["+"] = "NeovideClipboardPaste",
-			["*"] = "NeovideClipboardPaste",
-		},
-		cache_enabled = true,
-	}
-else
-	-- Fallback: OSC 52 read queries may hang in terminals without read support,
-	-- so paste locally from the unnamed register instead.
-	local function paste_from_unnamed()
-		local lines = vim.split(vim.fn.getreg(""), "\n", { plain = true })
-		return { #lines > 0 and lines or { "" }, vim.fn.getregtype(""):sub(1, 1) }
-	end
-
-	vim.g.clipboard = {
-		name = "OSC 52",
-		copy = {
-			["+"] = require("vim.ui.clipboard.osc52").copy("+"),
-			["*"] = require("vim.ui.clipboard.osc52").copy("*"),
-		},
-		paste = {
-			["+"] = paste_from_unnamed,
-			["*"] = paste_from_unnamed,
-		},
-	}
-end
-
--- y -> unnamed + system: bridge unnamed yanks to "+" (triggers the provider
--- copy, OSC 52 or NeovideClipboardCopy depending on the runtime).
 vim.api.nvim_create_autocmd("TextYankPost", {
 	callback = function()
 		local ev = vim.v.event
@@ -447,9 +404,6 @@ vim.api.nvim_create_autocmd("TextYankPost", {
 	end,
 })
 
--- Neovide only: explicit "paste from system clipboard" (Cmd+V on macOS,
--- Ctrl+Shift+V on Linux/Windows, avoiding the builtin quote-insert Ctrl+V).
--- In plain terminals the key stays unbound.
 if is_neovide then
 	local sys_paste = vim.fn.has("mac") == 1 and "<D-v>" or "<C-S-v>"
 	local desc = "Paste from system clipboard"
