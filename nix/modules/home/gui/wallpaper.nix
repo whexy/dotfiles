@@ -7,8 +7,8 @@
 }:
 let
   wallpaper = pkgs.fetchurl {
-    url = "https://raw.githubusercontent.com/thatmechguy/Nix-wallpapers/b189654e49d7124ec0a3367a07b3a65c976886fe/custom%20p-b.png";
-    hash = "sha256-U3ByfTa9g8GANj/x0lcDueuvTZmyKoSegdZwFXp7bZQ=";
+    url = "https://raw.githubusercontent.com/japamax/gnome-kde-dynamic-wallpaper-mojave/b62525499cec0d0794ace4103837284c958b976d/mojave/mojave_dynamic-0000.jpg";
+    hash = "sha256-zN8lo2cSsAe88W+RyLUtXLO2Oe3YBt2AyxPPv95DomA=";
   };
 in
 {
