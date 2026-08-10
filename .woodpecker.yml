@@ -22,8 +22,8 @@ steps:
       GITHUB_TOKEN:
         from_secret: github_token
     commands:
-      - git config user.name "Woodpecker CI"
-      - git config user.email "ci@woodpecker.local"
+      - git config user.name "whexy-bot[bot]"
+      - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
       - nix flake update --extra-experimental-features 'nix-command flakes'
       - |
         if git diff --quiet flake.lock; then
