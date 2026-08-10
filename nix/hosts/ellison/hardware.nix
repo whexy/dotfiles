@@ -24,12 +24,12 @@
 
     monitors = [
       {
-        connector = "HDMI-A-1";
+        connector = "DP-3";
         resolution = {
           width = 3840;
           height = 2160;
         };
-        refreshRate = 120.000;
+        refreshRate = 165.000;
         scale = 1.5;
       }
     ];
