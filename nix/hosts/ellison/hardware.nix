@@ -50,6 +50,9 @@
     };
   };
 
+  # Enable Wake-on-LAN on the onboard Ethernet adapter
+  networking.interfaces.enp5s0.wakeOnLan.enable = true;
+
   powerManagement.cpuFreqGovernor = "powersave";
 
   boot = {
