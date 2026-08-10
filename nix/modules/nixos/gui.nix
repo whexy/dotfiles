@@ -145,11 +145,23 @@
     pulse.enable = true;
     wireplumber = {
       enable = true;
-      extraConfig."51-bluez-headphones"."monitor.bluez.properties"."bluez5.roles" = [
-        "a2dp_source"
-        "hsp_ag"
-        "hfp_ag"
-      ];
+      extraConfig."51-bluez-headphones" = {
+        "monitor.bluez.properties"."bluez5.roles" = [
+          "a2dp_source"
+          "hsp_ag"
+          "hfp_ag"
+        ];
+        "monitor.bluez.rules" = [
+          {
+            matches = [ { "device.name" = "~bluez_card.*"; } ];
+            actions.update-props."bluez5.auto-connect" = [
+              "a2dp_source"
+              "hsp_ag"
+              "hfp_ag"
+            ];
+          }
+        ];
+      };
     };
   };
 
