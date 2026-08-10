@@ -2,6 +2,7 @@
 -- Run after install: :TSUpdate, :call firenvim#install(0)
 
 local is_neovide = vim.g.neovide
+local is_firenvim = vim.g.started_by_firenvim
 
 -- ╭──────────────────────────────────────────────────────────────────────╮
 -- │                         LANGUAGE CONFIG                              │
@@ -521,6 +522,10 @@ vim.g.firenvim_config = {
 		},
 	},
 }
+
+if is_firenvim then
+	vim.opt.guifont = "FiraCode Nerd Font:h14"
+end
 
 -- ── Hardtime ─────────────────────────────────────────────────────────────
 require("hardtime").setup()
