@@ -17,6 +17,11 @@
     recursive = true;
   };
 
+  home.shellAliases = {
+    e = "nvim";
+    r = "nvim -RM";
+  };
+
   # Include unstable tree-sitter since NeoVim requires it
   home.packages = [
     pkgs.unstable.tree-sitter
