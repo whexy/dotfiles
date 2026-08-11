@@ -2,7 +2,7 @@
 {
   imports = flake.lib.darwinHost {
     system = "aarch64-darwin";
-    hostName = "mini";
+    hostName = "sheridan";
     caps = [
       "base"
       "dev-lite"

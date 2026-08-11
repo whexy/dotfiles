@@ -1,13 +1,14 @@
 { flake, ... }:
 {
   imports = flake.lib.nixosHost {
-    system = "x86_64-linux";
-    hostName = "desktop";
+    system = "aarch64-linux";
+    hostName = "skokie";
     caps = [
       "base"
       "dev"
       "gui"
     ];
+    modules = [ ./hardware.nix ];
   };
 
   dotfiles.platform.desktopVm = {
