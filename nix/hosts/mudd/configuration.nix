@@ -2,16 +2,14 @@
 {
   imports = flake.lib.nixosHost {
     system = "x86_64-linux";
-    hostName = "desktop";
+    hostName = "mudd";
     caps = [
       "base"
       "dev"
-      "gui"
     ];
   };
 
-  dotfiles.platform.desktopVm = {
-    enable = true;
-    backend = "utm";
-  };
+  dotfiles.system.autoUpgrade.enable = true;
+
+  dotfiles.platform.qemuGuest.enable = true;
 }

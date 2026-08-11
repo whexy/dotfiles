@@ -2,7 +2,7 @@
 {
   imports = flake.lib.darwinHost {
     system = "aarch64-darwin";
-    hostName = "mba";
+    hostName = "golf";
     caps = [
       "base"
       "dev"
