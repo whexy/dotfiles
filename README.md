@@ -1,58 +1,49 @@
 <div align="center">
 
-<picture>
-  <img alt="NixOS logo" src="https://raw.githubusercontent.com/NixOS/nixos-artwork/refs/heads/master/logo/nix-snowflake-colours.svg" width="80">
-</picture>
+<picture> <img alt="NixOS logo"
+    src="https://raw.githubusercontent.com/NixOS/nixos-artwork/refs/heads/master/logo/nix-snowflake-colours.svg"
+    width="80"> </picture>
 
 # Dotfiles
 
-**Reproducible chaos across machines.**
-
-<br>
+[![NixOS](https://img.shields.io/badge/NixOS-5277C3?style=for-the-badge&logo=nixos&logoColor=white)](https://nixos.org)
+[![macOS](https://img.shields.io/badge/macOS-000000?style=for-the-badge&logo=apple&logoColor=white)](https://nix-darwin.com)
+[![Home
+Manager](https://img.shields.io/badge/Home%20Manager-5277C3?style=for-the-badge&logo=nixos&logoColor=white)](https://github.com/nix-community/home-manager)
+[![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com)
 
 </div>
 
-> [!WARNING]
-> **Don't blindly apply this** unless you want to import my SSH keys and I'll have a free pass to your machine.
+My personal Nix configuration for all my machines: NixOS, Macs, WSL.
 
-## Quick Start
+### Layout
 
-### Dotfiles-only
+The flake is built on [blueprint](https://github.com/numtide/blueprint), so
+hosts and users are discovered from the directory layout. Custom host helpers
+wire in caps, host metadata, platform packages, and Home Manager for each
+integrated user.
 
-For x86_64 Linux:
+### Capabilities and Features
 
-```bash
-home-manager switch --flake github:whexy/dotfiles#wenxuan@mars
-home-manager switch --flake github:whexy/dotfiles#wenxuan@venus
-```
+Caps are preset modules that assign feature options. A host picks its caps and
+then overrides individual options where needed.
 
-### macOS
+Feature modules are semantic groups: `default.nix` declares the options,
+`nixos.nix` / `darwin.nix` hold the platform-specific config.
 
-```bash
-sudo darwin-rebuild switch --flake github:whexy/dotfiles#mba
-```
+### Secrets and Remote access
 
-### NixOS
+Secrets are age-encrypted with agenix and only decrypted on the hosts that need
+them.
 
-```bash
-sudo nixos-rebuild switch --flake github:whexy/dotfiles#remote-dev
-```
+Tailscale on everything, so I can safely expose services in private network.
 
-#### Fresh Install (remote-dev)
+### Automation
 
-Boot a NixOS ISO on a Proxmox UEFI + q35 VM, then run:
+Woodpecker CI evaluates configurations on every push and runs the pre-commit
+checks (treefmt, statix, nil, deadnix).
 
-```bash
-# Partition and format the disk
-sudo nix run github:nix-community/disko -- --mode disko --flake github:whexy/dotfiles#remote-dev
+Nightly, a GitHub App bot updates `flake.lock` when inputs drift.
 
-# Install NixOS
-sudo nixos-install --flake github:whexy/dotfiles#remote-dev
-```
-
-### WSL
-
-```bash
-nix build github:whexy/dotfiles#nixosConfigurations.wsl.config.system.build.tarballBuilder
-sudo ./result/bin/nixos-wsl-tarball-builder
-```
+Servers and standalone Home Manager setups auto-upgrade daily from the flake, so
+the fleet stays near the same revision.
