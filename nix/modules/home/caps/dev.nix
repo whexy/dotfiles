@@ -21,7 +21,6 @@ in
     rclone.enable = lib.mkDefault true;
     vcs = {
       git.enable = lib.mkDefault true;
-      hunk.enable = lib.mkDefault false;
     };
     terminal.zellij.enable = lib.mkDefault true;
     shell.zsh.devExtras = lib.mkDefault true;
