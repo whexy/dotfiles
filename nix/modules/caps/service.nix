@@ -4,7 +4,7 @@ _: {
     system.timezone.enable = true;
     network = {
       tailscale.enable = true;
-      basics.enable = true;
+      networkmanager.enable = true;
     };
     services = {
       openssh = {

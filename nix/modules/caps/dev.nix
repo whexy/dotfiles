@@ -32,7 +32,7 @@ in
     };
     network = {
       tailscale.enable = true;
-      basics.enable = true;
+      networkmanager.enable = true;
     };
     services.openssh.enable = true;
     monitoring.nodeExporter.enable = true;
