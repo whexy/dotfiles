@@ -15,34 +15,34 @@ in
 {
   dotfiles = {
     system = {
-      timezone.enable = true;
-      docs.enable = true;
+      timezone.enable = lib.mkDefault true;
+      docs.enable = lib.mkDefault true;
     };
     nix = {
-      optimise.enable = true;
-      linuxBuilder.enable = true;
+      optimise.enable = lib.mkDefault true;
+      linuxBuilder.enable = lib.mkDefault true;
     };
     compat = {
-      nix-ld.enable = true;
-      binfmt.enable = true;
+      nix-ld.enable = lib.mkDefault true;
+      binfmt.enable = lib.mkDefault true;
     };
     security = {
-      onepassword.enable = true;
-      passwordlessSudo.enable = true;
+      onepassword.enable = lib.mkDefault true;
+      passwordlessSudo.enable = lib.mkDefault true;
     };
     network = {
-      tailscale.enable = true;
-      networkmanager.enable = true;
+      tailscale.enable = lib.mkDefault true;
+      networkmanager.enable = lib.mkDefault true;
     };
-    services.openssh.enable = true;
-    monitoring.nodeExporter.enable = true;
+    services.openssh.enable = lib.mkDefault true;
+    monitoring.nodeExporter.enable = lib.mkDefault true;
     virtualization = {
       docker = {
-        enable = true;
-        gvisor = true;
+        enable = lib.mkDefault true;
+        gvisor = lib.mkDefault true;
       };
-      podman.enable = true;
-      incus.enable = true;
+      podman.enable = lib.mkDefault true;
+      incus.enable = lib.mkDefault true;
     };
   };
 

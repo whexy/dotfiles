@@ -1,27 +1,27 @@
 # gui cap preset: machines expected to have GUI environments.
-_: {
+{ lib, ... }: {
   dotfiles = {
-    desktop.enable = true;
-    fonts.enable = true;
+    desktop.enable = lib.mkDefault true;
+    fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).
-    browser.firefox.enable = true;
+    browser.firefox.enable = lib.mkDefault true;
     # PipeWire audio stack; only has an effect on NixOS.
-    audio.enable = true;
+    audio.enable = lib.mkDefault true;
     # OBS Studio with virtual camera; only has an effect on NixOS.
-    streaming.enable = true;
+    streaming.enable = lib.mkDefault true;
     # Kanata remapper and fcitx5 input method; only have an effect on NixOS
     # (macOS uses Karabiner from the home keyboard group).
-    keyboard.kanata.enable = true;
-    keyboard.fcitx5.enable = true;
+    keyboard.kanata.enable = lib.mkDefault true;
+    keyboard.fcitx5.enable = lib.mkDefault true;
     security = {
       # GNOME Keyring and 1Password GUI; only have an effect on NixOS.
-      keyring.enable = true;
-      onepasswordGui.enable = true;
+      keyring.enable = lib.mkDefault true;
+      onepasswordGui.enable = lib.mkDefault true;
       # Touch ID / Apple Watch sudo; only has an effect on Darwin.
-      biometricSudo.enable = true;
+      biometricSudo.enable = lib.mkDefault true;
     };
     # Homebrew casks; only has an effect on Darwin.
-    homebrew.enable = true;
+    homebrew.enable = lib.mkDefault true;
   };
 }

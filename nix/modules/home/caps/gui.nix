@@ -11,30 +11,30 @@ let
 in
 {
   dotfiles = {
-    terminal.ghostty.enable = true;
-    browser.firefox.enable = true;
-    panel.waybar.enable = true;
-    editor.neovide.enable = true;
-    clipboard.history.enable = true;
-    streaming.enable = true;
-    desktop.wallpaper.enable = true;
-    vcs.git.opSshSigning = true;
+    terminal.ghostty.enable = lib.mkDefault true;
+    browser.firefox.enable = lib.mkDefault true;
+    panel.waybar.enable = lib.mkDefault true;
+    editor.neovide.enable = lib.mkDefault true;
+    clipboard.history.enable = lib.mkDefault true;
+    streaming.enable = lib.mkDefault true;
+    desktop.wallpaper.enable = lib.mkDefault true;
+    vcs.git.opSshSigning = lib.mkDefault true;
   }
   // lib.optionalAttrs (!isDarwin) {
     # Linux desktop (Wayland/niri)
-    wm.niri.enable = true;
-    keyboard.fcitx5.enable = true;
+    wm.niri.enable = lib.mkDefault true;
+    keyboard.fcitx5.enable = lib.mkDefault true;
     desktop = {
-      mako.enable = true;
-      macbookScreenDensity.enable = true;
+      mako.enable = lib.mkDefault true;
+      macbookScreenDensity.enable = lib.mkDefault true;
     };
-    clipboard.vmware.enable = true;
-    panel.renpho.enable = true;
+    clipboard.vmware.enable = lib.mkDefault true;
+    panel.renpho.enable = lib.mkDefault true;
   }
   // lib.optionalAttrs isDarwin {
     # macOS desktop
-    wm.aerospace.enable = true;
-    keyboard.karabiner.enable = true;
+    wm.aerospace.enable = lib.mkDefault true;
+    keyboard.karabiner.enable = lib.mkDefault true;
   };
 
   home.packages =

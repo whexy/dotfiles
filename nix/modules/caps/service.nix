@@ -1,24 +1,24 @@
 # service cap preset: machines running internet-facing services.
-_: {
+{ lib, ... }: {
   dotfiles = {
-    system.timezone.enable = true;
+    system.timezone.enable = lib.mkDefault true;
     network = {
-      tailscale.enable = true;
-      networkmanager.enable = true;
+      tailscale.enable = lib.mkDefault true;
+      networkmanager.enable = lib.mkDefault true;
     };
     services = {
       openssh = {
-        enable = true;
-        hardened = true;
+        enable = lib.mkDefault true;
+        hardened = lib.mkDefault true;
       };
-      caddy.enable = true;
+      caddy.enable = lib.mkDefault true;
     };
-    monitoring.nodeExporter.enable = true;
-    security.fail2ban.enable = true;
-    server.enable = true;
+    monitoring.nodeExporter.enable = lib.mkDefault true;
+    security.fail2ban.enable = lib.mkDefault true;
+    server.enable = lib.mkDefault true;
     virtualization.docker = {
-      enable = true;
-      serverHygiene = true;
+      enable = lib.mkDefault true;
+      serverHygiene = lib.mkDefault true;
     };
   };
 }

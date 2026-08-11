@@ -13,29 +13,29 @@ in
 {
   dotfiles = {
     agents = {
-      enable = true;
-      enableApiAccounts = true;
-      enableProxyAccounts = true;
+      enable = lib.mkDefault true;
+      enableApiAccounts = lib.mkDefault true;
+      enableProxyAccounts = lib.mkDefault true;
     };
-    ssh.enable = true;
-    rclone.enable = true;
+    ssh.enable = lib.mkDefault true;
+    rclone.enable = lib.mkDefault true;
     vcs = {
-      git.enable = true;
-      hunk.enable = false;
+      git.enable = lib.mkDefault true;
+      hunk.enable = lib.mkDefault false;
     };
-    terminal.zellij.enable = true;
-    shell.zsh.devExtras = true;
-    editor.neovim.dev = true;
+    terminal.zellij.enable = lib.mkDefault true;
+    shell.zsh.devExtras = lib.mkDefault true;
+    editor.neovim.dev = lib.mkDefault true;
   };
 
   # agenix identity (from the old secrets.nix)
   age.identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
 
   services.gpg-agent = {
-    enable = true;
+    enable = lib.mkDefault true;
   };
 
-  programs.nix-index-database.comma.enable = true;
+  programs.nix-index-database.comma.enable = lib.mkDefault true;
 
   home.packages =
     with pkgs;

@@ -10,10 +10,10 @@ let
 in
 {
   dotfiles = {
-    system.timezone.enable = true;
-    nix.optimise.enable = true;
-    security.onepassword.enable = true;
-    network.tailscale.enable = true;
+    system.timezone.enable = lib.mkDefault true;
+    nix.optimise.enable = lib.mkDefault true;
+    security.onepassword.enable = lib.mkDefault true;
+    network.tailscale.enable = lib.mkDefault true;
   };
 
   nixpkgs.overlays =
