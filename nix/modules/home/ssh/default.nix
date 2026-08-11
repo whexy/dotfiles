@@ -9,10 +9,6 @@ let
   cfg = config.dotfiles.ssh;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
-
-  # Whether this host is on the tailnet (null osConfig = standalone home,
-  # which is off the tailnet).
-  tailscale = osConfig != null && osConfig.dotfiles.network.tailscale.enable;
 in
 {
   options.dotfiles.ssh.enable = lib.mkEnableOption "ssh";
@@ -40,12 +36,6 @@ in
             ForwardAgent = true;
             ServerAliveInterval = 25;
             ServerAliveCountMax = 3;
-          };
-
-          # "remote-dev" is a MagicDNS name on the tailnet; only reachable with Tailscale.
-          "dev" = lib.mkIf tailscale {
-            HostName = "remote-dev";
-            User = "whexy";
           };
 
           "mars" = {
