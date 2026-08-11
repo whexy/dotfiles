@@ -57,10 +57,9 @@ steps:
       - echo "=== Evaluating representative NixOS configurations ==="
       - |
         for config in \
-          remote-dev \
-          ord \
-          wsl \
-          remote-service
+          mudd \
+          ellison \
+          wsl
         do
           echo "Evaluating $config..."
           nix eval --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.$config.config.system.build.toplevel.drvPath" --show-trace
@@ -75,10 +74,10 @@ steps:
       event: [push, pull_request]
     commands:
       - echo "=== Evaluating darwin configurations ==="
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mba.system.drvPath --show-trace
-      - echo "OK - mba"
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.mini.system.drvPath --show-trace
-      - echo "OK - mini"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.golf.system.drvPath --show-trace
+      - echo "OK - golf"
+      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.sheridan.system.drvPath --show-trace
+      - echo "OK - sheridan"
       - echo "=== Evaluating home-manager configurations ==="
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.wenxuan@mars.activationPackage.drvPath --impure --show-trace
       - echo "OK - mars (x86_64)"
