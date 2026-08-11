@@ -19,11 +19,11 @@ let
 in
 {
   dotfiles = {
-    monitors.htop.enable = true;
-    monitors.btop.enable = true;
-    terminal.tmux.enable = true;
-    shell.zsh.enable = true;
-    editor.neovim.enable = true;
+    monitors.htop.enable = lib.mkDefault true;
+    monitors.btop.enable = lib.mkDefault true;
+    terminal.tmux.enable = lib.mkDefault true;
+    shell.zsh.enable = lib.mkDefault true;
+    editor.neovim.enable = lib.mkDefault true;
   };
 
   home.stateVersion = "26.05";
@@ -49,7 +49,7 @@ in
     ];
 
   nix.gc = {
-    automatic = true;
+    automatic = lib.mkDefault true;
     dates = "weekly";
     options = "--delete-older-than 30d";
   };
