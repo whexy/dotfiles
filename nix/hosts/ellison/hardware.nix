@@ -10,6 +10,18 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
+  dotfiles.hardware.monitors = [
+    {
+      connector = "DP-3";
+      resolution = {
+        width = 3840;
+        height = 2160;
+      };
+      refreshRate = 165.000;
+      scale = 1.5;
+    }
+  ];
+
   hardware = {
     enableRedistributableFirmware = true;
 
@@ -21,18 +33,6 @@
     cpu.amd.updateMicrocode = lib.mkDefault config.hardware.enableRedistributableFirmware;
 
     logitech.wireless.enable = true;
-
-    monitors = [
-      {
-        connector = "DP-3";
-        resolution = {
-          width = 3840;
-          height = 2160;
-        };
-        refreshRate = 165.000;
-        scale = 1.5;
-      }
-    ];
 
     # Bluetooth support
     bluetooth = {

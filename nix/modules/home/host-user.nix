@@ -1,7 +1,11 @@
-{ inputs, osConfig, ... }:
+# Home Manager entry point for users integrated into NixOS or Darwin.
+# Caps arrive as preset names, not as config options. Home modules read host
+# feature options directly from osConfig.dotfiles.* when needed.
 {
-  imports = inputs.self.lib.homeModulesForCaps osConfig.dotfiles.host.caps;
-
-  # Keep the home-level tailscale flag in sync with the host.
-  dotfiles.tailscale = osConfig.dotfiles.host.tailscale;
+  inputs,
+  dotfilesCaps,
+  ...
+}:
+{
+  imports = [ inputs.self.homeModules.all ] ++ inputs.self.lib.homeCapsModules dotfilesCaps;
 }

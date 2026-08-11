@@ -1,6 +1,6 @@
 # macOS-specific system configuration
 _: {
-  hardware.keyboards = [
+  dotfiles.hardware.keyboards = [
     {
       vendorId = 12815;
       productId = 20565;

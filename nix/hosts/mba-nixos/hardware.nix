@@ -1,17 +1,13 @@
 # Desktop settings for VMware VM running on MacBook
-{ ... }:
+_:
 
 {
-  imports = [
-    ../../modules/nixos/platform-desktop-vm-vmware.nix
-  ];
-
   # Uses VMware's "Use full resolution for Retina Display" + fullscreen,
   # so the guest sees a fixed Virtual-1 output at the host's native panel res.
   # scale = 2.0 matches macOS's backing scale factor, so cursor/widget/icon
   # sizes line up physically with the paired macOS host (mba). GTK text
-  # parity is handled separately via hardware.display.macbookScreen below.
-  hardware.monitors = [
+  # parity is handled separately via dotfiles.hardware.display.macbookScreen below.
+  dotfiles.hardware.monitors = [
     {
       connector = "Virtual-1";
       resolution = {
@@ -29,5 +25,5 @@
   # at the same compositor scale. Enabling this flag lets the
   # macbook-screen-density home module apply text-scaling-factor = 0.75 so
   # text physically matches the macOS side.
-  hardware.display.macbookScreen = true;
+  dotfiles.hardware.display.macbookScreen = true;
 }
