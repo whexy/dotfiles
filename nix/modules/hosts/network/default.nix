@@ -1,16 +1,21 @@
-# Network group: NetworkManager basics, Tailscale.
+# Network group: firewall backend, NetworkManager, Tailscale.
 { config, lib, ... }:
 let
   cfg = config.dotfiles.network;
 in
 {
   options.dotfiles.network = {
-    basics.enable = lib.mkEnableOption "dotfiles networking basics (NetworkManager, nftables, trusted tailnet)";
     firewall.enable = lib.mkOption {
       type = lib.types.bool;
       default = true;
       description = "Enable the NixOS firewall.";
     };
+    nftables.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = "Use nftables as the firewall backend (required by Incus).";
+    };
+    networkmanager.enable = lib.mkEnableOption "NetworkManager";
     tailscale.enable = lib.mkEnableOption "Tailscale client";
   };
 

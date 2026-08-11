@@ -66,7 +66,7 @@ in
         # Disable cap-provided networking through its feature options; VMware
         # uses networkd and runs behind host NAT.
         dotfiles.network = {
-          basics.enable = lib.mkForce false;
+          networkmanager.enable = lib.mkForce false;
           firewall.enable = lib.mkForce false;
         };
 

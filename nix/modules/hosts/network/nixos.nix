@@ -4,14 +4,17 @@ let
 in
 {
   config = lib.mkMerge [
-    { networking.firewall.enable = cfg.firewall.enable; }
-
-    (lib.mkIf cfg.basics.enable {
+    {
       networking = {
-        networkmanager.enable = true;
-        nftables.enable = true;
-        firewall.trustedInterfaces = lib.mkIf cfg.tailscale.enable [ "tailscale0" ];
+        firewall.enable = cfg.firewall.enable;
+        nftables.enable = cfg.nftables.enable;
       };
+    }
+
+    (lib.mkIf cfg.networkmanager.enable { networking.networkmanager.enable = true; })
+
+    (lib.mkIf cfg.tailscale.enable {
+      networking.firewall.trustedInterfaces = [ "tailscale0" ];
     })
   ];
 }
