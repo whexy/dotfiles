@@ -1,16 +1,15 @@
 { flake, ... }:
 {
-  imports =
-    flake.lib.nixosHost {
-      system = "x86_64-linux";
-      hostName = "remote-dev";
-      caps = [
-        "base"
-        "dev"
-      ];
-      modules = [ flake.nixosModules.platform-qemu-guest-uefi-disko ];
-    }
-    ++ [ flake.nixosModules.auto-upgrade ];
+  imports = flake.lib.nixosHost {
+    system = "x86_64-linux";
+    hostName = "remote-dev";
+    caps = [
+      "base"
+      "dev"
+    ];
+  };
 
-  dotfiles.autoUpgrade.enable = true;
+  dotfiles.system.autoUpgrade.enable = true;
+
+  dotfiles.platform.qemuGuest.enable = true;
 }

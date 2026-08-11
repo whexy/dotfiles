@@ -7,6 +7,7 @@
       "base"
       "dev"
     ];
-    modules = [ flake.nixosModules.platform-qemu-guest-uefi-disko ];
   };
+
+  dotfiles.platform.qemuGuest.enable = true;
 }

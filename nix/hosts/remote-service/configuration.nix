@@ -7,6 +7,7 @@
       "base"
       "service"
     ];
-    modules = [ flake.nixosModules.image-proxmox ];
   };
+
+  dotfiles.image.proxmox.enable = true;
 }

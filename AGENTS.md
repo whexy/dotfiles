@@ -4,54 +4,67 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 ## Layout
 
 - `/nix/hosts` - Blueprint host definitions
-- `/nix/modules/nixos` - NixOS modules, including capability and reusable platform modules
-- `/nix/modules/darwin` - nix-darwin modules, including capability modules
-- `/nix/modules/home` - Home Manager modules shared by integrated and standalone homes
+- `/nix/modules/hosts` - semantic system setting groups shared by NixOS and Darwin
+- `/nix/modules/caps` - system capability preset modules
+- `/nix/modules/home` - semantic Home Manager software groups
+- `/nix/modules/home/caps` - Home Manager capability preset modules
 - `/nix/overlays` - nixpkgs overlays
 
 ### System configs
 
-System configs are operating-system settings, for example:
+System features are grouped semantically, like settings categories. A group
+may contain related options for both platforms; platform-specific behavior
+still belongs to that semantic group. For example, passwordless sudo,
+1Password, fail2ban, and macOS biometric sudo all belong to `security`.
 
-- locale, e.g., which timezone should the system use
-- power settings, e.g., how long should sleep after idle
-- some "heavy" system packages, e.g., whether to enable docker, openssh
+Each group follows this pattern:
 
-System configs are platform-specific Blueprint modules:
+- `nix/modules/hosts/<group>/default.nix` - declares `dotfiles.<group>.*`
+  options (every option has a default)
+- `nix/modules/hosts/<group>/nixos.nix` - NixOS config gated by those options
+- `nix/modules/hosts/<group>/darwin.nix` - Darwin config gated by those options
 
-- `nix/modules/nixos/{cap}.nix` - NixOS-specific settings
-- `nix/modules/darwin/{cap}.nix` - Darwin-specific settings
+`nix/modules/hosts/nixos.nix` and `darwin.nix` recursively aggregate the
+matching files and exclude the other platform. Platforms, images, user setup,
+and custom hardware metadata are option-driven groups under this same tree;
+there are no separate `modules/nixos` or `modules/darwin` directories.
 
 ### Home configs
 
-Home configs are user space settings, for example:
+Home features represent software, grouped when related. Examples:
 
-- packages, e.g., enable zsh, neovim, ripgrep
-- software settings, e.g., zshrc, neovim init.lua, tmux config
+- `terminal` groups Ghostty, tmux, and zellij
+- `editor` groups Neovim and Neovide
+- `vcs` groups git and hunk
+- `wm` groups niri and aerospace
+- `keyboard` groups fcitx5 and Karabiner
 
-Home configs are cross-platform Blueprint modules exposed as
-`homeModules.<name>`. They are shared between NixOS, Darwin, and standalone
-Home Manager outputs.
+A group's `default.nix` declares its `dotfiles.<group>.*` options and imports
+its config files; config is gated with `lib.mkIf`. Standalone software can put
+options and config together in its own `default.nix`. `homeModules.all`
+aggregates all feature modules, while presets under `nix/modules/home/caps`
+are imported selectively.
 
 ## Capabilities
 
-I have so many systems managed by nix, so I define "caps" to describe the
-capability of a certain machine.
+Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, `service`), but
+**caps are not options or features**. They are preset modules:
 
-`base` cap:
-very basic settings, all system should have them. For example, zsh.
+- `nix/modules/caps/<cap>.nix` assigns system `dotfiles.*` options
+- `nix/modules/home/caps/<cap>.nix` assigns Home Manager software options and
+  cap-specific package lists
 
-`dev` cap:
-machines used for development. dev setups like fancy NeoVim, LSPs, Linters,
-Formatters, direnv, everything for better developer experience.
+Feature option defaults have the lowest priority. Importing a cap assigns
+normal-priority preset values. A host or user customizes the preset with
+`lib.mkForce`, for example:
 
-`gui` cap:
-machines expected to have GUI environments. Enable GUI related setups,
-like ghostty, browser, fonts.
-Also included macOS-specific settings like dock, finder, Touch ID for sudo.
+```nix
+dotfiles.virtualization.docker.enable = lib.mkForce false;
+```
 
-For example, a remote NixOS dev machine should enable base+dev.
-My macOS machines enable base+dev-lite+gui.
+A cap should only tune feature options; implementation remains in semantic
+feature groups. Platform-specific options may be enabled by the same preset
+and simply have no config on the other platform.
 
 ## Putting them together
 
@@ -66,18 +79,25 @@ and HM modules, and enables `useGlobalPkgs`/`useUserPackages`. Hosts with only a
 
 Host files call `flake.lib.nixosHost` or `flake.lib.darwinHost` with their local
 `system`, `hostName`, `caps`, optional extra `modules`, and optional extra
-`overlays`. These helpers expose host metadata as `config.dotfiles.host.*`
-(consumed by integrated Home Manager users via `homeModules.host-user`), set
-`nixpkgs.hostPlatform`/`overlays`, and pass the `darwin`/`wsl` flags to HM via
-`home-manager.extraSpecialArgs`. `darwinHost` additionally overrides
-`nixpkgs.pkgs` to keep Darwin hosts on the `nixpkgs-darwin` branch (blueprint's
-injected pkgs comes from the NixOS-branch `nixpkgs` input).
+`overlays`. The helpers import the selected system cap presets, expose host
+metadata as `config.dotfiles.host.*`, set `nixpkgs.hostPlatform`/`overlays`,
+and wire the semantic system feature aggregator. `darwinHost` additionally
+overrides `nixpkgs.pkgs` to keep Darwin hosts on the `nixpkgs-darwin` branch
+(blueprint's injected pkgs comes from the NixOS-branch `nixpkgs` input).
+
+Integrated users import `homeModules.host-user`, which imports
+`homeModules.all` and the matching Home Manager cap presets via
+`flake.lib.homeCapsModules`; cap names arrive as a special argument, not a
+config option. Home modules read global system options directly from
+`osConfig.dotfiles.*`; do not mirror them into separate HM options.
+Standalone homes import `homeModules.all` plus `homeCapsModules [ ... ]`
+directly.
 
 Do not set `nixpkgs.config` in system modules: blueprint configures nixpkgs at
 the flake level (`flake.nix`) and injects `nixpkgs.pkgs`, and the module system
 asserts `nixpkgs.config == { }` when `nixpkgs.pkgs` is set. Host-specific
-hardware lives beside the host as `hardware.nix`; reusable VM/image/platform
-modules live in `nix/modules/nixos`.
+hardware lives beside the host as `hardware.nix`; reusable platform and image
+behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 
 ## Verification
 

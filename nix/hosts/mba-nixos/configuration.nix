@@ -10,4 +10,9 @@
     ];
     modules = [ ./hardware.nix ];
   };
+
+  dotfiles.platform.desktopVm = {
+    enable = true;
+    backend = "vmware";
+  };
 }
