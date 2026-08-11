@@ -23,21 +23,15 @@ check:
     nix build ".#checks.${SYSTEM}.pre-commit" -L --no-link
     echo "SUCCESS - All lint checks passed"
 
-# Verify primary configurations evaluate correctly (remote-dev, ord, mba)
+# Verify primary configurations evaluate correctly (ellison, mudd)
 verify:
     @echo "=== Verifying primary configurations ==="
-    @echo "Evaluating remote-dev..."
-    nix eval .#nixosConfigurations.remote-dev.config.system.build.toplevel.drvPath --show-trace
-    @echo "OK - remote-dev"
-    @echo "Evaluating ord..."
-    nix eval .#nixosConfigurations.ord.config.system.build.toplevel.drvPath --show-trace
-    @echo "OK - ord"
-    @echo "Evaluating mba..."
-    nix eval .#darwinConfigurations.mba.system.drvPath --show-trace
-    @echo "OK - mba"
-    @echo "Evaluating moore VM..."
-    nix eval .#nixosConfigurations.moore.config.system.build.vm.drvPath --show-trace
-    @echo "OK - moore VM"
+    @echo "Evaluating ellison..."
+    nix eval .#nixosConfigurations.ellison.config.system.build.toplevel.drvPath --show-trace
+    @echo "OK - ellison"
+    @echo "Evaluating mudd..."
+    nix eval .#nixosConfigurations.mudd.config.system.build.toplevel.drvPath --show-trace
+    @echo "OK - mudd"
     @echo "SUCCESS - All primary configurations evaluate correctly"
 
 # Build WSL tarball for import (requires sudo)
