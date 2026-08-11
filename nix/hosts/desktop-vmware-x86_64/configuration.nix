@@ -8,6 +8,10 @@
       "dev"
       "gui"
     ];
-    modules = [ flake.nixosModules.platform-desktop-vm-vmware ];
+  };
+
+  dotfiles.platform.desktopVm = {
+    enable = true;
+    backend = "vmware";
   };
 }

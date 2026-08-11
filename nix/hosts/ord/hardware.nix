@@ -2,15 +2,24 @@
 # Extends qemu-x86_64 with virtio-gpu, hardware graphics, and SPICE agent.
 # Used for hosts that run a Wayland compositor (e.g. niri) inside a QEMU/Proxmox VM,
 # including GPU passthrough setups (e.g. AMD RX 6000 series requiring firmware blobs).
-{ ... }:
+_:
 
 {
-  imports = [
-    ../../modules/nixos/platform-qemu-guest-uefi-disko.nix
-  ];
-
   # Load virtio-gpu early so the display is available before the compositor starts
   boot.initrd.kernelModules = [ "virtio_gpu" ];
+
+  # Monitor declarations consumed by compositor configs.
+  dotfiles.hardware.monitors = [
+    {
+      connector = "HDMI-A-1";
+      resolution = {
+        width = 3840;
+        height = 2160;
+      };
+      refreshRate = 120.000;
+      scale = 1.5;
+    }
+  ];
 
   hardware = {
     # Enable DRM/KMS and OpenGL support required by Wayland compositors
@@ -23,20 +32,6 @@
 
     # Enable udev rules files
     logitech.wireless.enable = true;
-
-    # Monitor declarations — consumed by compositor configs via osConfig.hardware.monitors
-    # Samsung Odyssey G8 (HDMI-A-1): 4K panel, 120 Hz over HDMI
-    monitors = [
-      {
-        connector = "HDMI-A-1";
-        resolution = {
-          width = 3840;
-          height = 2160;
-        };
-        refreshRate = 120.000;
-        scale = 1.5;
-      }
-    ];
 
     # Bluetooth support
     bluetooth = {
