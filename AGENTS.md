@@ -35,7 +35,7 @@ Home features represent software, grouped when related. Examples:
 
 - `terminal` groups Ghostty, tmux, and zellij
 - `editor` groups Neovim and Neovide
-- `vcs` groups git and hunk
+- `vcs` groups git and delta
 - `wm` groups niri and aerospace
 - `keyboard` groups fcitx5 and Karabiner
 

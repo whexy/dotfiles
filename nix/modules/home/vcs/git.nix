@@ -63,6 +63,7 @@ in
 
       delta = {
         enable = true;
+        enableGitIntegration = true; # use delta as default git diff viewer/pager
         options = {
           line-numbers = true;
           side-by-side = true;
