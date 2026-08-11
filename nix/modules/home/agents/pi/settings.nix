@@ -15,15 +15,22 @@ in
 
   # Scoped models for Ctrl+P cycling (`/scoped-models`).
   # kimi-k3 is only reachable via the tailnet AI proxy.
-  enabledModels = lib.optional tailscale "moonshotai/kimi-k3" ++ [
-    "opencode-go/deepseek-v4-flash"
-    "openai/gpt-5.6-sol"
-    "deepseek/deepseek-v4-flash"
-    "anthropic/claude-opus-5"
-    "anthropic/claude-fable-5"
-    # OpenCode Go subscription
-    "opencode-go/grok-4.5"
-    "opencode-go/gpt-5.6-luna"
-    "opencode-go/qwen3.8-max"
-  ];
+  enabledModels =
+    lib.optionals tailscale [
+      "moonshotai/kimi-k3"
+      "google/gemini-3.6-flash"
+      "google/gemini-3.1-pro-preview"
+    ]
+    ++ [
+      "opencode-go/deepseek-v4-flash"
+      "openai/gpt-5.6-sol"
+      "deepseek/deepseek-v4-flash"
+      "anthropic/claude-opus-5"
+      "anthropic/claude-sonnet-5"
+      "anthropic/claude-fable-5"
+      # OpenCode Go subscription
+      "opencode-go/grok-4.5"
+      "opencode-go/gpt-5.6-luna"
+      "opencode-go/qwen3.8-max"
+    ];
 }
