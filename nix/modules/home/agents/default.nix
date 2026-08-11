@@ -10,26 +10,46 @@ let
   cfg = config.dotfiles.agents;
 in
 {
-  options.dotfiles.agents.enable = lib.mkEnableOption "agents";
+  options.dotfiles.agents = {
+    enable = lib.mkEnableOption "agents";
+    enableApiAccounts = lib.mkEnableOption "enable models billed by API";
+    enableProxyAccounts = lib.mkEnableOption "enable models served by the tailnet AI proxy";
+  };
 
   config = lib.mkIf cfg.enable (
     let
-      opencode_settings = import ./opencode/config.nix { inherit config lib osConfig; };
+      apiAccounts = cfg.enableApiAccounts;
+      proxyAccounts = cfg.enableProxyAccounts;
+      opencode_settings = import ./opencode/config.nix {
+        inherit
+          config
+          lib
+          apiAccounts
+          proxyAccounts
+          ;
+      };
       opencode_tui = import ./opencode/tui.nix;
-      pi_settings = import ./pi/settings.nix { inherit lib osConfig; };
+      pi_settings = import ./pi/settings.nix { inherit lib apiAccounts proxyAccounts; };
       pi_models = import ./pi/models.nix {
         inherit
           config
           pkgs
           lib
-          osConfig
+          apiAccounts
+          proxyAccounts
           ;
       };
-
-      # claude_code_config = builtins.readFile ./claude-code/settings.json;
-      # claude_code_settings = builtins.fromJSON claude_code_config;
     in
     {
+      # The AI proxy lives on the tailnet; it is unreachable without Tailscale.
+      assertions = [
+        {
+          assertion =
+            !cfg.enableProxyAccounts || (osConfig != null && osConfig.dotfiles.network.tailscale.enable);
+          message = "dotfiles.agents.enableProxyAccounts requires dotfiles.network.tailscale.enable";
+        }
+      ];
+
       home = {
         file = {
           # Deploy the notification plugin so it is auto-loaded by OpenCode.
@@ -45,24 +65,24 @@ in
         };
       };
 
-      age = {
-        secrets = {
-          openai-api-key = {
-            file = ../../../../secrets/openai-api-key.age;
-            path = "${config.home.homeDirectory}/.secrets/openai-api-key";
-          };
-          anthropic-api-key = {
-            file = ../../../../secrets/anthropic-api-key.age;
-            path = "${config.home.homeDirectory}/.secrets/anthropic-api-key";
-          };
-          deepseek-api-key = {
-            file = ../../../../secrets/deepseek-api-key.age;
-            path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
-          };
-          opencode-api-key = {
-            file = ../../../../secrets/opencode-api-key.age;
-            path = "${config.home.homeDirectory}/.secrets/opencode-api-key";
-          };
+      age.secrets = {
+        opencode-api-key = {
+          file = ../../../../secrets/opencode-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/opencode-api-key";
+        };
+      }
+      // lib.optionalAttrs cfg.enableApiAccounts {
+        openai-api-key = {
+          file = ../../../../secrets/openai-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/openai-api-key";
+        };
+        anthropic-api-key = {
+          file = ../../../../secrets/anthropic-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/anthropic-api-key";
+        };
+        deepseek-api-key = {
+          file = ../../../../secrets/deepseek-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
         };
       };
 
