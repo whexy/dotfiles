@@ -12,12 +12,16 @@ let
 in
 {
   dotfiles = {
-    agents.enable = true;
+    agents = {
+      enable = true;
+      enableApiAccounts = true;
+      enableProxyAccounts = true;
+    };
     ssh.enable = true;
     rclone.enable = true;
     vcs = {
       git.enable = true;
-      hunk.enable = true;
+      hunk.enable = false;
     };
     terminal.zellij.enable = true;
     shell.zsh.devExtras = true;

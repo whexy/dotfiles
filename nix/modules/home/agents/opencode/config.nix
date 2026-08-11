@@ -1,15 +1,13 @@
 {
   config,
   lib,
-  osConfig,
+  apiAccounts,
+  proxyAccounts,
 }:
-let
-  tailscale = osConfig != null && osConfig.dotfiles.network.tailscale.enable;
-in
 {
   "$schema" = "https://opencode.ai/config.json";
-  # kimi-k3 goes through the tailnet AI proxy; fall back to OpenAI without Tailscale.
-  model = if tailscale then "moonshotai/kimi-k3" else "opencode-go/deepseek-v4-flash";
+  # kimi-k3 goes through the tailnet AI proxy; fall back to OpenCode Go without Tailscale.
+  model = if proxyAccounts then "moonshotai/kimi-k3" else "opencode-go/deepseek-v4-flash";
   autoupdate = false;
   default_agent = "plan";
   share = "disabled";
@@ -31,6 +29,19 @@ in
   };
 
   provider = {
+    # OpenCode Go subscription (https://opencode.ai/zen/go); always available.
+    opencode-go = {
+      options.apiKey = "{file:${config.age.secrets.opencode-api-key.path}}";
+      whitelist = [
+        "deepseek-v4-flash"
+        "grok-4.5"
+        "gpt-5.6-luna"
+        "qwen3.8-max"
+      ];
+    };
+  }
+  # Providers billed per API key; only wired when API accounts are enabled.
+  // lib.optionalAttrs apiAccounts {
     openai = {
       options.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
       whitelist = [
@@ -53,19 +64,9 @@ in
         "deepseek-v4-flash"
       ];
     };
-    # OpenCode Go subscription (https://opencode.ai/zen/go).
-    opencode-go = {
-      options.apiKey = "{file:${config.age.secrets.opencode-api-key.path}}";
-      whitelist = [
-        "deepseek-v4-flash"
-        "grok-4.5"
-        "gpt-5.6-luna"
-        "qwen3.8-max"
-      ];
-    };
   }
   # The AI proxy lives on the tailnet; only reachable with Tailscale.
-  // lib.optionalAttrs tailscale {
+  // lib.optionalAttrs proxyAccounts {
     moonshotai = {
       options = {
         baseURL = "https://ai-proxy.at-basking.ts.net/v1";

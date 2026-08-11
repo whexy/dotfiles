@@ -13,7 +13,10 @@
     inputs.self.lib.overlays.unstable
     inputs.self.lib.overlays.llm-tools
   ];
-  dotfiles.autoUpgrade.enable = true;
+  dotfiles = {
+    autoUpgrade.enable = true;
+    agents.enableProxyAccounts = false;
+  };
 
   targets.genericLinux.enable = true;
   targets.genericLinux.gpu.enable = false;
