@@ -1,4 +1,5 @@
 {
+  pkgs,
   lib,
   apiAccounts,
   proxyAccounts,
@@ -10,6 +11,12 @@
   # kimi-k3 goes through the tailnet AI proxy; fall back to OpenCode Go without Tailscale.
   defaultProvider = if proxyAccounts then "moonshotai" else "opencode-go";
   defaultModel = if proxyAccounts then "kimi-k3" else "deepseek-v4-flash";
+
+  packages = [
+    "npm:pi-web-access"
+  ];
+
+  npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
 
   # Scoped models for Ctrl+P cycling (`/scoped-models`).
   # kimi-k3 is only reachable via the tailnet AI proxy.
