@@ -27,6 +27,7 @@
     ++ [
       # OpenCode Go subscription (always available)
       "opencode-go/deepseek-v4-flash"
+      "opencode-go/deepseek-v4-pro"
       "opencode-go/grok-4.5"
       "opencode-go/gpt-5.6-luna"
       "opencode-go/qwen3.8-max"
@@ -35,6 +36,7 @@
       # Pay by APIs
       "openai/gpt-5.6-sol"
       "deepseek/deepseek-v4-flash"
+      "deepseek/deepseek-v4-pro"
       "anthropic/claude-opus-5"
       "anthropic/claude-sonnet-5"
       "anthropic/claude-fable-5"

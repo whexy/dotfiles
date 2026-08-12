@@ -34,6 +34,7 @@
       options.apiKey = "{file:${config.age.secrets.opencode-api-key.path}}";
       whitelist = [
         "deepseek-v4-flash"
+        "deepseek-v4-pro"
         "grok-4.5"
         "gpt-5.6-luna"
         "qwen3.8-max"
@@ -62,6 +63,7 @@
       options.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
       whitelist = [
         "deepseek-v4-flash"
+        "deepseek-v4-pro"
       ];
     };
   }
