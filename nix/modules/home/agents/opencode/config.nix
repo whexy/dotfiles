@@ -70,7 +70,7 @@
     moonshotai = {
       options = {
         baseURL = "https://ai-proxy.at-basking.ts.net/v1";
-        apiKey = "kfc-vivo-50";
+        apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
       };
       whitelist = [
         "kimi-k3"
@@ -79,7 +79,7 @@
     google = {
       options = {
         baseURL = "https://ai-proxy.at-basking.ts.net/v1beta";
-        apiKey = "kfc-vivo-50";
+        apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
       };
       whitelist = [
         "gemini-3.6-flash"

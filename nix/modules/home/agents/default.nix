@@ -84,6 +84,12 @@ in
           file = ../../../../secrets/deepseek-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
         };
+      }
+      // lib.optionalAttrs cfg.enableProxyAccounts {
+        ai-proxy-api-key = {
+          file = ../../../../secrets/ai-proxy-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/ai-proxy-api-key";
+        };
       };
 
       programs = {
