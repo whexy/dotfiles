@@ -10,7 +10,7 @@
       enableProxyAccounts = lib.mkDefault true;
     };
     ssh.enable = lib.mkDefault true;
-    rclone.enable = lib.mkDefault true;
+    rclone.enable = lib.mkDefault false;
     vcs = {
       git.enable = lib.mkDefault true;
     };
