@@ -1,7 +1,7 @@
 # Editor group: Neovim, Neovide, and per-language editing support. Each
 # `editor.<language>.enable` installs the language toolchain together with
 # its language servers and formatters.
-{ lib, ... }:
+{ inputs, lib, ... }:
 {
   options.dotfiles.editor = {
     neovim = {
@@ -13,6 +13,7 @@
     c.enable = lib.mkEnableOption "C/C++ editing support";
     config.enable = lib.mkEnableOption "config file (YAML/TOML/JSON) editing support";
     go.enable = lib.mkEnableOption "Go editing support";
+    haskell.enable = lib.mkEnableOption "Haskell editing support";
     javascript.enable = lib.mkEnableOption "JavaScript/TypeScript editing support";
     lua.enable = lib.mkEnableOption "Lua editing support";
     markdown.enable = lib.mkEnableOption "Markdown editing support";
@@ -25,12 +26,14 @@
   };
 
   imports = [
+    inputs.nixvim.homeModules.nixvim
     ./neovim.nix
     ./neovim-dev.nix
     ./neovide.nix
     ./c.nix
     ./config.nix
     ./go.nix
+    ./haskell.nix
     ./javascript.nix
     ./lua.nix
     ./markdown.nix

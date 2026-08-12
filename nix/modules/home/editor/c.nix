@@ -9,7 +9,6 @@
   config = lib.mkIf config.dotfiles.editor.c.enable {
     home.packages = with pkgs; [
       clang
-      clang-tools
       cmake
       gdb
       gnumake
@@ -17,5 +16,18 @@
       man-pages # Linux API man pages (sections 2-7)
       man-pages-posix # POSIX man pages (listen, socket, etc.)
     ];
+
+    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
+      plugins.treesitter.grammarPackages =
+        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
+          c
+          cpp
+          glsl
+          ninja
+        ];
+      lsp.servers.clangd = {
+        enable = true;
+      };
+    };
   };
 }
