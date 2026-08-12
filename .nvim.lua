@@ -1,18 +1,29 @@
+local flake = "(builtins.getFlake (builtins.toString ./.))"
+
 vim.lsp.config("nixd", {
+	cmd = { "nixd" },
+	filetypes = { "nix" },
+	root_markers = { "flake.nix", ".git" },
 	settings = {
 		nixd = {
 			nixpkgs = {
-				expr = "import (builtins.getFlake (builtins.toString ./.)).inputs.nixpkgs { }",
+				expr = "import " .. flake .. ".inputs.nixpkgs { system = builtins.currentSystem; }",
 			},
 			formatting = {
 				command = { "nixfmt" },
 			},
 			options = {
+				-- All NixOS hosts import the shared dotfiles option declarations.
 				nixos = {
-					expr = "(builtins.getFlake (builtins.toString ./.)).nixosConfigurations.remote-dev.options",
+					expr = flake .. ".nixosConfigurations.ellison.options",
 				},
+				darwin = {
+					expr = flake .. ".darwinConfigurations.golf.options",
+				},
+				-- Blueprint exposes standalone homes below legacyPackages. This
+				-- configuration imports homeModules.all, including dotfiles.*.
 				["home-manager"] = {
-					expr = "(builtins.getFlake (builtins.toString ./.)).nixosConfigurations.remote-dev.options.home-manager.users.type.getSubOptions []",
+					expr = flake .. '.legacyPackages.x86_64-linux.homeConfigurations."wenxuan@venus".options',
 				},
 			},
 			diagnostic = {
@@ -21,3 +32,5 @@ vim.lsp.config("nixd", {
 		},
 	},
 })
+
+vim.lsp.enable("nixd")
