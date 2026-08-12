@@ -1,10 +1,12 @@
-# Cross-platform replacement for home-manager's upstream `programs.rclone`
-# module.
+# rclone service definitions: render rclone.conf, inject secrets, and mount
+# remotes as systemd user services (Linux) or launchd agents (Darwin).
 #
 # Upstream HM only emits systemd user services, which means Darwin hosts get
 # the rclone.conf option machinery but no service to actually install the
-# config file nor mount the remotes. This module disables the upstream module
-# (`disabledModules`) and re-declares the same options, then provides:
+# config file nor mount the remotes. This file is gated by
+# `dotfiles.rclone.enable` and reads the `programs.rclone.*` options that
+# ./default.nix re-declares (and whose upstream module it disables). It only
+# provides the service definitions:
 #
 #   - Linux:  identical behavior to upstream (systemd user services for
 #             rclone-config and one mount unit per `remote.mounts` entry).
@@ -27,10 +29,10 @@
 # The `WatchPaths` list is sourced from `cfg.remotes.*.secrets`, making this
 # module agnostic to the specific secret provisioner.
 #
-# NOTE: This module is a near-verbatim fork of nix-community/home-manager
-# `modules/programs/rclone.nix` (release-25.11). The Linux branch is
-# duplicated rather than imported so a single source-of-truth handles both
-# platforms. Re-sync with upstream periodically.
+# NOTE: The Linux branch is a near-verbatim fork of nix-community/home-manager
+# `modules/programs/rclone.nix` (release-25.11), duplicated rather than
+# imported so a single source-of-truth handles both platforms. Re-sync with
+# upstream periodically.
 {
   config,
   lib,
@@ -45,8 +47,6 @@ let
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   replaceSlashes = builtins.replaceStrings [ "/" ] [ "." ];
   homeDir = config.home.homeDirectory;
-
-  isUsingSecretProvisioner = name: config ? "${name}" && config."${name}".secrets != { };
 
   rcloneConfigPath = "${config.xdg.configHome}/rclone/rclone.conf";
 
@@ -155,225 +155,7 @@ let
 
 in
 {
-  meta.maintainers = with lib.maintainers; [ jess ];
-
-  disabledModules = [ "programs/rclone.nix" ];
-
-  imports = [
-    (lib.mkRemovedOptionModule [ "programs" "rclone" "writeAfter" ] ''
-      The writeAfter option has been removed because rclone configuration is now handled by a
-      systemd service (Linux) or launchd agent (Darwin) instead of an activation script.
-    '')
-  ];
-
-  options = {
-    programs.rclone = {
-      enable = lib.mkEnableOption "rclone";
-
-      package = lib.mkPackageOption pkgs "rclone" { };
-
-      remotes = lib.mkOption {
-        type = lib.types.attrsOf (
-          lib.types.submodule {
-            options = {
-              config = lib.mkOption {
-                type =
-                  with lib.types;
-                  let
-                    baseType = attrsOf (
-                      nullOr (oneOf [
-                        bool
-                        int
-                        float
-                        str
-                      ])
-                    );
-
-                    remoteConfigType = addCheck baseType (lib.hasAttr "type") // {
-                      name = "rcloneRemoteConfig";
-                      description = "An attribute set containing a remote type and options.";
-                    };
-                  in
-                  remoteConfigType;
-                default = { };
-                description = ''
-                  Regular configuration options as described in rclone's documentation
-                  <https://rclone.org/docs/>. When specifying options follow the formatting
-                  process outlined here <https://rclone.org/docs/#config-config-file>, namely:
-                   - Remove the leading double-dash (--) from the rclone option name
-                   - Replace hyphens (-) with underscores (_)
-                   - Convert to lowercase
-                   - Use the resulting string as your configuration key
-
-                  Security Note: Always use the {option}`secrets` option for sensitive data
-                  instead of the {option}`config` option to prevent exposing credentials to
-                  the world-readable Nix store.
-                '';
-                example = lib.literalExpression ''
-                  {
-                    type = "mega";
-                    user = "you@example.com";
-                    hard_delete = true;
-                  }'';
-              };
-
-              secrets = lib.mkOption {
-                type = with lib.types; attrsOf str;
-                default = { };
-                description = ''
-                  Sensitive configuration values such as passwords, API keys, and tokens. These
-                  must be provided as file paths to the secrets, which will be read at activation
-                  time.
-
-                  On Darwin, these paths are also installed as launchd `WatchPaths` for the
-                  `rclone-config` agent, so changes (e.g. secret rotation) automatically
-                  re-render rclone.conf.
-                '';
-                example = lib.literalExpression ''
-                  {
-                    password = "/run/secrets/password";
-                    api_key = config.age.secrets.api-key.path;
-                  }'';
-              };
-
-              mounts = lib.mkOption {
-                type =
-                  with lib.types;
-                  attrsOf (
-                    lib.types.submodule {
-                      options = {
-                        enable = lib.mkEnableOption "this mount";
-
-                        logLevel = lib.mkOption {
-                          type = lib.types.nullOr (
-                            lib.types.enum [
-                              "ERROR"
-                              "NOTICE"
-                              "INFO"
-                              "DEBUG"
-                            ]
-                          );
-                          default = null;
-                          example = "INFO";
-                          description = ''
-                            Set the log-level.
-                            See: https://rclone.org/docs/#logging
-                          '';
-                        };
-
-                        mountPoint = lib.mkOption {
-                          type = lib.types.str;
-                          default = null;
-                          description = ''
-                            A local file path specifying the location of the mount point.
-                          '';
-                          example = "/home/alice/my-remote";
-                        };
-
-                        options = lib.mkOption {
-                          type =
-                            with lib.types;
-                            attrsOf (
-                              nullOr (oneOf [
-                                bool
-                                int
-                                float
-                                str
-                              ])
-                            );
-                          default = { };
-                          apply = lib.mergeAttrs {
-                            vfs-cache-mode = "full";
-                            cache-dir = "%C/rclone";
-                          };
-                          description = ''
-                            An attribute set of option values passed to `rclone mount`
-                            (Linux) / `rclone nfsmount` (Darwin). To set a boolean option,
-                            assign it `true` or `false`. See
-                            <https://nixos.org/manual/nixpkgs/stable/#function-library-lib.cli.toCommandLineShellGNU>
-                            for more details on the format.
-
-                            Some caching options are set by default, namely
-                            `vfs-cache-mode = "full"` and `cache-dir`. These can be
-                            overridden if desired. On Darwin, `%C/rclone` is rewritten to
-                            `~/Library/Caches/rclone`.
-                          '';
-                        };
-                      };
-                    }
-                  );
-                default = { };
-                description = ''
-                  An attribute set mapping remote file paths to their corresponding mount
-                  point configurations.
-                '';
-                example = lib.literalExpression ''
-                  {
-                    "path/to/files" = {
-                      enable = true;
-                      mountPoint = "/home/alice/rclone-mount";
-                      options = {
-                        dir-cache-time = "5000h";
-                        poll-interval = "10s";
-                        umask = "002";
-                        user-agent = "Laptop";
-                      };
-                    };
-                  }
-                '';
-              };
-            };
-          }
-        );
-        default = { };
-        description = ''
-          An attribute set of remote configurations. Each remote consists of regular
-          configuration options and optional secrets.
-
-          See <https://rclone.org/docs/> for more information on configuring specific
-          remotes.
-        '';
-        example = lib.literalExpression ''
-          {
-            b2 = {
-              config = {
-                type = "b2";
-                hard_delete = true;
-              };
-              secrets = {
-                account = config.sops.secrets.b2-acc-id.path;
-                key = config.age.secrets.b2-key.path;
-              };
-            };
-          }'';
-      };
-
-      requiresUnit = lib.mkOption {
-        type = with lib.types; nullOr str;
-        default =
-          lib.foldlAttrs
-            (
-              acc: prov: svc:
-              if isUsingSecretProvisioner prov then svc else acc
-            )
-            null
-            {
-              "sops" = "sops-nix.service";
-              "age" = "agenix.service";
-            };
-        example = "agenix.service";
-        description = ''
-          The name of a systemd user service that must complete before the rclone
-          configuration file is written. Linux-only; ignored on Darwin (which uses
-          `WatchPaths` instead).
-
-          When using sops-nix or agenix, this value is set automatically.
-        '';
-      };
-    };
-  };
-
-  config = lib.mkIf cfg.enable (
+  config = lib.mkIf config.dotfiles.rclone.enable (
     lib.mkMerge [
       { home.packages = [ cfg.package ]; }
 
