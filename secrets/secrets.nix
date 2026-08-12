@@ -15,4 +15,5 @@ in
   "openai-api-key.age".publicKeys = [ key ];
   "deepseek-api-key.age".publicKeys = [ key ];
   "opencode-api-key.age".publicKeys = [ key ];
+  "ai-proxy-api-key.age".publicKeys = [ key ];
 }

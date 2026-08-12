@@ -23,11 +23,11 @@ in
   // lib.optionalAttrs proxyAccounts {
     moonshotai = {
       baseUrl = "https://ai-proxy.at-basking.ts.net/v1";
-      apiKey = "kfc-vivo-50";
+      apiKey = secretKey config.age.secrets.ai-proxy-api-key.path;
     };
     google = {
       baseUrl = "https://ai-proxy.at-basking.ts.net/v1beta";
-      apiKey = "kfc-vivo-50";
+      apiKey = secretKey config.age.secrets.ai-proxy-api-key.path;
     };
   };
 }
