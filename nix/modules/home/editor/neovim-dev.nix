@@ -193,6 +193,20 @@ in
       extraPlugins = with pkgs.vimPlugins; [
         refjump-nvim
         nvim-lsp-file-operations
+        # Not packaged in nixpkgs; built from source.
+        (pkgs.vimUtils.buildVimPlugin {
+          pname = "tiny-code-action.nvim";
+          version = "0d040ed";
+          src = pkgs.fetchFromGitHub {
+            owner = "rachartier";
+            repo = "tiny-code-action.nvim";
+            rev = "0d040ed81f7953118b81cd12681fcdfcac069803";
+            hash = "sha256-UF9zeO5Uujdt2MEwy2d2Lhk6JRnEN4vrEvYslv0/zaA=";
+          };
+          dependencies = [ nui-nvim ];
+          # Optional snacks.nvim previewer; snacks is not installed.
+          nvimSkipModules = [ "tiny-code-action.previewers.snacks" ];
+        })
       ];
 
       autoGroups = {
@@ -433,7 +447,7 @@ in
         {
           mode = "n";
           key = "<leader>ca";
-          action.__raw = "vim.lsp.buf.code_action";
+          action.__raw = "function() require('tiny-code-action').code_action() end";
           options.desc = "Code Action";
         }
         {
