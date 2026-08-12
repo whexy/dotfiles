@@ -29,7 +29,14 @@ in
           ;
       };
       opencode_tui = import ./opencode/tui.nix;
-      pi_settings = import ./pi/settings.nix { inherit lib apiAccounts proxyAccounts; };
+      pi_settings = import ./pi/settings.nix {
+        inherit
+          pkgs
+          lib
+          apiAccounts
+          proxyAccounts
+          ;
+      };
       pi_models = import ./pi/models.nix {
         inherit
           config
@@ -39,6 +46,7 @@ in
           proxyAccounts
           ;
       };
+      pi_web_search = import ./pi/web-search.nix;
     in
     {
       # The AI proxy lives on the tailnet; it is unreachable without Tailscale.
@@ -56,6 +64,7 @@ in
           ".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
           ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
           ".pi/agent/models.json".text = builtins.toJSON pi_models;
+          ".pi/web-search.json".text = builtins.toJSON pi_web_search;
         };
 
         packages = [ pkgs.llm-agents.pi ];
