@@ -1,15 +1,23 @@
 # Lua: language server and formatter.
 {
   config,
-  pkgs,
   lib,
   ...
 }:
 {
   config = lib.mkIf config.dotfiles.editor.lua.enable {
-    home.packages = with pkgs; [
-      lua-language-server
-      stylua
-    ];
+    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
+      plugins.treesitter.grammarPackages =
+        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [ lua ];
+      lsp.servers.lua_ls = {
+        enable = true;
+        config.settings.Lua = {
+          runtime.version = "LuaJIT";
+          diagnostics.globals = [ "vim" ];
+          telemetry.enable = false;
+        };
+      };
+      plugins.conform-nvim.settings.formatters_by_ft.lua = [ "stylua" ];
+    };
   };
 }

@@ -21,6 +21,7 @@
       c.enable = lib.mkDefault true;
       config.enable = lib.mkDefault true;
       go.enable = lib.mkDefault true;
+      haskell.enable = lib.mkDefault false;
       javascript.enable = lib.mkDefault true;
       lua.enable = lib.mkDefault true;
       markdown.enable = lib.mkDefault true;

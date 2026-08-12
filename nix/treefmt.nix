@@ -4,7 +4,7 @@
 #   - `nix fmt`                         (flake.formatter)
 #   - the `treefmt` git pre-commit hook (devShell + checks.<system>.pre-commit)
 #
-# Formatter choices mirror nix/modules/home/dev/nvim/init.lua so editor and CLI agree.
+# Formatter choices mirror the Nixvim language modules so editor and CLI agree.
 _: {
   projectRootFile = "flake.nix";
   programs = {
