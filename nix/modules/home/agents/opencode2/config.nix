@@ -15,78 +15,55 @@
     "opencode" # disable Opencode Zen
   ];
 
-  server = {
-    port = 4096;
-    hostname = "127.0.0.1";
-  };
+  permissions = [
+    {
+      action = "external_directory";
+      resource = "/nix/store/*";
+      effect = "allow";
+    }
+    {
+      action = "external_directory";
+      resource = "/tmp/*";
+      effect = "allow";
+    }
+    {
+      action = "edit";
+      resource = "/nix/store/*";
+      effect = "deny";
+    }
+  ];
 
-  permission = {
-    external_directory = {
-      "/nix/store/**" = "allow";
-      "/tmp/**" = "allow";
-    };
-    edit."/nix/store/**" = "deny";
-  };
-
-  provider = {
+  providers = {
     # OpenCode Go subscription (https://opencode.ai/zen/go); always available.
     opencode-go = {
-      options.apiKey = "{file:${config.age.secrets.opencode-api-key.path}}";
-      whitelist = [
-        "deepseek-v4-flash"
-        "deepseek-v4-pro"
-        "grok-4.5"
-        "gpt-5.6-luna"
-        "qwen3.8-max"
-      ];
+      settings.apiKey = "{file:${config.age.secrets.opencode-api-key.path}}";
     };
   }
   # Providers billed per API key; only wired when API accounts are enabled.
   // lib.optionalAttrs apiAccounts {
     openai = {
-      options.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
-      whitelist = [
-        "gpt-5.6-sol"
-        "gpt-5.6-terra"
-        "gpt-5.6-luna"
-      ];
+      settings.apiKey = "{file:${config.age.secrets.openai-api-key.path}}";
     };
     anthropic = {
-      options.apiKey = "{file:${config.age.secrets.anthropic-api-key.path}}";
-      whitelist = [
-        "claude-opus-5"
-        "claude-sonnet-5"
-        "claude-fable-5"
-      ];
+      settings.apiKey = "{file:${config.age.secrets.anthropic-api-key.path}}";
     };
     deepseek = {
-      options.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
-      whitelist = [
-        "deepseek-v4-flash"
-        "deepseek-v4-pro"
-      ];
+      settings.apiKey = "{file:${config.age.secrets.deepseek-api-key.path}}";
     };
   }
   # The AI proxy lives on the tailnet; only reachable with Tailscale.
   // lib.optionalAttrs proxyAccounts {
     moonshotai = {
-      options = {
+      settings = {
         baseURL = "https://ai-proxy.at-basking.ts.net/v1";
         apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
       };
-      whitelist = [
-        "kimi-k3"
-      ];
     };
     google = {
-      options = {
+      settings = {
         baseURL = "https://ai-proxy.at-basking.ts.net/v1beta";
         apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
       };
-      whitelist = [
-        "gemini-3.6-flash"
-        "gemini-3.1-pro-preview"
-      ];
     };
   };
 }

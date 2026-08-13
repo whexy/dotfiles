@@ -20,7 +20,7 @@ in
     let
       apiAccounts = cfg.enableApiAccounts;
       proxyAccounts = cfg.enableProxyAccounts;
-      opencode_settings = import ./opencode/config.nix {
+      opencode2_settings = import ./opencode2/config.nix {
         inherit
           config
           lib
@@ -28,7 +28,7 @@ in
           proxyAccounts
           ;
       };
-      opencode_tui = import ./opencode/tui.nix;
+      opencode2_cli = import ./opencode2/cli.nix;
       pi_settings = import ./pi/settings.nix {
         inherit
           pkgs
@@ -60,17 +60,20 @@ in
 
       home = {
         file = {
-          # Deploy the notification plugin so it is auto-loaded by OpenCode.
-          ".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
+          ".config/opencode/opencode.json".text = builtins.toJSON opencode2_settings;
+          ".config/opencode/cli.json".text = builtins.toJSON opencode2_cli;
           ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
           ".pi/agent/models.json".text = builtins.toJSON pi_models;
           ".pi/web-search.json".text = builtins.toJSON pi_web_search;
         };
 
-        packages = [ pkgs.llm-agents.pi ];
+        packages = [
+          pkgs.llm-agents.pi
+          pkgs.llm-agents.opencode2
+        ];
 
         shellAliases = {
-          oc = "opencode";
+          oc2 = "opencode2";
         };
       };
 
@@ -98,15 +101,6 @@ in
         ai-proxy-api-key = {
           file = ../../../../secrets/ai-proxy-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/ai-proxy-api-key";
-        };
-      };
-
-      programs = {
-        opencode = {
-          enable = true;
-          package = pkgs.llm-agents.opencode;
-          settings = opencode_settings;
-          tui = opencode_tui;
         };
       };
     }
