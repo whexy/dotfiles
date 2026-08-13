@@ -43,7 +43,6 @@ in
           pkgs
           lib
           apiAccounts
-          proxyAccounts
           ;
       };
       pi_web_search = import ./pi/web-search.nix;
@@ -65,6 +64,10 @@ in
           ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
           ".pi/agent/models.json".text = builtins.toJSON pi_models;
           ".pi/web-search.json".text = builtins.toJSON pi_web_search;
+        }
+        // lib.optionalAttrs proxyAccounts {
+          # Discover the proxy catalog and clone matching model metadata from pi.
+          ".pi/agent/extensions/ai-proxy.ts".source = ./pi/ai-proxy.ts;
         };
 
         packages = [ pkgs.llm-agents.pi ];
