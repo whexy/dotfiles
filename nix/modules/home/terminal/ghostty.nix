@@ -87,6 +87,7 @@ in
             lib.optionals (!isDarwin) [
               "ctrl+shift+zero=set_font_size:23"
               "ctrl+shift+r=reset"
+              "ctrl+shift+e=write_screen_file:open"
               "ctrl+shift+arrow_down=jump_to_prompt:1"
               "ctrl+shift+arrow_up=jump_to_prompt:-1"
               "ctrl+alt+t=text:ghostty-toggle-theme\\n"
@@ -96,6 +97,7 @@ in
               "alt+right=unbind"
               "cmd+shift+zero=set_font_size:23"
               "cmd+shift+r=reset"
+              "cmd+shift+e=write_screen_file:open"
               "cmd+shift+arrow_down=jump_to_prompt:1"
               "cmd+shift+arrow_up=jump_to_prompt:-1"
               "cmd+shift+comma=reload_config"
