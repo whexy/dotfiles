@@ -15,9 +15,11 @@ in
         default = config.dotfiles.host.hostName;
         defaultText = "config.dotfiles.host.hostName";
         description = ''
-          The nixosConfigurations.<name> output of github:whexy/dotfiles to
-          switch to. Override when the flake output name differs from the
-          runtime hostname (e.g. moore has networking.hostName "moore-vm").
+          The nixosConfigurations.<name> (NixOS) or
+          darwinConfigurations.<name> (Darwin) output of
+          github:whexy/dotfiles to switch to. Override when the flake output
+          name differs from the runtime hostname (e.g. moore has
+          networking.hostName "moore-vm").
         '';
         example = "remote-dev";
       };
