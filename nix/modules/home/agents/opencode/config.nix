@@ -7,8 +7,12 @@
 {
   "$schema" = "https://opencode.ai/config.json";
   # kimi-k3 goes through the tailnet AI proxy; fall back to OpenCode Go without Tailscale.
-  model = if proxyAccounts then "moonshotai/kimi-k3" else "opencode-go/deepseek-v4-flash";
+  model = if proxyAccounts then "ai-proxy/kimi-k3" else "opencode-go/deepseek-v4-flash";
   autoupdate = false;
+  plugin = lib.optionals proxyAccounts [
+    # Discover the proxy catalog from its OpenAI-compatible /models endpoint.
+    "opencode-models-discovery@1.3.1"
+  ];
   default_agent = "plan";
   share = "disabled";
   disabled_providers = [
@@ -69,24 +73,26 @@
   }
   # The AI proxy lives on the tailnet; only reachable with Tailscale.
   // lib.optionalAttrs proxyAccounts {
-    moonshotai = {
-      options = {
-        baseURL = "https://ai-proxy.at-basking.ts.net/v1";
-        apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
-      };
+    ai-proxy = {
+      name = "AI Proxy";
+      npm = "@ai-sdk/openai-compatible";
       whitelist = [
         "kimi-k3"
-      ];
-    };
-    google = {
-      options = {
-        baseURL = "https://ai-proxy.at-basking.ts.net/v1beta";
-        apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
-      };
-      whitelist = [
+        "gpt-5.6-sol"
+        "gpt-5.6-terra"
         "gemini-3.6-flash"
         "gemini-3.1-pro-preview"
       ];
+      options = {
+        baseURL = "https://ai-proxy.at-basking.ts.net/v1";
+        apiKey = "{file:${config.age.secrets.ai-proxy-api-key.path}}";
+        modelsDiscovery = {
+          enabled = true;
+          timeoutMs = 10000;
+          modelInfoFormat = "models.dev";
+          smartModelName = true;
+        };
+      };
     };
   };
 }
