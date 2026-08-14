@@ -91,6 +91,14 @@
           timeoutMs = 10000;
           modelInfoFormat = "models.dev";
           smartModelName = true;
+          # Filter before OpenCode validates discovered metadata. `whitelist`
+          # only controls model visibility after every model has been parsed.
+          models.includeBy = [
+            {
+              field = "id";
+              match = "^(kimi-k3|gpt-5\\.6-(sol|terra)|gemini-3\\.6-flash|gemini-3\\.1-pro-preview)$";
+            }
+          ];
         };
       };
     };
