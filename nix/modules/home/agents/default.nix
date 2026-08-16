@@ -3,6 +3,7 @@ args@{
   pkgs,
   config,
   lib,
+  perSystem,
   ...
 }:
 let
@@ -70,7 +71,7 @@ in
           ".pi/agent/extensions/ai-proxy.ts".source = ./pi/ai-proxy.ts;
         };
 
-        packages = [ pkgs.llm-agents.pi ];
+        packages = [ pkgs.llm-agents.pi ] ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
 
         shellAliases = {
           oc = "opencode";
@@ -101,6 +102,12 @@ in
         ai-proxy-api-key = {
           file = ../../../../secrets/ai-proxy-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/ai-proxy-api-key";
+        };
+        # Management key for the CLIProxyAPI /v0/management endpoints,
+        # consumed by the ai-quota package.
+        ai-proxy-mgmt-key = {
+          file = ../../../../secrets/ai-proxy-mgmt-key.age;
+          path = "${config.home.homeDirectory}/.secrets/ai-proxy-mgmt-key";
         };
       };
 
