@@ -126,9 +126,6 @@ pkgs.writers.writePython3Bin "ai-quota"
         return {
             "label": label,
             "pct": pct,
-            "used": used,
-            "limit": limit,
-            "remaining": remaining,
             "reset": parse_time(detail.get("resetTime")),
         }
 
@@ -166,9 +163,6 @@ pkgs.writers.writePython3Bin "ai-quota"
                     {
                         "label": prefix + window_label(win.get("limit_window_seconds")),
                         "pct": float(win.get("used_percent") or 0),
-                        "used": None,
-                        "limit": None,
-                        "remaining": None,
                         "reset": parse_epoch(win.get("reset_at")),
                     }
                 )
@@ -189,9 +183,6 @@ pkgs.writers.writePython3Bin "ai-quota"
                 {
                     "label": b.get("modelId", "?"),
                     "pct": pct,
-                    "used": None,
-                    "limit": None,
-                    "remaining": None,
                     "reset": parse_time(b.get("resetTime")),
                 }
             )
@@ -263,11 +254,7 @@ pkgs.writers.writePython3Bin "ai-quota"
         graph = paint("█" * filled, usage_color(pct)) + paint(
             "░" * (BAR_WIDTH - filled), DIM
         )
-        if m["used"] is not None and m["limit"] is not None:
-            text = "%s/%s used · %s left" % (m["used"], m["limit"], m["remaining"])
-        else:
-            text = "%.0f%% used" % pct
-        return "%s %s%s" % (graph, text, reset_note(m["reset"]))
+        return "%s %.0f%% used%s" % (graph, pct, reset_note(m["reset"]))
 
 
     def show_account(name, resp, parse):
