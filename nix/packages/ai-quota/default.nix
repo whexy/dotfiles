@@ -210,7 +210,12 @@ pkgs.writers.writePython3Bin "ai-quota"
         "antigravity": {
             "request": {
                 "method": "POST",
+                # The daily (staging) endpoint rejects accounts without a
+                # staging license (HTTP 403); fall back to production.
                 "url": "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
+                "url_fallbacks": [
+                    "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
+                ],
                 "header": {
                     "Authorization": "Bearer $TOKEN$",
                     "Content-Type": "application/json",
@@ -302,14 +307,20 @@ pkgs.writers.writePython3Bin "ai-quota"
             first = False
             print(paint(provider, BOLD, MAGENTA))
             for f in accounts[provider]:
-                try:
-                    resp = api(
-                        key,
-                        "/api-call",
-                        payload=dict(spec["request"], authIndex=f["auth_index"]),
-                    )
-                except OSError as exc:
-                    resp = {"status_code": 0, "body": str(exc)}
+                urls = [spec["request"]["url"]] + spec["request"].get("url_fallbacks", [])
+                for url in urls:
+                    try:
+                        request = dict(spec["request"], url=url)
+                        request.pop("url_fallbacks", None)
+                        resp = api(
+                            key,
+                            "/api-call",
+                            payload=dict(request, authIndex=f["auth_index"]),
+                        )
+                    except OSError as exc:
+                        resp = {"status_code": 0, "body": str(exc)}
+                    if resp.get("status_code") not in (403, 404):
+                        break
                 show_account(f["name"], resp, spec["parse"])
 
 
