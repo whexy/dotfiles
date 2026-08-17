@@ -1,14 +1,13 @@
-{ pkgs }:
+{ pkgs, perSystem }:
 
 # Turn the current (possibly dirty) worktree into a PR authored by a GitHub
 # App. Designed for CI (see .woodpecker.yml update-flake): after `nix flake
 # update` dirties flake.lock, this script creates a branch, commits the
 # changes, pushes it, and opens a PR as the App's bot user.
 #
-# It mints an installation access token from the App credentials (the
-# token-minting logic mirrors ../github-app-token) and derives the bot's git
-# identity (login/id) from the GitHub API, so commits and the PR both show up
-# as "<app-slug>[bot]".
+# It mints an installation access token via the sibling github-app-token
+# package and derives the bot's git identity (login/id) from the GitHub API,
+# so commits and the PR both show up as "<app-slug>[bot]".
 #
 # Required environment:
 #   GITHUB_APP_ID              App ID
@@ -79,66 +78,28 @@ pkgs.writeShellScriptBin "github-pr" ''
     # `gh` shells out to git to inspect the repo/branch.
     export PATH="${pkgs.git}/bin:$PATH"
 
-    b64url() {
-      ${pkgs.openssl}/bin/openssl base64 -A |
-        ${pkgs.coreutils}/bin/tr '+/' '-_' |
-        ${pkgs.coreutils}/bin/tr -d '='
-    }
-
     # --- Mint an installation access token -------------------------------------
     echo "==> Minting installation access token"
-    now=$(${pkgs.coreutils}/bin/date +%s)
-    header=$(printf '%s' '{"alg":"RS256","typ":"JWT"}' | b64url)
-    payload=$(
-      printf '{"iat":%d,"exp":%d,"iss":"%s"}' \
-        "$((now - 60))" "$((now + 600))" "$GITHUB_APP_ID" |
-        b64url
-    )
-    unsigned="$header.$payload"
-    signature=$(
-      printf '%s' "$unsigned" |
-        ${pkgs.openssl}/bin/openssl dgst \
-          -sha256 \
-          -sign <(printf '%s' "$GITHUB_APP_PRIVATE_KEY") \
-          -binary |
-        b64url
-    )
-    token_response=$(
-      ${pkgs.curl}/bin/curl -sS -w '\n%{http_code}' -X POST \
-        -H "Authorization: Bearer $unsigned.$signature" \
-        -H "Accept: application/vnd.github+json" \
-        "https://api.github.com/app/installations/$GITHUB_APP_INSTALLATION_ID/access_tokens"
-    )
-    token_status=$(printf '%s' "$token_response" | ${pkgs.coreutils}/bin/tail -n1)
-    token_body=$(printf '%s' "$token_response" | ${pkgs.gnused}/bin/sed '$d')
-    if [ "$token_status" -ge 400 ]; then
-      echo "github-pr: token request failed (HTTP $token_status):" >&2
-      echo "$token_body" >&2
-      exit 1
-    fi
-    GH_TOKEN=$(
-      printf '%s' "$token_body" |
-        ${pkgs.gnused}/bin/sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
-    )
-    if [ -z "$GH_TOKEN" ]; then
-      echo "github-pr: failed to parse installation token" >&2
-      exit 1
-    fi
+    GH_TOKEN=$(${perSystem.self.github-app-token}/bin/github-app-token)
     export GH_TOKEN
 
     # --- Commit as the App's bot user ------------------------------------------
     # GET /user rejects installation tokens (403 "Resource not accessible by
-    # integration"), so resolve the bot identity via endpoints that accept
-    # them: GET /app (JWT) for the app slug, then GET /users/<slug>[bot] for
-    # the bot user's login and numeric ID.
+    # integration") and GET /app requires a JWT, so resolve the bot identity
+    # via endpoints that accept installation tokens: GET /repos/{owner}/{repo}/
+    # installation for the app slug, then GET /users/<slug>[bot] for the bot
+    # user's login and numeric ID.
     echo "==> Resolving bot identity"
-    app=$(
+    origin_url=$(git remote get-url origin)
+    repo=$(printf '%s' "$origin_url" |
+      ${pkgs.gnused}/bin/sed -e 's#.*github\.com[:/]##' -e 's#\.git$##')
+    installation=$(
       ${pkgs.curl}/bin/curl -fsS \
-        -H "Authorization: Bearer $unsigned.$signature" \
+        -H "Authorization: Bearer $GH_TOKEN" \
         -H "Accept: application/vnd.github+json" \
-        "https://api.github.com/app"
+        "https://api.github.com/repos/$repo/installation"
     )
-    app_slug=$(printf '%s' "$app" | ${pkgs.gnused}/bin/sed -n 's/.*"slug"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+    app_slug=$(printf '%s' "$installation" | ${pkgs.gnused}/bin/sed -n 's/.*"app_slug"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
     bot=$(
       ${pkgs.curl}/bin/curl -fsS \
         -H "Authorization: Bearer $GH_TOKEN" \
@@ -176,9 +137,6 @@ pkgs.writeShellScriptBin "github-pr" ''
     # Point origin at a token-authenticated URL just for the push, then restore
     # it so the token does not linger in .git/config.
     echo "==> Pushing to origin"
-    origin_url=$(git remote get-url origin)
-    repo=$(printf '%s' "$origin_url" |
-      ${pkgs.gnused}/bin/sed -e 's#.*github\.com[:/]##' -e 's#\.git$##')
     restore_origin() {
       git remote set-url origin "$origin_url"
     }
