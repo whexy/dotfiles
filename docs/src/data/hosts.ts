@@ -43,6 +43,14 @@ export const categories: Category[] = [
         note: "Lab development VM. Auto-upgrading.",
       },
       {
+        label: "zoozve",
+        hardware: "Incus VM",
+        caps: ["base", "dev"],
+        cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#zoozve",
+        nhCmd: "nh os switch --hostname zoozve github:whexy/dotfiles",
+        note: "Incus development VM with an encrypted root disk and guest agent.",
+      },
+      {
         label: "skokie",
         hardware: "Apple silicon desktop VM",
         caps: ["base", "dev", "gui"],
