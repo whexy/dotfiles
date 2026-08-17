@@ -4,63 +4,115 @@ import type { Model } from "@earendil-works/pi-ai";
 import { readFile } from "node:fs/promises";
 import { join } from "node:path";
 
-const baseUrl = "https://ai-proxy.at-basking.ts.net/v1";
-const keyPath = join(process.env.HOME!, ".secrets", "ai-proxy-api-key");
+const BASE_URL = "https://ai-proxy.at-basking.ts.net/v1";
+const API_KEY_PATH = join(process.env.HOME!, ".secrets", "ai-proxy-api-key");
 
-const preferredProviders = [
+// Providers checked first when resolving a model id.
+const PREFERRED_PROVIDERS = [
   "openai",
   "anthropic",
   "google",
   "xai",
   "moonshotai",
 ] as const;
-const providers = [
-  ...preferredProviders,
-  ...getProviders().filter(
-    (provider) =>
-      !preferredProviders.includes(
-        provider as (typeof preferredProviders)[number],
-      ),
-  ),
-];
 
-const modelsByProvider = new Map(
-  providers.map((provider) => [provider, getModels(provider)]),
-);
-const modelsById = new Map<string, Model>();
-for (const provider of providers) {
-  for (const model of modelsByProvider.get(provider) ?? []) {
-    if (!modelsById.has(model.id)) modelsById.set(model.id, model);
-  }
-}
-
-const ownerProviders: Record<string, string> = {
+// Maps the proxy's `owned_by` tags to pi-ai provider names.
+const OWNER_TO_PROVIDER: Record<string, string> = {
   openai: "openai",
   xai: "xai",
   moonshot: "moonshotai",
 };
 
-function findBundledModel(id: string, owner?: string): Model | undefined {
-  const ownerProvider = owner ? ownerProviders[owner] : undefined;
-  const prefixProvider = id.startsWith("claude-")
-    ? "anthropic"
-    : id.startsWith("gemini-")
-      ? "google"
-      : undefined;
+// Aliases for models the proxy serves that don't exist in pi-ai's registry.
+// Each alias clones a bundled model, optionally overriding some fields.
+const MODEL_ALIASES: Record<
+  string,
+  { provider: string; id: string; overrides?: Partial<Model> }
+> = {
+  "kimi-k3-256k": {
+    provider: "moonshotai",
+    id: "kimi-k3",
+    overrides: { contextWindow: 256 * 1024 },
+  },
+};
 
-  for (const provider of [ownerProvider, prefixProvider]) {
+type ModelIndex = {
+  byProvider: Map<string, Model[]>;
+  byId: Map<string, Model>;
+};
+
+function buildModelIndex(): ModelIndex {
+  const providerNames = [
+    ...PREFERRED_PROVIDERS,
+    ...getProviders().filter(
+      (provider) =>
+        !PREFERRED_PROVIDERS.includes(
+          provider as (typeof PREFERRED_PROVIDERS)[number],
+        ),
+    ),
+  ];
+
+  const byProvider = new Map(
+    providerNames.map((provider) => [provider, getModels(provider)]),
+  );
+  const byId = new Map<string, Model>();
+  for (const provider of providerNames) {
+    for (const model of byProvider.get(provider) ?? []) {
+      if (!byId.has(model.id)) byId.set(model.id, model);
+    }
+  }
+  return { byProvider, byId };
+}
+
+// Finds the bundled model matching a proxy-served id, preferring the
+// owner's provider, then well-known id prefixes, then a global lookup.
+function findBundledModel(
+  id: string,
+  owner: string | undefined,
+  index: ModelIndex,
+): Model | undefined {
+  const candidateProviders = [
+    owner ? OWNER_TO_PROVIDER[owner] : undefined,
+    id.startsWith("claude-") ? "anthropic" : undefined,
+    id.startsWith("gemini-") ? "google" : undefined,
+  ];
+
+  for (const provider of candidateProviders) {
     const model = provider
-      ? modelsByProvider.get(provider)?.find((candidate) => candidate.id === id)
+      ? index.byProvider.get(provider)?.find((m) => m.id === id)
       : undefined;
     if (model) return model;
   }
 
-  return modelsById.get(id);
+  return index.byId.get(id);
 }
 
-export default async function (pi: ExtensionAPI) {
-  const apiKey = (await readFile(keyPath, "utf8")).trim();
-  const response = await fetch(`${baseUrl}/models`, {
+// Converts a proxy model entry into a pi model registration, cloning
+// metadata from the bundled registry. Returns undefined for unknown models.
+function resolveModel(
+  id: string,
+  owner: string | undefined,
+  index: ModelIndex,
+) {
+  const alias = MODEL_ALIASES[id];
+  const source = alias
+    ? index.byProvider.get(alias.provider)?.find((m) => m.id === alias.id)
+    : findBundledModel(id, owner, index);
+  if (!source) return undefined;
+
+  const { provider: _provider, baseUrl: _baseUrl, ...model } = source;
+  return {
+    ...model,
+    ...alias?.overrides,
+    id,
+    api: "openai-completions" as const,
+  };
+}
+
+async function fetchServedModels(
+  apiKey: string,
+): Promise<Array<{ id: string; owner?: string }>> {
+  const response = await fetch(`${BASE_URL}/models`, {
     headers: { Authorization: `Bearer ${apiKey}` },
     signal: AbortSignal.timeout(10_000),
   });
@@ -73,19 +125,24 @@ export default async function (pi: ExtensionAPI) {
   const payload = (await response.json()) as {
     data?: Array<{ id?: string; owned_by?: string }>;
   };
-  const models = (payload.data ?? []).flatMap(({ id, owned_by: owner }) => {
-    if (!id) return [];
-    const source = findBundledModel(id, owner);
-    if (!source) return [];
+  return (payload.data ?? []).flatMap(({ id, owned_by }) =>
+    id ? [{ id, owner: owned_by }] : [],
+  );
+}
 
-    const { provider: _provider, baseUrl: _baseUrl, ...model } = source;
-    return [{ ...model, api: "openai-completions" as const }];
+export default async function (pi: ExtensionAPI) {
+  const apiKey = (await readFile(API_KEY_PATH, "utf8")).trim();
+  const index = buildModelIndex();
+  const served = await fetchServedModels(apiKey);
+  const models = served.flatMap(({ id, owner }) => {
+    const model = resolveModel(id, owner, index);
+    return model ? [model] : [];
   });
 
   pi.registerProvider("ai-proxy", {
     name: "AI Proxy",
-    baseUrl,
-    apiKey: `!cat ${JSON.stringify(keyPath)}`,
+    baseUrl: BASE_URL,
+    apiKey: `!cat ${JSON.stringify(API_KEY_PATH)}`,
     api: "openai-completions",
     models,
   });

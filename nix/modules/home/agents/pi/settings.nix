@@ -22,6 +22,7 @@
   enabledModels =
     lib.optionals proxyAccounts [
       "ai-proxy/kimi-k3"
+      "ai-proxy/kimi-k3-256k"
       "ai-proxy/gpt-5.6-sol"
     ]
     ++ [
