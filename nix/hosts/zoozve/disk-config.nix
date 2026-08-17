@@ -2,6 +2,8 @@
   disko.devices.disk.main = {
     type = "disk";
     device = "/dev/sda";
+    imageName = "zoozve";
+    imageSize = "32G";
     content = {
       type = "gpt";
       partitions = {
@@ -24,6 +26,9 @@
           content = {
             type = "luks";
             name = "crypted";
+            # Supplied to the Disko image builder with --pre-format-files.
+            # It is used only to create the image and is not stored in it.
+            passwordFile = "/tmp/zoozve-luks-passphrase";
             settings.allowDiscards = true;
             content = {
               type = "filesystem";
