@@ -188,20 +188,10 @@ in
         }
       ];
 
-      extraConfigLuaPre = lib.mkIf (!cfg.neovim.dev) ''
-        local function paste_from_unnamed()
-          local lines = vim.split(vim.fn.getreg(""), "\n", { plain = true })
-          return { #lines > 0 and lines or { "" }, vim.fn.getregtype(""):sub(1, 1) }
+      extraConfigLuaPre = ''
+        if vim.env.SSH_CONNECTION or vim.env.SSH_TTY then
+          vim.g.clipboard = "osc52"
         end
-
-        vim.g.clipboard = {
-          name = "OSC 52",
-          copy = {
-            ["+"] = require("vim.ui.clipboard.osc52").copy("+"),
-            ["*"] = require("vim.ui.clipboard.osc52").copy("*"),
-          },
-          paste = { ["+"] = paste_from_unnamed, ["*"] = paste_from_unnamed },
-        }
       '';
     };
 
