@@ -79,6 +79,7 @@ in
       # External option providers. Their behavior remains inert until a
       # dotfiles feature supplies actual configuration.
       inputs.disko.nixosModules.disko
+      inputs.agenix.nixosModules.default
       ({ modulesPath, ... }: {
         imports = [ (modulesPath + "/image/images.nix") ];
       })
@@ -120,6 +121,9 @@ in
       overlays ? [ ],
     }:
     [
+      # External option providers. Their behavior remains inert until a
+      # dotfiles feature supplies actual configuration.
+      inputs.agenix.darwinModules.default
       ../modules/hosts/darwin.nix
       (hostOptionsModule {
         inherit
