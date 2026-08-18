@@ -46,11 +46,9 @@ in
           KeepAlive = true;
           RunAtLoad = true;
           EnvironmentVariables = {
-            KEY = cfg.beszel.key;
+            KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBlZA5rswnKHS8M8ZMxqTxlJ8FM0Y9Pt9jrt52kGfC3m";
+            HUB_URL = "https://beszel.at-basking.ts.net";
             PORT = "45876";
-          }
-          // lib.optionalAttrs (cfg.beszel.hubUrl != "") {
-            HUB_URL = cfg.beszel.hubUrl;
           };
           StandardOutPath = "/var/log/beszel-agent.log";
           StandardErrorPath = "/var/log/beszel-agent.log";

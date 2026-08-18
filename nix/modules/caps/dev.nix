@@ -37,11 +37,7 @@ in
     services.openssh.enable = lib.mkDefault true;
     monitoring = {
       nodeExporter.enable = lib.mkDefault true;
-      beszel = {
-        enable = lib.mkDefault true;
-        key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBlZA5rswnKHS8M8ZMxqTxlJ8FM0Y9Pt9jrt52kGfC3m";
-        hubUrl = "https://beszel.at-basking.ts.net";
-      };
+      beszel.enable = lib.mkDefault true;
     };
     virtualization = {
       docker = {

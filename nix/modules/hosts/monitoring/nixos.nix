@@ -18,24 +18,15 @@ in
     })
 
     (lib.mkIf cfg.beszel.enable {
-      warnings =
-        lib.optional (cfg.beszel.key == "")
-          "dotfiles.monitoring.beszel is enabled but beszel.key is empty; the agent cannot connect to the hub until a key is set";
-
-      # The universal token is an agenix secret (secrets/beszel-token.age,
-      # encrypted to the user age key, so use that key as the identity).
       age.identityPaths = [ "/home/${config.dotfiles.host.username}/.config/agenix/key.txt" ];
       age.secrets.beszel-token.file = ../../../../secrets/beszel-token.age;
 
       services.beszel.agent = {
         enable = true;
         environment = {
-          KEY = cfg.beszel.key;
-        }
-        // lib.optionalAttrs (cfg.beszel.hubUrl != "") {
-          HUB_URL = cfg.beszel.hubUrl;
+          KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBlZA5rswnKHS8M8ZMxqTxlJ8FM0Y9Pt9jrt52kGfC3m";
+          HUB_URL = "https://beszel.at-basking.ts.net";
         };
-        # Provides TOKEN, the hub's universal token for auto-registration.
         environmentFile = config.age.secrets.beszel-token.path;
       };
     })
