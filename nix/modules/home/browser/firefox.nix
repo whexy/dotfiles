@@ -8,6 +8,13 @@ let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.browser;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+
+  # Force-install an extension from addons.mozilla.org. Firefox downloads the
+  # latest build itself and keeps it up to date, so no hashes to bump here.
+  forceInstall = slug: {
+    install_url = "https://addons.mozilla.org/firefox/downloads/latest/${slug}/latest.xpi";
+    installation_mode = "force_installed";
+  };
 in
 {
   config = lib.mkIf cfg.firefox.enable (
@@ -31,13 +38,125 @@ in
         # `~/.mozilla/firefox`. Keeping the legacy location avoids a forced
         # manual migration across all hosts.
         configPath = lib.mkIf (!isDarwin) ".mozilla/firefox";
+
+        # HM's default darwinDefaultsId is "org.mozilla.firefox.plist", but
+        # `defaults import` treats a domain ending in .plist as a relative file
+        # path, so policies would silently never reach Firefox. Use the real
+        # bundle-id defaults domain instead (only takes effect on Darwin).
+        darwinDefaultsId = "org.mozilla.firefox";
+
+        # On Linux these land in the wrapped package's policies.json; on Darwin
+        # they are written to the org.mozilla.firefox defaults domain, which the
+        # Homebrew-installed Firefox reads.
+        policies = {
+          DisableAccounts = true;
+          DisableFirefoxStudies = true;
+          DisableTelemetry = true;
+
+          GenerativeAI = {
+            Enabled = false;
+            Chatbot = false;
+            SmartWindow = false;
+            LinkPreviews = false;
+            TabGroups = false;
+            Locked = true;
+          };
+
+          FirefoxSuggest = {
+            WebSuggestions = false;
+            SponsoredSuggestions = false;
+            ImproveSuggest = false;
+            Locked = true;
+          };
+          SearchSuggestEnabled = false;
+
+          # 1Password owns credentials, addresses, and payment methods.
+          PasswordManagerEnabled = false;
+          OfferToSaveLogins = false;
+          AutofillAddressEnabled = false;
+          AutofillCreditCardEnabled = false;
+
+          # Prefer encrypted DNS without breaking Tailscale or split DNS.
+          DNSOverHTTPS = {
+            Enabled = true;
+            Fallback = true;
+            Locked = false;
+          };
+
+          EnableTrackingProtection = {
+            Value = true;
+            Category = "strict";
+            Locked = true;
+          };
+          HttpsOnlyMode = "enabled";
+
+          # Remove identifying history while retaining logins, site state, and
+          # cache for normal browsing performance.
+          SanitizeOnShutdown = {
+            History = true;
+            FormData = true;
+            Cookies = false;
+            Sessions = false;
+            SiteSettings = false;
+            Cache = false;
+            Locked = true;
+          };
+
+          FirefoxHome = {
+            Search = true;
+            TopSites = false;
+            Highlights = false;
+            Pocket = false;
+            Stories = false;
+            SponsoredTopSites = false;
+            SponsoredPocket = false;
+            SponsoredStories = false;
+            Snippets = false;
+            Weather = false;
+            Locked = true;
+          };
+
+          Permissions = {
+            Camera.BlockNewRequests = false;
+            Microphone.BlockNewRequests = false;
+            Location.BlockNewRequests = false;
+            Notifications.BlockNewRequests = false;
+            Autoplay.Default = "block-audio";
+          };
+
+          ExtensionSettings = {
+            # uBlacklist
+            "@ublacklist" = forceInstall "ublacklist";
+            # AdGuard AdBlocker
+            "adguardadblocker@adguard.com" = forceInstall "adguard-adblocker";
+            # AdGuard VPN
+            "adguard-vpn@adguard.com" = forceInstall "adguard-vpn";
+            # Firenvim (also needs `:call firenvim#install(0)` on the Neovim side)
+            "firenvim@lacamb.re" = forceInstall "firenvim";
+            # Tampermonkey
+            "firefox@tampermonkey.net" = forceInstall "tampermonkey";
+            # uBlock Origin
+            "uBlock0@raymondhill.net" = forceInstall "ublock-origin";
+            # Vimium
+            "{d7742d87-e61d-4b78-b8a1-b469842139fa}" = forceInstall "vimium-ff";
+            # 1Password
+            "{d634138d-c276-4fc8-924b-40a0ea21d284}" = forceInstall "1password-x-password-manager";
+          };
+        };
         profiles.default = {
           userChrome = builtins.readFile ./firefox/userChrome.css;
           settings = {
             "toolkit.legacyUserProfileCustomizations.stylesheets" = true;
             "browser.urlbar.scotchBonnet.enableOverride" = false;
-            "browser.search.suggest.enabled" = true;
-            "browser.urlbar.suggest.searches" = true;
+
+            # Never restore the previous session, including after a crash.
+            "browser.startup.page" = 1;
+            "browser.sessionstore.resume_from_crash" = false;
+
+            # Keep crash diagnostics local unless explicitly submitted.
+            "browser.crashReports.unsubmittedCheck.enabled" = false;
+            "browser.crashReports.unsubmittedCheck.autoSubmit2" = false;
+            "browser.tabs.crashReporting.sendReport" = false;
           }
           // (
             if isDarwin then
