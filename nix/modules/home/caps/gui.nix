@@ -17,7 +17,7 @@ in
       {
         terminal.ghostty.enable = lib.mkDefault true;
         browser.firefox.enable = lib.mkDefault true;
-        panel.waybar.enable = lib.mkDefault true;
+        panel.waybar.enable = lib.mkDefault (!isDarwin);
         editor.neovide.enable = lib.mkDefault true;
         clipboard.history.enable = lib.mkDefault true;
         streaming.enable = lib.mkDefault true;
@@ -40,6 +40,7 @@ in
           # macOS desktop
           wm.aerospace.enable = lib.mkDefault true;
           keyboard.karabiner.enable = lib.mkDefault true;
+          panel.sketchybar.enable = lib.mkDefault true;
         }
       );
 
