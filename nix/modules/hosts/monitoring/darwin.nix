@@ -23,10 +23,6 @@ in
     })
 
     (lib.mkIf cfg.beszel.enable {
-      warnings =
-        lib.optional (cfg.beszel.key == "")
-          "dotfiles.monitoring.beszel is enabled but beszel.key is empty; the agent cannot connect to the hub until a key is set";
-
       # The universal token is an agenix secret (secrets/beszel-token.age,
       # encrypted to the user age key, so use that key as the identity).
       age.identityPaths = [ "/Users/${config.dotfiles.host.username}/.config/agenix/key.txt" ];
@@ -35,6 +31,13 @@ in
       # nix-darwin has no beszel module; run the agent as a root launchd daemon.
       launchd.daemons.beszel-agent = {
         script = ''
+          # PathState starts the daemon once agenix has created the secret.
+          # Keep this check for an empty or concurrently replaced file.
+          if [ ! -s ${config.age.secrets.beszel-token.path} ]; then
+            echo "Secret is not ready: ${config.age.secrets.beszel-token.path}" >&2
+            exit 1
+          fi
+
           # Source TOKEN (hub universal token) decrypted by agenix.
           set -a
           . ${config.age.secrets.beszel-token.path}
@@ -43,8 +46,8 @@ in
           exec ${lib.getExe' pkgs.beszel "beszel-agent"}
         '';
         serviceConfig = {
-          KeepAlive = true;
-          RunAtLoad = true;
+          KeepAlive.PathState.${config.age.secrets.beszel-token.path} = true;
+          WatchPaths = [ config.age.secrets.beszel-token.path ];
           EnvironmentVariables = {
             KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBlZA5rswnKHS8M8ZMxqTxlJ8FM0Y9Pt9jrt52kGfC3m";
             HUB_URL = "https://beszel.at-basking.ts.net";
