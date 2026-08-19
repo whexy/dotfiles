@@ -7,6 +7,7 @@
 }:
 let
   cfg = config.dotfiles.wm;
+  sketchybar = lib.getExe pkgs.sketchybar;
 in
 {
   config = lib.mkIf cfg.aerospace.enable {
@@ -22,13 +23,21 @@ in
       settings = {
         config-version = 2;
         after-startup-command = [ ];
+        exec-on-workspace-change = lib.optionals config.dotfiles.panel.sketchybar.enable [
+          "/bin/bash"
+          "-c"
+          "${sketchybar} --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE"
+        ];
         start-at-login = true;
         enable-normalization-flatten-containers = true;
         enable-normalization-opposite-orientation-for-nested-containers = true;
         accordion-padding = 30;
         default-root-container-layout = "tiles";
         default-root-container-orientation = "auto";
-        on-focus-changed = [ "move-mouse window-lazy-center" ];
+        on-focus-changed = [
+          "move-mouse window-lazy-center"
+        ]
+        ++ lib.optional config.dotfiles.panel.sketchybar.enable "exec-and-forget ${sketchybar} --trigger aerospace_focus_change";
         automatically-unhide-macos-hidden-apps = false;
 
         persistent-workspaces = [
@@ -63,7 +72,7 @@ in
           };
           outer = {
             left = 0;
-            bottom = 0;
+            bottom = if config.dotfiles.panel.sketchybar.enable then 34 else 0;
             top = 0;
             right = 0;
           };
