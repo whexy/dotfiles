@@ -14,5 +14,5 @@ _:
     }
   ];
 
-  dotfiles.hardware.display.macbookScreen = true;
+  dotfiles.hardware.display.macbookScreen = false;
 }
