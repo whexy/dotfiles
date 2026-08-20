@@ -175,17 +175,28 @@ pkgs.writers.writePython3Bin "ai-quota"
 
 
     def parse_antigravity(body):
-        meters = []
+        # Buckets share quota pools; group models with identical usage and
+        # reset time into one meter instead of listing every model.
+        groups = {}
         for b in body.get("buckets", []):
+            model = b.get("modelId")
+            if not model or model.startswith(("chat_", "tab_")):
+                continue  # internal models, not user-facing quota
             frac = b.get("remainingFraction")
             pct = (1 - float(frac)) * 100 if frac is not None else 0.0
-            meters.append(
-                {
-                    "label": b.get("modelId", "?"),
-                    "pct": pct,
-                    "reset": parse_time(b.get("resetTime")),
-                }
-            )
+            reset = parse_time(b.get("resetTime"))
+            groups.setdefault((round(pct, 4), reset), []).append(model)
+
+        meters = []
+        for (pct, reset), models in groups.items():
+            prefix = os.path.commonprefix(models)
+            if len(models) > 1 and prefix:
+                label = "%s* (%d)" % (prefix, len(models))
+            elif len(models) > 1:
+                label = "%s +%d" % (models[0], len(models) - 1)
+            else:
+                label = models[0]
+            meters.append({"label": label, "pct": pct, "reset": reset})
         meters.sort(key=lambda m: -m["pct"])
         return None, meters, []
 
@@ -210,8 +221,10 @@ pkgs.writers.writePython3Bin "ai-quota"
         "antigravity": {
             "request": {
                 "method": "POST",
-                # The daily (staging) endpoint rejects accounts without a
-                # staging license (HTTP 403); fall back to production.
+                # The quota endpoint 403s (a misleading "no valid license"
+                # error) unless the request carries an Antigravity
+                # User-Agent. The daily (staging) endpoint works the same
+                # way; fall back to production on 403/404.
                 "url": "https://daily-cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
                 "url_fallbacks": [
                     "https://cloudcode-pa.googleapis.com/v1internal:retrieveUserQuota",
@@ -219,6 +232,7 @@ pkgs.writers.writePython3Bin "ai-quota"
                 "header": {
                     "Authorization": "Bearer $TOKEN$",
                     "Content-Type": "application/json",
+                    "User-Agent": "antigravity/hub/1.15.8 darwin/arm64",
                 },
                 "body": "{}",
             },
