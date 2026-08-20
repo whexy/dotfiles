@@ -9,6 +9,5 @@
   imports = [
     ./karabiner.nix
     ./fcitx5.nix
-    ./hammerspoon.nix
   ];
 }
