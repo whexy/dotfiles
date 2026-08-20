@@ -13,6 +13,42 @@ let
   topPadding =
     if (config.dotfiles.panel.sketchybar.enable && autoHideMenuBar && (!macbookScreen)) then 34 else 0;
   bottomPadding = if (config.dotfiles.panel.sketchybar.enable && !autoHideMenuBar) then 34 else 0;
+
+  # Paneru key names differ from Ghostty's (see the virtual/literal keycode
+  # tables in paneru's src/config.rs).
+  paneruKeyNames = {
+    zero = "0";
+    one = "1";
+    two = "2";
+    three = "3";
+    four = "4";
+    five = "5";
+    six = "6";
+    seven = "7";
+    eight = "8";
+    nine = "9";
+    arrow_up = "uparrow";
+    arrow_down = "downarrow";
+    arrow_left = "leftarrow";
+    arrow_right = "rightarrow";
+  };
+
+  # Convert a Ghostty keybind trigger ("cmd+shift+arrow_up") into a Paneru
+  # chord ("cmd + shift - uparrow").
+  toPaneruChord =
+    trigger:
+    let
+      parts = lib.splitString "+" trigger;
+      key = lib.last parts;
+    in
+    lib.concatStringsSep " + " (lib.init parts) + " - " + (paneruKeyNames.${key} or key);
+
+  # Keys bound inside Ghostty (nix/modules/home/terminal/ghostty.nix) must
+  # bypass Paneru and go straight to the terminal.
+  ghosttyPassthrough = map (kb: toPaneruChord (lib.head (lib.splitString "=" kb))) (
+    config.programs.ghostty.settings.keybind or [ ]
+  );
+  luaStringList = lib.concatMapStringsSep ", " (s: ''"${s}"'');
 in
 {
   config = lib.mkIf enabled {
@@ -52,6 +88,7 @@ in
               title = ".*",
               bundle_id = "com.mitchellh.ghostty",
               width = 0.5,
+              bindings_passthrough = { ${luaStringList ghosttyPassthrough} },
             },
             firefox = {
               title = ".*",
