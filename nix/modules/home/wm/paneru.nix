@@ -34,6 +34,7 @@ in
                     mouse_follows_focus = true,
                     horizontal_mouse_warp = 1,
                     preset_column_widths = { 0.33, 0.5, 0.66 },
+                    animation_speed = 25.0,
                     auto_center = false,
                     window_resize_cycle = true,
                     virtual_workspace_animations = false,
@@ -45,6 +46,12 @@ in
         }          },
                   padding = { top = 0, bottom = ${toString bottomPadding}, left = 0, right = 0 },
                   restore = { enabled = false },
+                  decorations = {
+                    -- Native macOS dimming of inactive windows (opacity only, no color).
+                    inactive = { dim = { opacity = -0.06 } },
+                    -- Experimental: colored border around the focused window.
+                    active = { border = { enabled = true, color = "#89b4fa", width = 2.0 } },
+                  },
                   windows = {
                     ghostty = {
                       title = ".*",
