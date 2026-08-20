@@ -87,6 +87,13 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
+    paneru = {
+      # Paneru's Lua layout API is newer than v0.4.4; flake.lock pins the
+      # tested main revision until the next release includes it.
+      url = "github:karinushka/paneru";
+      inputs.nixpkgs.follows = "nixpkgs-darwin";
+    };
+
     treefmt-nix = {
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";

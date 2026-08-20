@@ -1,5 +1,5 @@
 # gui home cap preset: desktop apps, Wayland/niri on Linux,
-# aerospace/karabiner on macOS.
+# selectable window manager/karabiner on macOS.
 args@{
   pkgs,
   lib,
@@ -38,7 +38,7 @@ in
         }
         // lib.optionalAttrs isDarwin {
           # macOS desktop
-          wm.aerospace.enable = lib.mkDefault true;
+          wm.darwin.enable = lib.mkDefault true;
           keyboard.karabiner.enable = lib.mkDefault true;
           panel.sketchybar.enable = lib.mkDefault true;
         }
