@@ -34,7 +34,6 @@ in
                     mouse_follows_focus = true,
                     horizontal_mouse_warp = 1,
                     preset_column_widths = { 0.33, 0.5, 0.66 },
-                    animation_speed = 25.0,
                     auto_center = false,
                     window_resize_cycle = true,
                     virtual_workspace_animations = false,
