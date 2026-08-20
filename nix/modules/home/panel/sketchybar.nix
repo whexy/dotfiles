@@ -8,37 +8,83 @@ args@{
 let
   cfg = config.dotfiles.panel;
   osConfig = args.osConfig or null;
+
   autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
   barPosition = if autoHideMenuBar then "top" else "bottom";
+
   sketchybar = lib.getExe pkgs.sketchybar;
   aerospace = lib.getExe pkgs.unstable.aerospace;
   paneru = lib.getExe config.services.paneru.finalPackage;
   jq = lib.getExe pkgs.jq;
+
   wmEnabled = config.dotfiles.wm.darwin.enable;
   windowManager = config.dotfiles.wm.darwin.windowManager;
-  showWorkspaces = windowManager == "aerospace";
+  isPaneru = windowManager == "paneru";
 
-  workspacePlugin = pkgs.writeShellScript "sketchybar-workspace" ''
-    focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
+  # Gruvbox palette (0xAARRGGBB)
+  colors = {
+    bar = "0xe6282828"; # bg0, mostly opaque
+    fg = "0xffebdbb2"; # fg0
+    fgInverse = "0xff282828"; # bg0, icon text on a highlighted item
+    item = "0xff3c3836"; # bg1, default item background
+    itemAlt = "0xff504945"; # bg2
+    occupied = "0xff665c54"; # bg3, occupied but inactive workspace
+    gray = "0xffa89984";
+    red = "0xffcc241d";
+    brightRed = "0xfffb4934";
+    yellow = "0xffd79921";
+    olive = "0xff98971a";
+    green = "0xffb8bb26";
+    teal = "0xff689d6a";
+    aqua = "0xff83a598";
+    blue = "0xff458588";
+  };
+
+  mkPlugin = name: pkgs.writeShellScript "sketchybar-${name}";
+
+  # Workspace items highlight the active workspace. On Paneru, occupied
+  # virtual workspaces get a dimmed background and empty slots stay muted
+  # (Paneru reports stable numbered slots).
+  workspacePlugin = mkPlugin "workspace" ''
+    set_state() {
+      ${sketchybar} --set "$NAME" icon.highlight="$1" background.color="$2"
+    }
 
     workspace="''${NAME#space.}"
-    if [ "$workspace" = "$focused" ]; then
-      ${sketchybar} --set "$NAME" \
-        icon.highlight=on \
-        background.color=0xff458588
-    else
-      ${sketchybar} --set "$NAME" \
-        icon.highlight=off \
-        background.color=0xff3c3836
-    fi
+    ${
+      if isPaneru then
+        ''
+          state="$(${paneru} query virtual-workspaces --json 2>/dev/null | ${jq} -r --argjson n "$workspace" '.[] | select(.number == $n) | "\(.active) \(.windows | length)"' 2>/dev/null)"
+          active="''${state%% *}"
+          count="''${state#* }"
+
+          if [ "$active" = "true" ]; then
+            set_state on ${colors.blue}
+          elif [ "''${count:-0}" -gt 0 ] 2>/dev/null; then
+            set_state off ${colors.occupied}
+          else
+            set_state off ${colors.item}
+          fi
+        ''
+      else
+        ''
+          focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
+
+          if [ "$workspace" = "$focused" ]; then
+            set_state on ${colors.blue}
+          else
+            set_state off ${colors.item}
+          fi
+        ''
+    }
   '';
 
-  frontAppPlugin = pkgs.writeShellScript "sketchybar-front-app" ''
+  frontAppPlugin = mkPlugin "front-app" ''
     if [ "$SENDER" = "front_app_switched" ] && [ -n "''${INFO:-}" ]; then
       app="$INFO"
     else
       ${
-        if windowManager == "paneru" then
+        if isPaneru then
           ''app="$(${paneru} query active --json 2>/dev/null | ${jq} -r '.focused_app_name // empty')"''
         else
           ''app="$(${aerospace} list-windows --focused --format '%{app-name}' 2>/dev/null | /usr/bin/head -n 1)"''
@@ -48,11 +94,11 @@ let
     ${sketchybar} --set "$NAME" label="''${app:-Desktop}"
   '';
 
-  clockPlugin = pkgs.writeShellScript "sketchybar-clock" ''
+  clockPlugin = mkPlugin "clock" ''
     ${sketchybar} --set "$NAME" label="$(/bin/date '+%a %b %d  %H:%M:%S')"
   '';
 
-  volumePlugin = pkgs.writeShellScript "sketchybar-volume" ''
+  volumePlugin = mkPlugin "volume" ''
     if [ "$SENDER" = "mouse.clicked" ]; then
       /usr/bin/osascript -e 'set volume output muted not (output muted of (get volume settings))'
     fi
@@ -62,26 +108,26 @@ let
 
     if [ "$muted" = "true" ] || [ "$volume" -eq 0 ]; then
       icon="󰖁"
-      color="0xffcc241d"
+      color=${colors.red}
     elif [ "$volume" -lt 35 ]; then
       icon="󰕿"
-      color="0xff83a598"
+      color=${colors.aqua}
     elif [ "$volume" -lt 70 ]; then
       icon="󰖀"
-      color="0xff83a598"
+      color=${colors.aqua}
     else
       icon="󰕾"
-      color="0xff83a598"
+      color=${colors.aqua}
     fi
 
     ${sketchybar} --set "$NAME" icon="$icon" icon.color="$color" label="$volume%"
   '';
 
-  networkPlugin = pkgs.writeShellScript "sketchybar-network" ''
+  networkPlugin = mkPlugin "network" ''
     interface="$(/sbin/route -n get default 2>/dev/null | /usr/bin/awk '/interface:/ { print $2; exit }')"
 
     if [ -z "$interface" ]; then
-      ${sketchybar} --set "$NAME" icon="󰤭" icon.color=0xffcc241d label="offline"
+      ${sketchybar} --set "$NAME" icon="󰤭" icon.color=${colors.red} label="offline"
       exit 0
     fi
 
@@ -89,21 +135,21 @@ let
     case "$network" in
       "Current Wi-Fi Network: "*)
         ssid="''${network#Current Wi-Fi Network: }"
-        ${sketchybar} --set "$NAME" icon="󰤨" icon.color=0xff689d6a label="$ssid"
+        ${sketchybar} --set "$NAME" icon="󰤨" icon.color=${colors.teal} label="$ssid"
         ;;
       *)
-        ${sketchybar} --set "$NAME" icon="󰈀" icon.color=0xff689d6a label="$interface"
+        ${sketchybar} --set "$NAME" icon="󰈀" icon.color=${colors.teal} label="$interface"
         ;;
     esac
   '';
 
-  cpuPlugin = pkgs.writeShellScript "sketchybar-cpu" ''
+  cpuPlugin = mkPlugin "cpu" ''
     cores="$(/usr/sbin/sysctl -n hw.logicalcpu)"
     cpu="$(/bin/ps -A -o %cpu= | /usr/bin/awk -v cores="$cores" '{ total += $1 } END { printf "%.0f", total / cores }')"
     ${sketchybar} --set "$NAME" label="$cpu%"
   '';
 
-  memoryPlugin = pkgs.writeShellScript "sketchybar-memory" ''
+  memoryPlugin = mkPlugin "memory" ''
     total="$(/usr/sbin/sysctl -n hw.memsize)"
     page_size="$(/usr/sbin/sysctl -n hw.pagesize)"
     free_pages="$(/usr/bin/vm_stat | /usr/bin/awk '/Pages free/ { gsub("\\.", "", $3); print $3 }')"
@@ -115,7 +161,7 @@ let
     ${sketchybar} --set "$NAME" label="''${used_gib}G/''${total_gib}G"
   '';
 
-  batteryPlugin = pkgs.writeShellScript "sketchybar-battery" ''
+  batteryPlugin = mkPlugin "battery" ''
     battery="$(/usr/bin/pmset -g batt)"
     percentage="$(printf '%s\n' "$battery" | /usr/bin/grep -Eo '[0-9]+%' | /usr/bin/head -n 1 | /usr/bin/tr -d '%')"
 
@@ -126,25 +172,27 @@ let
 
     if printf '%s\n' "$battery" | /usr/bin/grep -q 'AC Power'; then
       icon="󰂄"
-      color="0xffb8bb26"
+      color=${colors.green}
     elif [ "$percentage" -le 15 ]; then
       icon="󰂃"
-      color="0xfffb4934"
+      color=${colors.brightRed}
     elif [ "$percentage" -le 30 ]; then
       icon="󰁻"
-      color="0xffd79921"
+      color=${colors.yellow}
     elif [ "$percentage" -le 60 ]; then
       icon="󰁾"
-      color="0xff98971a"
+      color=${colors.olive}
     else
       icon="󰁹"
-      color="0xff98971a"
+      color=${colors.olive}
     fi
 
     ${sketchybar} --set "$NAME" drawing=on icon="$icon" icon.color="$color" label="$percentage%"
   '';
 
-  paneruEventBridge = pkgs.writeShellScript "sketchybar-paneru-events" ''
+  # Bridges `paneru subscribe` events into the sketchybar `wm_state_change`
+  # event that workspace and front-app items subscribe to.
+  paneruEventBridge = mkPlugin "paneru-events" ''
     while true; do
       ${paneru} subscribe --json 2>/dev/null | while IFS= read -r _event; do
         ${sketchybar} --trigger wm_state_change
@@ -153,11 +201,130 @@ let
     done
   '';
 
+  # ---------------------------------------------------------------------------
+  # Bar items, declared as data and rendered below.
+  # ---------------------------------------------------------------------------
+
+  workspaceItem = n: {
+    name = "space.${toString n}";
+    side = "left";
+    settings = {
+      icon = n;
+      "label.drawing" = "off";
+      "icon.padding_left" = 8;
+      "icon.padding_right" = 8;
+      script = workspacePlugin;
+    };
+    clickScript =
+      if isPaneru then
+        "${paneru} send-cmd window virtualnum ${toString n}"
+      else
+        "${aerospace} workspace ${toString n}";
+    subscribe = [ "wm_state_change" ];
+  };
+
+  items = (map workspaceItem (lib.range 1 9)) ++ [
+    {
+      name = "front_app";
+      side = "left";
+      settings = {
+        icon = "󰣆";
+        "icon.color" = colors.gray;
+        "label.color" = colors.gray;
+        "label.max_chars" = 40;
+        script = frontAppPlugin;
+      };
+      subscribe = [
+        "front_app_switched"
+        "wm_state_change"
+      ];
+    }
+    {
+      name = "clock";
+      side = "right";
+      settings = {
+        icon = "󰥔";
+        "background.color" = colors.itemAlt;
+        update_freq = 1;
+        script = clockPlugin;
+      };
+      clickScript = "/usr/bin/open -a Calendar";
+    }
+    {
+      name = "battery";
+      side = "right";
+      settings = {
+        update_freq = 60;
+        script = batteryPlugin;
+      };
+      clickScript = "/usr/bin/open x-apple.systempreferences:com.apple.Battery-Settings.extension";
+      subscribe = [
+        "system_woke"
+        "power_source_change"
+      ];
+    }
+    {
+      name = "volume";
+      side = "right";
+      settings.script = volumePlugin;
+      subscribe = [
+        "volume_change"
+        "mouse.clicked"
+      ];
+    }
+    {
+      name = "network";
+      side = "right";
+      settings = {
+        update_freq = 15;
+        script = networkPlugin;
+      };
+      clickScript = "/usr/bin/open x-apple.systempreferences:com.apple.Network-Settings.extension";
+      subscribe = [ "system_woke" ];
+    }
+    {
+      name = "cpu";
+      side = "right";
+      settings = {
+        icon = "󰍛";
+        "icon.color" = colors.yellow;
+        update_freq = 5;
+        script = cpuPlugin;
+      };
+    }
+    {
+      name = "memory";
+      side = "right";
+      settings = {
+        icon = "󰘚";
+        "icon.color" = colors.blue;
+        update_freq = 5;
+        script = memoryPlugin;
+      };
+    }
+  ];
+
+  renderItem =
+    item:
+    let
+      settings = lib.concatStringsSep " " (
+        lib.mapAttrsToList (k: v: ''${k}="${toString v}"'') item.settings
+      );
+      click = lib.optionalString (item ? clickScript) " click_script=\"${item.clickScript}\"";
+      events = lib.optionalString (
+        item ? subscribe
+      ) " --subscribe ${item.name} ${lib.concatStringsSep " " item.subscribe}";
+    in
+    ''
+      ${sketchybar} --add item ${item.name} ${item.side} \
+        --set ${item.name} ${settings}${click}${events}
+    '';
+
   sketchybarConfig = pkgs.writeShellScript "sketchybarrc" ''
     bar=(
       position=${barPosition}
       height=34
-      color=0xe6282828
+      color=${colors.bar}
       blur_radius=20
       margin=0
       y_offset=0
@@ -176,16 +343,16 @@ let
       padding_left=3
       padding_right=3
       icon.font="JetBrainsMono Nerd Font:Bold:12.0"
-      icon.color=0xffebdbb2
-      icon.highlight_color=0xff282828
+      icon.color=${colors.fg}
+      icon.highlight_color=${colors.fgInverse}
       icon.padding_left=7
       icon.padding_right=4
       label.font="JetBrainsMono Nerd Font:Medium:12.0"
-      label.color=0xffebdbb2
+      label.color=${colors.fg}
       label.padding_left=4
       label.padding_right=7
       background.drawing=on
-      background.color=0xff3c3836
+      background.color=${colors.item}
       background.height=26
       background.corner_radius=10
     )
@@ -193,72 +360,23 @@ let
 
     ${sketchybar} --add event wm_state_change
 
-    ${lib.optionalString showWorkspaces ''
-      for workspace in {1..9}; do
-        ${sketchybar} --add item "space.$workspace" left \
-          --set "space.$workspace" \
-            icon="$workspace" \
-            label.drawing=off \
-            icon.padding_left=8 \
-            icon.padding_right=8 \
-            script="${workspacePlugin}" \
-            click_script="${aerospace} workspace $workspace" \
-          --subscribe "space.$workspace" wm_state_change
-      done
-    ''}
-
-    ${sketchybar} --add item front_app left \
-      --set front_app \
-        icon="󰣆" \
-        icon.color=0xffa89984 \
-        label.color=0xffa89984 \
-        label.max_chars=40 \
-        script="${frontAppPlugin}" \
-      --subscribe front_app front_app_switched wm_state_change
-
-    ${sketchybar} --add item clock right \
-      --set clock \
-        icon="󰥔" \
-        background.color=0xff504945 \
-        update_freq=1 \
-        script="${clockPlugin}" \
-        click_script="/usr/bin/open -a Calendar"
-
-    ${sketchybar} --add item battery right \
-      --set battery \
-        update_freq=60 \
-        script="${batteryPlugin}" \
-        click_script="/usr/bin/open x-apple.systempreferences:com.apple.Battery-Settings.extension" \
-      --subscribe battery system_woke power_source_change
-
-    ${sketchybar} --add item volume right \
-      --set volume script="${volumePlugin}" \
-      --subscribe volume volume_change mouse.clicked
-
-    ${sketchybar} --add item network right \
-      --set network \
-        update_freq=15 \
-        script="${networkPlugin}" \
-        click_script="/usr/bin/open x-apple.systempreferences:com.apple.Network-Settings.extension" \
-      --subscribe network system_woke
-
-    ${sketchybar} --add item cpu right \
-      --set cpu \
-        icon="󰍛" \
-        icon.color=0xffd79921 \
-        update_freq=5 \
-        script="${cpuPlugin}"
-
-    ${sketchybar} --add item memory right \
-      --set memory \
-        icon="󰘚" \
-        icon.color=0xff458588 \
-        update_freq=5 \
-        script="${memoryPlugin}"
+    ${lib.concatMapStringsSep "\n" renderItem items}
 
     ${sketchybar} --update
     ${sketchybar} --trigger wm_state_change
   '';
+
+  mkAgent = name: programArguments: {
+    enable = true;
+    config = {
+      ProgramArguments = programArguments;
+      ProcessType = "Interactive";
+      KeepAlive = true;
+      RunAtLoad = true;
+      StandardOutPath = "${config.home.homeDirectory}/Library/Logs/${name}.log";
+      StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/${name}.err.log";
+    };
+  };
 in
 {
   config = lib.mkIf (cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin) {
@@ -266,32 +384,14 @@ in
 
     xdg.configFile."sketchybar/sketchybarrc".source = sketchybarConfig;
 
-    launchd.agents.sketchybar = {
-      enable = true;
-      config = {
-        ProgramArguments = [
-          sketchybar
-          "--config"
-          "${config.xdg.configHome}/sketchybar/sketchybarrc"
-        ];
-        ProcessType = "Interactive";
-        KeepAlive = true;
-        RunAtLoad = true;
-        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sketchybar.log";
-        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/sketchybar.err.log";
-      };
-    };
+    launchd.agents.sketchybar = mkAgent "sketchybar" [
+      sketchybar
+      "--config"
+      "${config.xdg.configHome}/sketchybar/sketchybarrc"
+    ];
 
-    launchd.agents.sketchybar-paneru-events = lib.mkIf (wmEnabled && windowManager == "paneru") {
-      enable = true;
-      config = {
-        ProgramArguments = [ "${paneruEventBridge}" ];
-        ProcessType = "Interactive";
-        KeepAlive = true;
-        RunAtLoad = true;
-        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sketchybar-paneru.log";
-        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/sketchybar-paneru.err.log";
-      };
-    };
+    launchd.agents.sketchybar-paneru-events = lib.mkIf (wmEnabled && isPaneru) (
+      mkAgent "sketchybar-paneru" [ "${paneruEventBridge}" ]
+    );
   };
 }

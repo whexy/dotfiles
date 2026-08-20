@@ -82,6 +82,38 @@ in
           },
         }
 
+        -- Remember the last focused managed window per virtual workspace, so
+        -- switching workspaces can restore it (like `window focus managed`,
+        -- which cannot be chained after a workspace switch without racing).
+        paneru.on("window_focused", function(event, ws)
+          local window = ws:window(event.window_id)
+          if window and not window.floating then
+            paneru.state.set("last_focused." .. ws:current(), event.window_id)
+          end
+        end)
+
+        for i = 1, 9 do
+          -- Switch to virtual workspace i and focus its previously focused
+          -- managed window. view + focus are committed atomically by
+          -- returning the transformed window set, so they cannot race.
+          paneru.bind(hyper .. " - " .. i, function(ws)
+            ws = ws:view(i)
+            local target = paneru.state.get("last_focused." .. i)
+            local window = target and ws:window(target)
+            if window and not window.floating and ws:workspace_of(target) == i then
+              return ws:focus(target)
+            end
+            -- Fallback: focus the first managed window on that workspace.
+            for _, w in ipairs(ws:workspace_windows(i)) do
+              if not w.floating then
+                return ws:focus(w.id)
+              end
+            end
+            return ws
+          end)
+          paneru.bind(meh .. " - " .. i, "window virtualmovenum " .. i)
+        end
+
         paneru.bind(hyper .. " - v", function(ws)
           local focused = ws:focused()
           local window = focused and ws:window(focused)
