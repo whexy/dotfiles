@@ -4,6 +4,5 @@
 
   dotfiles = {
     wm.darwin.windowManager = "paneru";
-    panel.sketchybar.enable = false;
   };
 }
