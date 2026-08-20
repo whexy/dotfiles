@@ -8,6 +8,15 @@
       this to compensate for the 72-DPI macOS versus 96-DPI GTK baseline
     '';
 
+    display.autoHideMenuBar = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Auto-hide the macOS menu bar, freeing the top of the screen for a
+        status bar such as SketchyBar.
+      '';
+    };
+
     keyboards = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {

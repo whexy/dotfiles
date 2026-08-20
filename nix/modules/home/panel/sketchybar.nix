@@ -1,5 +1,5 @@
 # SketchyBar status bar configuration (macOS)
-{
+args@{
   config,
   lib,
   pkgs,
@@ -7,6 +7,9 @@
 }:
 let
   cfg = config.dotfiles.panel;
+  osConfig = args.osConfig or null;
+  autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
+  barPosition = if autoHideMenuBar then "top" else "bottom";
   sketchybar = lib.getExe pkgs.sketchybar;
   aerospace = lib.getExe pkgs.unstable.aerospace;
   paneru = lib.getExe config.services.paneru.finalPackage;
@@ -152,7 +155,7 @@ let
 
   sketchybarConfig = pkgs.writeShellScript "sketchybarrc" ''
     bar=(
-      position=bottom
+      position=${barPosition}
       height=34
       color=0xe6282828
       blur_radius=20
