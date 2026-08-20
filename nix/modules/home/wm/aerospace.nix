@@ -10,7 +10,7 @@ let
   sketchybar = lib.getExe pkgs.sketchybar;
 in
 {
-  config = lib.mkIf cfg.aerospace.enable {
+  config = lib.mkIf (cfg.darwin.enable && cfg.darwin.windowManager == "aerospace") {
     programs.aerospace = {
       enable = true;
       package = pkgs.unstable.aerospace;
@@ -26,7 +26,7 @@ in
         exec-on-workspace-change = lib.optionals config.dotfiles.panel.sketchybar.enable [
           "/bin/bash"
           "-c"
-          "${sketchybar} --trigger aerospace_workspace_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE"
+          "${sketchybar} --trigger wm_state_change FOCUSED_WORKSPACE=$AEROSPACE_FOCUSED_WORKSPACE"
         ];
         start-at-login = true;
         enable-normalization-flatten-containers = true;
@@ -37,7 +37,7 @@ in
         on-focus-changed = [
           "move-mouse window-lazy-center"
         ]
-        ++ lib.optional config.dotfiles.panel.sketchybar.enable "exec-and-forget ${sketchybar} --trigger aerospace_focus_change";
+        ++ lib.optional config.dotfiles.panel.sketchybar.enable "exec-and-forget ${sketchybar} --trigger wm_state_change";
         automatically-unhide-macos-hidden-apps = false;
 
         persistent-workspaces = [

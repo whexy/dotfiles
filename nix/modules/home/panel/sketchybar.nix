@@ -9,12 +9,14 @@ let
   cfg = config.dotfiles.panel;
   sketchybar = lib.getExe pkgs.sketchybar;
   aerospace = lib.getExe pkgs.unstable.aerospace;
+  paneru = lib.getExe config.services.paneru.finalPackage;
+  jq = lib.getExe pkgs.jq;
+  wmEnabled = config.dotfiles.wm.darwin.enable;
+  windowManager = config.dotfiles.wm.darwin.windowManager;
+  showWorkspaces = windowManager == "aerospace";
 
   workspacePlugin = pkgs.writeShellScript "sketchybar-workspace" ''
-    focused="''${FOCUSED_WORKSPACE:-}"
-    if [ -z "$focused" ]; then
-      focused="$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)"
-    fi
+    focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
 
     workspace="''${NAME#space.}"
     if [ "$workspace" = "$focused" ]; then
@@ -32,7 +34,12 @@ let
     if [ "$SENDER" = "front_app_switched" ] && [ -n "''${INFO:-}" ]; then
       app="$INFO"
     else
-      app="$(${aerospace} list-windows --focused --format '%{app-name}' 2>/dev/null | /usr/bin/head -n 1)"
+      ${
+        if windowManager == "paneru" then
+          ''app="$(${paneru} query active --json 2>/dev/null | ${jq} -r '.focused_app_name // empty')"''
+        else
+          ''app="$(${aerospace} list-windows --focused --format '%{app-name}' 2>/dev/null | /usr/bin/head -n 1)"''
+      }
     fi
 
     ${sketchybar} --set "$NAME" label="''${app:-Desktop}"
@@ -134,6 +141,15 @@ let
     ${sketchybar} --set "$NAME" drawing=on icon="$icon" icon.color="$color" label="$percentage%"
   '';
 
+  paneruEventBridge = pkgs.writeShellScript "sketchybar-paneru-events" ''
+    while true; do
+      ${paneru} subscribe --json 2>/dev/null | while IFS= read -r _event; do
+        ${sketchybar} --trigger wm_state_change
+      done
+      /bin/sleep 1
+    done
+  '';
+
   sketchybarConfig = pkgs.writeShellScript "sketchybarrc" ''
     bar=(
       position=bottom
@@ -172,20 +188,21 @@ let
     )
     ${sketchybar} --default "''${defaults[@]}"
 
-    ${sketchybar} --add event aerospace_workspace_change
-    ${sketchybar} --add event aerospace_focus_change
+    ${sketchybar} --add event wm_state_change
 
-    for workspace in {1..9}; do
-      ${sketchybar} --add item "space.$workspace" left \
-        --set "space.$workspace" \
-          icon="$workspace" \
-          label.drawing=off \
-          icon.padding_left=8 \
-          icon.padding_right=8 \
-          script="${workspacePlugin}" \
-          click_script="${aerospace} workspace $workspace" \
-        --subscribe "space.$workspace" aerospace_workspace_change
-    done
+    ${lib.optionalString showWorkspaces ''
+      for workspace in {1..9}; do
+        ${sketchybar} --add item "space.$workspace" left \
+          --set "space.$workspace" \
+            icon="$workspace" \
+            label.drawing=off \
+            icon.padding_left=8 \
+            icon.padding_right=8 \
+            script="${workspacePlugin}" \
+            click_script="${aerospace} workspace $workspace" \
+          --subscribe "space.$workspace" wm_state_change
+      done
+    ''}
 
     ${sketchybar} --add item front_app left \
       --set front_app \
@@ -194,7 +211,7 @@ let
         label.color=0xffa89984 \
         label.max_chars=40 \
         script="${frontAppPlugin}" \
-      --subscribe front_app front_app_switched aerospace_focus_change
+      --subscribe front_app front_app_switched wm_state_change
 
     ${sketchybar} --add item clock right \
       --set clock \
@@ -237,6 +254,7 @@ let
         script="${memoryPlugin}"
 
     ${sketchybar} --update
+    ${sketchybar} --trigger wm_state_change
   '';
 in
 {
@@ -258,6 +276,18 @@ in
         RunAtLoad = true;
         StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sketchybar.log";
         StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/sketchybar.err.log";
+      };
+    };
+
+    launchd.agents.sketchybar-paneru-events = lib.mkIf (wmEnabled && windowManager == "paneru") {
+      enable = true;
+      config = {
+        ProgramArguments = [ "${paneruEventBridge}" ];
+        ProcessType = "Interactive";
+        KeepAlive = true;
+        RunAtLoad = true;
+        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/sketchybar-paneru.log";
+        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/sketchybar-paneru.err.log";
       };
     };
   };
