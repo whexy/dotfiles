@@ -121,7 +121,7 @@ in
         end)
 
         paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
-        paneru.bind(hyper .. " - t", function() os.execute("/usr/bin/env -i /usr/bin/open -na Ghostty") end)
+        paneru.bind(hyper .. " - t", function() os.execute("/usr/bin/env -i /usr/bin/open -a Ghostty") end)
       '';
     };
 

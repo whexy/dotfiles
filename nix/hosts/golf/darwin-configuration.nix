@@ -10,6 +10,4 @@
     ];
     modules = [ ./hardware.nix ];
   };
-
-  dotfiles.keyboard.hammerspoon.enable = true;
 }
