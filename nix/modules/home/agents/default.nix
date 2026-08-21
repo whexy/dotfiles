@@ -49,11 +49,12 @@ in
       pi_web_search = import ./pi/web-search.nix;
     in
     {
-      # The AI proxy lives on the tailnet; it is unreachable without Tailscale.
+      # The AI proxy lives on the tailnet; integrated hosts must run
+      # Tailscale. Standalone homes manage connectivity themselves.
       assertions = [
         {
           assertion =
-            !cfg.enableProxyAccounts || (osConfig != null && osConfig.dotfiles.network.tailscale.enable);
+            !cfg.enableProxyAccounts || (osConfig == null || osConfig.dotfiles.network.tailscale.enable);
           message = "dotfiles.agents.enableProxyAccounts requires dotfiles.network.tailscale.enable";
         }
       ];
