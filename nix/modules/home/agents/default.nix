@@ -46,7 +46,7 @@ in
           apiAccounts
           ;
       };
-      pi_web_search = import ./pi/web-search.nix;
+      pi_web_search = import ./pi/web-search.nix { inherit proxyAccounts; };
     in
     {
       # The AI proxy lives on the tailnet; integrated hosts must run
