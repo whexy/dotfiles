@@ -6,6 +6,7 @@ args@{
   pkgs,
   lib,
   inputs,
+  config,
   ...
 }:
 let
@@ -26,27 +27,35 @@ in
     editor.neovim.enable = lib.mkDefault true;
   };
 
-  home.stateVersion = "26.05";
-  home.packages =
-    with pkgs;
-    [
-      ghostty-terminfo
-      witr-pkg
-      (if isWsl then openssh-wsl else openssh)
-      curl
-      inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.home-manager
-      jq
-      mosh
-      podman
-      rsync
-      wget
-      nh
-      unzip
-      zstd
-    ]
-    ++ lib.optionals (!isDarwin) [
-      git # macOS: use native git to avoid keychain prompt
-    ];
+  home = {
+    stateVersion = "26.05";
+
+    shellAliases = lib.mkIf config.dotfiles.editor.neovim.enable {
+      e = "nvim";
+      r = "nvim -RM";
+    };
+
+    packages =
+      with pkgs;
+      [
+        ghostty-terminfo
+        witr-pkg
+        (if isWsl then openssh-wsl else openssh)
+        curl
+        inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.home-manager
+        jq
+        mosh
+        podman
+        rsync
+        wget
+        nh
+        unzip
+        zstd
+      ]
+      ++ lib.optionals (!isDarwin) [
+        git # macOS: use native git to avoid keychain prompt
+      ];
+  };
 
   nix.gc = {
     automatic = lib.mkDefault true;

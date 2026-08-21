@@ -1,4 +1,4 @@
-{ inputs, ... }:
+{ inputs, config, ... }:
 {
   imports = [
     inputs.self.homeModules.all
@@ -16,9 +16,12 @@
     autoUpgrade.enable = true;
     agents = {
       enable = true;
-      enableProxyAccounts = false;
+      enableApiAccounts = true;
+      enableProxyAccounts = true;
     };
   };
+
+  age.identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
 
   targets.genericLinux.enable = true;
   targets.genericLinux.gpu.enable = false;

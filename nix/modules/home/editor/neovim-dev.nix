@@ -653,10 +653,5 @@ in
         if vim.g.started_by_firenvim then vim.opt.guifont = "FiraCode Nerd Font:h14" end
       '';
     };
-
-    home.shellAliases = {
-      e = "nvim";
-      r = "nvim -RM";
-    };
   };
 }
