@@ -22,6 +22,20 @@ in
       # an assertion fails to avoid conflicting startup mechanisms.
       launchd.enable = true;
 
+      # The upstream module fires `aerospace reload-config` whenever the config
+      # file changes, which aborts the whole switch on a fresh install because
+      # the AeroSpace server isn't running yet (Connection refused). Only reload
+      # when the server is actually up; otherwise launchd will pick up the new
+      # config on the next launch, so there's nothing to do.
+      home.file.".aerospace.toml".onChange = lib.mkForce ''
+        if ${lib.getExe pkgs.unstable.aerospace} list-workspaces >/dev/null 2>&1; then
+          echo "AeroSpace config changed, reloading..."
+          ${lib.getExe pkgs.unstable.aerospace} reload-config
+        else
+          echo "AeroSpace not running; new config will be loaded on next launch"
+        fi
+      '';
+
       settings = {
         config-version = 2;
         after-startup-command = [ ];
