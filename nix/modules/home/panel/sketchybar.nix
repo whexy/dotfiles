@@ -384,6 +384,19 @@ in
 
     xdg.configFile."sketchybar/sketchybarrc".source = sketchybarConfig;
 
+    # Reload the running bar whenever its config changes; mirror the aerospace
+    # guard so a config change on fresh install (or while the bar is down)
+    # doesn't fail the whole switch. If sketchybar isn't running, launchd will
+    # pick up the new config on the next launch.
+    xdg.configFile."sketchybar/sketchybarrc".onChange = ''
+      if /usr/bin/pgrep -x sketchybar >/dev/null 2>&1; then
+        echo "SketchyBar config changed, reloading..."
+        ${sketchybar} --reload
+      else
+        echo "SketchyBar not running; new config will be loaded on next launch"
+      fi
+    '';
+
     launchd.agents.sketchybar = mkAgent "sketchybar" [
       sketchybar
       "--config"
