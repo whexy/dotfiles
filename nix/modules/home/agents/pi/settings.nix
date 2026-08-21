@@ -41,6 +41,7 @@
       "anthropic/claude-opus-5"
       "anthropic/claude-sonnet-5"
       "anthropic/claude-fable-5"
+      "openrouter/stealth/ox-alpha"
     ]
     ++ lib.optionals proxyAccounts [
       "ai-proxy/gpt-5.6-terra"

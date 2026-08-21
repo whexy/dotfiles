@@ -17,5 +17,6 @@ in
     openai.apiKey = secretKey config.age.secrets.openai-api-key.path;
     anthropic.apiKey = secretKey config.age.secrets.anthropic-api-key.path;
     deepseek.apiKey = secretKey config.age.secrets.deepseek-api-key.path;
+    openrouter.apiKey = secretKey config.age.secrets.openrouter-api-key.path;
   };
 }
