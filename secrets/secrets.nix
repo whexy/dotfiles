@@ -18,4 +18,5 @@ in
   "opencode-api-key.age".publicKeys = [ key ];
   "ai-proxy-api-key.age".publicKeys = [ key ];
   "ai-proxy-mgmt-key.age".publicKeys = [ key ];
+  "openrouter-api-key.age".publicKeys = [ key ];
 }

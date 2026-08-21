@@ -70,6 +70,12 @@
         "deepseek-v4-pro"
       ];
     };
+    openrouter = {
+      options.apiKey = "{file:${config.age.secrets.openrouter-api-key.path}}";
+      whitelist = [
+        "stealth/ox-alpha"
+      ];
+    };
   }
   # The AI proxy lives on the tailnet; only reachable with Tailscale.
   // lib.optionalAttrs proxyAccounts {

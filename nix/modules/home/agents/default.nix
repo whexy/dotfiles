@@ -97,6 +97,10 @@ in
           file = ../../../../secrets/deepseek-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
         };
+        openrouter-api-key = {
+          file = ../../../../secrets/openrouter-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/openrouter-api-key";
+        };
       }
       // lib.optionalAttrs cfg.enableProxyAccounts {
         ai-proxy-api-key = {
