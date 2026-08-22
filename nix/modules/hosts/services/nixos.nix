@@ -20,12 +20,26 @@ in
     (lib.mkIf cfg.openssh.enable {
       services.openssh = {
         enable = true;
-        settings = lib.mkIf cfg.openssh.hardened {
-          PermitRootLogin = "no";
-          PasswordAuthentication = false;
-          KbdInteractiveAuthentication = false;
-          X11Forwarding = false;
-        };
+        settings = lib.mkMerge [
+          (lib.mkIf cfg.openssh.hardened {
+            PermitRootLogin = "no";
+            PasswordAuthentication = false;
+            KbdInteractiveAuthentication = false;
+            X11Forwarding = false;
+          })
+          # Cloudflare's browser-rendered SSH client only offers non-ETM MACs
+          # (hmac-sha2-256, hmac-sha2-512), which nixpkgs' curated ETM-only
+          # default list rejects. Allow them alongside the hardened defaults.
+          (lib.mkIf cfg.openssh.cloudflareAccess.enable {
+            Macs = [
+              "hmac-sha2-512-etm@openssh.com"
+              "hmac-sha2-256-etm@openssh.com"
+              "umac-128-etm@openssh.com"
+              "hmac-sha2-512"
+              "hmac-sha2-256"
+            ];
+          })
+        ];
         extraConfig = lib.mkIf (trustedUserCAKeys != [ ]) ''
           TrustedUserCAKeys ${pkgs.writeText "trusted-user-ca-keys" (lib.concatLines trustedUserCAKeys)}
         '';
