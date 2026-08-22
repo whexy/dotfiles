@@ -7,13 +7,17 @@
 let
   cfg = config.dotfiles.services;
 
-  # Account-global Cloudflare Access (Gateway) SSH CA public key. Generated
-  # once per account via the `access/gateway_ca` API endpoint; not secret.
-  cloudflareAccessCAKey = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEFPufurBPmQlP0Zgi5NyA/O6warhX5Z92AZh3xE5Dj/Oh2WS7hAxrxg/ZL8gge09AphTkTHEz6kmeHclPYEkbo= open-ssh-ca@cloudflareaccess.org";
+  # Access for infrastructure
+  cloudflareAccessCAKey = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBPsy7z5TD/n3VeSnTshvO1Ks5B2Mz0pJGl3pwF1SksQh/cFec1S6tpY5EDO4XylkD1pA+WjSXZzxw9EEirr68NQ= open-ssh-ca@cloudflareaccess.org";
+  # Access for SSH Tunnel
+  cloudflareTunnelCAKey = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBLodc6lArLuwV6cVhG8IgHGn0l17mIwidCpAigp5KpK7E0Kldikr3BgcpBlz9gL+beFNb40wu8odBHqECQEmnJk= open-ssh-ca@cloudflareaccess.org";
 
   trustedUserCAKeys =
     cfg.openssh.trustedUserCAKeys
-    ++ lib.optional cfg.openssh.cloudflareAccess.enable cloudflareAccessCAKey;
+    ++ lib.optionals cfg.openssh.cloudflareAccess.enable [
+      cloudflareAccessCAKey
+      cloudflareTunnelCAKey
+    ];
 in
 {
   config = lib.mkMerge [
