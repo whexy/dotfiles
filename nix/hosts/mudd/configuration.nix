@@ -9,7 +9,9 @@
     ];
   };
 
-  dotfiles.system.autoUpgrade.enable = true;
-
-  dotfiles.platform.qemuGuest.enable = true;
+  dotfiles = {
+    system.autoUpgrade.enable = true;
+    platform.qemuGuest.enable = true;
+    services.openssh.cloudflareAccess.enable = true;
+  };
 }

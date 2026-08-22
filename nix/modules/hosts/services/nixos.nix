@@ -1,6 +1,19 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.dotfiles.services;
+
+  # Account-global Cloudflare Access (Gateway) SSH CA public key. Generated
+  # once per account via the `access/gateway_ca` API endpoint; not secret.
+  cloudflareAccessCAKey = "ecdsa-sha2-nistp256 AAAAE2VjZHNhLXNoYTItbmlzdHAyNTYAAAAIbmlzdHAyNTYAAABBBEFPufurBPmQlP0Zgi5NyA/O6warhX5Z92AZh3xE5Dj/Oh2WS7hAxrxg/ZL8gge09AphTkTHEz6kmeHclPYEkbo= open-ssh-ca@cloudflareaccess.org";
+
+  trustedUserCAKeys =
+    cfg.openssh.trustedUserCAKeys
+    ++ lib.optional cfg.openssh.cloudflareAccess.enable cloudflareAccessCAKey;
 in
 {
   config = lib.mkMerge [
@@ -13,6 +26,9 @@ in
           KbdInteractiveAuthentication = false;
           X11Forwarding = false;
         };
+        extraConfig = lib.mkIf (trustedUserCAKeys != [ ]) ''
+          TrustedUserCAKeys ${pkgs.writeText "trusted-user-ca-keys" (lib.concatLines trustedUserCAKeys)}
+        '';
       };
     })
 
