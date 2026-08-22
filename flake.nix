@@ -74,13 +74,7 @@
       inputs.nixpkgs.follows = "nixpkgs-unstable";
     };
 
-    llm-agents = {
-      url = "github:numtide/llm-agents.nix";
-      inputs = {
-        nixpkgs.follows = "nixpkgs-unstable";
-        treefmt-nix.follows = "treefmt-nix";
-      };
-    };
+    llm-agents.url = "github:numtide/llm-agents.nix";
 
     niri = {
       url = "github:sodiboo/niri-flake";

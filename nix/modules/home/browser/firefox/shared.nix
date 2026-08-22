@@ -92,6 +92,19 @@ in
       Autoplay.Default = "block-audio";
     };
 
+    # Tell Tampermonkey to install the userscript from its revision-independent
+    # Gist URL. Tampermonkey requires a small provisioning manifest plus its own
+    # integrity hash for managed first-time installation; the userscript itself
+    # remains remote and updates directly from the @updateURL in the Gist.
+    "3rdparty".Extensions."firefox@tampermonkey.net".jsonImport = [
+      {
+        url = "https://gist.githubusercontent.com/whexy/e77fc24ba031d2506bc21ab6639bf354/raw/tampermonkey.json";
+        hash = "1:a14de3ff1958d14e505c40e19d3a30d15901c5cf1f601f9b57202cb9f5ae9629";
+        haltOnError = true;
+        installAsSystemScripts = false;
+      }
+    ];
+
     ExtensionSettings = {
       # uBlacklist
       "@ublacklist" = forceInstall "ublacklist";
