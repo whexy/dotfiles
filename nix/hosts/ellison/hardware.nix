@@ -56,6 +56,10 @@
   powerManagement.cpuFreqGovernor = "powersave";
 
   boot = {
+    # With the amd-pstate-epp driver, the governor only selects the mechanism;
+    # actual performance scaling is controlled by the EPP hint.
+    kernel.sysfs.devices.system.cpu."cpu[0-9]*".cpufreq.energy_performance_preference = "balance_power";
+
     initrd.availableKernelModules = [
       "nvme"
       "xhci_pci"
