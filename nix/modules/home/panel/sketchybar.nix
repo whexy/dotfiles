@@ -48,10 +48,8 @@ let
     options = {
       name = lib.mkOption { type = lib.types.str; };
       side = lib.mkOption {
-        type = lib.types.enum [
-          "left"
-          "right"
-        ];
+        # "left", "right", or "popup.<item>" to nest inside an item's popup.
+        type = lib.types.strMatching "left|right|popup\\..+";
       };
       settings = lib.mkOption {
         type = lib.types.attrsOf lib.types.anything;
@@ -152,24 +150,6 @@ let
     fi
 
     ${sketchybar} --set "$NAME" icon="$icon" icon.color="$color" label="$volume%"
-  '';
-
-  networkPlugin = mkPlugin "network" ''
-    interface="$(/sbin/route -n get default 2>/dev/null | /usr/bin/awk '/interface:/ { print $2; exit }')"
-
-    if [ -z "$interface" ]; then
-      ${sketchybar} --set "$NAME" icon="󰤭" icon.color=${colors.red} label="offline"
-      exit 0
-    fi
-
-    ssid="$(/sbin/ipconfig getsummary "$interface" 2>/dev/null | \
-      /usr/bin/awk -F ' : ' '/^[[:space:]]*SSID[[:space:]]*:/ { print $2; exit }')"
-
-    if [ -n "$ssid" ]; then
-      ${sketchybar} --set "$NAME" icon="󰤨" icon.color=${colors.teal} label="$ssid"
-    else
-      ${sketchybar} --set "$NAME" icon="󰈀" icon.color=${colors.teal} label="$interface"
-    fi
   '';
 
   cpuPlugin = mkPlugin "cpu" ''
@@ -302,16 +282,6 @@ let
       ];
     }
     {
-      name = "network";
-      side = "right";
-      settings = {
-        update_freq = 15;
-        script = networkPlugin;
-      };
-      clickScript = "/usr/bin/open x-apple.systempreferences:com.apple.Network-Settings.extension";
-      subscribe = [ "system_woke" ];
-    }
-    {
       name = "cpu";
       side = "right";
       settings = {
@@ -427,14 +397,16 @@ in
 
     xdg.configFile."sketchybar/sketchybarrc".source = sketchybarConfig;
 
-    # Reload the running bar whenever its config changes; mirror the aerospace
-    # guard so a config change on fresh install (or while the bar is down)
-    # doesn't fail the whole switch. If sketchybar isn't running, launchd will
-    # pick up the new config on the next launch.
+    # Restart the bar whenever its config changes. `sketchybar --reload` only
+    # re-runs the config path resolved when the process started, so after a
+    # switch it keeps replaying the *previous* generation's sketchybarrc (and
+    # drops any items the new config added). Kickstarting the launchd agent
+    # re-execs sketchybar against the freshly linked config. Guard on the
+    # process so a config change on fresh install doesn't fail the switch.
     xdg.configFile."sketchybar/sketchybarrc".onChange = ''
       if /usr/bin/pgrep -x sketchybar >/dev/null 2>&1; then
-        echo "SketchyBar config changed, reloading..."
-        ${sketchybar} --reload
+        echo "SketchyBar config changed, restarting..."
+        /bin/launchctl kickstart -k "gui/$(/usr/bin/id -u)/org.nix-community.home.sketchybar"
       else
         echo "SketchyBar not running; new config will be loaded on next launch"
       fi

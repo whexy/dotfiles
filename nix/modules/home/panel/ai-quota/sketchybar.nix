@@ -115,11 +115,13 @@ let
     };
   };
 
+  # SketchyBar has no `popup.items` property; popup membership is expressed
+  # by adding the item at the `popup.<parent>` position. Visibility follows
+  # the popup, so the details item must not force drawing=off.
   mkDetailsItem = provider: {
     name = "ai_quota.${provider}.details";
-    side = "right";
+    side = "popup.ai_quota.${provider}";
     settings = {
-      drawing = "off";
       "label.font" = "JetBrainsMono Nerd Font:Medium:11.0";
     };
   };
@@ -137,7 +139,6 @@ let
       "popup.background.color" = colors.itemAlt;
       "popup.background.corner_radius" = 10;
       "popup.background.border_width" = 0;
-      "popup.items" = "ai_quota.${provider}.details";
     };
     clickScript = "${popupPlugin provider}";
   };
@@ -153,11 +154,13 @@ let
     }
   ];
 
+  # Popup details items must be added after their host pill: sketchybar
+  # rejects `popup.<parent>` positions for parents that don't exist yet.
   extraItems = [
     fetcherItem
   ]
-  ++ map mkDetailsItem (map (p: p.name) providers)
-  ++ map (p: mkPillItem p.name p.icon) providers;
+  ++ map (p: mkPillItem p.name p.icon) providers
+  ++ map mkDetailsItem (map (p: p.name) providers);
 in
 {
   config = lib.mkIf enabled {
