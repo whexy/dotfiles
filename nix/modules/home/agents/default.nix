@@ -86,6 +86,11 @@ in
 
       home = {
         file = {
+          # Single source of truth for global agent rules; every agent reads it.
+          ".pi/agent/AGENTS.md".source = ./AGENTS.md;
+          ".config/opencode/AGENTS.md".source = ./AGENTS.md;
+          ".codex/AGENTS.md".source = ./AGENTS.md;
+          ".claude/CLAUDE.md".source = ./AGENTS.md;
           # Deploy the notification plugin so it is auto-loaded by OpenCode.
           ".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
           ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
