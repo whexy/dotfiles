@@ -24,6 +24,7 @@ in
     monitors.btop.enable = lib.mkDefault true;
     terminal.tmux.enable = lib.mkDefault true;
     shell.zsh.enable = lib.mkDefault true;
+    shell.motd.enable = lib.mkDefault true;
     editor.neovim.enable = lib.mkDefault true;
   };
 
