@@ -1,4 +1,9 @@
 # SketchyBar status bar configuration (macOS)
+#
+# This file owns the bar itself: appearance, the item renderer, and the
+# built-in right-side pills. Feature modules contribute items through
+# `dotfiles.panel.sketchybar.items` and custom events through
+# `dotfiles.panel.sketchybar.events` (see ./wm and ./ai-quota).
 args@{
   config,
   lib,
@@ -13,13 +18,6 @@ let
   barPosition = if autoHideMenuBar then "top" else "bottom";
 
   sketchybar = lib.getExe pkgs.sketchybar;
-  aerospace = lib.getExe pkgs.unstable.aerospace;
-  paneru = lib.getExe config.services.paneru.finalPackage;
-  jq = lib.getExe pkgs.jq;
-
-  wmEnabled = config.dotfiles.wm.darwin.enable;
-  windowManager = config.dotfiles.wm.darwin.windowManager;
-  isPaneru = windowManager == "paneru";
 
   # Gruvbox palette (0xAARRGGBB)
   colors = {
@@ -76,75 +74,6 @@ let
       };
     };
   };
-
-  # Workspace items highlight the active workspace. Paneru workspaces are
-  # rendered together by paneruStatePlugin from one state snapshot below.
-  workspacePlugin = mkPlugin "workspace" ''
-    set_state() {
-      ${sketchybar} --set "$NAME" icon.highlight="$1" background.color="$2"
-    }
-
-    workspace="''${NAME#space.}"
-    focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
-
-    if [ "$workspace" = "$focused" ]; then
-      set_state on ${colors.blue}
-    else
-      set_state off ${colors.item}
-    fi
-  '';
-
-  frontAppPlugin = mkPlugin "front-app" ''
-    if [ "$SENDER" = "front_app_switched" ] && [ -n "''${INFO:-}" ]; then
-      app="$INFO"
-    else
-      ${
-        if isPaneru then
-          ''app="$(${paneru} query active --json 2>/dev/null | ${jq} -r '.focused_app_name // empty')"''
-        else
-          ''app="$(${aerospace} list-windows --focused --format '%{app-name}' 2>/dev/null | /usr/bin/head -n 1)"''
-      }
-    fi
-
-    ${sketchybar} --set "$NAME" label="''${app:-Desktop}"
-  '';
-
-  # Paneru events are invalidation hints rather than durable state. Query one
-  # snapshot and update every WM item together so the bar always converges.
-  paneruStatePlugin = mkPlugin "paneru-state" ''
-    state="$(${paneru} query state --json 2>/dev/null)" || exit 0
-    ${jq} -e '.active and (.virtual_workspaces | type == "array")' >/dev/null 2>&1 <<<"$state" || exit 0
-
-    args=()
-    for workspace in {1..9}; do
-      workspace_state="$(${jq} -r --argjson n "$workspace" '
-        .active.native_workspace_id as $native
-        | first(
-            .virtual_workspaces[]
-            | select(.native_workspace_id == $native and .number == $n)
-            | "\(.active) \(.windows | length)"
-          ) // "false 0"
-      ' <<<"$state")"
-      active="''${workspace_state%% *}"
-      count="''${workspace_state#* }"
-
-      if [ "$active" = "true" ]; then
-        highlight=on
-        color=${colors.blue}
-      elif [ "$count" -gt 0 ] 2>/dev/null; then
-        highlight=off
-        color=${colors.occupied}
-      else
-        highlight=off
-        color=${colors.item}
-      fi
-      args+=(--set "space.$workspace" icon.highlight="$highlight" background.color="$color")
-    done
-
-    app="$(${jq} -r '.active.focused_app_name // "Desktop"' <<<"$state")"
-    args+=(--set front_app label="$app")
-    ${sketchybar} "''${args[@]}"
-  '';
 
   clockPlugin = mkPlugin "clock" ''
     ${sketchybar} --set "$NAME" label="$(/bin/date '+%a %b %d  %H:%M:%S')"
@@ -222,77 +151,11 @@ let
     ${sketchybar} --set "$NAME" drawing=on icon="$icon" icon.color="$color" label="$percentage%"
   '';
 
-  # Bridges `paneru subscribe` events into the sketchybar `wm_state_change`
-  # event that workspace and front-app items subscribe to.
-  paneruEventBridge = mkPlugin "paneru-events" ''
-    while true; do
-      if ${paneru} query state --json >/dev/null 2>&1; then
-        # Reconcile state before subscribing so startup and reconnect gaps do
-        # not leave the bar waiting indefinitely for the next Paneru event.
-        ${sketchybar} --trigger wm_state_change
-        ${paneru} subscribe --json | while IFS= read -r _event; do
-          ${sketchybar} --trigger wm_state_change
-        done
-      fi
-      /bin/sleep 1
-    done
-  '';
-
   # ---------------------------------------------------------------------------
   # Bar items, declared as data and rendered below.
   # ---------------------------------------------------------------------------
 
-  workspaceItem = n: {
-    name = "space.${toString n}";
-    side = "left";
-    settings = {
-      icon = n;
-      "label.drawing" = "off";
-      "icon.padding_left" = 8;
-      "icon.padding_right" = 8;
-    }
-    // lib.optionalAttrs (!isPaneru) { script = workspacePlugin; };
-    clickScript =
-      if isPaneru then
-        "${paneru} send-cmd window virtualnum ${toString n}"
-      else
-        "${aerospace} workspace ${toString n}";
-    subscribe = lib.optional (!isPaneru) "wm_state_change";
-  };
-
-  paneruStateItem = {
-    name = "paneru_state";
-    side = "left";
-    settings = {
-      drawing = "off";
-      updates = "on";
-      update_freq = 10;
-      script = paneruStatePlugin;
-    };
-    subscribe = [
-      "wm_state_change"
-      "system_woke"
-    ];
-  };
-
-  wmItems = (map workspaceItem (lib.range 1 9)) ++ lib.optional isPaneru paneruStateItem;
-
-  baseItems = wmItems ++ [
-    {
-      name = "front_app";
-      side = "left";
-      settings = {
-        icon = "󰣆";
-        "icon.color" = colors.gray;
-        "label.color" = colors.gray;
-        "label.max_chars" = 40;
-      }
-      // lib.optionalAttrs (!isPaneru) { script = frontAppPlugin; };
-      subscribe = lib.optionals (!isPaneru) [
-        "front_app_switched"
-        "wm_state_change"
-      ];
-    }
+  baseItems = [
     {
       name = "clock";
       side = "right";
@@ -412,12 +275,12 @@ let
     )
     ${sketchybar} --default "''${defaults[@]}"
 
-    ${sketchybar} --add event wm_state_change
+    ${lib.concatMapStringsSep "\n" (event: "${sketchybar} --add event ${event}") cfg.sketchybar.events}
 
     ${lib.concatMapStringsSep "\n" renderItem allItems}
 
     ${sketchybar} --update
-    ${sketchybar} --trigger wm_state_change
+    ${lib.concatMapStringsSep "\n" (event: "${sketchybar} --trigger ${event}") cfg.sketchybar.events}
   '';
 
   mkAgent = name: programArguments: {
@@ -439,6 +302,16 @@ in
     description = ''
       Extra bar items rendered after the built-in ones, letting feature
       modules contribute items without touching the sketchybar renderer.
+    '';
+  };
+
+  options.dotfiles.panel.sketchybar.events = lib.mkOption {
+    type = lib.types.listOf lib.types.str;
+    default = [ ];
+    description = ''
+      Custom sketchybar events to register before items are added. Each
+      event is triggered once at the end of the config so subscribers
+      render their initial state.
     '';
   };
 
@@ -467,9 +340,5 @@ in
       "--config"
       "${config.xdg.configHome}/sketchybar/sketchybarrc"
     ];
-
-    launchd.agents.sketchybar-paneru-events = lib.mkIf (wmEnabled && isPaneru) (
-      mkAgent "sketchybar-paneru" [ "${paneruEventBridge}" ]
-    );
   };
 }

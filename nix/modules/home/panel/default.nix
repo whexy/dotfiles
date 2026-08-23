@@ -13,6 +13,7 @@
     ./waybar.nix
     ./sketchybar.nix
     ./renpho.nix
+    ./wm
     ./ai-quota
   ];
 }
