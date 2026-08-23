@@ -32,16 +32,17 @@ let
     && config.dotfiles.agents.enable
     && config.dotfiles.agents.enableProxyAccounts;
 
-  # Gruvbox subset of the palette in ../sketchybar.nix.
+  # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
-    fg = "0xffebdbb2";
-    gray = "0xffa89984";
-    yellow = "0xffd79921";
-    brightRed = "0xfffb4934";
-    blue = "0xff83a598";
-    orange = "0xfffe8019";
-    item = "0xff3c3836";
-    itemAlt = "0xff504945";
+    fg = "0xffffffff";
+    gray = "0xff98989d"; # systemGray, unknown state
+    yellow = "0xffffd60a"; # systemYellow, quota warning
+    red = "0xffff453a"; # systemRed, quota critical
+    blue = "0xff0a84ff"; # systemBlue, kimi accent
+    orange = "0xffff9f0a"; # systemOrange, codex accent
+    glassBorder = "0x40ffffff"; # 25% white hairline, popup edge highlight
+    popup = "0xe61c1c1e"; # near-opaque dark sheet for popups
+    sliderTrack = "0x40ffffff"; # 25% white, reads on the glass capsule
   };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
@@ -71,7 +72,7 @@ let
       case "$state" in
         ok) color=${accent} ;;
         warning) color=${colors.yellow} ;;
-        critical) color=${colors.brightRed} ;;
+        critical) color=${colors.red} ;;
         *) color=${colors.gray} ;;
       esac
 
@@ -104,7 +105,7 @@ let
 
   fetcherItem = {
     name = "ai_quota.fetch";
-    side = "right";
+    side = "left";
     settings = {
       drawing = "off";
       updates = "on";
@@ -130,21 +131,22 @@ let
     name = "ai_quota.${provider}";
     kind = "slider";
     width = 24;
-    side = "right";
+    side = "left";
     settings = {
       inherit icon;
       update_freq = 60;
       script = pillPlugin provider accent;
-      "slider.background.color" = colors.gray;
+      "slider.background.color" = colors.sliderTrack;
       "slider.background.height" = 4;
       "slider.background.corner_radius" = 2;
       "slider.knob" = "";
       "popup.horizontal" = "off";
-      "popup.align" = "right";
+      "popup.align" = "left";
       "popup.y_offset" = if barOnTop then "-8" else "8";
-      "popup.background.color" = colors.itemAlt;
+      "popup.background.color" = colors.popup;
       "popup.background.corner_radius" = 10;
-      "popup.background.border_width" = 0;
+      "popup.background.border_width" = 1;
+      "popup.background.border_color" = colors.glassBorder;
     };
     subscribe = [
       "mouse.entered"

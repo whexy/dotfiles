@@ -19,23 +19,19 @@ let
 
   sketchybar = lib.getExe pkgs.sketchybar;
 
-  # Gruvbox palette (0xAARRGGBB)
+  # macOS Liquid Glass palette (0xAARRGGBB): dark-variant system colors for
+  # state, translucent white tints for the glass capsules. Status icons stay
+  # monochrome white; color is reserved for state (charging, low, muted) and
+  # the accent-blue active workspace.
   colors = {
-    bar = "0xe6282828"; # bg0, mostly opaque
-    fg = "0xffebdbb2"; # fg0
-    fgInverse = "0xff282828"; # bg0, icon text on a highlighted item
-    item = "0xff3c3836"; # bg1, default item background
-    itemAlt = "0xff504945"; # bg2
-    occupied = "0xff665c54"; # bg3, occupied but inactive workspace
-    gray = "0xffa89984";
-    red = "0xffcc241d";
-    brightRed = "0xfffb4934";
-    yellow = "0xffd79921";
-    olive = "0xff98971a";
-    green = "0xffb8bb26";
-    teal = "0xff689d6a";
-    aqua = "0xff83a598";
-    blue = "0xff458588";
+    bar = "0x00000000"; # fully transparent, wallpaper shows through
+    fg = "0xffffffff"; # primary text/icons
+    fgDim = "0xb3ffffff"; # 70% white, secondary text and dim icons
+    glass = "0x1affffff"; # 10% white, default item capsule
+    glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
+    red = "0xffff453a"; # systemRed: muted, critical
+    yellow = "0xffffd60a"; # systemYellow: battery low, quota warning
+    green = "0xff30d158"; # systemGreen: charging
   };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-${name}";
@@ -75,6 +71,20 @@ let
     };
   };
 
+  # A bracket draws one shared background behind a set of member items (the
+  # `stats` capsule is a hardcoded example below). Feature modules use this to
+  # group their own items, e.g. the wm module's workspace capsule.
+  bracketType = lib.types.submodule {
+    options = {
+      name = lib.mkOption { type = lib.types.str; };
+      members = lib.mkOption { type = lib.types.listOf lib.types.str; };
+      settings = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+    };
+  };
+
   clockPlugin = mkPlugin "clock" ''
     ${sketchybar} --set "$NAME" label="$(/bin/date '+%a %b %d  %H:%M:%S')"
   '';
@@ -92,13 +102,13 @@ let
       color=${colors.red}
     elif [ "$volume" -lt 35 ]; then
       icon="󰕿"
-      color=${colors.aqua}
+      color=${colors.fg}
     elif [ "$volume" -lt 70 ]; then
       icon="󰖀"
-      color=${colors.aqua}
+      color=${colors.fg}
     else
       icon="󰕾"
-      color=${colors.aqua}
+      color=${colors.fg}
     fi
 
     ${sketchybar} --set "$NAME" icon="$icon" icon.color="$color" label="$volume%"
@@ -118,8 +128,7 @@ let
     available=$(( (free_pages + inactive_pages) * page_size ))
     used=$(( total - available ))
     used_gib="$(/usr/bin/awk -v bytes="$used" 'BEGIN { printf "%.1f", bytes / 1073741824 }')"
-    total_gib="$(/usr/bin/awk -v bytes="$total" 'BEGIN { printf "%.0f", bytes / 1073741824 }')"
-    ${sketchybar} --set "$NAME" label="''${used_gib}G/''${total_gib}G"
+    ${sketchybar} --set "$NAME" label="''${used_gib}G"
   '';
 
   batteryPlugin = mkPlugin "battery" ''
@@ -136,16 +145,16 @@ let
       color=${colors.green}
     elif [ "$percentage" -le 15 ]; then
       icon="󰂃"
-      color=${colors.brightRed}
+      color=${colors.red}
     elif [ "$percentage" -le 30 ]; then
       icon="󰁻"
       color=${colors.yellow}
     elif [ "$percentage" -le 60 ]; then
       icon="󰁾"
-      color=${colors.olive}
+      color=${colors.fg}
     else
       icon="󰁹"
-      color=${colors.olive}
+      color=${colors.fg}
     fi
 
     ${sketchybar} --set "$NAME" drawing=on icon="$icon" icon.color="$color" label="$percentage%"
@@ -161,7 +170,6 @@ let
       side = "right";
       settings = {
         icon = "󰥔";
-        "background.color" = colors.itemAlt;
         update_freq = 1;
         script = clockPlugin;
       };
@@ -189,12 +197,16 @@ let
         "mouse.clicked"
       ];
     }
+    # CPU and memory share one capsule via the `stats` bracket below, so their
+    # own backgrounds stay off and their inner padding collapses.
     {
       name = "cpu";
       side = "right";
       settings = {
         icon = "󰍛";
-        "icon.color" = colors.yellow;
+        "icon.color" = colors.fgDim;
+        "background.drawing" = "off";
+        padding_right = 0;
         update_freq = 5;
         script = cpuPlugin;
       };
@@ -204,7 +216,9 @@ let
       side = "right";
       settings = {
         icon = "󰘚";
-        "icon.color" = colors.blue;
+        "icon.color" = colors.fgDim;
+        "background.drawing" = "off";
+        padding_left = 0;
         update_freq = 5;
         script = memoryPlugin;
       };
@@ -237,12 +251,23 @@ let
         --set ${item.name} ${settings}${click}${events}
     '';
 
+  renderBracket =
+    bracket:
+    let
+      settings = lib.concatStringsSep " " (
+        lib.mapAttrsToList (k: v: ''${k}="${toString v}"'') bracket.settings
+      );
+    in
+    ''
+      ${sketchybar} --add bracket ${bracket.name} ${lib.concatStringsSep " " bracket.members} \
+        --set ${bracket.name} ${settings}
+    '';
+
   sketchybarConfig = pkgs.writeShellScript "sketchybarrc" ''
     bar=(
       position=${barPosition}
-      height=34
+      height=36
       color=${colors.bar}
-      blur_radius=20
       margin=0
       y_offset=0
       corner_radius=0
@@ -250,34 +275,50 @@ let
       shadow=off
       sticky=on
       topmost=window
-      padding_left=6
-      padding_right=6
+      padding_left=10
+      padding_right=10
     )
     ${sketchybar} --bar "''${bar[@]}"
 
     defaults=(
       updates=when_shown
-      padding_left=3
-      padding_right=3
+      padding_left=4
+      padding_right=4
       icon.font="JetBrainsMono Nerd Font:Bold:12.0"
       icon.color=${colors.fg}
-      icon.highlight_color=${colors.fgInverse}
+      icon.highlight_color=${colors.fg}
       icon.padding_left=7
       icon.padding_right=4
-      label.font="JetBrainsMono Nerd Font:Medium:12.0"
+      # .AppleSystemUIFont is the system font (SF): the "SF Pro" family name no
+      # longer resolves through CoreText and silently falls back to Helvetica.
+      label.font=".AppleSystemUIFont:Medium:12.5"
       label.color=${colors.fg}
       label.padding_left=4
       label.padding_right=7
       background.drawing=on
-      background.color=${colors.item}
+      background.color=${colors.glass}
       background.height=26
-      background.corner_radius=10
+      background.corner_radius=13
+      background.border_width=1
+      background.border_color=${colors.glassBorder}
     )
     ${sketchybar} --default "''${defaults[@]}"
 
     ${lib.concatMapStringsSep "\n" (event: "${sketchybar} --add event ${event}") cfg.sketchybar.events}
 
     ${lib.concatMapStringsSep "\n" renderItem allItems}
+
+    # Group CPU and memory under one glass capsule (must come after its
+    # members are added).
+    ${sketchybar} --add bracket stats cpu memory \
+      --set stats background.drawing=on \
+                  background.color=${colors.glass} \
+                  background.height=26 \
+                  background.corner_radius=13 \
+                  background.border_width=1 \
+                  background.border_color=${colors.glassBorder}
+
+    ${lib.concatMapStringsSep "\n" renderBracket cfg.sketchybar.brackets}
 
     ${sketchybar} --update
     ${lib.concatMapStringsSep "\n" (event: "${sketchybar} --trigger ${event}") cfg.sketchybar.events}
@@ -296,23 +337,34 @@ let
   };
 in
 {
-  options.dotfiles.panel.sketchybar.items = lib.mkOption {
-    type = lib.types.listOf itemType;
-    default = [ ];
-    description = ''
-      Extra bar items rendered after the built-in ones, letting feature
-      modules contribute items without touching the sketchybar renderer.
-    '';
-  };
+  options.dotfiles.panel.sketchybar = {
+    items = lib.mkOption {
+      type = lib.types.listOf itemType;
+      default = [ ];
+      description = ''
+        Extra bar items rendered after the built-in ones, letting feature
+        modules contribute items without touching the sketchybar renderer.
+      '';
+    };
 
-  options.dotfiles.panel.sketchybar.events = lib.mkOption {
-    type = lib.types.listOf lib.types.str;
-    default = [ ];
-    description = ''
-      Custom sketchybar events to register before items are added. Each
-      event is triggered once at the end of the config so subscribers
-      render their initial state.
-    '';
+    events = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Custom sketchybar events to register before items are added. Each
+        event is triggered once at the end of the config so subscribers
+        render their initial state.
+      '';
+    };
+
+    brackets = lib.mkOption {
+      type = lib.types.listOf bracketType;
+      default = [ ];
+      description = ''
+        Brackets rendered after all items, letting feature modules draw one
+        shared background behind a group of items they contributed.
+      '';
+    };
   };
 
   config = lib.mkIf (cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin) {
