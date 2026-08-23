@@ -14,6 +14,7 @@ in
     nix.optimise.enable = lib.mkDefault true;
     security.onepassword.enable = lib.mkDefault true;
     network.tailscale.enable = lib.mkDefault true;
+    shell.nushell.enable = lib.mkDefault true;
     monitoring = {
       nodeExporter.enable = lib.mkDefault true;
       beszel.enable = lib.mkDefault true;

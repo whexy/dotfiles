@@ -8,12 +8,14 @@ let
   cfg = config.dotfiles.shell;
 in
 {
-  # Required at system level so zsh can be used as a user shell.
-  config = lib.mkIf cfg.zsh.enable {
-    programs.zsh.enable = true;
-    environment.shells = with pkgs; [
-      bash
-      zsh
-    ];
-  };
+  config = lib.mkMerge [
+    (lib.mkIf cfg.zsh.enable {
+      programs.zsh.enable = true;
+    })
+    (lib.mkIf (cfg.zsh.enable || cfg.nushell.enable) {
+      environment.shells =
+        with pkgs;
+        [ bash ] ++ lib.optional cfg.zsh.enable zsh ++ lib.optional cfg.nushell.enable nushell;
+    })
+  ];
 }
