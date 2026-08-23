@@ -2,8 +2,8 @@
 #
 # A hidden fetcher item refreshes the shared cache every 5 minutes; each
 # pill polls it once a minute and renders the best account's binding
-# window (see ./summary.jq). Clicking a pill opens a popup listing every
-# account x meter.
+# window (see ./summary.jq). Clicking a pill opens a compact popup with
+# each account's binding quota window.
 args@{
   config,
   lib,
@@ -89,7 +89,7 @@ let
       if [ -f "$cache" ]; then
         summary="$(${jq} -c -f ${summaryFilter} --arg provider ${provider} "$cache" 2>/dev/null)" || summary=""
         if [ -n "$summary" ]; then
-          content="$(printf '%s' "$summary" | ${jq} -r '.lines | join("\n")')"
+          content="$(printf '%s' "$summary" | ${jq} -r '.compact_lines | join("\n")')"
           state="$(printf '%s' "$summary" | ${jq} -r 'if .present == true then .state else "error" end')"
           case "$state" in
             ok) color=${colors.green} ;;
