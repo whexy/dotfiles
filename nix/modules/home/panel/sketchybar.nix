@@ -47,6 +47,17 @@ let
   itemType = lib.types.submodule {
     options = {
       name = lib.mkOption { type = lib.types.str; };
+      kind = lib.mkOption {
+        type = lib.types.enum [
+          "item"
+          "slider"
+        ];
+        default = "item";
+      };
+      width = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 40;
+      };
       side = lib.mkOption {
         # "left", "right", or "popup.<item>" to nest inside an item's popup.
         type = lib.types.strMatching "left|right|popup\\..+";
@@ -318,9 +329,14 @@ let
       events = lib.optionalString (
         subscribed != [ ]
       ) " --subscribe ${item.name} ${lib.concatStringsSep " " subscribed}";
+      add =
+        if (item.kind or "item") == "slider" then
+          "--add slider ${item.name} ${item.side} ${toString item.width}"
+        else
+          "--add item ${item.name} ${item.side}";
     in
     ''
-      ${sketchybar} --add item ${item.name} ${item.side} \
+      ${sketchybar} ${add} \
         --set ${item.name} ${settings}${click}${events}
     '';
 
