@@ -3,7 +3,8 @@
 #   jq -c -f summary.jq --arg provider codex ai-quota.json
 #
 # Emits a single object:
-#   {present, state, label, lines}    state: ok | warning | critical | error
+#   {present, state, label, lines, compact_lines}
+#   state: ok | warning | critical | error
 # …or {present: false} when the provider has no usable accounts.
 #
 # Pill semantics ("can I keep working with confidence?"):
@@ -13,7 +14,9 @@
 #     account to zero costs nothing while another still has headroom;
 #   - `label` names the binding window so "5h·98%" never hides that the
 #     weekly window is the one actually about to run dry.
-#   - `lines` lists every account x every meter for the popup/tooltip.
+#   - `lines` lists every account x every meter for detailed tooltips;
+#   - `compact_lines` keeps the quota windows and progress bars, but omits
+#     account names and metadata for small popups.
 
 def bar:
   ((14 * . / 100) | floor) as $f
@@ -36,6 +39,10 @@ def meter_line:
   "  \(.label)  \(.pct | bar)  \(100 - .pct | round)% left"
   + (if .reset_human then " · resets " + .reset_human else "" end);
 
+def compact_meter_line:
+  "\(.label | tag)  \(.pct | bar)  \(100 - .pct | round)% left"
+  + (if .reset_human then " · resets " + .reset_human else "" end);
+
 . as $root
 | ([$root.providers[] | select(.provider == $provider)] | .[0] // null)
 | if . == null then
@@ -54,6 +61,7 @@ def meter_line:
           state: "error",
           label: "--",
           lines: ["no usable coding-quota windows"],
+          compact_lines: ["no usable coding-quota windows"],
         }
       else
         ($ranked | min_by(.pct)) as $best
@@ -92,6 +100,15 @@ def meter_line:
                       end),
                     (.meters[] | meter_line)
                   end
+              )
+            ],
+            compact_lines: [
+              ([$root.providers[] | select(.provider == $provider)]
+                | .[0]
+                | .accounts[]
+                | select(.error == null)
+                | coding[]
+                | compact_meter_line
               )
             ],
           }
