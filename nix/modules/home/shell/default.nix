@@ -1,4 +1,4 @@
-# Shell group: zsh and nushell.
+# Shell group: zsh, nushell, motd.
 args@{
   config,
   lib,
@@ -19,6 +19,9 @@ in
       default = defaultShell;
       description = "Default user shell.";
     };
+    motd = {
+      enable = lib.mkEnableOption "system status message of the day (motd)";
+    };
     zsh = {
       enable = lib.mkEnableOption "zsh";
       devExtras = lib.mkEnableOption "shell developer extras (p10k prompt, fzf, zoxide, bat, direnv)";
@@ -37,6 +40,7 @@ in
   };
 
   imports = [
+    ./motd.nix
     ./zsh.nix
     ./zsh-extras.nix
     ./nushell.nix
