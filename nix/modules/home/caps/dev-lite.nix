@@ -16,6 +16,7 @@
     terminal.zellij.enable = lib.mkDefault true;
     shell = {
       zsh.devExtras = lib.mkDefault true;
+      nushell.enable = lib.mkDefault true;
       nushell.devExtras = lib.mkDefault true;
     };
     # Daily scripting maintenance: Nix, config files, Markdown, Typst,

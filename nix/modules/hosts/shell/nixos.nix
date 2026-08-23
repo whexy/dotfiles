@@ -12,6 +12,7 @@ in
     (lib.mkIf cfg.zsh.enable { programs.zsh.enable = true; })
     (lib.mkIf cfg.nushell.enable {
       environment.shells = [ pkgs.nushell ];
+      environment.systemPackages = [ pkgs.nushell ];
     })
   ];
 }
