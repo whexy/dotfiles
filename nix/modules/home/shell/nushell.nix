@@ -21,7 +21,7 @@ in
             show_empty: true
             padding: { left: 1, right: 1 }
             trim: {
-              method: wrapping
+              methodology: wrapping
               wrapping_try_keep_words: true
             }
           }

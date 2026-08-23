@@ -17,5 +17,8 @@ in
         with pkgs;
         [ bash ] ++ lib.optional cfg.zsh.enable zsh ++ lib.optional cfg.nushell.enable nushell;
     })
+    (lib.mkIf cfg.nushell.enable {
+      environment.systemPackages = [ pkgs.nushell ];
+    })
   ];
 }
