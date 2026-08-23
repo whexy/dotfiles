@@ -131,16 +131,14 @@ let
       exit 0
     fi
 
-    network="$(/usr/sbin/networksetup -getairportnetwork "$interface" 2>/dev/null || true)"
-    case "$network" in
-      "Current Wi-Fi Network: "*)
-        ssid="''${network#Current Wi-Fi Network: }"
-        ${sketchybar} --set "$NAME" icon="󰤨" icon.color=${colors.teal} label="$ssid"
-        ;;
-      *)
-        ${sketchybar} --set "$NAME" icon="󰈀" icon.color=${colors.teal} label="$interface"
-        ;;
-    esac
+    ssid="$(/sbin/ipconfig getsummary "$interface" 2>/dev/null | \
+      /usr/bin/awk -F ' : ' '/^[[:space:]]*SSID[[:space:]]*:/ { print $2; exit }')"
+
+    if [ -n "$ssid" ]; then
+      ${sketchybar} --set "$NAME" icon="󰤨" icon.color=${colors.teal} label="$ssid"
+    else
+      ${sketchybar} --set "$NAME" icon="󰈀" icon.color=${colors.teal} label="$interface"
+    fi
   '';
 
   cpuPlugin = mkPlugin "cpu" ''
