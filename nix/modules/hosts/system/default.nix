@@ -25,6 +25,8 @@ in
       };
     };
 
+    fwupd.enable = lib.mkEnableOption "Linux Vendor firmware service";
+
     docs.enable = lib.mkEnableOption "developer documentation (man pages for syscalls & libc, sections 2 and 3)";
   };
 

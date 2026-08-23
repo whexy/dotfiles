@@ -21,5 +21,7 @@ in
     })
 
     (lib.mkIf cfg.docs.enable { documentation.dev.enable = true; })
+
+    (lib.mkIf cfg.fwupd.enable { services.fwupd.enable = true; })
   ];
 }
