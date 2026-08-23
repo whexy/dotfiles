@@ -47,6 +47,31 @@ in
           ;
       };
       pi_web_search = import ./pi/web-search.nix { inherit proxyAccounts; };
+      withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
+      claude = withModelPicker {
+        name = "claude";
+        package = pkgs.llm-agents.claude-code;
+        entries = import ./claude-code/models.nix {
+          inherit
+            config
+            lib
+            apiAccounts
+            proxyAccounts
+            ;
+        };
+      };
+      codex = withModelPicker {
+        name = "codex";
+        package = pkgs.llm-agents.codex;
+        entries = import ./codex/models.nix {
+          inherit
+            config
+            lib
+            apiAccounts
+            proxyAccounts
+            ;
+        };
+      };
     in
     {
       # The AI proxy lives on the tailnet; integrated hosts must run
@@ -66,13 +91,19 @@ in
           ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
           ".pi/agent/models.json".text = builtins.toJSON pi_models;
           ".pi/web-search.json".text = builtins.toJSON pi_web_search;
+          ".claude/settings.json".source = ./claude-code/settings.json;
         }
         // lib.optionalAttrs proxyAccounts {
           # Discover the proxy catalog and clone matching model metadata from pi.
           ".pi/agent/extensions/ai-proxy.ts".source = ./pi/ai-proxy.ts;
         };
 
-        packages = [ pkgs.llm-agents.pi ] ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
+        packages = [
+          pkgs.llm-agents.pi
+          claude
+          codex
+        ]
+        ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
 
         shellAliases = {
           oc = "opencode";
