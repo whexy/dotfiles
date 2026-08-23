@@ -21,12 +21,14 @@ let
 
   enabled = cfg.renpho.enable && cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin;
 
+  # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
-    gray = "0xffa89984";
-    brightRed = "0xfffb4934";
-    green = "0xffb8bb26";
-    purple = "0xffd3869b";
-    itemAlt = "0xff504945";
+    gray = "0xff98989d"; # systemGray, stale data
+    red = "0xffff453a"; # systemRed, weight up
+    green = "0xff30d158"; # systemGreen, weight down
+    purple = "0xffbf5af2"; # systemPurple, neutral reading
+    glassBorder = "0x40ffffff"; # 25% white hairline, popup edge highlight
+    popup = "0xe61c1c1e"; # near-opaque dark sheet for popups
   };
 
   popupSlots = lib.range 1 summaryCount;
@@ -56,7 +58,7 @@ let
 
     case "$state" in
       down) color=${colors.green} ;;
-      up) color=${colors.brightRed} ;;
+      up) color=${colors.red} ;;
       stale) color=${colors.gray} ;;
       *) color=${colors.purple} ;;
     esac
@@ -81,8 +83,7 @@ let
     fi
 
     label="$(printf '%s' "$summary" | ${jq} -r '
-      (if (.weight | type) == "number" then (.weight * 10 | round / 10 | tostring) + "kg" else "?" end)
-      + (if .trend == "" then "" elif .delta == null then " " + .trend else " " + .trend + (.delta | tostring) end)
+      if (.weight | type) == "number" then (.weight * 10 | round / 10 | tostring) + "kg" else "?" end
     ')"
 
     ${sketchybar} --set "$NAME" drawing=on icon.color="$color" label="$label"
@@ -99,9 +100,10 @@ let
       "popup.horizontal" = "off";
       "popup.align" = "right";
       "popup.y_offset" = if barOnTop then "-8" else "8";
-      "popup.background.color" = colors.itemAlt;
+      "popup.background.color" = colors.popup;
       "popup.background.corner_radius" = 10;
-      "popup.background.border_width" = 0;
+      "popup.background.border_width" = 1;
+      "popup.background.border_color" = colors.glassBorder;
     };
     subscribe = [
       "mouse.entered"

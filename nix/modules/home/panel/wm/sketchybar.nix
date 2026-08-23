@@ -26,30 +26,34 @@ let
 
   enabled = cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin;
 
-  # Gruvbox subset of the palette in ../sketchybar.nix.
+  # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
-    item = "0xff3c3836"; # bg1, default item background
-    occupied = "0xff665c54"; # bg3, occupied but inactive workspace
-    gray = "0xffa89984";
-    blue = "0xff458588";
+    fg = "0xffffffff";
+    fgDim = "0xb3ffffff"; # 70% white, empty workspaces and the front app
+    glass = "0x1affffff"; # 10% white, shared capsule backgrounds
+    glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
+    blue = "0xff0a84ff"; # systemBlue, active workspace pill
   };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-wm-${name}";
 
-  # Workspace items highlight the active workspace. Paneru workspaces are
-  # rendered together by paneruStatePlugin from one state snapshot below.
+  # Workspace items live inside the shared `spaces` capsule (bracket below):
+  # only the active workspace gets an inset blue pill, the rest are bare text.
+  # Paneru workspaces are rendered together by paneruStatePlugin from one state
+  # snapshot below.
   workspacePlugin = mkPlugin "workspace" ''
     set_state() {
-      ${sketchybar} --set "$NAME" icon.highlight="$1" background.color="$2"
+      ${sketchybar} --set "$NAME" icon.highlight="$1" icon.color="$2" \
+        background.drawing="$3" background.color="$4"
     }
 
     workspace="''${NAME#space.}"
     focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
 
     if [ "$workspace" = "$focused" ]; then
-      set_state on ${colors.blue}
+      set_state on ${colors.fg} on ${colors.blue}
     else
-      set_state off ${colors.item}
+      set_state off ${colors.fgDim} off ${colors.blue}
     fi
   '';
 
@@ -89,15 +93,18 @@ let
 
       if [ "$active" = "true" ]; then
         highlight=on
-        color=${colors.blue}
+        icon_color=${colors.fg}
+        pill=on
       elif [ "$count" -gt 0 ] 2>/dev/null; then
         highlight=off
-        color=${colors.occupied}
+        icon_color=${colors.fg}
+        pill=off
       else
         highlight=off
-        color=${colors.item}
+        icon_color=${colors.fgDim}
+        pill=off
       fi
-      args+=(--set "space.$workspace" icon.highlight="$highlight" background.color="$color")
+      args+=(--set "space.$workspace" icon.highlight="$highlight" icon.color="$icon_color" background.drawing="$pill")
     done
 
     app="$(${jq} -r '.active.focused_app_name // "Desktop"' <<<"$state")"
@@ -129,6 +136,14 @@ let
       "label.drawing" = "off";
       "icon.padding_left" = 8;
       "icon.padding_right" = 8;
+      padding_left = 1;
+      padding_right = 1;
+      # The shared `spaces` bracket supplies the capsule; a workspace only
+      # draws its own background while active, as an inset blue pill.
+      "background.drawing" = "off";
+      "background.color" = colors.blue;
+      "background.height" = 20;
+      "background.corner_radius" = 10;
     }
     // lib.optionalAttrs (!isPaneru) { script = workspacePlugin; };
     clickScript =
@@ -159,8 +174,8 @@ let
     side = "left";
     settings = {
       icon = "󰣆";
-      "icon.color" = colors.gray;
-      "label.color" = colors.gray;
+      "icon.color" = colors.fgDim;
+      "label.color" = colors.fgDim;
       "label.max_chars" = 40;
     }
     // lib.optionalAttrs (!isPaneru) { script = frontAppPlugin; };
@@ -188,9 +203,26 @@ in
 {
   config = lib.mkIf enabled {
     # Workspaces and the front app lead the bar's left side; other feature
-    # modules (e.g. ai-quota) only add right-side items.
-    dotfiles.panel.sketchybar.items = lib.mkBefore wmItems;
-    dotfiles.panel.sketchybar.events = [ "wm_state_change" ];
+    # modules (e.g. ai-quota) only add right-side items. The workspaces share
+    # one capsule, drawn by the `spaces` bracket.
+    dotfiles.panel.sketchybar = {
+      items = lib.mkBefore wmItems;
+      events = [ "wm_state_change" ];
+      brackets = [
+        {
+          name = "spaces";
+          members = map (n: "space.${toString n}") (lib.range 1 9);
+          settings = {
+            "background.drawing" = "on";
+            "background.color" = colors.glass;
+            "background.height" = 26;
+            "background.corner_radius" = 13;
+            "background.border_width" = 1;
+            "background.border_color" = colors.glassBorder;
+          };
+        }
+      ];
+    };
 
     launchd.agents.sketchybar-paneru-events = lib.mkIf (wmEnabled && isPaneru) (
       mkAgent "sketchybar-paneru" [ "${paneruEventBridge}" ]
