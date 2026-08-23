@@ -25,9 +25,7 @@ in
             spacing = 4;
 
             modules-left = [
-              "niri/workspaces"
               "idle_inhibitor"
-              "niri/window"
             ];
             modules-center = [
               "clock"
@@ -41,20 +39,6 @@ in
               "memory"
               "disk"
             ];
-
-            "niri/workspaces" = {
-              format = "{index}";
-            };
-
-            "niri/window" = {
-              format = "{}";
-              max-length = 50;
-              rewrite = {
-                "(.*) — Mozilla Firefox" = "󰈹 $1";
-                "(.*) - fish" = " $1";
-                "(.*)" = "$1";
-              };
-            };
 
             idle_inhibitor = {
               format = "{icon}";
@@ -169,8 +153,6 @@ in
           }
 
           /* Pill-shaped module styling */
-          #workspaces,
-          #window,
           #idle_inhibitor,
           #tray,
           #battery,
@@ -185,39 +167,6 @@ in
             border-radius: 10px;
             background-color: #3c3836;
             transition: all 0.3s ease;
-          }
-
-          /* Workspaces */
-          #workspaces {
-            padding: 0;
-            background-color: transparent;
-          }
-
-          #workspaces button {
-            padding: 2px 8px;
-            margin: 3px 1px;
-            border-radius: 10px;
-            color: #928374;
-            background-color: #3c3836;
-            border: none;
-            transition: all 0.3s ease;
-          }
-
-          #workspaces button:hover {
-            background-color: #504945;
-            color: #ebdbb2;
-          }
-
-          #workspaces button.active {
-            color: #282828;
-            background-color: #458588;
-            font-weight: bold;
-          }
-
-          /* Window title */
-          #window {
-            color: #a89984;
-            font-style: italic;
           }
 
           /* Idle inhibitor */
