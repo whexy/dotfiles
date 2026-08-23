@@ -31,14 +31,18 @@ in
           # `chsh`-ing to the nix-managed zsh since gc/rename would break it, so
           # instead re-exec into it from the distro zsh's .zshrc.
           (lib.mkIf config.targets.genericLinux.enable (
+            let
+              targetShellBin =
+                if cfg.default == "nushell" then "${pkgs.nushell}/bin/nu" else "${pkgs.zsh}/bin/zsh";
+            in
             lib.mkOrder 100 ''
-              # Re-exec into the nix-managed zsh once, before any output.
+              # Re-exec into the nix-managed shell once, before any output.
               # Guard against re-exec loops (the same .zshrc is sourced by both shells).
-              if [[ -z "$IN_NIX_ZSH" && "''${SHELL:-}" != "${pkgs.zsh}/bin/zsh" \
-                    && -x "${pkgs.zsh}/bin/zsh" ]]; then
-                export IN_NIX_ZSH=1
-                export SHELL="${pkgs.zsh}/bin/zsh"
-                exec "${pkgs.zsh}/bin/zsh" -l
+              if [[ -z "$IN_NIX_SHELL" && "''${SHELL:-}" != "${targetShellBin}" \
+                    && -x "${targetShellBin}" ]]; then
+                export IN_NIX_SHELL=1
+                export SHELL="${targetShellBin}"
+                exec "${targetShellBin}" -l
               fi
             ''
           ))

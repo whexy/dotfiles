@@ -18,7 +18,7 @@ in
       description = username;
       uid = 501;
       home = "/Users/${username}";
-      shell = pkgs.zsh;
+      shell = if config.dotfiles.shell.default == "nushell" then pkgs.nushell else pkgs.zsh;
       openssh.authorizedKeys.keys = [
         "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIMdMvHl7VPzajwBjWw+pqcLatA42yWtQKiEPj/9VqI9i"
       ];

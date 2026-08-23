@@ -14,7 +14,10 @@
       git.enable = lib.mkDefault true;
     };
     terminal.zellij.enable = lib.mkDefault true;
-    shell.zsh.devExtras = lib.mkDefault true;
+    shell = {
+      zsh.devExtras = lib.mkDefault true;
+      nushell.devExtras = lib.mkDefault true;
+    };
     # Daily scripting maintenance: Nix, config files, Markdown, Typst,
     # shell, and Python.
     editor = {
