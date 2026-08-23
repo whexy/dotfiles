@@ -94,7 +94,7 @@ let
     settings = {
       icon = "󰓅";
       "icon.color" = colors.purple;
-      update_freq = 60;
+      update_freq = 300;
       script = pillPlugin;
       "popup.horizontal" = "off";
       "popup.align" = "right";

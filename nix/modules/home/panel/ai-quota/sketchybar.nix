@@ -38,7 +38,8 @@ let
     gray = "0xffa89984";
     yellow = "0xffd79921";
     brightRed = "0xfffb4934";
-    green = "0xffb8bb26";
+    blue = "0xff83a598";
+    orange = "0xfffe8019";
     item = "0xff3c3836";
     itemAlt = "0xff504945";
   };
@@ -54,7 +55,7 @@ let
   '';
 
   pillPlugin =
-    provider:
+    provider: accent:
     mkPlugin "pill-${provider}" ''
       cache="${cacheFile}"
 
@@ -68,7 +69,7 @@ let
 
       state="$(printf '%s' "$summary" | ${jq} -r 'if .present == true then .state else "error" end')"
       case "$state" in
-        ok) color=${colors.green} ;;
+        ok) color=${accent} ;;
         warning) color=${colors.yellow} ;;
         critical) color=${colors.brightRed} ;;
         *) color=${colors.gray} ;;
@@ -107,7 +108,7 @@ let
     settings = {
       drawing = "off";
       updates = "on";
-      update_freq = 300;
+      update_freq = 60;
       script = fetcherPlugin;
     };
   };
@@ -125,15 +126,15 @@ let
     };
   };
 
-  mkPillItem = provider: icon: {
+  mkPillItem = provider: icon: accent: {
     name = "ai_quota.${provider}";
     kind = "slider";
-    width = 38;
+    width = 24;
     side = "right";
     settings = {
       inherit icon;
       update_freq = 60;
-      script = pillPlugin provider;
+      script = pillPlugin provider accent;
       "slider.background.color" = colors.gray;
       "slider.background.height" = 4;
       "slider.background.corner_radius" = 2;
@@ -155,10 +156,12 @@ let
     {
       name = "kimi";
       icon = "󰽥";
+      accent = colors.blue;
     }
     {
       name = "codex";
       icon = "󰚩";
+      accent = colors.orange;
     }
   ];
 
@@ -167,7 +170,7 @@ let
   extraItems = [
     fetcherItem
   ]
-  ++ map (p: mkPillItem p.name p.icon) providers
+  ++ map (p: mkPillItem p.name p.icon p.accent) providers
   ++ lib.concatMap (p: map (mkDetailsItem p.name) popupSlots) providers;
 in
 {
