@@ -80,7 +80,12 @@ let
     ${
       if isPaneru then
         ''
-          state="$(${paneru} query virtual-workspaces --json 2>/dev/null | ${jq} -r --argjson n "$workspace" '.[] | select(.number == $n) | "\(.active) \(.windows | length)"' 2>/dev/null)"
+          state="$(${paneru} query state --json 2>/dev/null | ${jq} -r --argjson n "$workspace" '
+            .active.native_workspace_id as $native
+            | .virtual_workspaces[]
+            | select(.native_workspace_id == $native and .number == $n)
+            | "\(.active) \(.windows | length)"
+          ' 2>/dev/null)"
           active="''${state%% *}"
           count="''${state#* }"
 
