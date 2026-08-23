@@ -79,3 +79,20 @@ Example: `Assisted-by: Codex, gpt-5.6 sol medium`
 Any adequate form of disclosure is permitted for other kinds of tooling and
 contribution. Pull request summaries and review comments must be disclosed
 separately to commits.
+
+### Coding
+
+**Comments**
+
+A comment states the non-obvious reason at the owning boundary. Include a
+constraint or invalidation condition only when a maintainer needs it to know
+when the rationale or code stops being valid. Do not restate the operation,
+preserve intermediate attempts, or list speculative future work.
+
+**Correct**
+
+When correcting your own mistake, produce the result as if the mistake never
+happened. Do not mention the rejected approach anywhere (e.g., comments, commit
+messages, PR) unless its history is materially necessary. Do not add code or
+explanation whose only purpose is to document why the rejected approach is
+absent.
