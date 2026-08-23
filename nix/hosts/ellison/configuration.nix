@@ -17,7 +17,10 @@
   services.fstrim.enable = true;
 
   dotfiles = {
-    system.autoUpgrade.enable = true;
+    system = {
+      autoUpgrade.enable = true;
+      fwupd.enable = true;
+    };
     gaming.enable = true;
   };
   system.stateVersion = "26.05";
