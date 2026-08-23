@@ -17,7 +17,10 @@ pkgs.writers.writePython3Bin "ai-quota"
     ];
   }
   ''
-    """Fetch quota for all accounts on the AI proxy."""
+    """Fetch quota for all accounts on the AI proxy.
+
+    Pass --json for machine-readable output (consumed by the bar pills).
+    """
 
     import json
     import os
@@ -68,11 +71,18 @@ pkgs.writers.writePython3Bin "ai-quota"
         return datetime.fromtimestamp(ts, timezone.utc)
 
 
-    def human_delta(dt):
-        seconds = (dt - datetime.now(timezone.utc)).total_seconds()
+    def seconds_until(dt):
+        if dt is None:
+            return None
+        return int((dt - datetime.now(timezone.utc)).total_seconds())
+
+
+    def human_delta(seconds):
+        if seconds is None:
+            return None
         if seconds <= 0:
             return "now"
-        minutes = int(seconds // 60)
+        minutes = seconds // 60
         days, minutes = divmod(minutes, 60 * 24)
         hours, minutes = divmod(minutes, 60)
         if days:
@@ -80,17 +90,6 @@ pkgs.writers.writePython3Bin "ai-quota"
         if hours:
             return "%dh %dm" % (hours, minutes)
         return "%dm" % minutes
-
-
-    def reset_note(dt):
-        if dt is None:
-            return ""
-        local = dt.astimezone()
-        return paint(
-            " · resets in %s (%s)"
-            % (human_delta(dt), local.strftime("%b %d %H:%M")),
-            DIM,
-        )
 
 
     def usage_color(pct):
@@ -267,43 +266,78 @@ pkgs.writers.writePython3Bin "ai-quota"
             return json.load(resp)
 
 
+    def finalize_meters(meters):
+        for m in meters:
+            dt = m.get("reset")
+            secs = seconds_until(dt)
+            m["reset"] = dt.astimezone(timezone.utc).isoformat() if dt else None
+            m["reset_in"] = secs
+            m["reset_human"] = human_delta(secs)
+            m["reset_local"] = (
+                dt.astimezone().strftime("%b %d %H:%M") if dt else None
+            )
+        return meters
+
+
+    def build_account(name, resp, parse):
+        status = resp.get("status_code", 0)
+        if status != 200:
+            return {
+                "name": name,
+                "subtitle": None,
+                "error": "HTTP %d: %s" % (status, str(resp.get("body", ""))[:200]),
+                "meters": [],
+                "notes": [],
+            }
+        subtitle, meters, notes = parse(json.loads(resp.get("body") or "{}"))
+        return {
+            "name": name,
+            "subtitle": subtitle,
+            "error": None,
+            "meters": finalize_meters(meters),
+            "notes": notes,
+        }
+
+
     def quota_line(m):
         pct = min(max(m["pct"], 0.0), 100.0)
         filled = round(BAR_WIDTH * pct / 100.0)
         graph = paint("█" * filled, usage_color(pct)) + paint(
             "░" * (BAR_WIDTH - filled), DIM
         )
-        return "%s %.0f%% used%s" % (graph, pct, reset_note(m["reset"]))
+        note = ""
+        if m["reset_human"]:
+            note = paint(
+                " · resets in %s (%s)" % (m["reset_human"], m["reset_local"]),
+                DIM,
+            )
+        return "%s %.0f%% used%s" % (graph, pct, note)
 
 
-    def show_account(name, resp, parse):
-        status = resp.get("status_code", 0)
+    def print_account(acct):
         rows = []
-        if status != 200:
-            rows.append(paint("error: HTTP %d: %s" % (status, resp.get("body", "")[:200]), RED))
+        if acct["error"]:
+            rows.append(paint("error: %s" % acct["error"], RED))
         else:
-            body = json.loads(resp.get("body") or "{}")
-            subtitle, meters, notes = parse(body)
-            labels = (["user"] if subtitle else []) + [m["label"] for m in meters] + [label for label, _ in notes]
+            labels = (
+                (["user"] if acct["subtitle"] else [])
+                + [m["label"] for m in acct["meters"]]
+                + [label for label, _ in acct["notes"]]
+            )
             width = max([len(lbl) for lbl in labels] or [0])
-            if subtitle:
-                rows.append(paint("user".ljust(width), DIM) + " " + subtitle)
-            for m in meters:
+            if acct["subtitle"]:
+                rows.append(paint("user".ljust(width), DIM) + " " + acct["subtitle"])
+            for m in acct["meters"]:
                 rows.append(paint(m["label"].ljust(width), DIM) + " " + quota_line(m))
-            for label, text in notes:
+            for label, text in acct["notes"]:
                 rows.append(paint(label.ljust(width), DIM) + " " + text)
-        print("  " + paint("● ", CYAN) + paint(name, BOLD))
+        print("  " + paint("● ", CYAN) + paint(acct["name"], BOLD))
         for r in rows:
             print("    " + r)
 
 
-    def main():
-        key = load_key()
-        try:
-            files = api(key, "/auth-files", timeout=20).get("files", [])
-        except OSError as exc:
-            sys.exit("error: failed to list auth files: %s" % exc)
-
+    def fetch_providers(key):
+        files = api(key, "/auth-files", timeout=20).get("files", [])
         accounts = {}
         for f in files:
             provider = f.get("provider")
@@ -312,20 +346,20 @@ pkgs.writers.writePython3Bin "ai-quota"
         if not accounts:
             sys.exit("No enabled auth files with a known quota endpoint found.")
 
-        first = True
+        providers = []
         for provider, spec in PROVIDERS.items():
             if provider not in accounts:
                 continue
-            if not first:
-                print()
-            first = False
-            print(paint(provider, BOLD, MAGENTA))
+            entries = []
             for f in accounts[provider]:
-                urls = [spec["request"]["url"]] + spec["request"].get("url_fallbacks", [])
+                urls = [spec["request"]["url"]] + spec["request"].get(
+                    "url_fallbacks", []
+                )
+                resp = {}
                 for url in urls:
+                    request = dict(spec["request"], url=url)
+                    request.pop("url_fallbacks", None)
                     try:
-                        request = dict(spec["request"], url=url)
-                        request.pop("url_fallbacks", None)
                         resp = api(
                             key,
                             "/api-call",
@@ -335,7 +369,30 @@ pkgs.writers.writePython3Bin "ai-quota"
                         resp = {"status_code": 0, "body": str(exc)}
                     if resp.get("status_code") not in (403, 404):
                         break
-                show_account(f["name"], resp, spec["parse"])
+                entries.append(build_account(f["name"], resp, spec["parse"]))
+            providers.append({"provider": provider, "accounts": entries})
+        return providers
+
+
+    def main():
+        key = load_key()
+        try:
+            providers = fetch_providers(key)
+        except OSError as exc:
+            sys.exit("error: failed to list auth files: %s" % exc)
+
+        if "--json" in sys.argv[1:]:
+            print(json.dumps({"providers": providers}))
+            return
+
+        first = True
+        for entry in providers:
+            if not first:
+                print()
+            first = False
+            print(paint(entry["provider"], BOLD, MAGENTA))
+            for acct in entry["accounts"]:
+                print_account(acct)
 
 
     if __name__ == "__main__":

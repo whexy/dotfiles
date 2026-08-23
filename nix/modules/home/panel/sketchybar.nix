@@ -42,6 +42,32 @@ let
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-${name}";
 
+  # Extension point so other feature modules (e.g. the ai-quota pills) can
+  # contribute bar items without touching this file's rendering logic.
+  itemType = lib.types.submodule {
+    options = {
+      name = lib.mkOption { type = lib.types.str; };
+      side = lib.mkOption {
+        type = lib.types.enum [
+          "left"
+          "right"
+        ];
+      };
+      settings = lib.mkOption {
+        type = lib.types.attrsOf lib.types.anything;
+        default = { };
+      };
+      clickScript = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+      };
+      subscribe = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+      };
+    };
+  };
+
   # Workspace items highlight the active workspace. On Paneru, occupied
   # virtual workspaces get a dimmed background and empty slots stay muted
   # (Paneru reports stable numbered slots).
@@ -221,7 +247,7 @@ let
     subscribe = [ "wm_state_change" ];
   };
 
-  items = (map workspaceItem (lib.range 1 9)) ++ [
+  baseItems = (map workspaceItem (lib.range 1 9)) ++ [
     {
       name = "front_app";
       side = "left";
@@ -302,16 +328,21 @@ let
     }
   ];
 
+  allItems = baseItems ++ cfg.sketchybar.items;
+
   renderItem =
     item:
     let
       settings = lib.concatStringsSep " " (
         lib.mapAttrsToList (k: v: ''${k}="${toString v}"'') item.settings
       );
-      click = lib.optionalString (item ? clickScript) " click_script=\"${item.clickScript}\"";
+      click = lib.optionalString (
+        (item.clickScript or null) != null
+      ) " click_script=\"${item.clickScript}\"";
+      subscribed = item.subscribe or [ ];
       events = lib.optionalString (
-        item ? subscribe
-      ) " --subscribe ${item.name} ${lib.concatStringsSep " " item.subscribe}";
+        subscribed != [ ]
+      ) " --subscribe ${item.name} ${lib.concatStringsSep " " subscribed}";
     in
     ''
       ${sketchybar} --add item ${item.name} ${item.side} \
@@ -358,7 +389,7 @@ let
 
     ${sketchybar} --add event wm_state_change
 
-    ${lib.concatMapStringsSep "\n" renderItem items}
+    ${lib.concatMapStringsSep "\n" renderItem allItems}
 
     ${sketchybar} --update
     ${sketchybar} --trigger wm_state_change
@@ -377,6 +408,15 @@ let
   };
 in
 {
+  options.dotfiles.panel.sketchybar.items = lib.mkOption {
+    type = lib.types.listOf itemType;
+    default = [ ];
+    description = ''
+      Extra bar items rendered after the built-in ones, letting feature
+      modules contribute items without touching the sketchybar renderer.
+    '';
+  };
+
   config = lib.mkIf (cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin) {
     home.packages = [ pkgs.sketchybar ];
 
