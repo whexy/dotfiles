@@ -106,6 +106,7 @@ let
     side = "right";
     settings = {
       drawing = "off";
+      updates = "on";
       update_freq = 300;
       script = fetcherPlugin;
     };
