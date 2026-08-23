@@ -18,6 +18,7 @@ in
         terminal.ghostty.enable = lib.mkDefault true;
         browser.firefox.enable = lib.mkDefault true;
         panel.waybar.enable = lib.mkDefault (!isDarwin);
+        panel.renpho.enable = lib.mkDefault true;
         editor.neovide.enable = lib.mkDefault true;
         clipboard.history.enable = lib.mkDefault true;
         streaming.enable = lib.mkDefault true;
@@ -34,7 +35,6 @@ in
             macbookScreenDensity.enable = lib.mkDefault true;
           };
           clipboard.vmware.enable = lib.mkDefault true;
-          panel.renpho.enable = lib.mkDefault true;
         }
         // lib.optionalAttrs isDarwin {
           # macOS desktop

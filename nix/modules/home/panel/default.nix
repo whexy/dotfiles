@@ -4,15 +4,14 @@
   options.dotfiles.panel = {
     waybar.enable = lib.mkEnableOption "Waybar status bar (Linux)";
     sketchybar.enable = lib.mkEnableOption "SketchyBar status bar (macOS)";
-    renpho.enable = lib.mkEnableOption "Renpho smart-scale Waybar pill";
+    renpho.enable = lib.mkEnableOption "Renpho smart-scale panel pill";
   };
 
   imports = [
     inputs.renpho-health.homeModules.default
-    inputs.renpho-health.homeModules.waybar
     ./waybar.nix
     ./sketchybar.nix
-    ./renpho.nix
+    ./renpho
     ./wm
     ./ai-quota
   ];
