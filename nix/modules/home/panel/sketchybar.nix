@@ -77,46 +77,21 @@ let
     };
   };
 
-  # Workspace items highlight the active workspace. On Paneru, occupied
-  # virtual workspaces get a dimmed background and empty slots stay muted
-  # (Paneru reports stable numbered slots).
+  # Workspace items highlight the active workspace. Paneru workspaces are
+  # rendered together by paneruStatePlugin from one state snapshot below.
   workspacePlugin = mkPlugin "workspace" ''
     set_state() {
       ${sketchybar} --set "$NAME" icon.highlight="$1" background.color="$2"
     }
 
     workspace="''${NAME#space.}"
-    ${
-      if isPaneru then
-        ''
-          state="$(${paneru} query state --json 2>/dev/null | ${jq} -r --argjson n "$workspace" '
-            .active.native_workspace_id as $native
-            | .virtual_workspaces[]
-            | select(.native_workspace_id == $native and .number == $n)
-            | "\(.active) \(.windows | length)"
-          ' 2>/dev/null)"
-          active="''${state%% *}"
-          count="''${state#* }"
+    focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
 
-          if [ "$active" = "true" ]; then
-            set_state on ${colors.blue}
-          elif [ "''${count:-0}" -gt 0 ] 2>/dev/null; then
-            set_state off ${colors.occupied}
-          else
-            set_state off ${colors.item}
-          fi
-        ''
-      else
-        ''
-          focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
-
-          if [ "$workspace" = "$focused" ]; then
-            set_state on ${colors.blue}
-          else
-            set_state off ${colors.item}
-          fi
-        ''
-    }
+    if [ "$workspace" = "$focused" ]; then
+      set_state on ${colors.blue}
+    else
+      set_state off ${colors.item}
+    fi
   '';
 
   frontAppPlugin = mkPlugin "front-app" ''
@@ -132,6 +107,43 @@ let
     fi
 
     ${sketchybar} --set "$NAME" label="''${app:-Desktop}"
+  '';
+
+  # Paneru events are invalidation hints rather than durable state. Query one
+  # snapshot and update every WM item together so the bar always converges.
+  paneruStatePlugin = mkPlugin "paneru-state" ''
+    state="$(${paneru} query state --json 2>/dev/null)" || exit 0
+    ${jq} -e '.active and (.virtual_workspaces | type == "array")' >/dev/null 2>&1 <<<"$state" || exit 0
+
+    args=()
+    for workspace in {1..9}; do
+      workspace_state="$(${jq} -r --argjson n "$workspace" '
+        .active.native_workspace_id as $native
+        | first(
+            .virtual_workspaces[]
+            | select(.native_workspace_id == $native and .number == $n)
+            | "\(.active) \(.windows | length)"
+          ) // "false 0"
+      ' <<<"$state")"
+      active="''${workspace_state%% *}"
+      count="''${workspace_state#* }"
+
+      if [ "$active" = "true" ]; then
+        highlight=on
+        color=${colors.blue}
+      elif [ "$count" -gt 0 ] 2>/dev/null; then
+        highlight=off
+        color=${colors.occupied}
+      else
+        highlight=off
+        color=${colors.item}
+      fi
+      args+=(--set "space.$workspace" icon.highlight="$highlight" background.color="$color")
+    done
+
+    app="$(${jq} -r '.active.focused_app_name // "Desktop"' <<<"$state")"
+    args+=(--set front_app label="$app")
+    ${sketchybar} "''${args[@]}"
   '';
 
   clockPlugin = mkPlugin "clock" ''
@@ -214,9 +226,14 @@ let
   # event that workspace and front-app items subscribe to.
   paneruEventBridge = mkPlugin "paneru-events" ''
     while true; do
-      ${paneru} subscribe --json 2>/dev/null | while IFS= read -r _event; do
+      if ${paneru} query state --json >/dev/null 2>&1; then
+        # Reconcile state before subscribing so startup and reconnect gaps do
+        # not leave the bar waiting indefinitely for the next Paneru event.
         ${sketchybar} --trigger wm_state_change
-      done
+        ${paneru} subscribe --json | while IFS= read -r _event; do
+          ${sketchybar} --trigger wm_state_change
+        done
+      fi
       /bin/sleep 1
     done
   '';
@@ -233,17 +250,34 @@ let
       "label.drawing" = "off";
       "icon.padding_left" = 8;
       "icon.padding_right" = 8;
-      script = workspacePlugin;
-    };
+    }
+    // lib.optionalAttrs (!isPaneru) { script = workspacePlugin; };
     clickScript =
       if isPaneru then
         "${paneru} send-cmd window virtualnum ${toString n}"
       else
         "${aerospace} workspace ${toString n}";
-    subscribe = [ "wm_state_change" ];
+    subscribe = lib.optional (!isPaneru) "wm_state_change";
   };
 
-  baseItems = (map workspaceItem (lib.range 1 9)) ++ [
+  paneruStateItem = {
+    name = "paneru_state";
+    side = "left";
+    settings = {
+      drawing = "off";
+      updates = "on";
+      update_freq = 10;
+      script = paneruStatePlugin;
+    };
+    subscribe = [
+      "wm_state_change"
+      "system_woke"
+    ];
+  };
+
+  wmItems = (map workspaceItem (lib.range 1 9)) ++ lib.optional isPaneru paneruStateItem;
+
+  baseItems = wmItems ++ [
     {
       name = "front_app";
       side = "left";
@@ -252,9 +286,9 @@ let
         "icon.color" = colors.gray;
         "label.color" = colors.gray;
         "label.max_chars" = 40;
-        script = frontAppPlugin;
-      };
-      subscribe = [
+      }
+      // lib.optionalAttrs (!isPaneru) { script = frontAppPlugin; };
+      subscribe = lib.optionals (!isPaneru) [
         "front_app_switched"
         "wm_state_change"
       ];
