@@ -95,7 +95,7 @@ in
 
       "custom/ai-quota-fetch" = {
         exec = fetchScript;
-        interval = 300;
+        interval = 60;
         return-type = "json";
       };
     }
