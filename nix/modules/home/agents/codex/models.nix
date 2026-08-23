@@ -43,6 +43,8 @@ let
       "-c"
       ''model_provider="opencode-go"''
       "-c"
+      ''model_providers.opencode-go.name="OpenCode Go"''
+      "-c"
       ''model_providers.opencode-go.base_url="https://opencode.ai/zen/go/v1"''
       "-c"
       ''model_providers.opencode-go.wire_api="responses"''
