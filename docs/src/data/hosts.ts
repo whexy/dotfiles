@@ -51,6 +51,14 @@ export const categories: Category[] = [
         note: "Incus development VM with an encrypted root disk and guest agent.",
       },
       {
+        label: "phobos",
+        hardware: "Incus VM",
+        caps: ["base", "dev"],
+        cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#phobos",
+        nhCmd: "nh os switch --hostname phobos github:whexy/dotfiles",
+        note: "Incus VM with LUKS-encrypted root and guest agent. Auto-upgrading.",
+      },
+      {
         label: "skokie",
         hardware: "Apple silicon desktop VM",
         caps: ["base", "dev", "gui"],
@@ -112,6 +120,24 @@ export const categories: Category[] = [
           "nh home switch github:whexy/dotfiles --no-nom -c wenxuan@mars -b backup",
         note: "Standalone Home Manager on mars.",
       },
+      {
+        label: "b3srv0",
+        hardware: "root @ /root",
+        caps: ["base"],
+        cmd: "home-manager switch --flake github:whexy/dotfiles#root@b3srv0",
+        nhCmd:
+          "nh home switch github:whexy/dotfiles --no-nom -c root@b3srv0 -b backup",
+        note: "Root profile on the b3srv0 server, with AI agents. Auto-upgrading.",
+      },
+      {
+        label: "proxmox",
+        hardware: "root @ /root",
+        caps: ["base"],
+        cmd: "home-manager switch --flake github:whexy/dotfiles#root@proxmox",
+        nhCmd:
+          "nh home switch github:whexy/dotfiles --no-nom -c root@proxmox -b backup",
+        note: "Root profile on the Proxmox host, with AI agents. Auto-upgrading.",
+      },
     ],
   },
   {
@@ -138,6 +164,20 @@ export const categories: Category[] = [
         caps: ["base", "dev"],
         cmd: "just build-moore-vm",
         note: "Dev VM for the moore server. ssh -p 2222 whexy@localhost.",
+      },
+      {
+        label: "zoozve image",
+        hardware: "Encrypted Incus image",
+        caps: ["base", "dev"],
+        cmd: "just build-zoozve",
+        note: "LUKS-encrypted qcow2 + Incus metadata. Import with incus image import.",
+      },
+      {
+        label: "phobos image",
+        hardware: "Encrypted Incus image",
+        caps: ["base", "dev"],
+        cmd: "just build-phobos",
+        note: "LUKS-encrypted qcow2 + Incus metadata. Import with incus image import.",
       },
     ],
   },
@@ -177,15 +217,18 @@ export const stack: { name: string; note: string }[] = [
   { name: "ghostty", note: "terminal emulator" },
   { name: "niri", note: "scrollable-tiling wayland compositor" },
   { name: "waybar", note: "status bar" },
+  { name: "sketchybar", note: "status bar for macOS" },
   { name: "aerospace", note: "tiling wm for macOS" },
+  { name: "paneru", note: "tiling wm for macOS, experimental" },
   { name: "karabiner", note: "keyboard remapping" },
   { name: "firefox", note: "browser, policies included" },
+  { name: "beszel", note: "fleet monitoring" },
   { name: "agenix", note: "age-encrypted secrets" },
   { name: "disko", note: "declarative disk partitioning" },
   { name: "blueprint", note: "flake structure, zero boilerplate" },
   { name: "treefmt", note: "one formatter to rule them all" },
   { name: "nix-index-database", note: "comma for everything" },
-  { name: "llm-agents", note: "opencode & claude-code, pinned" },
+  { name: "llm-agents", note: "opencode, claude-code & codex, pinned" },
 ];
 
 /** Commands cycled through in the hero terminal. */
