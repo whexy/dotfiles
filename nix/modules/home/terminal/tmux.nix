@@ -7,6 +7,9 @@
 }:
 let
   cfg = config.dotfiles.terminal;
+  shellCfg = config.dotfiles.shell;
+  defaultShellCmd =
+    if shellCfg.default == "nushell" then "${pkgs.nushell}/bin/nu -l" else "${pkgs.zsh}/bin/zsh -l";
 in
 {
   config = lib.mkIf cfg.tmux.enable {
@@ -22,7 +25,7 @@ in
       terminal = "xterm-256color";
 
       extraConfig = ''
-        set-option -g default-command "${pkgs.zsh}/bin/zsh -l"
+        set-option -g default-command "${defaultShellCmd}"
 
         bind C-b send-prefix
         bind C-k clear-history
