@@ -13,47 +13,34 @@ in
 # Usage:
 #   gcai [extra git commit args...]
 #
-pkgs.writeShellScriptBin "gcai" ''
-  set -euo pipefail
+pkgs.writeShellApplication {
+  name = "gcai";
 
-  PATH="${pkgs.git}/bin:${pi}/bin:${pkgs.coreutils}/bin:${pkgs.gnused}/bin"
+  runtimeInputs = [
+    pkgs.git
+    pkgs.gnused
+    pi
+  ];
 
-  model="''${GCAI_MODEL:-opencode-go/deepseek-v4-flash}"
+  text = ''
+    model="''${GCAI_MODEL:-opencode-go/deepseek-v4-flash}"
 
-  if ! git rev-parse --git-dir >/dev/null 2>&1; then
-    echo "gcai: not a git repository" >&2
-    exit 1
-  fi
+    message=$(
+      pi -p --no-session \
+        --model "$model" \
+        "Write a commit message for the staged changes in this repository.
+        Follow VCS rules. Reply with plain text, no code fences, no surrounding quotes.
+        You are pi, a coding agent. Provider and model: $model."
+    )
 
-  if git diff --staged --quiet; then
-    echo "gcai: no staged changes (stage files with git add first)" >&2
-    exit 1
-  fi
+    # Strip stray code fences and leading blank lines from the reply.
+    message=$(printf '%s\n' "$message" | sed -e '/^```/d' -e '/./,$!d')
 
-  # Cap the diff so a huge refactor doesn't blow the model's context.
-  diff=$(git diff --staged --no-color | head -c 20000)
-  subjects=$(git log -8 --format=%s 2>/dev/null || true)
+    if [ -z "$message" ]; then
+      echo "gcai: pi returned an empty message" >&2
+      exit 1
+    fi
 
-  message=$(
-    pi -p --no-session \
-      --model "$model" \
-      "Write a commit message for these staged changes.
-      Reply with only the commit message text: plain text, no code fences, no surrounding quotes.
-
-      Recent commit subjects for style reference:
-      $subjects
-
-      Staged diff:
-      $diff"
-  )
-
-  # Strip stray code fences and leading blank lines from the reply.
-  message=$(printf '%s\n' "$message" | sed -e '/^```/d' -e '/./,$!d')
-
-  if [ -z "$message" ]; then
-    echo "gcai: pi returned an empty message" >&2
-    exit 1
-  fi
-
-  git commit -e -m "$message" "$@"
-''
+    git commit -e -m "$message" "$@"
+  '';
+}
