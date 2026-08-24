@@ -15,6 +15,18 @@ in
     enable = lib.mkEnableOption "agents";
     enableApiAccounts = lib.mkEnableOption "enable models billed by API";
     enableProxyAccounts = lib.mkEnableOption "enable models served by the tailnet AI proxy";
+
+    gcai.model = lib.mkOption {
+      type = lib.types.str;
+      default =
+        if cfg.enableProxyAccounts then "ai-proxy/gpt-5.6-luna" else "opencode-go/deepseek-v4-flash";
+      defaultText = lib.literalExpression ''
+        if config.dotfiles.agents.enableProxyAccounts
+        then "ai-proxy/gpt-5.6-luna"
+        else "opencode-go/deepseek-v4-flash"
+      '';
+      description = "provider/model gcai uses to generate commit messages with pi";
+    };
   };
 
   config = lib.mkIf cfg.enable (
@@ -48,6 +60,11 @@ in
       };
       pi_web_search = import ./pi/web-search.nix { inherit proxyAccounts; };
       withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
+      # Stamp the configured model into gcai via GCAI_MODEL.
+      gcai = pkgs.writeShellScriptBin "gcai" ''
+        export GCAI_MODEL=${lib.escapeShellArg cfg.gcai.model}
+        exec ${perSystem.self.gcai}/bin/gcai "$@"
+      '';
       claude = withModelPicker {
         name = "claude";
         package = pkgs.llm-agents.claude-code;
@@ -107,6 +124,7 @@ in
           pkgs.llm-agents.pi
           claude
           codex
+          gcai
         ]
         ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
 
