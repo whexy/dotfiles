@@ -24,13 +24,14 @@ pkgs.writeShellApplication {
 
   text = ''
     model="''${GCAI_MODEL:-opencode-go/deepseek-v4-flash}"
+    model_name="''${model##*/}"
 
     message=$(
       pi -p --no-session \
         --model "$model" \
         "Write a commit message for the staged changes in this repository.
         Follow VCS rules. Reply with plain text, no code fences, no surrounding quotes.
-        You are pi, a coding agent. Provider and model: $model."
+        You are pi, a coding agent. Model: $model_name."
     )
 
     # Strip stray code fences and leading blank lines from the reply.
