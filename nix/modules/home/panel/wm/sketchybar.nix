@@ -56,6 +56,8 @@ let
 
     if [ "$workspace" = "$focused" ]; then
       set_state on ${colors.fg} on
+    elif ${aerospace} list-windows --workspace "$workspace" --format '%{window-id}' 2>/dev/null | /usr/bin/grep -q .; then
+      set_state off ${colors.fg} off
     else
       set_state off ${colors.fgDim} off
     fi
