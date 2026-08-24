@@ -10,7 +10,7 @@
 
   # kimi-k3 goes through the tailnet AI proxy; fall back to OpenCode Go without Tailscale.
   defaultProvider = if proxyAccounts then "ai-proxy" else "opencode-go";
-  defaultModel = if proxyAccounts then "kimi-k3" else "deepseek-v4-pro";
+  defaultModel = if proxyAccounts then "kimi-k3-256k" else "deepseek-v4-pro";
 
   packages = [
     "npm:pi-web-access"
@@ -21,8 +21,8 @@
   # Scoped models for Ctrl+P cycling (`/scoped-models`).
   enabledModels =
     lib.optionals proxyAccounts [
-      "ai-proxy/kimi-k3"
       "ai-proxy/kimi-k3-256k"
+      "ai-proxy/kimi-k3"
       "ai-proxy/gpt-5.6-sol"
     ]
     ++ [
