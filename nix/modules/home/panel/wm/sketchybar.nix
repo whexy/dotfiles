@@ -41,19 +41,23 @@ let
   # only the active workspace gets an inset blue pill, the rest are bare text.
   # Paneru workspaces are rendered together by paneruStatePlugin from one state
   # snapshot below.
+  # The plugin only toggles background.drawing, never background.color:
+  # assigning background.color implicitly re-enables background.drawing in
+  # sketchybar, which would turn every workspace's pill back on. The pill
+  # color is constant and set once in the item declaration.
   workspacePlugin = mkPlugin "workspace" ''
     set_state() {
       ${sketchybar} --set "$NAME" icon.highlight="$1" icon.color="$2" \
-        background.drawing="$3" background.color="$4"
+        background.drawing="$3"
     }
 
     workspace="''${NAME#space.}"
     focused="''${FOCUSED_WORKSPACE:-$(${aerospace} list-workspaces --focused 2>/dev/null | /usr/bin/head -n 1)}"
 
     if [ "$workspace" = "$focused" ]; then
-      set_state on ${colors.fg} on ${colors.blue}
+      set_state on ${colors.fg} on
     else
-      set_state off ${colors.fgDim} off ${colors.blue}
+      set_state off ${colors.fgDim} off
     fi
   '';
 
