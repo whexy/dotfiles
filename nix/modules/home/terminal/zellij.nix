@@ -22,6 +22,7 @@ in
         default_mode = "locked";
         show_startup_tips = false;
         show_release_notes = false;
+        session_serialization = false;
       };
 
       extraConfig = ''
