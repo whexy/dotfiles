@@ -636,11 +636,11 @@
         "treefmt": "treefmt"
       },
       "locked": {
-        "lastModified": 1787675278,
-        "narHash": "sha256-pJrRl3OkglKjucB2jQ2/fZaBcEHL7wkQUQ2tPhygAd0=",
+        "lastModified": 1787679006,
+        "narHash": "sha256-ffu4bviHRbk3uTsauvt3ZGX58abUXB6eNpC/NwA+8zU=",
         "owner": "whexy",
         "repo": "oh-my-ghostty",
-        "rev": "ba900262c1286a5921f78cf34248d8deb27f9568",
+        "rev": "4f2bd4d86b3ab39a38082c916c4ea5db53537666",
         "type": "github"
       },
       "original": {
