@@ -8,25 +8,17 @@ pkgs.writers.writePython3Bin "motd"
     ];
   }
   ''
-    """System Message of the Day (MOTD) banner.
+    """Render a compact, responsive system dashboard for interactive shells."""
 
-    Displays a fast, beautifully formatted telemetry summary:
-      - OS, Kernel, Uptime, Load, Sessions
-      - Memory, Root disk, Nix store, Generation ID, IPv4, Tailscale IPv4
-      - Multiplexers (tmux, zellij) active windows and session status
-      - AI proxy quotas (Kimi, Codex, Antigravity) if available
-    """
-
-    import json
     import os
     import platform
     import re
     import shutil
     import socket
     import subprocess
+    import sys
     from datetime import datetime
 
-    # --- ANSI Styling ---
     RESET = "\033[0m"
     BOLD = "\033[1m"
     DIM = "\033[2m"
@@ -37,171 +29,247 @@ pkgs.writers.writePython3Bin "motd"
     MAGENTA = "\033[35m"
     CYAN = "\033[36m"
     WHITE = "\033[37m"
+    GRAY = "\033[90m"
 
     ANSI_RE = re.compile(r"\033\[[0-9;]*m")
+    COLOR_MODE = os.environ.get("MOTD_COLOR", "auto").lower()
+    COLOR = (
+        "NO_COLOR" not in os.environ
+        and os.environ.get("TERM") != "dumb"
+        and (COLOR_MODE == "always" or (COLOR_MODE != "never" and sys.stdout.isatty()))
+    )
 
 
-    def visible_len(text: str) -> int:
-        """Calculate printable length without ANSI escape codes."""
-        return len(ANSI_RE.sub("", text))
-
-
-    def paint(text: str, *codes) -> str:
+    def paint(text: str, *codes: str) -> str:
+        if not COLOR or not codes:
+            return str(text)
         return "".join(codes) + str(text) + RESET
 
 
-    def pad_lbl(lbl: str, width: int = 11) -> str:
-        vlen = visible_len(lbl)
-        return lbl + " " * max(0, width - vlen)
+    def visible_len(text: str) -> int:
+        return len(ANSI_RE.sub("", text))
 
 
-    def color_bar(pct: float, width: int = 10) -> str:
+    def truncate(text: str, width: int) -> str:
+        if visible_len(text) <= width:
+            return text
+        if width <= 1:
+            return "…"[:width]
+
+        result = []
+        visible = 0
+        position = 0
+        for match in ANSI_RE.finditer(text):
+            plain = text[position:match.start()]
+            remaining = width - 1 - visible
+            if len(plain) > remaining:
+                result.append(plain[:remaining])
+                visible += remaining
+                break
+            result.append(plain)
+            visible += len(plain)
+            result.append(match.group(0))
+            position = match.end()
+        else:
+            remaining = width - 1 - visible
+            result.append(text[position:position + remaining])
+
+        return "".join(result) + "…" + (RESET if COLOR else "")
+
+
+    def fit(text: str, width: int) -> str:
+        text = truncate(text, width)
+        return text + " " * max(0, width - visible_len(text))
+
+
+    def human_bytes(value: float) -> str:
+        units = ["B", "KiB", "MiB", "GiB", "TiB"]
+        value = float(value)
+        for unit in units:
+            if value < 1024.0 or unit == units[-1]:
+                if unit in ("B", "KiB", "MiB"):
+                    return "%.0f %s" % (value, unit)
+                return "%.1f %s" % (value, unit)
+            value /= 1024.0
+        return "unknown"
+
+
+    def severity_color(pct: float) -> str:
+        if pct >= 90:
+            return RED
+        if pct >= 75:
+            return YELLOW
+        return GREEN
+
+
+    def meter(pct: float, width: int = 6) -> str:
         pct = max(0.0, min(100.0, pct))
         filled = int(round(width * pct / 100.0))
-        c = GREEN if pct < 60 else (YELLOW if pct < 85 else RED)
-        bar_fill = "█" * filled
-        bar_empty = "░" * (width - filled)
-        return "%s%s%s%s%s%s %.0f%%" % (c, bar_fill, RESET, DIM, bar_empty, RESET, pct)
+        bar = paint("━" * filled, severity_color(pct)) + paint("─" * (width - filled), GRAY)
+        return "%s %s" % (bar, paint("%2.0f%%" % pct, severity_color(pct), BOLD))
 
 
-    # --- Telemetry Collectors ---
+    def command(args, timeout=0.3):
+        try:
+            result = subprocess.run(args, capture_output=True, text=True, timeout=timeout)
+            if result.returncode == 0:
+                return result.stdout.strip()
+        except Exception:
+            pass
+        return ""
 
 
-    def get_os_and_kernel():
-        os_name = platform.system()
+    def get_system():
+        system = platform.system()
+        os_name = system
         if os.path.exists("/etc/os-release"):
             try:
-                with open("/etc/os-release", encoding="utf-8") as f:
-                    for line in f:
+                with open("/etc/os-release", encoding="utf-8") as file:
+                    for line in file:
                         if line.startswith("PRETTY_NAME="):
                             os_name = line.split("=", 1)[1].strip().strip("\"'")
                             break
             except Exception:
                 pass
-        elif os_name == "Darwin":
-            mac_ver = platform.mac_ver()[0]
-            os_name = "macOS " + mac_ver if mac_ver else "macOS"
+        elif system == "Darwin":
+            version = platform.mac_ver()[0]
+            os_name = "macOS " + version if version else "macOS"
 
-        kernel = "%s %s (%s)" % (platform.system(), platform.release(), platform.machine())
-        hostname = socket.gethostname()
-        return hostname, os_name, kernel
+        kernel = "%s %s · %s" % (system, platform.release(), platform.machine())
+        return socket.gethostname().split(".")[0], os_name, kernel
 
 
     def get_uptime():
         if os.path.exists("/proc/uptime"):
             try:
-                with open("/proc/uptime", encoding="utf-8") as f:
-                    secs = int(float(f.readline().split()[0]))
-                    days, rem = divmod(secs, 86400)
-                    hours, rem = divmod(rem, 3600)
-                    mins = rem // 60
-                    parts = []
-                    if days:
-                        parts.append("%dd" % days)
-                    if hours:
-                        parts.append("%dh" % hours)
-                    parts.append("%dm" % mins)
-                    return " ".join(parts)
+                with open("/proc/uptime", encoding="utf-8") as file:
+                    seconds = int(float(file.readline().split()[0]))
+                days, remainder = divmod(seconds, 86400)
+                hours, remainder = divmod(remainder, 3600)
+                minutes = remainder // 60
+                parts = []
+                if days:
+                    parts.append("%dd" % days)
+                if hours:
+                    parts.append("%dh" % hours)
+                parts.append("%dm" % minutes)
+                return " ".join(parts)
             except Exception:
                 pass
-        try:
-            res = subprocess.run(["uptime"], capture_output=True, text=True, timeout=0.3)
-            if res.returncode == 0:
-                m = re.search(r"up\s+(.*?),\s+\d+\s+user", res.stdout)
-                if m:
-                    return m.group(1).strip()
-        except Exception:
-            pass
-        return "unknown"
+
+        output = command(["uptime"], timeout=0.4)
+        match = re.search(r"up\s+(.*?),\s+\d+\s+users?", output)
+        return match.group(1).strip() if match else "unknown"
 
 
     def get_load():
         try:
-            l1, l5, l15 = os.getloadavg()
-            return "%.2f, %.2f, %.2f" % (l1, l5, l15)
+            one, five, fifteen = os.getloadavg()
+            cores = os.cpu_count() or 1
+            pressure = one / cores * 100.0
+            text = "%.2f  %.2f  %.2f" % (one, five, fifteen)
+            return paint(text, severity_color(pressure)), pressure
         except Exception:
-            return "unknown"
+            return "unknown", None
+
+
+    def linux_memory():
+        if not os.path.exists("/proc/meminfo"):
+            return None
+        try:
+            values = {}
+            with open("/proc/meminfo", encoding="utf-8") as file:
+                for line in file:
+                    key, value = line.split(":", 1)
+                    values[key] = int(value.split()[0]) * 1024
+            total = values["MemTotal"]
+            available = values.get("MemAvailable", values.get("MemFree", 0))
+            return max(0, total - available), total
+        except Exception:
+            return None
+
+
+    def darwin_memory():
+        if platform.system() != "Darwin":
+            return None
+        try:
+            total = int(command(["sysctl", "-n", "hw.memsize"]))
+            output = command(["vm_stat"], timeout=0.4)
+            page_match = re.search(r"page size of (\d+) bytes", output)
+            page_size = int(page_match.group(1)) if page_match else 4096
+            pages = {}
+            for line in output.splitlines():
+                match = re.match(r"([^:]+):\s+(\d+)\.", line)
+                if match:
+                    pages[match.group(1)] = int(match.group(2))
+            available_pages = sum(
+                pages.get(name, 0)
+                for name in ("Pages free", "Pages inactive", "Pages speculative")
+            )
+            return max(0, total - available_pages * page_size), total
+        except Exception:
+            return None
 
 
     def get_memory():
-        if os.path.exists("/proc/meminfo"):
-            try:
-                mem = {}
-                with open("/proc/meminfo", encoding="utf-8") as f:
-                    for line in f:
-                        parts = line.split(":")
-                        if len(parts) == 2:
-                            mem[parts[0].strip()] = int(parts[1].split()[0])
-                total_kb = mem.get("MemTotal", 0)
-                avail_kb = mem.get("MemAvailable", mem.get("MemFree", 0) + mem.get("Buffers", 0) + mem.get("Cached", 0))
-                used_kb = max(0, total_kb - avail_kb)
-                if total_kb:
-                    pct = (used_kb / total_kb) * 100
-                    total_gb = total_kb / 1048576
-                    used_gb = used_kb / 1048576
-                    return "%.1fG / %.1fG  %s" % (used_gb, total_gb, color_bar(pct, 10))
-            except Exception:
-                pass
-        return "unknown"
+        usage = linux_memory() or darwin_memory()
+        if not usage:
+            return "unknown", None
+        used, total = usage
+        pct = used / total * 100.0
+        text = "%s / %s  %s" % (human_bytes(used), human_bytes(total), meter(pct))
+        return text, pct
 
 
     def get_root_disk():
         try:
-            st = os.statvfs("/")
-            total = st.f_blocks * st.f_frsize
-            free = st.f_bavail * st.f_frsize
-            used = max(0, total - free)
-            if total > 0:
-                pct = (used / total) * 100
-                total_gb = total / (1024**3)
-                used_gb = used / (1024**3)
-                return "%.0fG / %.0fG  %s" % (used_gb, total_gb, color_bar(pct, 10))
+            stats = os.statvfs("/")
+            total = stats.f_blocks * stats.f_frsize
+            available = stats.f_bavail * stats.f_frsize
+            used = max(0, total - available)
+            pct = used / total * 100.0
+            text = "%s / %s  %s" % (human_bytes(used), human_bytes(total), meter(pct))
+            return text, pct
         except Exception:
-            pass
-        return "unknown"
+            return "unknown", None
 
 
     def get_generation():
-        # Check system profile (NixOS / nix-darwin)
-        for sys_path in ["/nix/var/nix/profiles/system", "/run/current-system"]:
-            if os.path.islink(sys_path):
+        for path in ("/nix/var/nix/profiles/system", "/run/current-system"):
+            if os.path.islink(path):
                 try:
-                    target = os.readlink(sys_path)
-                    m = re.search(r"system-(\d+)-link", target)
-                    if m:
-                        return "#" + m.group(1) + " (system)"
+                    match = re.search(r"system-(\d+)-link", os.readlink(path))
+                    if match:
+                        return "#%s · system" % match.group(1)
                 except Exception:
                     pass
 
-        # Check Home Manager profile
-        hm_paths = [
+        for path in (
             os.path.expanduser("~/.local/state/nix/profiles/home-manager"),
             os.path.expanduser("~/.nix-profile"),
-        ]
-        for hm_path in hm_paths:
-            if os.path.islink(hm_path):
+        ):
+            if os.path.islink(path):
                 try:
-                    target = os.readlink(hm_path)
-                    m = re.search(r"home-manager-(\d+)-link", target)
-                    if m:
-                        return "#" + m.group(1) + " (home-manager)"
+                    match = re.search(r"home-manager-(\d+)-link", os.readlink(path))
+                    if match:
+                        return "#%s · home-manager" % match.group(1)
                 except Exception:
                     pass
-        return None
+        return "unavailable"
 
 
-    def trigger_nix_store_bg_refresh(cache_path: str):
-        """Trigger an asynchronous background computation of nix store size."""
+    def refresh_nix_store(cache_path: str):
         if not os.path.exists("/nix/store"):
             return
-        cmd = 'du -sh /nix/store 2>/dev/null | cut -f1 > "%s.tmp" && mv "%s.tmp" "%s"' % (
-            cache_path,
-            cache_path,
-            cache_path,
-        )
         try:
+            os.makedirs(os.path.dirname(cache_path), exist_ok=True)
+            command_text = 'du -sh /nix/store 2>/dev/null | cut -f1 > "%s.tmp" && mv "%s.tmp" "%s"' % (
+                cache_path,
+                cache_path,
+                cache_path,
+            )
             subprocess.Popen(
-                ["sh", "-c", cmd],
+                ["sh", "-c", command_text],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,
@@ -213,312 +281,199 @@ pkgs.writers.writePython3Bin "motd"
 
     def get_nix_store():
         if not os.path.exists("/nix/store"):
-            return None
+            return "not mounted"
         try:
-            st_root = os.stat("/")
-            st_nix = os.stat("/nix/store")
-            if st_root.st_dev != st_nix.st_dev:
-                nst = os.statvfs("/nix/store")
-                total = nst.f_blocks * nst.f_frsize
-                free = nst.f_bavail * nst.f_frsize
-                used = max(0, total - free)
-                if total > 0:
-                    pct = (used / total) * 100
-                    return "%.1fG / %.1fG (%.0f%%)" % (used / (1024**3), total / (1024**3), pct)
-            else:
-                # Same mount as root; check cache file if available
-                cache_file = os.path.expanduser("~/.cache/nix-store-size")
-                if os.path.exists(cache_file):
-                    try:
-                        mtime = os.path.getmtime(cache_file)
-                        # Refresh cache if older than 24 hours
-                        if datetime.now().timestamp() - mtime > 86400:
-                            trigger_nix_store_bg_refresh(cache_file)
+            if os.stat("/").st_dev != os.stat("/nix/store").st_dev:
+                stats = os.statvfs("/nix/store")
+                total = stats.f_blocks * stats.f_frsize
+                used = max(0, total - stats.f_bavail * stats.f_frsize)
+                return "%s / %s" % (human_bytes(used), human_bytes(total))
 
-                        with open(cache_file, encoding="utf-8") as f:
-                            size = f.read().strip()
-                            if size:
-                                return size + " (on /)"
-                    except Exception:
-                        pass
-                else:
-                    trigger_nix_store_bg_refresh(cache_file)
-                return "shared with /"
+            cache_path = os.path.expanduser("~/.cache/nix-store-size")
+            if os.path.exists(cache_path):
+                if datetime.now().timestamp() - os.path.getmtime(cache_path) > 86400:
+                    refresh_nix_store(cache_path)
+                with open(cache_path, encoding="utf-8") as file:
+                    size = file.read().strip()
+                return "%s · shared with /" % size if size else "shared with /"
+
+            refresh_nix_store(cache_path)
+            return "shared with /"
         except Exception:
-            return None
+            return "unavailable"
 
 
     def get_ipv4():
+        sock = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
         try:
-            s = socket.socket(socket.AF_INET, socket.SOCK_DGRAM)
-            s.connect(("8.8.8.8", 80))
-            ip = s.getsockname()[0]
-            s.close()
-            return ip
+            sock.settimeout(0.2)
+            sock.connect(("8.8.8.8", 80))
+            return sock.getsockname()[0]
         except Exception:
-            return "unknown"
+            return "offline"
+        finally:
+            sock.close()
 
 
     def get_tailscale_ipv4():
-        try:
-            res = subprocess.run(
-                ["tailscale", "ip", "-4"],
-                capture_output=True,
-                text=True,
-                timeout=0.25,
-            )
-            if res.returncode == 0:
-                out = res.stdout.strip().split()
-                if out:
-                    return out[0]
-        except Exception:
-            pass
-        return None
+        output = command(["tailscale", "ip", "-4"], timeout=0.25)
+        return output.split()[0] if output else paint("disconnected", DIM)
 
 
     def get_sessions():
+        output = command(["who"], timeout=0.3)
         sessions = []
-        try:
-            res = subprocess.run(["who"], capture_output=True, text=True, timeout=0.3)
-            if res.returncode == 0:
-                for line in res.stdout.strip().splitlines():
-                    parts = line.split()
-                    if len(parts) >= 2:
-                        user, tty = parts[0], parts[1]
-                        ip = parts[-1].strip("()") if len(parts) >= 5 and parts[-1].startswith("(") else ""
-                        ip_text = " from " + ip if ip else ""
-                        sessions.append("%s (%s%s)" % (user, tty, ip_text))
-        except Exception:
-            pass
-        return sessions
+        for line in output.splitlines():
+            parts = line.split()
+            if len(parts) < 2:
+                continue
+            origin = parts[-1].strip("()") if len(parts) >= 5 and parts[-1].startswith("(") else ""
+            sessions.append("%s@%s%s" % (parts[0], parts[1], " · " + origin if origin else ""))
+        return ", ".join(sessions) if sessions else "none"
 
 
     def get_tmux_info():
+        output = command(
+            ["tmux", "list-sessions", "-F", "#{session_name}\t#{session_windows}\t#{?session_attached,attached,detached}"],
+            timeout=0.3,
+        )
         sessions = []
-        try:
-            res = subprocess.run(
-                ["tmux", "list-sessions", "-F", "#{session_name}\t#{session_windows}\t#{?session_attached,attached,detached}"],
-                capture_output=True,
-                text=True,
-                timeout=0.3,
-            )
-            if res.returncode == 0:
-                for line in res.stdout.strip().splitlines():
-                    if not line:
-                        continue
-                    parts = line.split("\t")
-                    if len(parts) < 3:
-                        continue
-                    sname, swins, satt = parts[0], parts[1], parts[2]
-                    # List windows for session
-                    w_res = subprocess.run(
-                        ["tmux", "list-windows", "-t", sname, "-F", "#{window_index}:#{window_name}#{?window_active,*,}"],
-                        capture_output=True,
-                        text=True,
-                        timeout=0.2,
-                    )
-                    if w_res.returncode == 0 and w_res.stdout.strip():
-                        win_str = " ".join(w_res.stdout.strip().splitlines())
-                    else:
-                        win_str = "%s windows" % swins
-                    att_color = GREEN if satt == "attached" else DIM
-                    att_str = paint("(%s)" % satt, att_color)
-                    sessions.append("%s [%s] %s" % (paint(sname, BOLD), win_str, att_str))
-        except Exception:
-            pass
-        return sessions
+        for line in output.splitlines():
+            parts = line.split("\t")
+            if len(parts) != 3:
+                continue
+            name, windows, state = parts
+            state_color = GREEN if state == "attached" else GRAY
+            sessions.append("%s %sw %s" % (paint(name, BOLD), windows, paint(state, state_color)))
+        return " · ".join(sessions) if sessions else paint("inactive", DIM)
 
 
     def get_zellij_info():
+        output = command(["zellij", "list-sessions", "-n"], timeout=0.3)
         sessions = []
-        try:
-            res = subprocess.run(
-                ["zellij", "list-sessions", "-n"],
-                capture_output=True,
-                text=True,
-                timeout=0.3,
-            )
-            if res.returncode == 0:
-                for line in res.stdout.strip().splitlines():
-                    line = line.strip()
-                    if not line or line.startswith("EXITED"):
-                        continue
-                    sname = line.split()[0]
-                    if "(current)" in line:
-                        status = paint("(current)", GREEN)
-                    elif "(ATTACHED)" in line or "(attached)" in line:
-                        status = paint("(attached)", GREEN)
-                    else:
-                        status = paint("(detached)", DIM)
-                    sessions.append("%s %s" % (paint(sname, BOLD), status))
-        except Exception:
-            pass
-        return sessions
+        for line in output.splitlines():
+            line = line.strip()
+            if not line or line.startswith("EXITED"):
+                continue
+            name = line.split()[0]
+            if "(current)" in line:
+                state = paint("current", GREEN)
+            elif "(ATTACHED)" in line or "(attached)" in line:
+                state = paint("attached", GREEN)
+            else:
+                state = paint("detached", GRAY)
+            sessions.append("%s %s" % (paint(name, BOLD), state))
+        return " · ".join(sessions) if sessions else paint("inactive", DIM)
 
 
-    def trigger_ai_quota_bg_refresh(cache_path: str):
-        """Trigger a background refresh of the AI quota cache if executable exists."""
-        ai_quota_bin = shutil.which("ai-quota")
-        if not ai_quota_bin:
-            return
-        cmd = '"%s" --json > "%s.tmp" 2>/dev/null && mv "%s.tmp" "%s"' % (
-            ai_quota_bin,
-            cache_path,
-            cache_path,
-            cache_path,
-        )
-        try:
-            subprocess.Popen(
-                ["sh", "-c", cmd],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-                start_new_session=True,
-            )
-        except Exception:
-            pass
+    def card(title: str, rows, width: int):
+        inner_width = width - 4
+        title_text = "─ %s " % paint(title.upper(), BOLD, CYAN)
+        top = paint("╭", GRAY) + title_text + paint("─" * max(0, width - 2 - visible_len(title_text)), GRAY) + paint("╮", GRAY)
+        bottom = paint("╰" + "─" * (width - 2) + "╯", GRAY)
+        label_width = min(11, max(len(label) for label, _ in rows))
+        lines = [top]
+        for label, value in rows:
+            prefix = "%s %s" % (paint("◆", MAGENTA), paint(label.ljust(label_width), DIM))
+            content = prefix + "  " + value
+            lines.append(paint("│ ", GRAY) + fit(content, inner_width) + paint(" │", GRAY))
+        lines.append(bottom)
+        return lines
 
 
-    def get_ai_quota():
-        cache_path = os.path.expanduser("~/.cache/ai-quota.json")
-        data = None
-
-        # Check if cache exists
-        if os.path.exists(cache_path):
-            try:
-                # If cache is older than 10 minutes, trigger background refresh
-                mtime = os.path.getmtime(cache_path)
-                if datetime.now().timestamp() - mtime > 600:
-                    trigger_ai_quota_bg_refresh(cache_path)
-
-                with open(cache_path, encoding="utf-8") as f:
-                    data = json.load(f)
-            except Exception:
-                data = None
-        else:
-            # Trigger background fetch for future shells
-            trigger_ai_quota_bg_refresh(cache_path)
-
-        if not data or not data.get("providers"):
-            return []
-
-        rows = []
-        for p in data.get("providers", []):
-            pname = p.get("provider")
-            accounts = p.get("accounts", [])
-            for acct in accounts:
-                if acct.get("error"):
-                    continue
-                meters = acct.get("meters", [])
-                if not meters:
-                    continue
-
-                meter_strs = []
-                for m in meters:
-                    lbl = m.get("label", "")
-                    pct = float(m.get("pct", 0.0))
-                    # Shorten labels for clean display
-                    lbl_clean = lbl.replace("-minute", "m").replace("-hour", "h").replace("-week", "w")
-                    meter_strs.append("%s %s" % (lbl_clean, color_bar(pct, 8)))
-
-                notes = acct.get("notes", [])
-                note_str = ""
-                if notes:
-                    note_str = " " + paint("(" + notes[0][1] + ")", DIM)
-                elif acct.get("subtitle") and "plus" in acct.get("subtitle", ""):
-                    note_str = " " + paint("(plus)", DIM)
-
-                rows.append((pname, " · ".join(meter_strs) + note_str))
-        return rows
+    def header(hostname: str, os_name: str, kernel: str, width: int):
+        inner_width = width - 4
+        title = paint("●", GREEN) + " " + paint(hostname.upper(), BOLD, CYAN)
+        subtitle = paint(os_name, WHITE) + paint("  //  " + kernel, DIM)
+        timestamp = datetime.now().astimezone().strftime("%A, %d %B · %H:%M %Z")
+        eyebrow = paint(" NIX // SYSTEM STATUS ", BOLD, MAGENTA)
+        top = paint("╭", GRAY) + eyebrow + paint("─" * max(0, width - 2 - visible_len(eyebrow)), GRAY) + paint("╮", GRAY)
+        return [
+            top,
+            paint("│ ", GRAY) + fit(title, inner_width) + paint(" │", GRAY),
+            paint("│ ", GRAY) + fit(subtitle, inner_width) + paint(" │", GRAY),
+            paint("│ ", GRAY) + fit(paint(timestamp, DIM), inner_width) + paint(" │", GRAY),
+            paint("╰" + "─" * (width - 2) + "╯", GRAY),
+        ]
 
 
-    # --- Main Formatter & Display ---
+    def print_pair(left, right, gap=2):
+        left_width = visible_len(left[0])
+        for left_line, right_line in zip(left, right):
+            print(fit(left_line, left_width) + " " * gap + right_line)
 
 
     def main():
-        hostname, os_name, kernel = get_os_and_kernel()
-        uptime = get_uptime()
-        load = get_load()
-        memory = get_memory()
-        root_disk = get_root_disk()
-        gen_id = get_generation()
-        nix_store = get_nix_store()
-        ipv4 = get_ipv4()
-        ts_ipv4 = get_tailscale_ipv4()
-        sessions = get_sessions()
-        tmux_info = get_tmux_info()
-        zellij_info = get_zellij_info()
-        ai_quota = get_ai_quota()
+        hostname, os_name, kernel = get_system()
+        load, load_pct = get_load()
+        memory, memory_pct = get_memory()
+        root_disk, root_pct = get_root_disk()
 
-        term_width = shutil.get_terminal_size((80, 24)).columns
-        rule_width = min(term_width - 2, 78)
+        try:
+            terminal_width = int(os.environ.get("MOTD_COLUMNS", ""))
+        except ValueError:
+            terminal_width = 0
+        if terminal_width <= 0:
+            terminal_width = shutil.get_terminal_size((92, 24)).columns
+        width = max(24, min(terminal_width - 2, 108))
+        wide = width >= 88
 
-        # 1. Header
-        header = " %s %s %s %s %s" % (
-            paint(hostname, BOLD, CYAN),
-            paint("·", DIM),
-            paint(os_name, WHITE),
-            paint("·", DIM),
-            paint(kernel, DIM),
-        )
+        overview = [
+            ("Uptime", get_uptime()),
+            ("Load", load),
+            ("Logins", get_sessions()),
+            ("Cores", str(os.cpu_count() or "unknown")),
+        ]
+        resources = [
+            ("Memory", memory),
+            ("Root", root_disk),
+            ("Nix store", get_nix_store()),
+            ("Generation", get_generation()),
+        ]
+        connectivity = [
+            ("Local IPv4", get_ipv4()),
+            ("Tailscale", get_tailscale_ipv4()),
+        ]
+        workspaces = [
+            ("tmux", get_tmux_info()),
+            ("zellij", get_zellij_info()),
+        ]
+
         print()
-        print(header)
-        print(" %s" % paint("─" * rule_width, DIM))
+        for line in header(hostname, os_name, kernel, width):
+            print(line)
+        print()
 
-        # 2. System & Resources Table
-        gen_text = ("Gen " + gen_id) if gen_id else "N/A"
-        store_text = ("%s · %s" % (nix_store, gen_text)) if nix_store else gen_text
-
-        col1 = [
-            (pad_lbl(paint("Uptime:", DIM), 11), uptime),
-            (pad_lbl(paint("Load:", DIM), 11), load),
-            (pad_lbl(paint("Sessions:", DIM), 11), ", ".join(sessions) if sessions else "none"),
-            (pad_lbl(paint("IPv4:", DIM), 11), ipv4),
-        ]
-
-        col2 = [
-            (pad_lbl(paint("Memory:", DIM), 11), memory),
-            (pad_lbl(paint("Root (/):", DIM), 11), root_disk),
-            (pad_lbl(paint("Nix Store:", DIM), 11), store_text),
-            (pad_lbl(paint("Tailscale:", DIM), 11), ts_ipv4 if ts_ipv4 else paint("disconnected", DIM)),
-        ]
-
-        col1_w = max(visible_len(lbl) + visible_len(val) for lbl, val in col1)
-        col1_w = max(col1_w, 32)
-
-        # If terminal is very narrow (<70 cols), render stacked columns
-        if term_width < 70:
-            print(" %s" % paint("● System", BOLD, CYAN))
-            for lbl, val in col1:
-                print("   %s%s" % (lbl, val))
-            print("\n %s" % paint("● Resources & Storage", BOLD, CYAN))
-            for lbl, val in col2:
-                print("   %s%s" % (lbl, val))
+        if wide:
+            card_width = min(44, (width - 2) // 2)
+            print_pair(card("Overview", overview, card_width), card("Resources", resources, width - card_width - 2))
+            print()
+            print_pair(card("Connectivity", connectivity, card_width), card("Workspaces", workspaces, width - card_width - 2))
         else:
-            title1 = paint("● System", BOLD, CYAN)
-            title2 = paint("● Resources & Storage", BOLD, CYAN)
-            pad_title = (col1_w + 3) - visible_len(title1) + 1
-            print(" %s%s%s" % (title1, " " * max(1, pad_title), title2))
+            sections = (
+                card("Overview", overview, width),
+                card("Resources", resources, width),
+                card("Connectivity", connectivity, width),
+                card("Workspaces", workspaces, width),
+            )
+            for index, section in enumerate(sections):
+                if index:
+                    print()
+                for line in section:
+                    print(line)
 
-            for (lbl1, val1), (lbl2, val2) in zip(col1, col2):
-                pad1 = col1_w - (visible_len(lbl1) + visible_len(val1))
-                line = "   %s%s%s   %s%s" % (lbl1, val1, " " * max(0, pad1), lbl2, val2)
-                print(line)
-
-        # 3. Multiplexers Section
-        print("\n %s" % paint("● Multiplexers", BOLD, CYAN))
-        tmux_str = ", ".join(tmux_info) if tmux_info else paint("inactive", DIM)
-        zellij_str = ", ".join(zellij_info) if zellij_info else paint("inactive", DIM)
-        print("   %s %s" % (pad_lbl(paint("tmux:", DIM), 10), tmux_str))
-        print("   %s %s" % (pad_lbl(paint("zellij:", DIM), 10), zellij_str))
-
-        # 4. AI Quota Section (if present)
-        if ai_quota:
-            print("\n %s" % paint("● AI Quota", BOLD, CYAN))
-            for pname, qstr in ai_quota:
-                print("   %s %s" % (pad_lbl(paint(pname + ":", DIM), 14), qstr))
-
-        print()
+        pressures = [value for value in (load_pct, memory_pct, root_pct) if value is not None]
+        peak = max(pressures, default=0.0)
+        if peak >= 90:
+            status = paint("● ATTENTION", RED, BOLD)
+            message = paint("resource pressure is high", DIM)
+        elif peak >= 75:
+            status = paint("● WATCH", YELLOW, BOLD)
+            message = paint("resource pressure is elevated", DIM)
+        else:
+            status = paint("● NOMINAL", GREEN, BOLD)
+            message = paint("systems are operating normally", DIM)
+        print("\n  %s  %s\n" % (status, message))
 
 
     if __name__ == "__main__":
