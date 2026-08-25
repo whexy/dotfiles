@@ -240,11 +240,22 @@ in
             # semantics, and a running unit so `systemctl reload --user
             # app-com.mitchellh.ghostty.service` (used by ghostty-toggle-theme)
             # actually works.
+            #
+            # With ssh window multiplexing the spawn goes through `ssh-window
+            # launch` instead, which clones the focused window's SSH context;
+            # its niri backend keeps the same `+new-window` D-Bus activation.
             "${hyper}+T" = {
-              action.spawn = [
-                "ghostty"
-                "+new-window"
-              ];
+              action.spawn =
+                if config.dotfiles.ssh.windowMultiplexing.enable then
+                  [
+                    "${config.programs.ssh-window.package}/bin/ssh-window"
+                    "launch"
+                  ]
+                else
+                  [
+                    "ghostty"
+                    "+new-window"
+                  ];
               repeat = false;
             };
 

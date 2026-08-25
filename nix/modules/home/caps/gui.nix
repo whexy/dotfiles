@@ -16,6 +16,7 @@ in
     lib.recursiveUpdate
       {
         terminal.ghostty.enable = lib.mkDefault true;
+        ssh.windowMultiplexing.enable = lib.mkDefault true;
         browser.firefox.enable = lib.mkDefault true;
         panel.waybar.enable = lib.mkDefault (!isDarwin);
         panel.renpho.enable = lib.mkDefault true;

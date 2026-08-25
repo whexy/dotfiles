@@ -121,7 +121,12 @@ in
           cmd-alt-ctrl-shift-f = "layout floating tiling";
           cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
           cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
-          cmd-alt-ctrl-shift-t = "exec-and-forget open -a Ghostty";
+          cmd-alt-ctrl-shift-t =
+            if config.dotfiles.ssh.windowMultiplexing.enable then
+              # SSH-context aware: clones the focused window's ssh destination.
+              "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch"
+            else
+              "exec-and-forget open -a Ghostty";
           cmd-alt-ctrl-shift-q = "close";
 
           # service binding
