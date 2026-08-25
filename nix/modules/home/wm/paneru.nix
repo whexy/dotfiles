@@ -49,6 +49,14 @@ let
     config.programs.ghostty.settings.keybind or [ ]
   );
   luaStringList = lib.concatMapStringsSep ", " (s: ''"${s}"'');
+
+  # The terminal-spawn binding is SSH-context aware when multiplexing is on:
+  # `ssh-window launch` clones the focused window's SSH destination.
+  terminalLaunch =
+    if config.dotfiles.ssh.windowMultiplexing.enable then
+      "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &"
+    else
+      "/usr/bin/env -i /usr/bin/open -a Ghostty";
 in
 {
   config = lib.mkIf enabled {
@@ -158,7 +166,7 @@ in
         end)
 
         paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
-        paneru.bind(hyper .. " - t", function() os.execute("/usr/bin/env -i /usr/bin/open -a Ghostty") end)
+        paneru.bind(hyper .. " - t", function() os.execute("${terminalLaunch}") end)
       '';
     };
 

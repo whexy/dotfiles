@@ -69,6 +69,12 @@
       inputs.blueprint.follows = "blueprint";
     };
 
+    oh-my-ghostty = {
+      url = "github:whexy/oh-my-ghostty";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.blueprint.follows = "blueprint";
+    };
+
     blueprint = {
       url = "github:numtide/blueprint";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
