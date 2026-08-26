@@ -24,7 +24,4 @@
     "deepseek-v4-flash"
     "deepseek-v4-pro"
   ];
-  openrouter = [
-    "stealth/ox-alpha"
-  ];
 }
