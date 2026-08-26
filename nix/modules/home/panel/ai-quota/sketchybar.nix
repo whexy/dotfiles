@@ -27,10 +27,7 @@ let
   cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
   enabled =
-    cfg.sketchybar.enable
-    && pkgs.stdenv.hostPlatform.isDarwin
-    && config.dotfiles.agents.enable
-    && config.dotfiles.agents.enableProxyAccounts;
+    cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin && config.dotfiles.agents.enable;
 
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
@@ -40,6 +37,7 @@ let
     red = "0xffff453a"; # systemRed, quota critical
     blue = "0xff0a84ff"; # systemBlue, kimi accent
     orange = "0xffff9f0a"; # systemOrange, codex accent
+    green = "0xff30d158"; # systemGreen, OpenCode Go accent
     glassBorder = "0x40ffffff"; # 25% white hairline, popup edge highlight
     popup = "0xe61c1c1e"; # near-opaque dark sheet for popups
     sliderTrack = "0x40ffffff"; # 25% white, reads on the glass capsule
@@ -127,43 +125,70 @@ let
     };
   };
 
-  mkPillItem = provider: icon: accent: {
-    name = "ai_quota.${provider}";
-    kind = "slider";
-    width = 24;
-    side = "left";
-    settings = {
-      inherit icon;
-      update_freq = 60;
-      script = pillPlugin provider accent;
-      "slider.background.color" = colors.sliderTrack;
-      "slider.background.height" = 4;
-      "slider.background.corner_radius" = 2;
-      "slider.knob" = "";
-      "popup.horizontal" = "off";
-      "popup.align" = "left";
-      "popup.y_offset" = if barOnTop then "-8" else "8";
-      "popup.background.color" = colors.popup;
-      "popup.background.corner_radius" = 10;
-      "popup.background.border_width" = 1;
-      "popup.background.border_color" = colors.glassBorder;
+  mkPillItem =
+    provider:
+    {
+      logo,
+      logoScale,
+      accent,
+      ...
+    }:
+    {
+      name = "ai_quota.${provider}";
+      kind = "slider";
+      width = 24;
+      side = "left";
+      settings = {
+        icon = " ";
+        updates = "on";
+        update_freq = 60;
+        script = pillPlugin provider accent;
+        # The image padding positions the logo; the fixed icon width must also
+        # include that padding so the background image cannot reach the slider.
+        "icon.width" = 28;
+        "icon.padding_left" = 0;
+        "icon.padding_right" = 0;
+        "icon.background.drawing" = "on";
+        "icon.background.image" = logo;
+        "icon.background.image.scale" = logoScale;
+        "icon.background.image.padding_left" = 7;
+        "icon.background.image.padding_right" = 6;
+        "slider.background.color" = colors.sliderTrack;
+        "slider.background.height" = 4;
+        "slider.background.corner_radius" = 2;
+        "slider.knob" = "";
+        "popup.horizontal" = "off";
+        "popup.align" = "left";
+        "popup.y_offset" = if barOnTop then "-8" else "8";
+        "popup.background.color" = colors.popup;
+        "popup.background.corner_radius" = 10;
+        "popup.background.border_width" = 1;
+        "popup.background.border_color" = colors.glassBorder;
+      };
+      subscribe = [
+        "mouse.entered"
+        "mouse.exited"
+      ];
     };
-    subscribe = [
-      "mouse.entered"
-      "mouse.exited"
-    ];
-  };
 
   providers = [
     {
       name = "kimi";
-      icon = "󰽥";
+      logo = ./logos/kimi.png;
+      logoScale = 0.025;
       accent = colors.blue;
     }
     {
       name = "codex";
-      icon = "󰚩";
+      logo = ./logos/codex.png;
+      logoScale = 0.027;
       accent = colors.orange;
+    }
+    {
+      name = "opencode-go";
+      logo = ./logos/opencode-go.png;
+      logoScale = 0.025;
+      accent = colors.green;
     }
   ];
 
@@ -172,7 +197,7 @@ let
   extraItems = [
     fetcherItem
   ]
-  ++ map (p: mkPillItem p.name p.icon p.accent) providers
+  ++ map (p: mkPillItem p.name p) providers
   ++ lib.concatMap (p: map (mkDetailsItem p.name) popupSlots) providers;
 in
 {

@@ -109,9 +109,7 @@ in
         }
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
-        packages =
-          lib.concatMap (a: a.packages or [ ]) agents
-          ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
+        packages = lib.concatMap (a: a.packages or [ ]) agents ++ [ perSystem.self.ai-quota ];
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
       };
