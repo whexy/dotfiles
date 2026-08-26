@@ -1,4 +1,8 @@
 # AI coding agents configuration
+#
+# Tool-specific config lives in each tool's folder, which exports a common
+# contract: packages, homeFiles, shellAliases. This module keeps only shared
+# concerns: options, the global AGENTS.md, agenix secrets, and merging.
 args@{
   pkgs,
   config,
@@ -33,62 +37,56 @@ in
     let
       apiAccounts = cfg.enableApiAccounts;
       proxyAccounts = cfg.enableProxyAccounts;
-      opencode_settings = import ./opencode/config.nix {
-        inherit
-          config
-          lib
-          apiAccounts
-          proxyAccounts
-          ;
-      };
-      opencode_tui = import ./opencode/tui.nix;
-      pi_settings = import ./pi/settings.nix {
-        inherit
-          pkgs
-          lib
-          apiAccounts
-          proxyAccounts
-          ;
-      };
-      pi_models = import ./pi/models.nix {
-        inherit
-          config
-          pkgs
-          lib
-          apiAccounts
-          ;
-      };
-      pi_web_search = import ./pi/web-search.nix { inherit proxyAccounts; };
       withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
-      # Stamp the configured model into gcai via GCAI_MODEL.
-      gcai = pkgs.writeShellScriptBin "gcai" ''
-        export GCAI_MODEL=${lib.escapeShellArg cfg.gcai.model}
-        exec ${perSystem.self.gcai}/bin/gcai "$@"
-      '';
-      claude = withModelPicker {
-        name = "claude";
-        package = pkgs.llm-agents.claude-code;
-        entries = import ./claude-code/models.nix {
+      opencode = import ./opencode/home.nix {
+        inherit
+          pkgs
+          config
+          lib
+          apiAccounts
+          proxyAccounts
+          ;
+      };
+      agents = [
+        opencode
+        (import ./pi/home.nix {
           inherit
+            pkgs
             config
             lib
             apiAccounts
             proxyAccounts
             ;
-        };
-      };
-      codex = withModelPicker {
-        name = "codex";
-        package = pkgs.llm-agents.codex;
-        entries = import ./codex/models.nix {
+        })
+        (import ./claude-code/home.nix {
           inherit
+            pkgs
             config
             lib
             apiAccounts
             proxyAccounts
+            withModelPicker
             ;
-        };
-      };
+        })
+        (import ./codex/home.nix {
+          inherit
+            pkgs
+            config
+            lib
+            apiAccounts
+            proxyAccounts
+            withModelPicker
+            ;
+        })
+        (import ./gcai/home.nix {
+          inherit
+            pkgs
+            lib
+            perSystem
+            ;
+          model = cfg.gcai.model;
+        })
+      ];
     in
     {
       # The AI proxy lives on the tailnet; integrated hosts must run
@@ -102,35 +100,20 @@ in
       ];
 
       home = {
+        # Single source of truth for global agent rules; every agent reads it.
         file = {
-          # Single source of truth for global agent rules; every agent reads it.
           ".pi/agent/AGENTS.md".source = ./AGENTS.md;
           ".config/opencode/AGENTS.md".source = ./AGENTS.md;
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".claude/CLAUDE.md".source = ./AGENTS.md;
-          # Deploy the notification plugin so it is auto-loaded by OpenCode.
-          ".config/opencode/plugins/notify.js".source = ./opencode/plugins/notify.js;
-          ".pi/agent/settings.json".text = builtins.toJSON pi_settings;
-          ".pi/agent/models.json".text = builtins.toJSON pi_models;
-          ".pi/web-search.json".text = builtins.toJSON pi_web_search;
-          ".claude/settings.json".source = ./claude-code/settings.json;
         }
-        // lib.optionalAttrs proxyAccounts {
-          # Discover the proxy catalog and clone matching model metadata from pi.
-          ".pi/agent/extensions/ai-proxy.ts".source = ./pi/ai-proxy.ts;
-        };
+        // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
-        packages = [
-          pkgs.llm-agents.pi
-          claude
-          codex
-          gcai
-        ]
-        ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
+        packages =
+          lib.concatMap (a: a.packages or [ ]) agents
+          ++ lib.optionals proxyAccounts [ perSystem.self.ai-quota ];
 
-        shellAliases = {
-          oc = "opencode";
-        };
+        shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
       };
 
       age.secrets = {
@@ -173,9 +156,7 @@ in
       programs = {
         opencode = {
           enable = true;
-          package = pkgs.llm-agents.opencode;
-          settings = opencode_settings;
-          tui = opencode_tui;
+          inherit (opencode) package settings tui;
         };
       };
     }
