@@ -3,8 +3,9 @@
 # Renderer counterpart of ./waybar.nix, selected by
 # dotfiles.panel.linuxBar. Feature modules contribute through the
 # extension points below instead of editing the window definition:
-# defs appends yuck definitions (defpoll/defvar/defwidget) and
-# left/center/right name the widgets placed in the bar's three slots.
+# defs appends yuck definitions (defpoll/defvar/defwidget), styles
+# appends SCSS (palette variables stay in scope), and left/center/right
+# name the widgets placed in the bar's three slots.
 args@{
   config,
   lib,
@@ -127,7 +128,25 @@ let
       (bar-layout))
   '';
 
+  # Material You (Material 3) dark palette: tone-80 accent text over dark
+  # surface containers. Feature modules append state rules through
+  # dotfiles.panel.eww.styles and can reuse these variables (same file).
   scss = ''
+    // Material You dark palette.
+    $primary: #d0bcff;
+    $on-primary: #381e72;
+    $primary-container: #4f378b;
+    $on-primary-container: #eaddff;
+    $secondary-container: #4a4458;
+    $error: #f2b8b5;
+    $warning: #eac46d;
+    $surface: #141218;
+    $surface-container-high: #2b2930;
+    $surface-container-highest: #36343b;
+    $on-surface: #e6e0e9;
+    $on-surface-variant: #cac4d0;
+    $on-surface-dim: rgba(230, 224, 233, 0.5);
+
     * {
       all: unset;
       font-family: "JetBrainsMono Nerd Font", monospace;
@@ -135,15 +154,17 @@ let
     }
 
     #bar {
-      background-color: rgba(40, 40, 40, 0.9);
-      color: #ebdbb2;
+      background-color: rgba(20, 18, 24, 0.92);
+      color: $on-surface;
+      padding: 0 4px;
     }
 
+    // Tonal chips: full-rounded containers with tone-80 accent text.
     .pill {
-      background-color: #3c3836;
-      border-radius: 10px;
-      padding: 2px 10px;
-      margin: 3px 2px;
+      background-color: $surface-container-high;
+      border-radius: 13px;
+      padding: 2px 12px;
+      margin: 4px 3px;
     }
 
     .tray {
@@ -152,33 +173,41 @@ let
     }
 
     .network {
-      color: #689d6a;
+      color: #a8c7fa;
     }
 
     .cpu {
-      color: #d79921;
+      color: #efb8c8;
     }
 
     .memory {
-      color: #458588;
+      color: #ccc2dc;
     }
 
     .disk {
-      color: #b16286;
+      color: #d0bcff;
     }
 
     .bluetooth {
-      color: #83a598;
+      color: #80d5c6;
+    }
+
+    .bluetooth:hover {
+      background-color: $surface-container-highest;
     }
 
     .battery {
-      color: #98971a;
+      color: #b1d18b;
     }
 
+    // Filled tonal button: the bar's one saturated element.
     .clock {
-      background-color: #504945;
+      background-color: $primary-container;
+      color: $on-primary-container;
       font-weight: bold;
     }
+
+    ${cfg.eww.styles}
   '';
 
   # Store-path copies double as reload triggers for the opener unit below;
@@ -192,6 +221,12 @@ in
       type = lib.types.lines;
       default = "";
       description = "Extra yuck definitions (defpoll/defvar/defwidget) merged into eww.yuck.";
+    };
+
+    styles = lib.mkOption {
+      type = lib.types.lines;
+      default = "";
+      description = "Extra SCSS appended to eww.scss after the base styles, so the Material You palette variables stay in scope.";
     };
 
     left = lib.mkOption {

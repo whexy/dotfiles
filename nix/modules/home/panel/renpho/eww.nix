@@ -34,7 +34,8 @@ let
     summary="$(${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} "$cache" 2>/dev/null)" ||
       { printf '${icon} …\n'; exit 0; }
 
-    exec ${jq} -cn --argjson summary "$summary" --arg icon '${icon}' '
+    # Raw output: -c would JSON-encode the label, leaving literal quotes.
+    exec ${jq} -rn --argjson summary "$summary" --arg icon '${icon}' '
       def rounded: (. * 10 | round / 10 | tostring);
       if $summary.present == false then ($icon + " …")
       else
@@ -68,6 +69,12 @@ in
       '';
 
       right = lib.mkAfter [ "renpho" ];
+
+      styles = ''
+        .renpho {
+          color: #efb876;
+        }
+      '';
     };
   };
 }

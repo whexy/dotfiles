@@ -18,11 +18,17 @@ let
 
   enabled = cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
 
+  # One JSON record per workspace so the widget can render per-workspace
+  # buttons with focused/occupied/empty states (niri's fields are
+  # is_focused/active_window_id).
   workspacesScript = pkgs.writeShellScript "eww-niri-workspaces" ''
     state="$(${niri} msg --json workspaces 2>/dev/null)" || exit 0
-    exec ${jq} -r 'sort_by(.idx)
-      | map(if .focused then "[\( .idx)]" else "\( .idx)" end)
-      | join(" ")' <<<"$state"
+    exec ${jq} -c '[sort_by(.idx)[]
+      | {
+          idx: (.idx | tostring),
+          focused: .is_focused,
+          occupied: (.active_window_id != null)
+        }]' <<<"$state"
   '';
 
   # Same title rewrites as the Waybar module.
@@ -39,12 +45,57 @@ in
   config = lib.mkIf enabled {
     dotfiles.panel.eww = {
       defs = ''
-        (defpoll WORKSPACES :interval "1s" "${workspacesScript}")
+        (defpoll WORKSPACES :interval "1s" :initial "[]" "${workspacesScript}")
         (defpoll WINDOW_TITLE :interval "1s" "${windowTitleScript}")
 
-        (defwidget workspaces [] (box :class "pill workspaces" (label :text WORKSPACES)))
+        ; One button per workspace so the focused one can be highlighted and
+        ; empty ones dimmed (the paneru SketchyBar states); clicks switch.
+        (defwidget workspaces []
+          (box :class "pill workspaces" :spacing 2 :visible {jq(WORKSPACES, "length") > 0}
+            (for ws in {WORKSPACES}
+              (button
+                :class {"ws" + (ws.focused ? " focused" : (ws.occupied ? " occupied" : " empty"))}
+                :onclick {"${niri} msg action focus-workspace " + ws.idx}
+                (label :text {ws.idx})))))
         (defwidget window-title []
           (box :class "pill window-title" (label :text WINDOW_TITLE :limit-width 50)))
+      '';
+
+      styles = ''
+        // Focused = filled primary pill, occupied = full emphasis, empty =
+        // dimmed; mirrors the paneru SketchyBar workspace states.
+        .workspaces {
+          padding: 2px 5px;
+        }
+
+        .workspaces .ws {
+          border-radius: 10px;
+          padding: 0 8px;
+          color: $on-surface-dim;
+        }
+
+        .workspaces .ws.occupied {
+          color: $on-surface;
+        }
+
+        .workspaces .ws.focused {
+          background-color: $primary;
+          color: $on-primary;
+          font-weight: bold;
+        }
+
+        .workspaces .ws:hover {
+          background-color: $surface-container-highest;
+        }
+
+        .workspaces .ws.focused:hover {
+          background-color: $primary;
+        }
+
+        // Dimmed secondary readout, like SketchyBar's front app.
+        .window-title {
+          color: $on-surface-variant;
+        }
       '';
 
       left = lib.mkMerge [
