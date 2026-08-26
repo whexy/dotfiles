@@ -1,6 +1,6 @@
 # Waybar quota meters (Linux).
 #
-# A hidden fetcher module refreshes the shared cache every 5 minutes; each
+# A hidden fetcher module refreshes the shared cache once a minute; each
 # meter polls it once a minute and renders the best account's remaining quota
 # as a compact progress bar. Hovering shows the same account-free, multiline
 # quota details as SketchyBar. Settings and style are merged in with mkAfter,

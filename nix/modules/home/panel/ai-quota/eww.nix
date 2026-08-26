@@ -96,7 +96,7 @@ in
     dotfiles.panel.eww = {
       defs = ''
         ; Hidden poll keeping the shared cache fresh; its value is unused.
-        (defpoll AI_QUOTA_FETCH :interval "300s" "${updateCacheScript}")
+        (defpoll AI_QUOTA_FETCH :interval "60s" "${updateCacheScript}")
       ''
       + lib.concatMapStringsSep "\n" providerDefs providers;
 
