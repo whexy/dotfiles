@@ -1,6 +1,6 @@
 # SketchyBar quota pills (macOS).
 #
-# A hidden fetcher item refreshes the shared cache every 5 minutes; each
+# A hidden fetcher item refreshes the shared cache once a minute; each
 # slider polls it once a minute and renders the best account's remaining
 # quota (see ./summary.jq). Hovering it opens a compact glass panel with one
 # native progress meter per quota window.
