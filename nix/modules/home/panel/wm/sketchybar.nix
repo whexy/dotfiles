@@ -19,6 +19,7 @@ let
   aerospace = lib.getExe pkgs.unstable.aerospace;
   paneru = lib.getExe config.services.paneru.finalPackage;
   jq = lib.getExe pkgs.jq;
+  sshWindow = lib.getExe config.programs.ssh-window.package;
 
   wmEnabled = config.dotfiles.wm.darwin.enable;
   windowManager = config.dotfiles.wm.darwin.windowManager;
@@ -33,6 +34,9 @@ let
     glass = "0x1affffff"; # 10% white, shared capsule backgrounds
     glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
     blue = "0xff0a84ff"; # systemBlue, active workspace pill
+    green = "0xff30d158"; # systemGreen, live SSH context
+    greenGlass = "0x2630d158"; # 15% systemGreen, SSH pill background
+    greenBorder = "0x8030d158"; # 50% systemGreen, SSH pill border
   };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-wm-${name}";
@@ -76,6 +80,16 @@ let
     fi
 
     ${sketchybar} --set "$NAME" label="''${app:-Desktop}"
+  '';
+
+  # Focus changes are not the only invalidation: starting or ending ssh can
+  # change the focused window's binding in place, so this item also polls.
+  sshContextPlugin = mkPlugin "ssh-context" ''
+    if destination="$(${sshWindow} current 2>/dev/null)" && [ -n "$destination" ]; then
+      ${sketchybar} --set "$NAME" drawing=on label="$destination"
+    else
+      ${sketchybar} --set "$NAME" drawing=off
+    fi
   '';
 
   # Paneru events are invalidation hints rather than durable state. Query one
@@ -191,8 +205,29 @@ let
     ];
   };
 
+  sshContextItem = {
+    name = "ssh_context";
+    side = "left";
+    settings = {
+      drawing = "off";
+      updates = "on";
+      update_freq = 1;
+      script = sshContextPlugin;
+      icon = "󰣀";
+      "icon.color" = colors.green;
+      "label.color" = colors.fg;
+      "label.max_chars" = 40;
+      "background.color" = colors.greenGlass;
+      "background.border_color" = colors.greenBorder;
+    };
+    subscribe = [ "wm_state_change" ];
+  };
+
   wmItems =
-    (map workspaceItem (lib.range 1 9)) ++ lib.optional isPaneru paneruStateItem ++ [ frontAppItem ];
+    (map workspaceItem (lib.range 1 9))
+    ++ lib.optional isPaneru paneruStateItem
+    ++ [ frontAppItem ]
+    ++ lib.optional config.dotfiles.ssh.windowMultiplexing.enable sshContextItem;
 
   mkAgent = name: programArguments: {
     enable = true;

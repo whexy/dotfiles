@@ -15,6 +15,7 @@ let
 
   niri = lib.getExe config.programs.niri.package;
   jq = lib.getExe pkgs.jq;
+  sshWindow = lib.getExe config.programs.ssh-window.package;
 
   enabled = cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
 
@@ -40,6 +41,10 @@ let
     esac
     printf '%s' "$title"
   '';
+
+  sshContextScript = pkgs.writeShellScript "eww-ssh-context" ''
+    ${sshWindow} current 2>/dev/null || true
+  '';
 in
 {
   config = lib.mkIf enabled {
@@ -47,6 +52,9 @@ in
       defs = ''
         (defpoll WORKSPACES :interval "1s" :initial "[]" "${workspacesScript}")
         (defpoll WINDOW_TITLE :interval "1s" "${windowTitleScript}")
+        ${lib.optionalString config.dotfiles.ssh.windowMultiplexing.enable ''
+          (defpoll SSH_CONTEXT :interval "1s" :initial "" "${sshContextScript}")
+        ''}
 
         ; One button per workspace so the focused one can be highlighted and
         ; empty ones dimmed (the paneru SketchyBar states); clicks switch.
@@ -59,6 +67,11 @@ in
                 (label :text {ws.idx})))))
         (defwidget window-title []
           (box :class "pill window-title" (label :text WINDOW_TITLE :limit-width 50)))
+        ${lib.optionalString config.dotfiles.ssh.windowMultiplexing.enable ''
+          (defwidget ssh-context []
+            (box :class "pill ssh-context" :visible {SSH_CONTEXT != ""}
+              (label :text {"󰣀 " + SSH_CONTEXT} :limit-width 40)))
+        ''}
       '';
 
       styles = ''
@@ -96,11 +109,19 @@ in
         .window-title {
           color: $on-surface-variant;
         }
+
+        .ssh-context {
+          color: #b1d18b;
+          background-color: rgba(177, 209, 139, 0.14);
+          border: 1px solid rgba(177, 209, 139, 0.5);
+        }
       '';
 
       left = lib.mkMerge [
         (lib.mkBefore [ "workspaces" ])
-        (lib.mkAfter [ "window-title" ])
+        (lib.mkAfter (
+          [ "window-title" ] ++ lib.optional config.dotfiles.ssh.windowMultiplexing.enable "ssh-context"
+        ))
       ];
     };
   };
