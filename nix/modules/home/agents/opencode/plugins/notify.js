@@ -5,34 +5,36 @@
 // receives and displays it without any local helper programs.
 //
 // Format: ESC ] 777 ; notify ; <title> ; <body> ST
-export const NotifyPlugin = async ({ client }) => ({
-  event: async ({ event }) => {
-    if (event.type !== "session.idle") return;
+//
+// V2 port: the loader requires a default-exported { id, setup } module. The
+// plugin context does not expose the todo list, so the body only carries the
+// session title.
+import { writeFile } from "node:fs/promises";
 
-    const { sessionID } = event.properties;
-
-    const { data: session } = await client.session.get({
-      path: { id: sessionID },
-    });
-    const { data: todos } = await client.session.todo({
-      path: { id: sessionID },
-    });
-
-    const remaining = todos.filter(
-      (t) => t.status === "pending" || t.status === "in_progress",
-    ).length;
-
-    let body = session.title || "Session idle";
-    if (remaining > 0)
-      body += ` — ${remaining} todo${remaining > 1 ? "s" : ""} remaining`;
-    if (session.summary?.files > 0) {
-      const { files, additions, deletions } = session.summary;
-      body += ` (${files} file${files > 1 ? "s" : ""}, +${additions}/-${deletions})`;
-    }
-
-    // Write directly to the controlling terminal device — bypasses the TUI
-    // and works transparently over SSH.
-    const fs = await import("fs");
-    fs.writeFileSync("/dev/tty", `\x1b]777;notify;OpenCode;${body}\x1b\\`);
+export default {
+  id: "dotfiles.notify",
+  async setup(ctx) {
+    // Detached loop; plugin unload closes the underlying stream.
+    void (async () => {
+      for await (const event of ctx.event.subscribe()) {
+        if (event.type !== "session.idle") continue;
+        let body = "Session idle";
+        const sessionID = event.properties?.sessionID;
+        if (sessionID) {
+          const session = await ctx.session
+            .get({ sessionID })
+            .catch(() => null);
+          if (session?.title) body = session.title;
+        }
+        // Strip control characters so the title cannot break the OSC sequence.
+        body = body.replace(/[\x00-\x1f\x7f]/g, " ");
+        // Write directly to the controlling terminal device — bypasses the TUI
+        // and works transparently over SSH.
+        await writeFile(
+          "/dev/tty",
+          "\x1b]777;notify;OpenCode;" + body + "\x1b\\",
+        ).catch(() => {});
+      }
+    })();
   },
-});
+};

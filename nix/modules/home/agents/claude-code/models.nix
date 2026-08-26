@@ -68,7 +68,7 @@ in
     "gpt-5.6-sol"
     "gpt-5.6-terra"
     "gemini-3.1-pro-preview"
-    "gemini-3.6-flash"
+    "gemini-3.7-flash"
   ]
 )
 ++ lib.optionals apiAccounts (
