@@ -2,8 +2,8 @@
 #
 # A hidden fetcher item refreshes the shared cache every 5 minutes; each
 # slider polls it once a minute and renders the best account's remaining
-# quota (see ./summary.jq). Hovering it opens a compact vertical popup with
-# one quota window per line.
+# quota (see ./summary.jq). Hovering it opens a compact glass panel with one
+# native progress meter per quota window.
 args@{
   config,
   lib,
@@ -32,14 +32,15 @@ let
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
     fg = "0xffffffff";
+    fgDim = "0xb3ffffff"; # 70% white, secondary popup text
     gray = "0xff98989d"; # systemGray, unknown state
     yellow = "0xffffd60a"; # systemYellow, quota warning
     red = "0xffff453a"; # systemRed, quota critical
     blue = "0xff0a84ff"; # systemBlue, kimi accent
     orange = "0xffff9f0a"; # systemOrange, codex accent
     green = "0xff30d158"; # systemGreen, OpenCode Go accent
+    glass = "0x1affffff"; # 10% white, matching the bar capsules
     glassBorder = "0x40ffffff"; # 25% white hairline, popup edge highlight
-    popup = "0xe61c1c1e"; # near-opaque dark sheet for popups
     sliderTrack = "0x40ffffff"; # 25% white, reads on the glass capsule
   };
 
@@ -76,12 +77,25 @@ let
 
       if [ "$SENDER" = "mouse.entered" ]; then
         for slot in ${lib.concatStringsSep " " (map toString popupSlots)}; do
-          details="ai_quota.${provider}.details.$slot"
-          content="$(printf '%s' "$summary" | ${jq} -r --argjson index "$((slot - 1))" '.compact_lines[$index] // empty')"
-          if [ -n "$content" ]; then
-            ${sketchybar} --set "$details" drawing=on label="$content" label.color="$color"
+          meter="ai_quota.${provider}.meter.$slot"
+          meter_state="$(printf '%s' "$summary" | ${jq} -r --argjson index "$((slot - 1))" '.compact_meters[$index].state // empty')"
+          if [ -n "$meter_state" ]; then
+            meter_label="$(printf '%s' "$summary" | ${jq} -r --argjson index "$((slot - 1))" '.compact_meters[$index].label')"
+            meter_remaining="$(printf '%s' "$summary" | ${jq} -r --argjson index "$((slot - 1))" '.compact_meters[$index].remaining | round')"
+            meter_reset="$(printf '%s' "$summary" | ${jq} -r --argjson index "$((slot - 1))" '.compact_meters[$index].reset // "—"')"
+            case "$meter_state" in
+              ok) meter_color=${accent} ;;
+              warning) meter_color=${colors.yellow} ;;
+              critical) meter_color=${colors.red} ;;
+              *) meter_color=${colors.gray} ;;
+            esac
+            ${sketchybar} --set "$meter" drawing=on \
+              icon="$meter_label" \
+              label="''${meter_remaining}%  ·  ''${meter_reset}" \
+              slider.percentage="$meter_remaining" \
+              slider.highlight_color="$meter_color"
           else
-            ${sketchybar} --set "$details" drawing=off
+            ${sketchybar} --set "$meter" drawing=off
           fi
         done
         ${sketchybar} --set "$NAME" popup.drawing=on
@@ -114,14 +128,42 @@ let
 
   popupSlots = lib.range 1 4;
 
-  # Newlines in an item label are rendered horizontally, so each quota window
-  # gets its own popup item. Unused slots stay hidden.
-  mkDetailsItem = provider: slot: {
-    name = "ai_quota.${provider}.details.${toString slot}";
+  # A popup slider is a native progress meter: the icon names the window, the
+  # center bar shows remaining quota, and the label gives the exact value and
+  # reset countdown. Unused slots stay hidden.
+  mkMeterItem = provider: slot: {
+    name = "ai_quota.${provider}.meter.${toString slot}";
+    kind = "slider";
+    width = 112;
     side = "popup.ai_quota.${provider}";
     settings = {
       drawing = "off";
-      "label.font" = "JetBrainsMono Nerd Font:Medium:11.0";
+      padding_left = 8;
+      padding_right = 8;
+      icon = "";
+      "icon.font" = ".AppleSystemUIFont:Semibold:11.5";
+      "icon.color" = colors.fg;
+      "icon.width" = 60;
+      "icon.align" = "left";
+      "icon.padding_left" = 8;
+      "icon.padding_right" = 8;
+      label = "";
+      "label.font" = ".AppleSystemUIFont:Medium:11.5";
+      "label.color" = colors.fgDim;
+      "label.width" = 116;
+      "label.align" = "right";
+      "label.padding_left" = 14;
+      "label.padding_right" = 10;
+      "slider.background.color" = colors.sliderTrack;
+      "slider.background.height" = 6;
+      "slider.background.corner_radius" = 3;
+      "slider.knob" = "";
+      "background.drawing" = "on";
+      "background.color" = colors.glass;
+      "background.height" = 30;
+      "background.corner_radius" = 15;
+      "background.border_width" = 1;
+      "background.border_color" = colors.glassBorder;
     };
   };
 
@@ -160,10 +202,9 @@ let
         "popup.horizontal" = "off";
         "popup.align" = "left";
         "popup.y_offset" = if barOnTop then "-8" else "8";
-        "popup.background.color" = colors.popup;
-        "popup.background.corner_radius" = 10;
-        "popup.background.border_width" = 1;
-        "popup.background.border_color" = colors.glassBorder;
+        "popup.height" = 38;
+        "popup.blur_radius" = 0;
+        "popup.background.drawing" = "off";
       };
       subscribe = [
         "mouse.entered"
@@ -198,7 +239,7 @@ let
     fetcherItem
   ]
   ++ map (p: mkPillItem p.name p) providers
-  ++ lib.concatMap (p: map (mkDetailsItem p.name) popupSlots) providers;
+  ++ lib.concatMap (p: map (mkMeterItem p.name) popupSlots) providers;
 in
 {
   config = lib.mkIf enabled {
