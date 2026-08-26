@@ -17,34 +17,32 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  aiQuota = "${perSystem.self.ai-quota}/bin/ai-quota";
+  shared = import ./shared.nix {
+    inherit
+      config
+      lib
+      pkgs
+      perSystem
+      ;
+  };
+
+  inherit (shared)
+    cacheFile
+    providers
+    updateCacheScript
+    ;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
-  cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
-
-  providers = [
-    {
-      name = "kimi";
-      icon = "󰽥";
-    }
-    {
-      name = "codex";
-      icon = "󰚩";
-    }
-  ];
 
   enabled =
     cfg.waybar.enable
+    && cfg.linuxBar == "waybar"
     && (!isDarwin)
     && config.dotfiles.agents.enable
     && config.dotfiles.agents.enableProxyAccounts;
 
   fetchScript = pkgs.writeShellScript "waybar-ai-quota-fetch" ''
-    out="$(${aiQuota} --json 2>/dev/null)" || exit 0
-    mkdir -p "$(dirname "${cacheFile}")"
-    tmp="${cacheFile}.tmp.$$"
-    printf '%s\n' "$out" > "$tmp"
-    mv "$tmp" "${cacheFile}"
+    ${updateCacheScript}
     printf '{"text":"","class":"empty"}\n'
   '';
 

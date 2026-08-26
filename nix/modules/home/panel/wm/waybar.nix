@@ -1,4 +1,5 @@
-# Waybar window-manager modules (Linux, niri).
+# Waybar window-manager modules (Linux, niri). The Eww counterpart lives
+# in ../eww.nix; both are selected by dotfiles.panel.linuxBar.
 #
 # Contributes niri/workspaces and niri/window around the core bar's
 # idle_inhibitor in modules-left: mkBefore lands workspaces before it and
@@ -15,7 +16,7 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  enabled = cfg.waybar.enable && (!isDarwin);
+  enabled = cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 in
 {
   config = lib.mkIf enabled {

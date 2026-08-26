@@ -8,5 +8,6 @@
   imports = [
     ./sketchybar.nix
     ./waybar.nix
+    ./eww.nix
   ];
 }

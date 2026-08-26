@@ -17,7 +17,7 @@ let
   summaryCount = 5;
   staleAfter = 36 * 60 * 60;
 
-  enabled = cfg.renpho.enable && cfg.waybar.enable && (!isDarwin);
+  enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 
   pillScript = pkgs.writeShellScript "waybar-renpho" ''
     cache=${lib.escapeShellArg hcfg.cachePath}
