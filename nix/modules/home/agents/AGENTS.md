@@ -70,6 +70,11 @@ Example: `feat(auth): implement JWT token refresh strategy`
 
 Commit message must be plain text, no markdown. Bullet list is allowed.
 
+**Tagging commits**
+
+Run `git tag <tag-name>` will stuck the session since I have `tag.gpgsign=true`.
+By default, you should use commands like `git tag -s v0.1 -m "v0.1"`.
+
 **Disclosure**
 
 All covered use of automated tooling for a contribution must be disclosed as
