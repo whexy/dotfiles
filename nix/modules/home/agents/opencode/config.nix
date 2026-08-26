@@ -42,6 +42,7 @@
   // lib.optionalAttrs proxyAccounts {
     ai-proxy = {
       name = "AI Proxy";
+      env = [ "AI_PROXY_API_KEY" ];
       npm = "@ai-sdk/openai-compatible";
       options = {
         baseURL = "https://ai-proxy.at-basking.ts.net/v1";
