@@ -121,11 +121,11 @@ in
           margin-left: 6px;
         }
 
-        // GTK progressbars request ~150px by default; min-width must be set
-        // on all three CSS nodes to shrink them.
+        // GTK progressbars request ~150px by default. The widget and trough
+        // establish the compact track width; the progress node must remain
+        // unconstrained so GTK can size it to the current percentage.
         .quota-bar,
-        .quota-bar trough,
-        .quota-bar progress {
+        .quota-bar trough {
           min-width: 56px;
         }
 
@@ -136,6 +136,7 @@ in
         }
 
         .quota-bar progress {
+          min-width: 0;
           min-height: 6px;
           border-radius: 3px;
           background-color: $primary;
