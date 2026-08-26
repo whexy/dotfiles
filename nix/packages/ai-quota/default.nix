@@ -1,14 +1,9 @@
 { pkgs }:
 
-# Fetch quota for all accounts on the tailnet AI proxy (CLIProxyAPI).
+# Fetch quota for direct subscriptions and accounts on the tailnet AI proxy.
 #
-# Each provider has its own quota endpoint and response shape; PROVIDERS
-# maps a provider to its request template (sent through the management
-# /api-call endpoint, which substitutes $TOKEN$ with the account's OAuth
-# token) and a parser that normalizes the response into meters.
-#
-# The management key is provisioned by agenix (see the dotfiles.agents home
-# module). Override with MGMT_KEY / MGMT_KEY_FILE if needed.
+# Proxy providers use CLIProxyAPI's management /api-call endpoint. Direct
+# providers authenticate from their own agenix-provisioned key files.
 pkgs.writers.writePython3Bin "ai-quota"
   {
     flakeIgnore = [
@@ -17,7 +12,7 @@ pkgs.writers.writePython3Bin "ai-quota"
     ];
   }
   ''
-    """Fetch quota for all accounts on the AI proxy.
+    """Fetch quota for configured AI accounts.
 
     Pass --json for machine-readable output (consumed by the bar pills).
     """
@@ -25,12 +20,14 @@ pkgs.writers.writePython3Bin "ai-quota"
     import json
     import os
     import sys
+    import urllib.error
     import urllib.request
     from datetime import datetime, timezone
 
     API_BASE = "https://ai-proxy.at-basking.ts.net"
     MGMT = API_BASE + "/v0/management"
     KEY_FILE = os.path.expanduser("~/.secrets/ai-proxy-mgmt-key")
+    OPENCODE_KEY_FILE = os.path.expanduser("~/.secrets/opencode-api-key")
 
     BAR_WIDTH = 20
 
@@ -173,6 +170,21 @@ pkgs.writers.writePython3Bin "ai-quota"
         return subtitle, meters, notes
 
 
+    def parse_opencode_go(body):
+        meters = []
+        for label, usage in (body.get("usage") or {}).items():
+            if not isinstance(usage, dict):
+                continue
+            meters.append(
+                {
+                    "label": "5-hour" if label == "rolling" else label,
+                    "pct": float(usage.get("percent") or 0),
+                    "reset": parse_time(usage.get("resetsAt")),
+                }
+            )
+        return None, meters, []
+
+
     def parse_antigravity(body):
         # Buckets share quota pools; group models with identical usage and
         # reset time into one meter instead of listing every model.
@@ -240,16 +252,31 @@ pkgs.writers.writePython3Bin "ai-quota"
     }
 
 
-    def load_key():
-        key = os.environ.get("MGMT_KEY")
+    def load_key(env_name, file_env_name, default_file):
+        key = os.environ.get(env_name)
         if key:
             return key
-        key_file = os.environ.get("MGMT_KEY_FILE", KEY_FILE)
+        key_file = os.environ.get(file_env_name, default_file)
         try:
             with open(key_file, encoding="utf-8") as f:
                 return f.read().strip()
-        except OSError as exc:
-            sys.exit("error: cannot read management key from %s: %s" % (key_file, exc))
+        except OSError:
+            return None
+
+
+    def direct_api(url, key, timeout=30):
+        req = urllib.request.Request(
+            url,
+            headers={
+                "Authorization": "Bearer " + key,
+                "User-Agent": "opencode/ai-quota",
+            },
+        )
+        try:
+            with urllib.request.urlopen(req, timeout=timeout) as resp:
+                return {"status_code": resp.status, "body": resp.read().decode()}
+        except urllib.error.HTTPError as exc:
+            return {"status_code": exc.code, "body": exc.read().decode()}
 
 
     def api(key, path, payload=None, timeout=30):
@@ -336,16 +363,15 @@ pkgs.writers.writePython3Bin "ai-quota"
             print("    " + r)
 
 
-    def fetch_providers(key):
+    def fetch_proxy_providers(key):
+        if not key:
+            return []
         files = api(key, "/auth-files", timeout=20).get("files", [])
         accounts = {}
         for f in files:
             provider = f.get("provider")
             if provider in PROVIDERS and not f.get("disabled"):
                 accounts.setdefault(provider, []).append(f)
-        if not accounts:
-            sys.exit("No enabled auth files with a known quota endpoint found.")
-
         providers = []
         for provider, spec in PROVIDERS.items():
             if provider not in accounts:
@@ -374,12 +400,33 @@ pkgs.writers.writePython3Bin "ai-quota"
         return providers
 
 
-    def main():
-        key = load_key()
+    def fetch_opencode_go(key):
+        if not key:
+            return None
         try:
-            providers = fetch_providers(key)
+            resp = direct_api("https://opencode.ai/zen/go/v1/usage", key)
         except OSError as exc:
-            sys.exit("error: failed to list auth files: %s" % exc)
+            resp = {"status_code": 0, "body": str(exc)}
+        return {
+            "provider": "opencode-go",
+            "accounts": [build_account("OpenCode Go", resp, parse_opencode_go)],
+        }
+
+
+    def main():
+        mgmt_key = load_key("MGMT_KEY", "MGMT_KEY_FILE", KEY_FILE)
+        opencode_key = load_key(
+            "OPENCODE_API_KEY", "OPENCODE_API_KEY_FILE", OPENCODE_KEY_FILE
+        )
+        try:
+            providers = fetch_proxy_providers(mgmt_key)
+        except OSError as exc:
+            sys.exit("error: failed to list proxy auth files: %s" % exc)
+        opencode = fetch_opencode_go(opencode_key)
+        if opencode:
+            providers.append(opencode)
+        if not providers:
+            sys.exit("No configured accounts with a known quota endpoint found.")
 
         if "--json" in sys.argv[1:]:
             print(json.dumps({"providers": providers}))

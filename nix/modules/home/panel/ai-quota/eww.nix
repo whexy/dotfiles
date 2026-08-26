@@ -33,11 +33,7 @@ let
   summaryFilter = ./summary.jq;
 
   enabled =
-    cfg.waybar.enable
-    && cfg.linuxBar == "eww"
-    && (!isDarwin)
-    && config.dotfiles.agents.enable
-    && config.dotfiles.agents.enableProxyAccounts;
+    cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin) && config.dotfiles.agents.enable;
 
   # Yuck variable names cannot contain hyphens (kimi -> KIMI).
   toVarName = name: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] name);

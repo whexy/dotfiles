@@ -22,6 +22,10 @@ let
       name = "codex";
       icon = "󰚩";
     }
+    {
+      name = "opencode-go";
+      icon = "󰘦";
+    }
   ];
 
   # Refreshes the shared JSON cache both renderers poll.

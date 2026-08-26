@@ -35,11 +35,7 @@ let
   summaryFilter = ./summary.jq;
 
   enabled =
-    cfg.waybar.enable
-    && cfg.linuxBar == "waybar"
-    && (!isDarwin)
-    && config.dotfiles.agents.enable
-    && config.dotfiles.agents.enableProxyAccounts;
+    cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin) && config.dotfiles.agents.enable;
 
   fetchScript = pkgs.writeShellScript "waybar-ai-quota-fetch" ''
     ${updateCacheScript}
@@ -101,7 +97,8 @@ in
 
     programs.waybar.style = lib.mkAfter ''
       #custom-ai-quota-kimi,
-      #custom-ai-quota-codex {
+      #custom-ai-quota-codex,
+      #custom-ai-quota-opencode-go {
         padding: 2px 10px;
         margin: 3px 2px;
         border-radius: 10px;
@@ -111,29 +108,34 @@ in
       }
 
       #custom-ai-quota-kimi:hover,
-      #custom-ai-quota-codex:hover {
+      #custom-ai-quota-codex:hover,
+      #custom-ai-quota-opencode-go:hover {
         background-color: #504945;
       }
 
       #custom-ai-quota-kimi.warning,
-      #custom-ai-quota-codex.warning {
+      #custom-ai-quota-codex.warning,
+      #custom-ai-quota-opencode-go.warning {
         color: #d79921;
       }
 
       #custom-ai-quota-kimi.critical,
-      #custom-ai-quota-codex.critical {
+      #custom-ai-quota-codex.critical,
+      #custom-ai-quota-opencode-go.critical {
         color: #fb4934;
       }
 
       #custom-ai-quota-kimi.error,
-      #custom-ai-quota-codex.error {
+      #custom-ai-quota-codex.error,
+      #custom-ai-quota-opencode-go.error {
         color: #928374;
       }
 
       /* Collapse absent providers entirely */
       #custom-ai-quota-fetch,
       #custom-ai-quota-kimi.empty,
-      #custom-ai-quota-codex.empty {
+      #custom-ai-quota-codex.empty,
+      #custom-ai-quota-opencode-go.empty {
         padding: 0;
         margin: 0;
         min-width: 0;
