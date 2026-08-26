@@ -15,6 +15,7 @@ let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  sshWindow = lib.getExe config.programs.ssh-window.package;
 
   enabled = cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 in
@@ -28,7 +29,9 @@ in
         };
       }
       {
-        "modules-left" = lib.mkAfter [ "niri/window" ];
+        "modules-left" = lib.mkAfter (
+          [ "niri/window" ] ++ lib.optional config.dotfiles.ssh.windowMultiplexing.enable "custom/ssh-context"
+        );
         "niri/window" = {
           format = "{}";
           max-length = 50;
@@ -39,6 +42,17 @@ in
           };
         };
       }
+      (lib.mkIf config.dotfiles.ssh.windowMultiplexing.enable {
+        "custom/ssh-context" = {
+          exec = "${sshWindow} current 2>/dev/null || true";
+          format = "󰣀 {text}";
+          interval = 1;
+          hide-empty-text = true;
+          escape = true;
+          max-length = 40;
+          tooltip-format = "SSH context: {text}";
+        };
+      })
     ];
 
     programs.waybar.style = lib.mkAfter ''
@@ -78,6 +92,16 @@ in
         transition: all 0.3s ease;
         color: #a89984;
         font-style: italic;
+      }
+
+      #custom-ssh-context {
+        padding: 2px 10px;
+        margin: 3px 2px;
+        border-radius: 10px;
+        color: #b8bb26;
+        background-color: rgba(184, 187, 38, 0.14);
+        border: 1px solid rgba(184, 187, 38, 0.5);
+        font-style: normal;
       }
     '';
   };
