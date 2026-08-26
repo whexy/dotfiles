@@ -104,7 +104,7 @@ in
       ''
       + lib.concatMapStringsSep "\n" providerDefs providers;
 
-      right = lib.mkAfter (map (p: "ai-quota-${p.name}") providers);
+      left = lib.mkAfter (map (p: "ai-quota-${p.name}") providers);
 
       styles = ''
         // Material You linear progress: tonal track, rounded fill tinted by
