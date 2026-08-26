@@ -22,6 +22,7 @@ pkgs.writers.writePython3Bin "ai-quota"
     import sys
     import urllib.error
     import urllib.request
+    from concurrent.futures import ThreadPoolExecutor
     from datetime import datetime, timezone
 
     API_BASE = "https://ai-proxy.at-basking.ts.net"
@@ -363,41 +364,48 @@ pkgs.writers.writePython3Bin "ai-quota"
             print("    " + r)
 
 
-    def fetch_proxy_providers(key):
+    def fetch_proxy_account(key, spec, f):
+        urls = [spec["request"]["url"]] + spec["request"].get(
+            "url_fallbacks", []
+        )
+        resp = {}
+        for url in urls:
+            request = dict(spec["request"], url=url)
+            request.pop("url_fallbacks", None)
+            try:
+                resp = api(
+                    key,
+                    "/api-call",
+                    payload=dict(request, authIndex=f["auth_index"]),
+                )
+            except OSError as exc:
+                resp = {"status_code": 0, "body": str(exc)}
+            if resp.get("status_code") not in (403, 404):
+                break
+        return build_account(f["name"], resp, spec["parse"])
+
+
+    def fetch_proxy_providers(key, pool):
         if not key:
             return []
         files = api(key, "/auth-files", timeout=20).get("files", [])
+        tasks = [
+            (f.get("provider"), f)
+            for f in files
+            if f.get("provider") in PROVIDERS and not f.get("disabled")
+        ]
+        # One fan-out across all accounts; pool.map preserves auth-file order.
+        results = pool.map(
+            lambda t: fetch_proxy_account(key, PROVIDERS[t[0]], t[1]), tasks
+        )
         accounts = {}
-        for f in files:
-            provider = f.get("provider")
-            if provider in PROVIDERS and not f.get("disabled"):
-                accounts.setdefault(provider, []).append(f)
-        providers = []
-        for provider, spec in PROVIDERS.items():
-            if provider not in accounts:
-                continue
-            entries = []
-            for f in accounts[provider]:
-                urls = [spec["request"]["url"]] + spec["request"].get(
-                    "url_fallbacks", []
-                )
-                resp = {}
-                for url in urls:
-                    request = dict(spec["request"], url=url)
-                    request.pop("url_fallbacks", None)
-                    try:
-                        resp = api(
-                            key,
-                            "/api-call",
-                            payload=dict(request, authIndex=f["auth_index"]),
-                        )
-                    except OSError as exc:
-                        resp = {"status_code": 0, "body": str(exc)}
-                    if resp.get("status_code") not in (403, 404):
-                        break
-                entries.append(build_account(f["name"], resp, spec["parse"]))
-            providers.append({"provider": provider, "accounts": entries})
-        return providers
+        for (provider, _), acct in zip(tasks, results):
+            accounts.setdefault(provider, []).append(acct)
+        return [
+            {"provider": provider, "accounts": accounts[provider]}
+            for provider in PROVIDERS
+            if provider in accounts
+        ]
 
 
     def fetch_opencode_go(key):
@@ -418,11 +426,15 @@ pkgs.writers.writePython3Bin "ai-quota"
         opencode_key = load_key(
             "OPENCODE_API_KEY", "OPENCODE_API_KEY_FILE", OPENCODE_KEY_FILE
         )
-        try:
-            providers = fetch_proxy_providers(mgmt_key)
-        except OSError as exc:
-            sys.exit("error: failed to list proxy auth files: %s" % exc)
-        opencode = fetch_opencode_go(opencode_key)
+        # All fetches are blocking HTTP I/O, so threads overlap them: the
+        # OpenCode Go call runs while the proxy account calls fan out.
+        with ThreadPoolExecutor(max_workers=8) as pool:
+            opencode_future = pool.submit(fetch_opencode_go, opencode_key)
+            try:
+                providers = fetch_proxy_providers(mgmt_key, pool)
+            except OSError as exc:
+                sys.exit("error: failed to list proxy auth files: %s" % exc)
+            opencode = opencode_future.result()
         if opencode:
             providers.append(opencode)
         if not providers:
