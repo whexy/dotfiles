@@ -13,9 +13,8 @@ in
 {
   config = lib.mkIf cfg.enable {
     services = {
-      # Blueman: GTK Bluetooth manager (blueman-manager) plus a tray applet
-      # for pairing and managing devices from the waybar tray. The applet is
-      # launched by niri's spawn-at-startup (niri doesn't process XDG autostart).
+      # Blueman provides the Bluetooth manager and D-Bus backend; Home Manager
+      # starts its tray applet after the session tray target is available.
       blueman.enable = true;
 
       # Greetd display manager with auto-login to niri

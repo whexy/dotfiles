@@ -68,7 +68,10 @@ in
         # avoid pulling an extra rebuild-from-source derivation into the closure.
         package = pkgs.niri;
       };
-      services.wl-clip-persist.enable = true;
+      services = {
+        wl-clip-persist.enable = true;
+        blueman-applet.enable = true;
+      };
 
       # Turn off all monitors after 5 minutes of inactivity via swayidle.
       # swayidle listens to the Wayland idle protocol and runs commands on timeout.
@@ -114,10 +117,6 @@ in
               "fcitx5"
               "-d"
             ];
-          }
-          # Bluetooth tray applet (blueman) – same XDG autostart reason as fcitx5.
-          {
-            command = [ "${pkgs.blueman}/bin/blueman-applet" ];
           }
         ];
 
