@@ -6,6 +6,19 @@
 }:
 let
   cfg = config.dotfiles.platform.incusVm;
+
+  # All features the Incus 6.20+ guest agent understands. The agent binary is
+  # injected by the hypervisor at boot, so the hypervisor's Incus version
+  # decides whether the feature map is honored at all.
+  agentFeatures = {
+    guestapi = true; # /dev/incus API inside the guest
+    exec = true; # incus exec
+    files = true; # incus file push/pull
+    mounts = true; # shared disk devices
+    metrics = true; # OpenMetrics endpoint
+    state = true; # OS/network state shown by incus list (incl. IPs)
+  }
+  // cfg.agent.features;
 in
 {
   imports = [ (modulesPath + "/virtualisation/lxc-image-metadata.nix") ];
@@ -48,5 +61,14 @@ in
 
     services.qemuGuest.enable = true;
     virtualisation.incus.agent.enable = true;
+
+    # Read once at agent startup; applies after incus-agent restart or reboot.
+    environment.etc."incus-agent.yml".text = ''
+      # Managed by NixOS via dotfiles.platform.incusVm.agent.features.
+      features:
+      ${lib.concatMapAttrsStringSep "\n" (
+        name: value: "  ${name}: ${lib.boolToString value}"
+      ) agentFeatures}
+    '';
   };
 }
