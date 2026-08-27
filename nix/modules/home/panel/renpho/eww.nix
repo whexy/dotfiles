@@ -1,9 +1,10 @@
 # Renpho weight widget for Eww (Linux).
 #
-# Eww counterpart of ./waybar.nix: one widget for the weight readout plus a
-# tooltip widget, both polling the renpho-health cache through ./summary.jq.
+# One Eww poll fetches current measurements and emits the complete summary as
+# JSON. The visible widget consumes that value directly.
 args@{
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -11,9 +12,10 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  hcfg = config.services.renpho-health;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
+  renphoHealth = lib.getExe inputs.renpho-health.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  credsFile = config.age.secrets.renpho-creds.path;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
   icon = "󰓅";
@@ -21,51 +23,29 @@ let
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
 
-  cacheArgs = "cache=${lib.escapeShellArg hcfg.cachePath}";
-
-  weightScript = pkgs.writeShellScript "eww-renpho-weight" ''
-    ${cacheArgs}
-
-    if [ ! -f "$cache" ]; then
-      printf '${icon} …\n'
-      exit 0
-    fi
-
-    summary="$(${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} "$cache" 2>/dev/null)" ||
-      { printf '${icon} …\n'; exit 0; }
-
-    # Raw output: -c would JSON-encode the label, leaving literal quotes.
-    exec ${jq} -rn --argjson summary "$summary" --arg icon '${icon}' '
-      def rounded: (. * 10 | round / 10 | tostring);
-      if $summary.present == false then ($icon + " …")
-      else
-        $icon + " "
-        + (if ($summary.weight | type) == "number" then ($summary.weight | rounded) + "kg" else "?" end)
-        + (if $summary.trend == "" then ""
-           elif $summary.delta == null then " " + $summary.trend
-           else " " + $summary.trend + ($summary.delta | tostring)
-           end)
-      end'
-  '';
-
-  tooltipScript = pkgs.writeShellScript "eww-renpho-tooltip" ''
-    ${cacheArgs}
-    [ -f "$cache" ] || exit 0
-
-    ${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} "$cache" 2>/dev/null |
-      ${jq} -r 'if .present == false then "" else (.lines | join("\n")) end'
+  summaryScript = pkgs.writeShellScript "eww-renpho" ''
+    raw="$(${renphoHealth} recent --count ${toString summaryCount} --creds-file "${credsFile}" 2>/dev/null)" || exit 0
+    printf '%s\n' "$raw" | ${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} 2>/dev/null
   '';
 in
 {
   config = lib.mkIf enabled {
     dotfiles.panel.eww = {
       defs = ''
-        (defpoll RENPHO :interval "300s" "${weightScript}")
-        (defpoll RENPHO_TOOLTIP :interval "300s" "${tooltipScript}")
+        (defpoll RENPHO :interval "300s"
+          :initial '{"present":false,"state":"stale","lines":[]}'
+          "${summaryScript}")
 
         (defwidget renpho []
-          (box :class "pill renpho" :tooltip {RENPHO_TOOLTIP}
-            (label :text RENPHO)))
+          (box :class {"pill renpho " + jq(RENPHO, ".state")}
+            :tooltip {jq(RENPHO, ".lines | join(\"\\n\")")}
+            (label :text {
+              "${icon} "
+              + (jq(RENPHO, ".present")
+                ? round(jq(RENPHO, ".weight"), 1) + "kg"
+                  + (jq(RENPHO, ".trend") == "" ? "" : " " + jq(RENPHO, ".trend")
+                    + (jq(RENPHO, ".delta == null") ? "" : jq(RENPHO, ".delta")))
+                : "…")})))
       '';
 
       right = lib.mkAfter [ "renpho" ];

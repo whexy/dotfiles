@@ -1,9 +1,8 @@
 # SketchyBar quota pills (macOS).
 #
-# A hidden fetcher item refreshes the shared cache once a minute; each
-# slider polls it once a minute and renders the best account's remaining
-# quota (see ./summary.jq). Hovering it opens a compact glass panel with one
-# native progress meter per quota window.
+# Each visible pill fetches current quota data on SketchyBar's own interval
+# and renders its provider directly. Hovering opens a compact glass panel
+# with one native progress meter per quota window.
 args@{
   config,
   lib,
@@ -24,7 +23,6 @@ let
   sketchybar = lib.getExe pkgs.sketchybar;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
-  cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
   enabled =
     cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin && config.dotfiles.agents.enable;
@@ -46,26 +44,19 @@ let
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
 
-  fetcherPlugin = mkPlugin "fetch" ''
-    out="$(${aiQuota} --json 2>/dev/null)" || exit 0
-    mkdir -p "$(dirname "${cacheFile}")"
-    tmp="${cacheFile}.tmp.$$"
-    printf '%s\n' "$out" > "$tmp"
-    mv "$tmp" "${cacheFile}"
-  '';
-
   pillPlugin =
     provider: accent:
     mkPlugin "pill-${provider}" ''
-      cache="${cacheFile}"
-
       if [ "$SENDER" = "mouse.exited" ]; then
         ${sketchybar} --set "$NAME" popup.drawing=off
         exit 0
       fi
 
-      [ -f "$cache" ] || exit 0
-      summary="$(${jq} -c -f ${summaryFilter} --arg provider ${provider} "$cache" 2>/dev/null)" || exit 0
+      raw="$(${aiQuota} --json 2>/dev/null)" || {
+        ${sketchybar} --set "$NAME" icon.color=${colors.gray}
+        exit 0
+      }
+      summary="$(printf '%s\n' "$raw" | ${jq} -c -f ${summaryFilter} --arg provider ${provider} 2>/dev/null)" || exit 0
 
       state="$(printf '%s' "$summary" | ${jq} -r 'if .present == true then .state else "error" end')"
       case "$state" in
@@ -114,17 +105,6 @@ let
         slider.percentage="$remaining" \
         slider.highlight_color="$color"
     '';
-
-  fetcherItem = {
-    name = "ai_quota.fetch";
-    side = "left";
-    settings = {
-      drawing = "off";
-      updates = "on";
-      update_freq = 60;
-      script = fetcherPlugin;
-    };
-  };
 
   popupSlots = lib.range 1 4;
 
@@ -235,11 +215,9 @@ let
 
   # Popup details items must be added after their host pill: sketchybar
   # rejects `popup.<parent>` positions for parents that don't exist yet.
-  extraItems = [
-    fetcherItem
-  ]
-  ++ map (p: mkPillItem p.name p) providers
-  ++ lib.concatMap (p: map (mkMeterItem p.name) popupSlots) providers;
+  extraItems =
+    map (p: mkPillItem p.name p) providers
+    ++ lib.concatMap (p: map (mkMeterItem p.name) popupSlots) providers;
 in
 {
   config = lib.mkIf enabled {

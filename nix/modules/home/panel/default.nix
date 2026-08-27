@@ -1,6 +1,6 @@
 # Panel group: status bar (Waybar or Eww on Linux, SketchyBar on macOS)
 # and their pills.
-{ inputs, lib, ... }:
+{ lib, ... }:
 {
   options.dotfiles.panel = {
     waybar.enable = lib.mkEnableOption "the Linux status bar";
@@ -17,7 +17,6 @@
   };
 
   imports = [
-    inputs.renpho-health.homeModules.default
     ./waybar.nix
     ./eww.nix
     ./sketchybar.nix

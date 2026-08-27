@@ -1,16 +1,18 @@
-# Renpho smart-scale data integration shared by Waybar and SketchyBar.
+# Renpho smart-scale data integration for the status bars.
 #
-# The renpho-health input owns data fetching, cache refresh, and the query CLI.
-# This panel module owns all status-bar rendering.
-{ config, lib, ... }:
+# Each selected bar invokes the query CLI directly on its own interval.
+{
+  config,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
 {
   config = lib.mkIf config.dotfiles.panel.renpho.enable {
     age.secrets.renpho-creds.file = ../../../../../secrets/renpho-creds.age;
 
-    services.renpho-health = {
-      enable = true;
-      credsFile = config.age.secrets.renpho-creds.path;
-    };
+    home.packages = [ inputs.renpho-health.packages.${pkgs.stdenv.hostPlatform.system}.default ];
   };
 
   imports = [
