@@ -25,7 +25,60 @@ in
       darkTheme = "Gruvbox Dark";
       # lightTheme = "Catppuccin Latte";
       lightTheme = "Gruvbox Light";
-      themeFile = "${config.home.homeDirectory}/.config/ghostty/theme.conf";
+      themeFile = "${config.xdg.configHome}/ghostty/theme.conf";
+      modeFile = "${config.xdg.configHome}/ghostty/mode.conf";
+      nostalgiaModeFile = "${config.xdg.stateHome}/dotfiles/nostalgia";
+      modernFont = "FiraCode Nerd Font";
+      nostalgiaFont = "Perfect DOS VGA 437 Nerd Font";
+
+      reloadGhostty = ''
+        if [ "$(uname)" = "Darwin" ]; then
+          if ! osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.mitchellh.ghostty") to keystroke "," using {command down, shift down}' 2>/dev/null; then
+            echo "press cmd+shift+, in Ghostty to apply the new mode" >&2
+          fi
+        else
+          systemctl reload --user app-com.mitchellh.ghostty.service
+        fi
+      '';
+
+      notifyNeovim = ''
+        runtime_dir="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}"
+        if [ -d "$runtime_dir" ]; then
+          find "$runtime_dir" -maxdepth 1 -type s -name 'nvim.*' -print0 2>/dev/null \
+            | while IFS= read -r -d "" socket; do
+                pid="''${socket##*.}"
+                if [[ "$pid" =~ ^[0-9]+$ ]]; then
+                  kill -USR1 "$pid" 2>/dev/null || true
+                fi
+              done
+        fi
+      '';
+
+      ghostty-nostalgia = pkgs.writeShellScriptBin "ghostty-nostalgia" ''
+        mode_file="''${GHOSTTY_MODE_FILE:-$HOME/.config/ghostty/mode.conf}"
+        state_file="''${NOSTALGIA_MODE_FILE:-${nostalgiaModeFile}}"
+
+        mkdir -p "$(dirname "$mode_file")" "$(dirname "$state_file")"
+        printf 'font-family = %s\n' "${nostalgiaFont}" > "$mode_file"
+        : > "$state_file"
+        echo "ghostty mode -> nostalgia"
+
+        ${reloadGhostty}
+        ${notifyNeovim}
+      '';
+
+      ghostty-modern = pkgs.writeShellScriptBin "ghostty-modern" ''
+        mode_file="''${GHOSTTY_MODE_FILE:-$HOME/.config/ghostty/mode.conf}"
+        state_file="''${NOSTALGIA_MODE_FILE:-${nostalgiaModeFile}}"
+
+        mkdir -p "$(dirname "$mode_file")"
+        printf 'font-family = %s\n' "${modernFont}" > "$mode_file"
+        rm -f "$state_file"
+        echo "ghostty mode -> modern"
+
+        ${reloadGhostty}
+        ${notifyNeovim}
+      '';
 
       ghostty-toggle-theme = pkgs.writeShellScriptBin "ghostty-toggle-theme" ''
         theme_file="''${GHOSTTY_THEME_FILE:-$HOME/.config/ghostty/theme.conf}"
@@ -42,25 +95,27 @@ in
         printf 'theme = %s\n' "$next" > "$theme_file"
         echo "ghostty theme -> $next"
 
-        # Ask every running Ghostty instance to reload its configuration.
-        if [ "$(uname)" = "Darwin" ]; then
-          if ! osascript -e 'tell application "System Events" to tell (first process whose bundle identifier is "com.mitchellh.ghostty") to keystroke "," using {command down, shift down}' 2>/dev/null; then
-            echo "press cmd+shift+, in Ghostty to apply the new theme" >&2
-          fi
-        else
-          systemctl reload --user app-com.mitchellh.ghostty.service
-        fi
+        ${reloadGhostty}
       '';
 
     in
     {
-      home.packages = [ ghostty-toggle-theme ];
+      home.packages = [
+        ghostty-modern
+        ghostty-nostalgia
+        ghostty-toggle-theme
+      ];
 
-      # Seed the mutable theme file (never overwrite an existing one).
-      home.activation.ghosttyThemeFile = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      # Mutable includes keep runtime mode switches outside Home Manager's
+      # immutable Ghostty config while preserving the selected mode on rebuild.
+      home.activation.ghosttyMutableConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         if [ ! -f "${themeFile}" ]; then
           mkdir -p "$(dirname "${themeFile}")"
           echo "theme = ${darkTheme}" > "${themeFile}"
+        fi
+        if [ ! -f "${modeFile}" ]; then
+          mkdir -p "$(dirname "${modeFile}")"
+          echo "font-family = ${modernFont}" > "${modeFile}"
         fi
       '';
 
@@ -70,9 +125,11 @@ in
         systemd.enable = !isDarwin;
 
         settings = {
-          config-file = themeFile;
+          config-file = [
+            themeFile
+            modeFile
+          ];
           font-size = if macbookScreen then 16 else 14;
-          font-family = "FiraCode Nerd Font";
           background-opacity = 0.90;
           background-blur = true;
 

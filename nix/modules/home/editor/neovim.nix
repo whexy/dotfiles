@@ -8,6 +8,17 @@
 }:
 let
   cfg = config.dotfiles.editor;
+  nostalgiaModeFile = "${config.xdg.stateHome}/dotfiles/nostalgia";
+  modernBorland = pkgs.vimUtils.buildVimPlugin {
+    pname = "vim-colors-modern-borland";
+    version = "2024-03-03";
+    src = pkgs.fetchFromGitHub {
+      owner = "letorbi";
+      repo = "vim-colors-modern-borland";
+      rev = "9da28b3049481ac098f555834db1607a265eb7bc";
+      hash = "sha256-ybSdRHuNOTLGo39B5Q4oJLjqYlwa3pm85eVfrFcrOL8=";
+    };
+  };
 in
 {
   config = lib.mkIf cfg.neovim.enable {
@@ -17,6 +28,7 @@ in
       nixpkgs.source = inputs.nixpkgs.outPath;
       wrapRc = true;
       impureRtp = true;
+      extraPlugins = [ modernBorland ];
       defaultEditor = false;
       viAlias = true;
       vimAlias = true;
@@ -192,6 +204,29 @@ in
         if vim.env.SSH_CONNECTION or vim.env.SSH_TTY then
           vim.g.clipboard = "osc52"
         end
+      '';
+
+      extraConfigLuaPost = ''
+        local nostalgia_mode_file = ${lib.generators.toLua { } nostalgiaModeFile}
+
+        local function apply_dotfiles_mode()
+          if vim.fn.filereadable(nostalgia_mode_file) == 1 then
+            vim.g.BorlandStyle = "classic"
+            vim.cmd.colorscheme("modern-borland")
+          else
+            vim.g.BorlandStyle = nil
+            vim.cmd.colorscheme(${
+              lib.generators.toLua { } (if cfg.neovim.dev then "gruvbox" else "default")
+            })
+          end
+        end
+
+        apply_dotfiles_mode()
+        vim.api.nvim_create_autocmd("Signal", {
+          pattern = "SIGUSR1",
+          callback = apply_dotfiles_mode,
+          desc = "Reload the dotfiles visual mode",
+        })
       '';
     };
 
