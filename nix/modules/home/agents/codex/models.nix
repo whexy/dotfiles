@@ -66,7 +66,7 @@ let
 in
 [ { label = "default (ChatGPT login)"; } ]
 ++ map opencodeGo [
-  "grok-4.5"
+  "grok-4.6"
   "gpt-5.6-luna"
   "deepseek-v4-pro"
   "deepseek-v4-flash"

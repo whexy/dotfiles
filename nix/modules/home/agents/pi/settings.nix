@@ -29,7 +29,7 @@
       # OpenCode Go subscription (always available)
       "opencode-go/deepseek-v4-pro"
       "opencode-go/deepseek-v4-flash"
-      "opencode-go/grok-4.5"
+      "opencode-go/grok-4.6"
       "opencode-go/gpt-5.6-luna"
       "opencode-go/qwen3.8-max"
     ]
