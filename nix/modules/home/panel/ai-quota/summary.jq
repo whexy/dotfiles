@@ -3,7 +3,7 @@
 #   jq -c -f summary.jq --arg provider codex ai-quota.json
 #
 # Emits a single object:
-#   {present, state, label, lines, compact_lines, compact_meters}
+#   {present, state, label, countdown, lines, compact_lines, compact_meters}
 #   state: ok | warning | critical | error
 # …or {present: false} when the provider has no usable accounts.
 #
@@ -18,7 +18,10 @@
 #   - `compact_lines` keeps the quota windows and text progress bars for
 #     tooltips that only support text;
 #   - `compact_meters` describes the best account's windows for renderers
-#     that can draw native progress bars.
+#     that can draw native progress bars;
+#   - `display_meter` is the one window a compact pill should show. Normally it
+#     is the binding window; when multiple windows are exhausted it is the one
+#     with the latest reset, because earlier resets cannot restore availability.
 
 def bar:
   ((14 * . / 100) | floor) as $f
@@ -47,6 +50,22 @@ def meter_tag:
         "\($minutes)m"
       end
   else .
+  end;
+
+def pill_tag:
+  if . == "weekly" then "WK"
+  elif . == "daily" then "1D"
+  elif . == "monthly" then "MO"
+  elif test("^[0-9]+-hour$") then
+    (capture("^(?<n>[0-9]+)-hour$").n + "H")
+  elif test("^[0-9]+-minute$") then
+    (capture("^(?<n>[0-9]+)-minute$").n | tonumber) as $minutes
+    | if ($minutes % 60) == 0 then
+        "\($minutes / 60)H"
+      else
+        "\($minutes)M"
+      end
+  else (. | ascii_upcase)
   end;
 
 def window_span:
@@ -78,10 +97,46 @@ def compact_meter:
   (. | remaining) as $remaining
   | {
       label: (.label | meter_tag),
+      pill_label: (.label | pill_tag),
       remaining: $remaining,
       reset: (.reset_human // null),
+      reset_in: (.reset_in // null),
+      span: window_span,
       state: ($remaining | state),
     };
+
+def countdown:
+  if . == null then "—"
+  elif . <= 0 then "now"
+  else
+    (. | floor) as $seconds
+    | (($seconds + 3599) / 3600 | floor) as $hours
+    | ($hours / 24 | floor) as $days
+    | ($hours % 24) as $day_hours
+    | if $hours >= 48 then
+        "\($days)d \($day_hours)h"
+      else
+        (($seconds % 3600) / 60 | floor) as $minutes
+        | ($minutes | tostring | if length < 2 then "0" + . else . end) as $minute_text
+        | "\($hours):\($minute_text)"
+      end
+  end;
+
+def smart_meter:
+  . as $meters
+  | [$meters[] | select(.remaining <= 0)] as $exhausted
+  | if ($exhausted | length) > 0 then
+      ($exhausted | max_by(.reset_in // 0))
+    else
+      ($meters | sort_by(.remaining, .span) | .[0])
+    end;
+
+def window_color($accent):
+  (if .span >= 2592000 then "Faint" elif .span >= 604800 then "Dim" else "" end) as $dim
+  | if .state == "critical" then "critical" + $dim
+  elif .state == "warning" then "warning" + $dim
+  else $accent + $dim
+  end;
 
 # Coding-quota meters only; the review pool is displayed but never binds.
 def coding:
@@ -94,6 +149,13 @@ def meter_line:
 def compact_meter_line:
   "\(.label | tag)  \(.pct | bar)  \(100 - .pct | round)% left"
   + (if .reset_human then " · resets " + .reset_human else "" end);
+
+def provider_accent:
+  if . == "kimi" then "blue"
+  elif . == "codex" then "orange"
+  elif . == "opencode-go" then "green"
+  else "gray"
+  end;
 
 . as $root
 | ([$root.providers[] | select(.provider == $provider)] | .[0] // null)
@@ -114,6 +176,9 @@ def compact_meter_line:
           state: "error",
           label: "--",
           lines: ["no usable coding-quota windows"],
+          countdown: "—",
+          countdown_meter: null,
+          display_meter: null,
           compact_lines: ["no usable coding-quota windows"],
           compact_meters: [],
         }
@@ -124,10 +189,24 @@ def compact_meter_line:
           elif $remaining <= 50 then "warning"
           else "ok"
           end) as $state
+        | ($provider | provider_accent) as $accent
+        | ([$best.account | coding | sort_by(window_span)[] | compact_meter | . + {color: (. | window_color($accent))}]) as $meters
+        | ($meters | smart_meter) as $display
+        | ($display.state
+          | if . == "critical" then "critical"
+            elif . == "warning" then "warning"
+            else $accent
+            end) as $display_color
         | {
             present: true,
             state: $state,
             remaining: $remaining,
+            countdown: ($display.reset_in | countdown),
+            countdown_meter: ($display.label // null),
+            display_meter: ($display + {
+              countdown: ($display.reset_in | countdown),
+              color: $display_color,
+            }),
             label: (
               ($best.binding.label | tag)
               + "·"
@@ -164,7 +243,7 @@ def compact_meter_line:
                 | compact_meter_line
               )
             ],
-            compact_meters: [$best.account | coding | sort_by(window_span)[] | compact_meter],
+            compact_meters: $meters,
           }
       end
   end
