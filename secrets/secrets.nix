@@ -9,8 +9,8 @@ in
   "b2-crypt-password.age".publicKeys = [ key ];
   "beszel-token.age".publicKeys = [ key ];
   "nas-webdav-pass.age".publicKeys = [ key ];
-  "cf-access-nas-client-id.age".publicKeys = [ key ];
-  "cf-access-nas-client-secret.age".publicKeys = [ key ];
+  "cf-access-dotfiles-id.age".publicKeys = [ key ];
+  "cf-access-dotfiles-secret.age".publicKeys = [ key ];
   "renpho-creds.age".publicKeys = [ key ];
   "anthropic-api-key.age".publicKeys = [ key ];
   "openai-api-key.age".publicKeys = [ key ];

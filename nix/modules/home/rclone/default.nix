@@ -18,8 +18,8 @@
 # Cloudflare Access "Service Auth" policy. Requests must carry two HTTP
 # headers:
 #
-#     CF-Access-Client-Id:     <from secrets/cf-access-nas-client-id.age>
-#     CF-Access-Client-Secret: <from secrets/cf-access-nas-client-secret.age>
+#     CF-Access-Client-Id:     <from secrets/cf-access-dotfiles-id.age>
+#     CF-Access-Client-Secret: <from secrets/cf-access-dotfiles-secret.age>
 #
 # rclone reads `RCLONE_HEADER` (comma-separated `Header: Value` pairs) from
 # the environment, but neither systemd nor launchd can interpolate
@@ -265,8 +265,8 @@ in
     let
       homeDir = config.home.homeDirectory;
 
-      cfIdPath = config.age.secrets.cf-access-nas-client-id.path;
-      cfSecretPath = config.age.secrets.cf-access-nas-client-secret.path;
+      cfIdPath = config.age.secrets.cf-access-dotfiles-id.path;
+      cfSecretPath = config.age.secrets.cf-access-dotfiles-secret.path;
 
       # Wrapper: reads CF Access secrets from disk, sets RCLONE_HEADER, exec's
       # whatever command (with args) it was given. Usage:
@@ -342,8 +342,8 @@ in
     {
       age.secrets = {
         nas-webdav-pass.file = ../../../../secrets/nas-webdav-pass.age;
-        cf-access-nas-client-id.file = ../../../../secrets/cf-access-nas-client-id.age;
-        cf-access-nas-client-secret.file = ../../../../secrets/cf-access-nas-client-secret.age;
+        cf-access-dotfiles-id.file = ../../../../secrets/cf-access-dotfiles-id.age;
+        cf-access-dotfiles-secret.file = ../../../../secrets/cf-access-dotfiles-secret.age;
         b2-account.file = ../../../../secrets/b2-account.age;
         b2-key.file = ../../../../secrets/b2-key.age;
         b2-crypt-password.file = ../../../../secrets/b2-crypt-password.age;
