@@ -1,8 +1,8 @@
 # Eww quota meters (Linux).
 #
-# Eww counterpart of ./waybar.nix: each provider gets a meter widget plus a
-# tooltip widget, both polling the shared JSON cache refreshed by
-# updateCacheScript from ./shared.nix. Summarization lives in ./summary.jq.
+# One Eww poll fetches the provider data and emits all summaries as a single
+# JSON value. The visible widgets reference that poll directly, so fetching
+# and rendering share one lifecycle and one interval.
 args@{
   config,
   lib,
@@ -15,79 +15,42 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  shared = import ./shared.nix {
-    inherit
-      config
-      lib
-      pkgs
-      perSystem
-      ;
-  };
+  shared = import ./shared.nix { inherit perSystem; };
+  inherit (shared) aiQuota providers;
 
-  inherit (shared)
-    cacheFile
-    providers
-    updateCacheScript
-    ;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
 
   enabled =
     cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin) && config.dotfiles.agents.enable;
 
-  # Yuck variable names cannot contain hyphens (kimi -> KIMI).
-  toVarName = name: lib.toUpper (lib.replaceStrings [ "-" ] [ "_" ] name);
+  quotaScript = pkgs.writeShellScript "eww-ai-quota" ''
+    raw="$(${aiQuota} --json 2>/dev/null)" || exit 0
+    ${lib.concatMapStringsSep "\n" (p: ''
+      ${p.variable}="$(printf '%s\n' "$raw" | ${jq} -c -f ${summaryFilter} --arg provider ${p.name} 2>/dev/null)" || exit 0
+    '') providers}
+    ${jq} -cn \
+      ${
+        lib.concatMapStringsSep " \\\n      " (
+          p: ''--argjson ${p.variable} "$'' + p.variable + ''"''
+        ) providers
+      } \
+      '{${lib.concatMapStringsSep ", " (p: ''"${p.name}": $'' + p.variable) providers}}'
+  '';
 
-  # Emits one JSON record per provider so the widget can drive a real
-  # progress bar and per-state classes. summary.jq still decides what binds;
-  # the tooltip poll provides the compact hover details.
-  meterScript =
-    provider:
-    pkgs.writeShellScript "eww-ai-quota-${provider}" ''
-      cache="${cacheFile}"
-      [ -f "$cache" ] || exit 0
-
-      summary="$(${jq} -c -f ${summaryFilter} --arg provider ${provider} "$cache" 2>/dev/null)" || exit 0
-      exec ${jq} -cn --argjson s "$summary" '
-        ($s.remaining // 0 | round | if . < 0 then 0 elif . > 100 then 100 else . end) as $r
-        | if $s.present == false then
-            {present: false, state: "empty", remaining: 0}
-          else
-            {present: true, state: $s.state, remaining: $r}
-          end'
-    '';
-
-  tooltipScript =
-    provider:
-    pkgs.writeShellScript "eww-ai-quota-${provider}-tooltip" ''
-      cache="${cacheFile}"
-      [ -f "$cache" ] || exit 0
-
-      ${jq} -c -f ${summaryFilter} --arg provider ${provider} "$cache" 2>/dev/null |
-        ${jq} -r 'if .present == false then "" else (.compact_lines | join("\n")) end'
-    '';
-
-  # eww's jq() keeps JSON quoting on string results, so the state class
-  # comes from boolean filters and the percentage renders as a number plus
-  # a literal "%" label.
-  providerDefs = p: ''
-    (defpoll ${toVarName p.name} :interval "60s"
-      :initial '{"present": false, "state": "empty", "remaining": 0}'
-      "${meterScript p.name}")
-    (defpoll ${toVarName p.name}_TOOLTIP :interval "60s" "${tooltipScript p.name}")
-
+  providerDef = p: ''
     (defwidget ai-quota-${p.name} []
       (box :space-evenly false
         :class {"pill quota"
-          + (jq(${toVarName p.name}, ".state == \"warning\"") ? " warning" : "")
-          + (jq(${toVarName p.name}, ".state == \"critical\"") ? " critical" : "")
-          + (jq(${toVarName p.name}, ".state == \"error\"") ? " error" : "")}
-        :visible {jq(${toVarName p.name}, ".present")}
-        :tooltip {${toVarName p.name}_TOOLTIP}
+          + (jq(AI_QUOTA, ".\"${p.name}\".state == \"warning\"") ? " warning" : "")
+          + (jq(AI_QUOTA, ".\"${p.name}\".state == \"critical\"") ? " critical" : "")
+          + (jq(AI_QUOTA, ".\"${p.name}\".state == \"error\"") ? " error" : "")}
+        :visible {jq(AI_QUOTA, ".\"${p.name}\".present")}
+        :tooltip {jq(AI_QUOTA, ".\"${p.name}\".compact_lines | join(\"\\n\")")}
         (label :class "quota-icon" :text "${p.icon}")
         (progress :class "quota-bar" :orientation "h" :valign "center"
-          :hexpand false :width 56 :value {jq(${toVarName p.name}, ".remaining")})
-        (label :class "quota-pct" :text {jq(${toVarName p.name}, ".remaining")})
+          :hexpand false :width 56 :value {jq(AI_QUOTA, ".\"${p.name}\".remaining")})
+        (label :class "quota-pct" :text {round(jq(AI_QUOTA, ".\"${p.name}\".remaining"), 0)})
         (label :text "%")))
   '';
 in
@@ -95,10 +58,15 @@ in
   config = lib.mkIf enabled {
     dotfiles.panel.eww = {
       defs = ''
-        ; Hidden poll keeping the shared cache fresh; its value is unused.
-        (defpoll AI_QUOTA_FETCH :interval "60s" "${updateCacheScript}")
+        (defpoll AI_QUOTA :interval "60s"
+          :initial '{${
+            lib.concatMapStringsSep "," (
+              p: ''"${p.name}":{"present":false,"state":"empty","remaining":0,"compact_lines":[]}''
+            ) providers
+          }}'
+          "${quotaScript}")
       ''
-      + lib.concatMapStringsSep "\n" providerDefs providers;
+      + lib.concatMapStringsSep "\n" providerDef providers;
 
       left = lib.mkAfter (map (p: "ai-quota-${p.name}") providers);
 

@@ -1,6 +1,7 @@
 # Renpho weight pill for SketchyBar (macOS).
 args@{
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -8,22 +9,22 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  hcfg = config.services.renpho-health;
 
   autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
   barOnTop = autoHideMenuBar;
 
+  renphoHealth = lib.getExe inputs.renpho-health.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  credsFile = config.age.secrets.renpho-creds.path;
   sketchybar = lib.getExe pkgs.sketchybar;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
   summaryCount = 5;
-  staleAfter = 36 * 60 * 60;
 
   enabled = cfg.renpho.enable && cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin;
 
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
-    gray = "0xff98989d"; # systemGray, stale data
+    gray = "0xff98989d"; # systemGray, fetch error
     red = "0xffff453a"; # systemRed, weight up
     green = "0xff30d158"; # systemGreen, weight down
     purple = "0xffbf5af2"; # systemPurple, neutral reading
@@ -34,32 +35,21 @@ let
   popupSlots = lib.range 1 summaryCount;
 
   pillPlugin = pkgs.writeShellScript "sketchybar-renpho" ''
-    cache=${lib.escapeShellArg hcfg.cachePath}
-
     if [ "$SENDER" = "mouse.exited" ]; then
       ${sketchybar} --set "$NAME" popup.drawing=off
       exit 0
     fi
 
-    if [ ! -f "$cache" ]; then
+    raw="$(${renphoHealth} recent --count ${toString summaryCount} --creds-file "${credsFile}" 2>/dev/null)" || {
       ${sketchybar} --set "$NAME" icon.color=${colors.gray} label="…"
       exit 0
-    fi
-
-    summary="$(${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} "$cache" 2>/dev/null)" || exit 0
-    modified="$(${pkgs.coreutils}/bin/stat -c %Y "$cache" 2>/dev/null || printf 0)"
-    now="$(${pkgs.coreutils}/bin/date +%s)"
-    age=$((now - modified))
-
+    }
+    summary="$(printf '%s\n' "$raw" | ${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} 2>/dev/null)" || exit 0
     state="$(printf '%s' "$summary" | ${jq} -r '.state')"
-    if [ "$age" -gt ${toString staleAfter} ]; then
-      state=stale
-    fi
 
     case "$state" in
       down) color=${colors.green} ;;
       up) color=${colors.red} ;;
-      stale) color=${colors.gray} ;;
       *) color=${colors.purple} ;;
     esac
 

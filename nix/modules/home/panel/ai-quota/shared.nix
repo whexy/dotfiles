@@ -1,47 +1,23 @@
-# Shared plumbing for the AI-quota bar pills (Waybar and Eww renderers).
-#
-# Owns the provider list, the shared JSON cache path, and the cache
-# refresh; both renderers read the same cache. Summarization logic lives
-# in ./summary.jq.
+# Shared metadata for the AI-quota bar renderers.
+{ perSystem, ... }:
 {
-  config,
-  pkgs,
-  perSystem,
-  ...
-}:
-let
   aiQuota = "${perSystem.self.ai-quota}/bin/ai-quota";
-  cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
   providers = [
     {
       name = "kimi";
+      variable = "kimi";
       icon = "󰽥";
     }
     {
       name = "codex";
+      variable = "codex";
       icon = "󰚩";
     }
     {
       name = "opencode-go";
+      variable = "opencode_go";
       icon = "󰘦";
     }
   ];
-
-  # Refreshes the shared JSON cache both renderers poll.
-  updateCacheScript = pkgs.writeShellScript "ai-quota-update-cache" ''
-    out="$(${aiQuota} --json 2>/dev/null)" || exit 0
-    mkdir -p "$(dirname "${cacheFile}")"
-    tmp="${cacheFile}.tmp.$$"
-    printf '%s\n' "$out" > "$tmp"
-    mv "$tmp" "${cacheFile}"
-  '';
-in
-{
-  inherit
-    aiQuota
-    cacheFile
-    providers
-    updateCacheScript
-    ;
 }

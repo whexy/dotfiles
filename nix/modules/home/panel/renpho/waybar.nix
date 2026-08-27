@@ -1,6 +1,7 @@
 # Renpho weight pill for Waybar (Linux).
 args@{
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -8,50 +9,36 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  hcfg = config.services.renpho-health;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
+  renphoHealth = lib.getExe inputs.renpho-health.packages.${pkgs.stdenv.hostPlatform.system}.default;
+  credsFile = config.age.secrets.renpho-creds.path;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
   icon = "󰓅";
   summaryCount = 5;
-  staleAfter = 36 * 60 * 60;
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 
   pillScript = pkgs.writeShellScript "waybar-renpho" ''
-    cache=${lib.escapeShellArg hcfg.cachePath}
-    now="$(${pkgs.coreutils}/bin/date +%s)"
+    raw="$(${renphoHealth} recent --count ${toString summaryCount} --creds-file "${credsFile}" 2>/dev/null)" ||
+      exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), tooltip: "fetch failed", class: "stale"}'
+    summary="$(printf '%s\n' "$raw" | ${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} 2>/dev/null)" ||
+      exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), tooltip: "response unreadable", class: "stale"}'
 
-    if [ ! -f "$cache" ]; then
-      exec ${jq} -cn --arg icon '${icon}' '{ text: ($icon + " …"), tooltip: "no data yet", class: "stale" }'
-    fi
-
-    summary="$(${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} "$cache" 2>/dev/null)" ||
-      exec ${jq} -cn --arg icon '${icon}' '{ text: ($icon + " …"), tooltip: "cache unreadable", class: "stale" }'
-
-    modified="$(${pkgs.coreutils}/bin/stat -c %Y "$cache" 2>/dev/null || printf 0)"
-    age=$((now - modified))
-
-    exec ${jq} -cn \
-      --argjson summary "$summary" \
-      --arg icon '${icon}' \
-      --argjson age "$age" \
-      --argjson stale_after ${toString staleAfter} '
-        def rounded: (. * 10 | round / 10 | tostring);
-        if $summary.present == false then
-          { text: ($icon + " …"), tooltip: ($summary.lines | join("\n")), class: "stale" }
-        else
-          ($age > $stale_after) as $stale
-          | {
-              text: ($icon + " "
-                + (if ($summary.weight | type) == "number" then ($summary.weight | rounded) + "kg" else "?" end)
-                + (if $summary.trend == "" then "" elif $summary.delta == null then " " + $summary.trend else " " + $summary.trend + ($summary.delta | tostring) end)),
-              tooltip: ((if $stale then "[cache " + (($age / 3600) | floor | tostring) + "h old]\n" else "" end)
-                + ($summary.lines | join("\n"))),
-              class: (if $stale then "stale" else $summary.state end)
-            }
-        end'
+    exec ${jq} -cn --argjson summary "$summary" --arg icon '${icon}' '
+      def rounded: (. * 10 | round / 10 | tostring);
+      if $summary.present == false then
+        {text: ($icon + " …"), tooltip: ($summary.lines | join("\n")), class: "stale"}
+      else
+        {
+          text: ($icon + " "
+            + (if ($summary.weight | type) == "number" then ($summary.weight | rounded) + "kg" else "?" end)
+            + (if $summary.trend == "" then "" elif $summary.delta == null then " " + $summary.trend else " " + $summary.trend + ($summary.delta | tostring) end)),
+          tooltip: ($summary.lines | join("\n")),
+          class: $summary.state
+        }
+      end'
   '';
 in
 {
