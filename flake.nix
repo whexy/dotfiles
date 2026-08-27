@@ -63,12 +63,6 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
-    renpho-health = {
-      url = "github:whexy/renpho-health-nix";
-      inputs.nixpkgs.follows = "nixpkgs";
-      inputs.blueprint.follows = "blueprint";
-    };
-
     oh-my-ghostty = {
       url = "github:whexy/oh-my-ghostty";
       inputs.nixpkgs.follows = "nixpkgs";

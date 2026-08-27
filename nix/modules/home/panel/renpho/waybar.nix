@@ -1,7 +1,6 @@
 # Renpho weight pill for Waybar (Linux).
 args@{
   config,
-  inputs,
   lib,
   pkgs,
   ...
@@ -11,34 +10,25 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  renphoHealth = lib.getExe inputs.renpho-health.packages.${pkgs.stdenv.hostPlatform.system}.default;
-  credsFile = config.age.secrets.renpho-creds.path;
+  curl = lib.getExe pkgs.curl;
+  cfIdFile = config.age.secrets.cf-access-dotfiles-id.path;
+  cfSecretFile = config.age.secrets.cf-access-dotfiles-secret.path;
+  dataUrl = "https://zepbound.whexy.com/api/data.json";
   jq = lib.getExe pkgs.jq;
-  summaryFilter = ./summary.jq;
   icon = "󰓅";
-  summaryCount = 5;
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 
   pillScript = pkgs.writeShellScript "waybar-renpho" ''
-    raw="$(${renphoHealth} recent --count ${toString summaryCount} --creds-file "${credsFile}" 2>/dev/null)" ||
-      exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), tooltip: "fetch failed", class: "stale"}'
-    summary="$(printf '%s\n' "$raw" | ${jq} -c --argjson summary_count ${toString summaryCount} -f ${summaryFilter} 2>/dev/null)" ||
-      exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), tooltip: "response unreadable", class: "stale"}'
-
-    exec ${jq} -cn --argjson summary "$summary" --arg icon '${icon}' '
-      def rounded: (. * 10 | round / 10 | tostring);
-      if $summary.present == false then
-        {text: ($icon + " …"), tooltip: ($summary.lines | join("\n")), class: "stale"}
-      else
-        {
-          text: ($icon + " "
-            + (if ($summary.weight | type) == "number" then ($summary.weight | rounded) + "kg" else "?" end)
-            + (if $summary.trend == "" then "" elif $summary.delta == null then " " + $summary.trend else " " + $summary.trend + ($summary.delta | tostring) end)),
-          tooltip: ($summary.lines | join("\n")),
-          class: $summary.state
-        }
-      end'
+    weight="$(${curl} -fsS --max-time 15 \
+      -H "CF-Access-Client-Id: $(<"${cfIdFile}")" \
+      -H "CF-Access-Client-Secret: $(<"${cfSecretFile}")" \
+      "${dataUrl}" 2>/dev/null \
+      | ${jq} -r '(.measurements | sort_by(.date) | last | .weight_kg) // empty' 2>/dev/null)"
+    if [ -z "$weight" ]; then
+      exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), class: "stale"}'
+    fi
+    exec ${jq} -cn --arg icon '${icon}' --arg weight "$weight" '{text: ($icon + " " + $weight + "kg")}'
   '';
 in
 {
@@ -50,9 +40,6 @@ in
         exec = pillScript;
         interval = 300;
         return-type = "json";
-        escape = false;
-        format = "{}";
-        tooltip = true;
       };
     };
 
@@ -66,8 +53,6 @@ in
         transition: all 0.3s ease;
       }
 
-      #custom-renpho.down { color: #b8bb26; }
-      #custom-renpho.up { color: #fb4934; }
       #custom-renpho.stale { color: #928374; }
 
       #custom-renpho:hover {

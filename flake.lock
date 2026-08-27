@@ -673,46 +673,6 @@
         "type": "github"
       }
     },
-    "renpho-api": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1777924782,
-        "narHash": "sha256-L6AtI5qKr2z8DE6Mufp4V6zerbwbkZII76btoCCl/Ag=",
-        "owner": "danvaneijck",
-        "repo": "renpho-api",
-        "rev": "b259e499f125d82fa2b73b1f6eaf7be8df1775f1",
-        "type": "github"
-      },
-      "original": {
-        "owner": "danvaneijck",
-        "repo": "renpho-api",
-        "type": "github"
-      }
-    },
-    "renpho-health": {
-      "inputs": {
-        "blueprint": [
-          "blueprint"
-        ],
-        "nixpkgs": [
-          "nixpkgs"
-        ],
-        "renpho-api": "renpho-api"
-      },
-      "locked": {
-        "lastModified": 1787493251,
-        "narHash": "sha256-1lFjW6Kry4l+Ry1l/GSy1QX1YyugwaM93lQ06aNUd5g=",
-        "owner": "whexy",
-        "repo": "renpho-health-nix",
-        "rev": "15fc6ceebf1b5dd1f52d181ca663e9dccc05548e",
-        "type": "github"
-      },
-      "original": {
-        "owner": "whexy",
-        "repo": "renpho-health-nix",
-        "type": "github"
-      }
-    },
     "root": {
       "inputs": {
         "agenix": "agenix",
@@ -731,7 +691,6 @@
         "nixvim": "nixvim",
         "oh-my-ghostty": "oh-my-ghostty",
         "paneru": "paneru",
-        "renpho-health": "renpho-health",
         "treefmt-nix": "treefmt-nix_2"
       }
     },
