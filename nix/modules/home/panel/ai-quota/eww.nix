@@ -47,7 +47,8 @@ let
           + (jq(AI_QUOTA, ".\"${p.name}\".state == \"error\"") ? " error" : "")}
         :visible {jq(AI_QUOTA, ".\"${p.name}\".present")}
         :tooltip {jq(AI_QUOTA, ".\"${p.name}\".compact_lines | join(\"\\n\")")}
-        (label :class "quota-icon" :text "${p.icon}")
+        (image :class "quota-icon" :path "${p.logo}"
+          :image-width 14 :image-height 14 :preserve-aspect-ratio true)
         (progress :class "quota-bar" :orientation "h" :valign "center"
           :hexpand false :width 56 :value {jq(AI_QUOTA, ".\"${p.name}\".remaining")})
         (label :class "quota-pct" :text {round(jq(AI_QUOTA, ".\"${p.name}\".remaining"), 0)})
