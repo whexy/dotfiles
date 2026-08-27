@@ -12,6 +12,10 @@
 Manager](https://img.shields.io/badge/Home%20Manager-5277C3?style=for-the-badge&logo=nixos&logoColor=white)](https://github.com/nix-community/home-manager)
 [![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com)
 
+<picture> <img alt="macOS desktop"
+    src="docs/dotfiles_macOS.png"
+    width="700"> </picture>
+
 </div>
 
 My personal Nix configuration for all my machines: NixOS, Macs, WSL.
