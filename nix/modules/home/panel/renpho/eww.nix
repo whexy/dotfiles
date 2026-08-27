@@ -37,13 +37,14 @@ in
           "${summaryScript}")
 
         (defwidget renpho []
-          (box :class {"pill renpho " + jq(RENPHO, ".state")}
-            :tooltip {jq(RENPHO, ".lines | join(\"\\n\")")}
+          (box :class {"pill renpho " + replace(jq(RENPHO, ".state"), "^\"|\"$", "")}
+            :tooltip {replace(jq(RENPHO, ".lines | join(\"\\n\")"), "^\"|\"$", "")}
             (label :text {
               "${icon} "
               + (jq(RENPHO, ".present")
                 ? round(jq(RENPHO, ".weight"), 1) + "kg"
-                  + (jq(RENPHO, ".trend") == "" ? "" : " " + jq(RENPHO, ".trend")
+                  + (jq(RENPHO, ".trend") == "\"\"" ? "" : " "
+                    + replace(jq(RENPHO, ".trend"), "^\"|\"$", "")
                     + (jq(RENPHO, ".delta == null") ? "" : jq(RENPHO, ".delta")))
                 : "…")})))
       '';
