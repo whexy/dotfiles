@@ -47,7 +47,7 @@ let
   # OpenCode Go subscription (https://opencode.ai/zen/go); always
   # available. Claude Code speaks the Anthropic Messages API; verified
   # against /v1/messages (x-api-key auth): qwen and deepseek models
-  # answer, grok-4.6 and gpt-5.6-luna are rejected.
+  # answer, grok-4.6, gpt-5.6-luna, and glm-5.3-flash are rejected.
   opencodeGo = model: {
     label = "opencode-go/${model}";
     env = pinAll model // {
