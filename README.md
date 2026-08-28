@@ -12,6 +12,10 @@
 Manager](https://img.shields.io/badge/Home%20Manager-5277C3?style=for-the-badge&logo=nixos&logoColor=white)](https://github.com/nix-community/home-manager)
 [![Tailscale](https://img.shields.io/badge/Tailscale-000000?style=for-the-badge&logo=tailscale&logoColor=white)](https://tailscale.com)
 
+<picture> <img alt="NixOS desktop"
+    src="docs/dotfiles_nixOS.png"
+    width="700"> </picture>
+
 <picture> <img alt="macOS desktop"
     src="docs/dotfiles_macOS.png"
     width="700"> </picture>
