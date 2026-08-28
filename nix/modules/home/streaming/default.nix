@@ -48,7 +48,7 @@ in
             echo "$msg" | while IFS= read -r line; do
               printf "%*s%s\n" "$left_padding" "" "$line"
             done
-            sleep 1
+            [ "$i" -eq 0 ] || sleep 1
           done
           clear
         '';
