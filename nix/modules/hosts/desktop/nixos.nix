@@ -17,6 +17,11 @@ in
       # starts its tray applet after the session tray target is available.
       blueman.enable = true;
 
+      # GVfs and UDisks2 provide volume monitoring, automounting support, and trash
+      # integration for Nautilus and file dialogs.
+      gvfs.enable = true;
+      udisks2.enable = true;
+
       # Greetd display manager with auto-login to niri
       greetd = {
         enable = true;
