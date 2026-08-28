@@ -111,7 +111,7 @@ def countdown:
   elif . <= 0 then "now"
   else
     (. | floor) as $seconds
-    | (($seconds + 3599) / 3600 | floor) as $hours
+    | ($seconds / 3600 | floor) as $hours
     | ($hours / 24 | floor) as $days
     | ($hours % 24) as $day_hours
     | if $hours >= 48 then
