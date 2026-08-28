@@ -7,7 +7,7 @@
 {
   "$schema" = "https://opencode.ai/config.json";
   # kimi-k3 goes through the tailnet AI proxy; fall back to OpenCode Go without Tailscale.
-  model = if proxyAccounts then "ai-proxy/kimi-k3" else "opencode-go/deepseek-v4-flash";
+  model = if proxyAccounts then "ai-proxy/gpt-5.6-sol" else "opencode-go/glm-5.3-flash";
   autoupdate = false;
   default_agent = "plan";
   share = "disabled";

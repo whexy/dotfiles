@@ -4,12 +4,11 @@
 # cannot hide.
 {
   opencode-go = [
+    "glm-5.3-flash"
     "deepseek-v4-flash"
     "deepseek-v4-pro"
     "grok-4.6"
     "gpt-5.6-luna"
-    "qwen3.8-max"
-    "glm-5.3-flash"
   ];
   openai = [
     "gpt-5.6-sol"
