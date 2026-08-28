@@ -30,6 +30,8 @@ in
     ".pi/agent/settings.json".text = builtins.toJSON settings;
     ".pi/agent/models.json".text = builtins.toJSON models;
     ".pi/web-search.json".text = builtins.toJSON webSearch;
+    # Desktop notification on agent settle (see extensions/notify.ts).
+    ".pi/agent/extensions/notify.ts".source = ./extensions/notify.ts;
   }
   // lib.optionalAttrs proxyAccounts {
     # Discover the proxy catalog and clone matching model metadata from pi.
