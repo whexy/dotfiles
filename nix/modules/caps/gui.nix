@@ -15,8 +15,9 @@
     keyboard.kanata.enable = lib.mkDefault true;
     keyboard.fcitx5.enable = lib.mkDefault true;
     security = {
-      # GNOME Keyring and 1Password GUI; only have an effect on NixOS.
+      # Desktop authentication services and 1Password GUI; only have an effect on NixOS.
       keyring.enable = lib.mkDefault true;
+      soteria.enable = lib.mkDefault true;
       onepasswordGui.enable = lib.mkDefault true;
       # Touch ID / Apple Watch sudo; only has an effect on Darwin.
       biometricSudo.enable = lib.mkDefault true;

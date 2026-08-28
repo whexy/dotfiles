@@ -6,6 +6,7 @@
     onepassword.enable = lib.mkEnableOption "1Password system integration (CLI)";
     onepasswordGui.enable = lib.mkEnableOption "1Password GUI (Linux: _1password-gui; macOS: Homebrew cask)";
     keyring.enable = lib.mkEnableOption "GNOME Keyring (Secret Service portal for apps, Linux)";
+    soteria.enable = lib.mkEnableOption "Soteria graphical Polkit authentication agent (Linux)";
     fail2ban.enable = lib.mkEnableOption "fail2ban intrusion prevention";
     biometricSudo.enable = lib.mkEnableOption "Touch ID / Apple Watch authentication for sudo";
   };

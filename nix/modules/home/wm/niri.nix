@@ -15,6 +15,8 @@ in
   config = lib.mkIf cfg.niri.enable (
     let
       monitors = osConfig.dotfiles.hardware.monitors or [ ];
+      networkManagerEnabled = osConfig.dotfiles.network.networkmanager.enable or false;
+      swaylock = lib.getExe config.programs.swaylock.package;
 
       # Build programs.niri.settings.outputs from dotfiles.hardware.monitors entries.
       # Each entry maps to a niri output block with mode, refresh, and scale.
@@ -61,30 +63,45 @@ in
         wl-clipboard
       ];
 
-      programs.niri = {
-        enable = true;
-        # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
-        # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
-        # avoid pulling an extra rebuild-from-source derivation into the closure.
-        package = pkgs.niri;
+      programs = {
+        niri = {
+          enable = true;
+          # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
+          # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
+          # avoid pulling an extra rebuild-from-source derivation into the closure.
+          package = pkgs.niri;
+        };
+        swaylock = {
+          enable = true;
+          settings = {
+            color = "282828";
+            font = "JetBrainsMono Nerd Font";
+            indicator-radius = 100;
+            show-failed-attempts = true;
+          };
+        };
       };
       services = {
         wl-clip-persist.enable = true;
         blueman-applet.enable = true;
-      };
+        network-manager-applet.enable = networkManagerEnabled;
 
-      # Turn off all monitors after 5 minutes of inactivity via swayidle.
-      # swayidle listens to the Wayland idle protocol and runs commands on timeout.
-      # `niri msg action power-off-monitors` uses niri's built-in DPMS control.
-      # On resume (any input event), niri automatically powers monitors back on.
-      services.swayidle = {
-        enable = true;
-        timeouts = [
-          {
-            timeout = 300; # 5 minutes
-            command = "${config.programs.niri.package}/bin/niri msg action power-off-monitors";
-          }
-        ];
+        # Lock after 5 minutes, blank the displays shortly afterward, and always
+        # lock before suspend. Any input event powers the monitors back on.
+        swayidle = {
+          enable = true;
+          events.before-sleep = "${swaylock} -f";
+          timeouts = [
+            {
+              timeout = 300; # 5 minutes
+              command = "${swaylock} -f";
+            }
+            {
+              timeout = 305;
+              command = "${config.programs.niri.package}/bin/niri msg action power-off-monitors";
+            }
+          ];
+        };
       };
 
       # Niri settings
@@ -303,8 +320,69 @@ in
               cooldown-ms = 150;
             };
 
+            # ── Media keys ────────────────────────────────────────────
+            "XF86AudioRaiseVolume".action.spawn = [
+              "wpctl"
+              "set-volume"
+              "-l"
+              "1.0"
+              "@DEFAULT_AUDIO_SINK@"
+              "5%+"
+            ];
+            "XF86AudioLowerVolume".action.spawn = [
+              "wpctl"
+              "set-volume"
+              "@DEFAULT_AUDIO_SINK@"
+              "5%-"
+            ];
+            "XF86AudioMute".action.spawn = [
+              "wpctl"
+              "set-mute"
+              "@DEFAULT_AUDIO_SINK@"
+              "toggle"
+            ];
+            "XF86AudioMicMute".action.spawn = [
+              "wpctl"
+              "set-mute"
+              "@DEFAULT_AUDIO_SOURCE@"
+              "toggle"
+            ];
+            "XF86AudioPlay".action.spawn = [
+              "playerctl"
+              "play-pause"
+            ];
+            "XF86AudioPause".action.spawn = [
+              "playerctl"
+              "play-pause"
+            ];
+            "XF86AudioNext".action.spawn = [
+              "playerctl"
+              "next"
+            ];
+            "XF86AudioPrev".action.spawn = [
+              "playerctl"
+              "previous"
+            ];
+            "XF86MonBrightnessUp".action.spawn = [
+              "brightnessctl"
+              "set"
+              "5%+"
+            ];
+            "XF86MonBrightnessDown".action.spawn = [
+              "brightnessctl"
+              "set"
+              "5%-"
+            ];
+
             # ── Power & Escape ────────────────────────────────────────
             "${hyper}+P".action.power-off-monitors = [ ];
+            "${hyper}+X" = {
+              action.spawn = [
+                swaylock
+                "-f"
+              ];
+              repeat = false;
+            };
             "${hyper}+Escape" = {
               action.toggle-keyboard-shortcuts-inhibit = [ ];
               allow-inhibiting = false;

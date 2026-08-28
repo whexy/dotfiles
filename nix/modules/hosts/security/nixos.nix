@@ -19,6 +19,8 @@ in
     # GNOME Keyring: implements the Secret portal for apps that need credentials
     (lib.mkIf cfg.keyring.enable { services.gnome.gnome-keyring.enable = true; })
 
+    (lib.mkIf cfg.soteria.enable { security.soteria.enable = true; })
+
     (lib.mkIf cfg.fail2ban.enable { services.fail2ban.enable = true; })
   ];
 }
