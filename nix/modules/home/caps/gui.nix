@@ -33,6 +33,7 @@ in
           keyboard.fcitx5.enable = lib.mkDefault true;
           desktop = {
             mako.enable = lib.mkDefault true;
+            udiskie.enable = lib.mkDefault true;
             macbookScreenDensity.enable = lib.mkDefault true;
           };
           clipboard.vmware.enable = lib.mkDefault true;
