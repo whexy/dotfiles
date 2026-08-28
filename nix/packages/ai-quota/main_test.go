@@ -4,6 +4,7 @@ import (
 	"math"
 	"net/http"
 	"net/http/httptest"
+	"strings"
 	"testing"
 )
 
@@ -107,6 +108,37 @@ func TestAggregateUsageRecomputesCacheHitRate(t *testing.T) {
 	}
 }
 
+func TestAccountDisplayNamePrefersUserIdentity(t *testing.T) {
+	subtitle := "person@example.com (plus)"
+	tests := []struct {
+		account Account
+		want    string
+	}{
+		{Account{Name: "codex-generated-name.json", Subtitle: &subtitle}, subtitle},
+		{Account{Name: "antigravity-person@example.com.json"}, "person@example.com"},
+		{Account{Name: "OpenCode Go"}, "OpenCode Go"},
+	}
+	for _, tt := range tests {
+		if got := accountDisplayName(tt.account); got != tt.want {
+			t.Errorf("accountDisplayName(%q) = %q, want %q", tt.account.Name, got, tt.want)
+		}
+	}
+}
+
+func TestQuotaLineIsCompact(t *testing.T) {
+	resetHuman := "4h 30m"
+	resetLocal := "Aug 28 11:15"
+	line := quotaLine(Meter{Pct: 30, ResetHuman: &resetHuman, ResetLocal: &resetLocal})
+	for _, want := range []string{"━━━━", "30%", "resets in 4h 30m", "Aug 28 11:15"} {
+		if !strings.Contains(line, want) {
+			t.Errorf("quotaLine() = %q, want substring %q", line, want)
+		}
+	}
+	if strings.Contains(line, "used") {
+		t.Errorf("quotaLine() = %q, should not repeat the meaning of the percentage", line)
+	}
+}
+
 func TestUsageFormatting(t *testing.T) {
 	counts := map[int64]string{
 		999:     "999",
@@ -123,7 +155,8 @@ func TestUsageFormatting(t *testing.T) {
 	costs := map[float64]string{
 		0:        "$0.00",
 		2:        "$2.00",
-		2.066112: "$2.066112",
+		2.066112: "$2.07",
+		0.017957: "$0.018",
 	}
 	for value, want := range costs {
 		if got := formatCostUSD(value); got != want {

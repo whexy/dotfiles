@@ -31,7 +31,7 @@ const (
 	defaultOCKeyFile = "~/.secrets/opencode-api-key"
 	opencodeUsageURL = "https://opencode.ai/zen/go/v1/usage"
 
-	barWidth = 20
+	barWidth = 12
 )
 
 const (
@@ -164,10 +164,10 @@ func humanDelta(seconds int64) string {
 }
 
 func usageColor(pct float64) string {
-	if pct >= 80 {
+	if pct >= 90 {
 		return red
 	}
-	if pct >= 50 {
+	if pct >= 70 {
 		return yellow
 	}
 	return green
@@ -725,50 +725,68 @@ func fetchOpencodeGo(client *http.Client, key string, now time.Time) *Provider {
 
 func quotaLine(m Meter) string {
 	pct := math.Min(math.Max(m.Pct, 0), 100)
-	filled := int(math.RoundToEven(barWidth * pct / 100))
-	graph := paint(strings.Repeat("█", filled), usageColor(pct)) +
-		paint(strings.Repeat("░", barWidth-filled), dim)
+	filled := int(math.Round(float64(barWidth) * pct / 100))
+	graph := ""
+	if filled > 0 {
+		graph += paint(strings.Repeat("━", filled), usageColor(pct))
+	}
+	if empty := barWidth - filled; empty > 0 {
+		graph += paint(strings.Repeat("─", empty), dim)
+	}
+
 	note := ""
 	if m.ResetHuman != nil && m.ResetLocal != nil {
-		note = paint(fmt.Sprintf(" · resets in %s (%s)", *m.ResetHuman, *m.ResetLocal), dim)
+		note = paint(fmt.Sprintf("  resets in %s · %s", *m.ResetHuman, *m.ResetLocal), dim)
 	}
-	return fmt.Sprintf("%s %.0f%% used%s", graph, pct, note)
+	return fmt.Sprintf("%s  %s%s", graph, paint(fmt.Sprintf("%3.0f%%", pct), usageColor(pct)), note)
+}
+
+func accountDisplayName(acct Account) string {
+	if acct.Subtitle != nil && *acct.Subtitle != "" {
+		return *acct.Subtitle
+	}
+
+	name := strings.TrimSuffix(acct.Name, ".json")
+	for _, prefix := range []string{"antigravity-", "codex-", "kimi-"} {
+		name = strings.TrimPrefix(name, prefix)
+	}
+	return name
 }
 
 func printAccount(acct Account) {
-	var rows []string
+	fmt.Println("  " + paint("●", cyan) + " " + paint(accountDisplayName(acct), bold))
 	if acct.Error != nil {
-		rows = append(rows, paint("error: "+*acct.Error, red))
-	} else {
-		var labels []string
-		if acct.Subtitle != nil {
-			labels = append(labels, "user")
-		}
-		for _, m := range acct.Meters {
-			labels = append(labels, m.Label)
-		}
-		for _, n := range acct.Notes {
-			labels = append(labels, n[0])
-		}
-		width := 0
-		for _, l := range labels {
-			if len(l) > width {
-				width = len(l)
-			}
-		}
-		if acct.Subtitle != nil {
-			rows = append(rows, paint(fmt.Sprintf("%-*s", width, "user"), dim)+" "+*acct.Subtitle)
-		}
-		for _, m := range acct.Meters {
-			rows = append(rows, paint(fmt.Sprintf("%-*s", width, m.Label), dim)+" "+quotaLine(m))
-		}
-		for _, n := range acct.Notes {
-			rows = append(rows, paint(fmt.Sprintf("%-*s", width, n[0]), dim)+" "+n[1])
+		fmt.Println("    " + paint("error: "+*acct.Error, red))
+		return
+	}
+
+	labelWidth := 0
+	for _, m := range acct.Meters {
+		if len(m.Label) <= 14 && len(m.Label) > labelWidth {
+			labelWidth = len(m.Label)
 		}
 	}
-	fmt.Println("  " + paint("● ", cyan) + paint(acct.Name, bold))
-	for _, r := range rows {
-		fmt.Println("    " + r)
+	for _, n := range acct.Notes {
+		if len(n[0]) <= 14 && len(n[0]) > labelWidth {
+			labelWidth = len(n[0])
+		}
+	}
+
+	for _, m := range acct.Meters {
+		if len(m.Label) > 14 {
+			fmt.Println("    " + paint(m.Label, dim))
+			fmt.Println("      " + quotaLine(m))
+			continue
+		}
+		fmt.Println("    " + paint(fmt.Sprintf("%-*s", labelWidth, m.Label), dim) + "  " + quotaLine(m))
+	}
+	for _, n := range acct.Notes {
+		if len(n[0]) > 14 {
+			fmt.Println("    " + paint(n[0], dim))
+			fmt.Println("      " + n[1])
+			continue
+		}
+		fmt.Println("    " + paint(fmt.Sprintf("%-*s", labelWidth, n[0]), dim) + "  " + n[1])
 	}
 }
 
@@ -790,12 +808,16 @@ func compactCount(n int64) string {
 }
 
 func formatCostUSD(cost float64) string {
-	if cost == 0 {
-		return "$0.00"
+	precision := 2
+	if math.Abs(cost) < 1 {
+		precision = 4
 	}
-	formatted := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.6f", cost), "0"), ".")
-	if !strings.Contains(formatted, ".") {
-		formatted += ".00"
+	if math.Abs(cost) < 0.01 {
+		precision = 6
+	}
+	formatted := fmt.Sprintf("%.*f", precision, cost)
+	for strings.Contains(formatted, ".") && strings.HasSuffix(formatted, "0") && len(formatted)-strings.LastIndex(formatted, ".")-1 > 2 {
+		formatted = strings.TrimSuffix(formatted, "0")
 	}
 	return "$" + formatted
 }
@@ -803,16 +825,16 @@ func formatCostUSD(cost float64) string {
 func usagePeriodLabel(period UsagePeriod) string {
 	to, err := time.Parse(time.RFC3339Nano, period.To)
 	if err != nil {
-		return "model usage"
+		return ""
 	}
 	if period.From == "1970-01-01T00:00:00Z" {
-		return "model usage · all history through " + to.UTC().Format("2006-01-02 15:04 UTC")
+		return "lifetime · through " + to.UTC().Format("2006-01-02 15:04 UTC")
 	}
 	from, err := time.Parse(time.RFC3339Nano, period.From)
 	if err != nil {
-		return "model usage · through " + to.UTC().Format("2006-01-02 15:04 UTC")
+		return "through " + to.UTC().Format("2006-01-02 15:04 UTC")
 	}
-	return fmt.Sprintf("model usage · %s to %s UTC", from.UTC().Format("2006-01-02 15:04"), to.UTC().Format("2006-01-02 15:04"))
+	return fmt.Sprintf("%s → %s UTC", from.UTC().Format("2006-01-02 15:04"), to.UTC().Format("2006-01-02 15:04"))
 }
 
 func aggregateUsage(models []ModelUsage) UsageAggregate {
@@ -835,22 +857,38 @@ func aggregateUsage(models []ModelUsage) UsageAggregate {
 	return total
 }
 
-func usageCells(model string, usage UsageAggregate) []string {
-	return []string{
-		model,
-		strconv.FormatInt(usage.APICalls, 10),
-		strconv.FormatInt(usage.FailedAPICalls, 10),
-		compactCount(usage.InputTokens),
-		compactCount(usage.CacheReadTokens) + "/" + compactCount(usage.CacheWriteTokens),
-		compactCount(usage.OutputTokens),
-		compactCount(usage.TotalTokens),
-		fmt.Sprintf("%.1f%%", usage.CacheHitRate*100),
-		formatCostUSD(usage.CostUSD),
-		fmt.Sprintf("%d/%d", usage.PricedAPICalls, usage.UnpricedAPICalls),
+func callCount(calls int64) string {
+	word := "calls"
+	if calls == 1 {
+		word = "call"
+	}
+	return fmt.Sprintf("%d %s", calls, word)
+}
+
+func printModelUsage(model ModelUsage) {
+	callSummary := callCount(model.APICalls)
+	if model.FailedAPICalls > 0 {
+		callSummary += " · " + paint(fmt.Sprintf("%d failed", model.FailedAPICalls), red)
+	}
+	if model.UnpricedAPICalls > 0 {
+		callSummary += " · " + paint(fmt.Sprintf("%d unpriced", model.UnpricedAPICalls), yellow)
+	}
+
+	fmt.Println("    " + paint(model.Model, bold) + "  " + callSummary + " · " + formatCostUSD(model.CostUSD))
+	fmt.Printf("      %s tokens · %s input · %s output\n",
+		compactCount(model.TotalTokens), compactCount(model.InputTokens), compactCount(model.OutputTokens))
+
+	if model.CacheReadTokens > 0 || model.CacheWriteTokens > 0 {
+		cache := "cache " + compactCount(model.CacheReadTokens) + " read"
+		if model.CacheWriteTokens > 0 {
+			cache += " · " + compactCount(model.CacheWriteTokens) + " write"
+		}
+		cache += fmt.Sprintf(" · %.1f%% hit", model.CacheHitRate*100)
+		fmt.Println("      " + paint(cache, dim))
 	}
 }
 
-func printUsageTable(models []ModelUsage, period UsagePeriod) {
+func printUsage(models []ModelUsage, period UsagePeriod) {
 	models = append([]ModelUsage(nil), models...)
 	sort.SliceStable(models, func(i, j int) bool {
 		if models[i].CostUSD != models[j].CostUSD {
@@ -862,51 +900,21 @@ func printUsageTable(models []ModelUsage, period UsagePeriod) {
 		return models[i].Model < models[j].Model
 	})
 
-	headers := []string{"MODEL", "CALLS", "FAIL", "INPUT", "CACHE READ/WRITE", "OUTPUT", "TOTAL", "HIT", "COST", "PRICED/UNPRICED"}
-	rows := make([][]string, 0, len(models)+1)
-	for _, model := range models {
-		rows = append(rows, usageCells(model.Model, model.UsageAggregate))
+	heading := "  " + paint("Usage", bold)
+	if periodLabel := usagePeriodLabel(period); periodLabel != "" {
+		heading += "  " + paint(periodLabel, dim)
+	}
+	fmt.Println(heading)
+	for i, model := range models {
+		if i > 0 {
+			fmt.Println()
+		}
+		printModelUsage(model)
 	}
 	if len(models) > 1 {
-		rows = append(rows, usageCells("TOTAL", aggregateUsage(models)))
-	}
-	widths := make([]int, len(headers))
-	for i, header := range headers {
-		widths[i] = len(header)
-	}
-	for _, row := range rows {
-		for i, cell := range row {
-			if len(cell) > widths[i] {
-				widths[i] = len(cell)
-			}
-		}
-	}
-
-	formatRow := func(row []string) string {
-		parts := make([]string, len(row))
-		for i, cell := range row {
-			if i == 0 {
-				parts[i] = fmt.Sprintf("%-*s", widths[i], cell)
-			} else {
-				parts[i] = fmt.Sprintf("%*s", widths[i], cell)
-			}
-		}
-		return strings.Join(parts, "  ")
-	}
-	separator := make([]string, len(widths))
-	for i, width := range widths {
-		separator[i] = strings.Repeat("─", width)
-	}
-
-	fmt.Println("  " + paint(usagePeriodLabel(period), bold))
-	fmt.Println("    " + paint(formatRow(headers), dim))
-	fmt.Println("    " + paint(strings.Join(separator, "  "), dim))
-	for i, row := range rows {
-		if len(models) > 1 && i == len(rows)-1 {
-			fmt.Println("    " + paint(formatRow(row), bold))
-		} else {
-			fmt.Println("    " + formatRow(row))
-		}
+		total := aggregateUsage(models)
+		fmt.Println()
+		fmt.Println("    " + paint(fmt.Sprintf("Total  %s · %s tokens · %s", callCount(total.APICalls), compactCount(total.TotalTokens), formatCostUSD(total.CostUSD)), bold))
 	}
 }
 
@@ -1021,12 +1029,16 @@ func main() {
 		if sections > 0 {
 			fmt.Println()
 		}
-		fmt.Println(paint(entry.Provider, bold, magenta))
-		for _, acct := range entry.Accounts {
+		fmt.Println(paint(strings.ToUpper(entry.Provider), bold, magenta))
+		for i, acct := range entry.Accounts {
+			if i > 0 {
+				fmt.Println()
+			}
 			printAccount(acct)
 		}
 		if models := usageByProvider[entry.Provider]; len(models) > 0 {
-			printUsageTable(models, usageInsights.Period)
+			fmt.Println()
+			printUsage(models, usageInsights.Period)
 		}
 		printed[entry.Provider] = true
 		sections++
@@ -1043,8 +1055,8 @@ func main() {
 		if sections > 0 {
 			fmt.Println()
 		}
-		fmt.Println(paint(provider, bold, magenta))
-		printUsageTable(usageByProvider[provider], usageInsights.Period)
+		fmt.Println(paint(strings.ToUpper(provider), bold, magenta))
+		printUsage(usageByProvider[provider], usageInsights.Period)
 		sections++
 	}
 }
