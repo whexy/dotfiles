@@ -67,7 +67,6 @@ let
             + (jq(AI_QUOTA, ".\"${p.name}\".display_meter.state == \"critical\"") ? " critical" : "")
             + (jq(AI_QUOTA, ".\"${p.name}\".state == \"error\"") ? " error" : "")}
           :visible {jq(AI_QUOTA, ".\"${p.name}\".present")}
-          :tooltip {jq(AI_QUOTA, ".\"${p.name}\".compact_lines | join(\"\\n\")")}
           (image :class "quota-icon" :path "${p.logo}"
             :image-width 16 :image-height 16 :preserve-aspect-ratio true)
           (box :class "quota-tracks" :orientation "v" :spacing 2
