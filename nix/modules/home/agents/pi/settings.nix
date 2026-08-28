@@ -16,6 +16,7 @@
 
   packages = [
     "npm:pi-web-access"
+    "npm:@agentoom/pi-spending-guard"
   ];
 
   npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
