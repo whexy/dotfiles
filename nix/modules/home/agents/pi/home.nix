@@ -29,6 +29,7 @@ in
   homeFiles = {
     ".pi/agent/settings.json".text = builtins.toJSON settings;
     ".pi/agent/models.json".text = builtins.toJSON models;
+    ".pi/agent/spending-guard.json".text = builtins.toJSON { enabled = false; };
     ".pi/web-search.json".text = builtins.toJSON webSearch;
     # Desktop notification on agent settle (see extensions/notify.ts).
     ".pi/agent/extensions/notify.ts".source = ./extensions/notify.ts;
