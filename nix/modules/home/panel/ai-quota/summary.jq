@@ -100,6 +100,7 @@ def compact_meter:
       pill_label: (.label | pill_tag),
       remaining: $remaining,
       reset: (.reset_human // null),
+      reset_label: (if .reset_human then "Resets " + .reset_human else "Reset unavailable" end),
       reset_in: (.reset_in // null),
       span: window_span,
       state: ($remaining | state),
@@ -152,8 +153,8 @@ def compact_meter_line:
 
 def provider_accent:
   if . == "kimi" then "blue"
-  elif . == "codex" then "orange"
-  elif . == "opencode-go" then "green"
+  elif . == "codex" then "green"
+  elif . == "opencode-go" then "orange"
   else "gray"
   end;
 

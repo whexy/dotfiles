@@ -1,8 +1,8 @@
-# Eww quota meters (Linux).
+# Eww quota capsules (Linux).
 #
-# One Eww poll fetches the provider data and emits all summaries as a single
-# JSON value. The visible widgets reference that poll directly, so fetching
-# and rendering share one lifecycle and one interval.
+# One poll fetches every provider. Compact Material 3 capsules show all quota
+# windows as stacked tracks plus the reset that can next restore availability;
+# clicking a capsule toggles a larger read-only details card.
 args@{
   config,
   lib,
@@ -18,6 +18,7 @@ let
   shared = import ./shared.nix { inherit perSystem; };
   inherit (shared) aiQuota providers;
 
+  eww = lib.getExe pkgs.eww;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
 
@@ -38,21 +39,76 @@ let
       '{${lib.concatMapStringsSep ", " (p: ''"${p.name}": $'' + p.variable) providers}}'
   '';
 
+  detailsWindows = map (p: "ai-quota-details-${p.name}") providers;
+
+  toggleScript =
+    provider:
+    pkgs.writeShellScript "eww-ai-quota-toggle-${provider}" ''
+      ${eww} poll AI_QUOTA >/dev/null 2>&1 &
+      active="$(${eww} active-windows 2>/dev/null || true)"
+      case "$active" in
+        *"ai-quota-details-${provider}: ai-quota-details-${provider}"*)
+          exec ${eww} close ai-quota-details-${provider}
+          ;;
+        *)
+          ${eww} close ${lib.concatStringsSep " " detailsWindows} >/dev/null 2>&1 || true
+          exec ${eww} open ai-quota-details-${provider}
+          ;;
+      esac
+    '';
+
   providerDef = p: ''
     (defwidget ai-quota-${p.name} []
-      (box :space-evenly false
-        :class {"pill quota"
-          + (jq(AI_QUOTA, ".\"${p.name}\".state == \"warning\"") ? " warning" : "")
-          + (jq(AI_QUOTA, ".\"${p.name}\".state == \"critical\"") ? " critical" : "")
-          + (jq(AI_QUOTA, ".\"${p.name}\".state == \"error\"") ? " error" : "")}
-        :visible {jq(AI_QUOTA, ".\"${p.name}\".present")}
-        :tooltip {jq(AI_QUOTA, ".\"${p.name}\".compact_lines | join(\"\\n\")")}
-        (image :class "quota-icon" :path "${p.logo}"
-          :image-width 14 :image-height 14 :preserve-aspect-ratio true)
-        (progress :class "quota-bar" :orientation "h" :valign "center"
-          :hexpand false :width 56 :value {jq(AI_QUOTA, ".\"${p.name}\".remaining")})
-        (label :class "quota-pct" :text {round(jq(AI_QUOTA, ".\"${p.name}\".remaining"), 0)})
-        (label :text "%")))
+      (eventbox :cursor "pointer" :timeout "1s"
+        :onclick "${toggleScript p.name}"
+        (box :space-evenly false
+          :class {"pill quota quota-${p.name}"
+            + (jq(AI_QUOTA, ".\"${p.name}\".display_meter.state == \"warning\"") ? " warning" : "")
+            + (jq(AI_QUOTA, ".\"${p.name}\".display_meter.state == \"critical\"") ? " critical" : "")
+            + (jq(AI_QUOTA, ".\"${p.name}\".state == \"error\"") ? " error" : "")}
+          :visible {jq(AI_QUOTA, ".\"${p.name}\".present")}
+          :tooltip {jq(AI_QUOTA, ".\"${p.name}\".compact_lines | join(\"\\n\")")}
+          (image :class "quota-icon" :path "${p.logo}"
+            :image-width 16 :image-height 16 :preserve-aspect-ratio true)
+          (box :class "quota-tracks" :orientation "v" :spacing 2
+            :space-evenly false :valign "center"
+            (for meter in {jq(AI_QUOTA, ".\"${p.name}\".compact_meters[:3]")}
+              (progress :class {"quota-track " + meter.color}
+                :orientation "h" :width 58 :value {meter.remaining})))
+          (label :class "quota-countdown"
+            :text {jq(AI_QUOTA, ".\"${p.name}\".display_meter.countdown // \"—\"", "r")}))))
+
+    (defwidget ai-quota-details-${p.name} []
+      (box :class "quota-details" :orientation "v" :space-evenly false
+        (box :class "quota-details-header" :space-evenly false
+          (image :path "${p.logo}" :image-width 20 :image-height 20
+            :preserve-aspect-ratio true)
+          (box :class "quota-details-heading" :orientation "v" :space-evenly false
+            (label :class "quota-details-title" :halign "start" :text "${p.title}")
+            (label :class "quota-details-subtitle" :halign "start" :text "Quota windows"))
+          (button :class "quota-details-close"
+            :onclick "${eww} close ai-quota-details-${p.name}" "󰅖"))
+        (box :class "quota-details-meters" :orientation "v" :spacing 10
+          :space-evenly false
+          (for meter in {jq(AI_QUOTA, ".\"${p.name}\".compact_meters[:3]")}
+            (box :class "quota-detail-meter" :orientation "v" :space-evenly false
+              (box :class "quota-detail-labels" :space-evenly false
+                (label :class {"quota-detail-name " + meter.color}
+                  :halign "start" :hexpand true :text {meter.label})
+                (label :class "quota-detail-value" :halign "end"
+                  :text {round(meter.remaining, 0) + "%"}))
+              (progress :class {"quota-detail-bar " + meter.color}
+                :orientation "h" :value {meter.remaining})
+              (label :class "quota-detail-reset" :halign "start"
+                :text {meter.reset_label}))))))
+
+    (defwindow ai-quota-details-${p.name}
+      :monitor 0
+      :geometry (geometry :x "8px" :y "-36px" :width "300px" :height "224px"
+        :anchor "bottom left")
+      :stacking "overlay"
+      :focusable "none"
+      (ai-quota-details-${p.name}))
   '';
 in
 {
@@ -62,7 +118,8 @@ in
         (defpoll AI_QUOTA :interval "60s"
           :initial '{${
             lib.concatMapStringsSep "," (
-              p: ''"${p.name}":{"present":false,"state":"empty","remaining":0,"compact_lines":[]}''
+              p:
+              ''"${p.name}":{"present":false,"state":"empty","remaining":0,"display_meter":null,"compact_lines":[],"compact_meters":[]}''
             ) providers
           }}'
           "${quotaScript}")
@@ -72,59 +129,230 @@ in
       left = lib.mkAfter (map (p: "ai-quota-${p.name}") providers);
 
       styles = ''
-        // Material You linear progress: tonal track, rounded fill tinted by
-        // quota state (matches summary.jq's ok/warning/critical/error).
+        // Material 3 compact status capsules. Each native progress bar is one
+        // quota window; longer windows use lower-emphasis accent tones.
         .quota {
           color: $on-surface;
+          padding: 2px 9px;
+          transition: background-color 150ms ease;
+        }
+
+        .quota:hover {
+          background-color: $surface-container-highest;
         }
 
         .quota-icon {
-          margin-right: 6px;
+          margin-right: 8px;
         }
 
-        .quota-pct {
-          margin-left: 6px;
+        .quota-tracks {
+          min-width: 58px;
         }
 
-        // GTK progressbars request ~150px by default. The widget and trough
-        // establish the compact track width; the progress node must remain
-        // unconstrained so GTK can size it to the current percentage.
-        .quota-bar,
-        .quota-bar trough {
-          min-width: 56px;
+        .quota-track,
+        .quota-track trough {
+          min-width: 58px;
         }
 
-        .quota-bar trough {
-          min-height: 6px;
-          border-radius: 3px;
-          background-color: $secondary-container;
+        .quota-track trough {
+          min-height: 3px;
+          border-radius: 2px;
+          background-color: rgba(202, 196, 208, 0.18);
         }
 
-        .quota-bar progress {
+        .quota-track progress {
           min-width: 0;
-          min-height: 6px;
-          border-radius: 3px;
-          background-color: $primary;
+          min-height: 3px;
+          border-radius: 2px;
         }
 
-        .quota.warning {
+        .quota-countdown {
+          min-width: 46px;
+          margin-left: 8px;
+          font-size: 11px;
+          font-weight: bold;
+        }
+
+        .quota-kimi .quota-countdown {
+          color: #a8c7fa;
+        }
+
+        .quota-codex .quota-countdown {
+          color: #b1d18b;
+        }
+
+        .quota-opencode-go .quota-countdown {
+          color: #ffb77d;
+        }
+
+        .quota.warning .quota-countdown {
           color: $warning;
         }
 
-        .quota.warning .quota-bar progress {
-          background-color: $warning;
-        }
-
-        .quota.critical {
+        .quota.critical .quota-countdown {
           color: $error;
-        }
-
-        .quota.critical .quota-bar progress {
-          background-color: $error;
         }
 
         .quota.error {
           color: $on-surface-variant;
+        }
+
+        .quota.error .quota-countdown {
+          color: $on-surface-variant;
+        }
+
+        .quota-track.blue progress,
+        .quota-detail-bar.blue progress {
+          background-color: #a8c7fa;
+        }
+
+        .quota-track.blueDim progress,
+        .quota-detail-bar.blueDim progress {
+          background-color: rgba(168, 199, 250, 0.7);
+        }
+
+        .quota-track.blueFaint progress,
+        .quota-detail-bar.blueFaint progress {
+          background-color: rgba(168, 199, 250, 0.45);
+        }
+
+        .quota-track.green progress,
+        .quota-detail-bar.green progress {
+          background-color: #b1d18b;
+        }
+
+        .quota-track.greenDim progress,
+        .quota-detail-bar.greenDim progress {
+          background-color: rgba(177, 209, 139, 0.7);
+        }
+
+        .quota-track.greenFaint progress,
+        .quota-detail-bar.greenFaint progress {
+          background-color: rgba(177, 209, 139, 0.45);
+        }
+
+        .quota-track.orange progress,
+        .quota-detail-bar.orange progress {
+          background-color: #ffb77d;
+        }
+
+        .quota-track.orangeDim progress,
+        .quota-detail-bar.orangeDim progress {
+          background-color: rgba(255, 183, 125, 0.7);
+        }
+
+        .quota-track.orangeFaint progress,
+        .quota-detail-bar.orangeFaint progress {
+          background-color: rgba(255, 183, 125, 0.45);
+        }
+
+        .quota-track.warning progress,
+        .quota-detail-bar.warning progress {
+          background-color: $warning;
+        }
+
+        .quota-track.warningDim progress,
+        .quota-detail-bar.warningDim progress {
+          background-color: rgba(234, 196, 109, 0.7);
+        }
+
+        .quota-track.warningFaint progress,
+        .quota-detail-bar.warningFaint progress {
+          background-color: rgba(234, 196, 109, 0.45);
+        }
+
+        .quota-track.critical progress,
+        .quota-detail-bar.critical progress {
+          background-color: $error;
+        }
+
+        .quota-track.criticalDim progress,
+        .quota-detail-bar.criticalDim progress {
+          background-color: rgba(242, 184, 181, 0.7);
+        }
+
+        .quota-track.criticalFaint progress,
+        .quota-detail-bar.criticalFaint progress {
+          background-color: rgba(242, 184, 181, 0.45);
+        }
+
+        // Material 3 elevated card used by the click-toggle details window.
+        #ai-quota-details-kimi,
+        #ai-quota-details-codex,
+        #ai-quota-details-opencode-go {
+          background-color: transparent;
+        }
+
+        .quota-details {
+          background-color: $surface-container-high;
+          color: $on-surface;
+          border: 1px solid rgba(202, 196, 208, 0.24);
+          border-radius: 20px;
+          padding: 14px 16px;
+          box-shadow: 0 8px 24px rgba(0, 0, 0, 0.42);
+        }
+
+        .quota-details-header {
+          margin-bottom: 10px;
+        }
+
+        .quota-details-heading {
+          margin-left: 10px;
+        }
+
+        .quota-details-title {
+          font-size: 13px;
+          font-weight: bold;
+        }
+
+        .quota-details-subtitle,
+        .quota-detail-reset {
+          color: $on-surface-variant;
+          font-size: 10px;
+        }
+
+        .quota-details-close {
+          min-width: 28px;
+          min-height: 28px;
+          margin-left: 8px;
+          border-radius: 14px;
+          color: $on-surface-variant;
+        }
+
+        .quota-details-close:hover {
+          background-color: $surface-container-highest;
+          color: $on-surface;
+        }
+
+        .quota-detail-labels {
+          margin-bottom: 3px;
+        }
+
+        .quota-detail-name,
+        .quota-detail-value {
+          font-size: 11px;
+          font-weight: bold;
+        }
+
+        .quota-detail-bar,
+        .quota-detail-bar trough {
+          min-width: 266px;
+        }
+
+        .quota-detail-bar trough {
+          min-height: 6px;
+          border-radius: 3px;
+          background-color: $surface-container-highest;
+        }
+
+        .quota-detail-bar progress {
+          min-width: 0;
+          min-height: 6px;
+          border-radius: 3px;
+        }
+
+        .quota-detail-reset {
+          margin-top: 2px;
         }
       '';
     };
