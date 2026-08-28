@@ -44,6 +44,16 @@ let
     env.ANTHROPIC_MODEL = model;
     secrets.ANTHROPIC_API_KEY = config.age.secrets.anthropic-api-key.path;
   };
+  # OpenRouter serves an Anthropic-compatible endpoint; the base URL omits
+  # /v1 because Claude Code appends /v1/messages. GLM emits thinking blocks
+  # with empty signatures, which OpenRouter accepts on replay.
+  openrouter = model: {
+    label = "openrouter/${model}";
+    env = pinAll model // {
+      ANTHROPIC_BASE_URL = "https://openrouter.ai/api";
+    };
+    secrets.ANTHROPIC_API_KEY = config.age.secrets.openrouter-api-key.path;
+  };
   # OpenCode Go subscription (https://opencode.ai/zen/go); always
   # available. Claude Code speaks the Anthropic Messages API; verified
   # against /v1/messages (x-api-key auth): qwen and deepseek models
@@ -62,6 +72,11 @@ in
   "deepseek-v4-pro"
   "deepseek-v4-flash"
 ]
+++ lib.optionals apiAccounts (
+  map openrouter [
+    "z-ai/glm-5.3-flash"
+  ]
+)
 ++ lib.optionals proxyAccounts (
   map proxy [
     "kimi-k3"
