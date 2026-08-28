@@ -32,6 +32,7 @@
       "opencode-go/grok-4.6"
       "opencode-go/gpt-5.6-luna"
       "opencode-go/qwen3.8-max"
+      "opencode-go/glm-5.3-flash"
     ]
     ++ lib.optionals apiAccounts [
       # Pay by APIs

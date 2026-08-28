@@ -9,6 +9,7 @@
     "grok-4.6"
     "gpt-5.6-luna"
     "qwen3.8-max"
+    "glm-5.3-flash"
   ];
   openai = [
     "gpt-5.6-sol"
