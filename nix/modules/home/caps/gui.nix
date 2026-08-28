@@ -53,13 +53,34 @@ in
     ]
     ++ lib.optionals (!isDarwin) [
       # Linux only
+      brightnessctl
       nautilus # required by xdg-desktop-portal-gnome for FileChooser
       obsidian
       pavucontrol # PipeWire/Pulse per-stream routing GUI (waybar audio module)
+      playerctl
       vlc
     ]
     ++ lib.optionals (!isDarwin && pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
       # x86-64 Linux only
       zoom-us
     ];
+
+  xdg = lib.mkIf (!isDarwin) {
+    userDirs = {
+      enable = true;
+      createDirectories = true;
+    };
+
+    mimeApps = {
+      enable = true;
+      defaultApplications = {
+        "application/pdf" = "firefox.desktop";
+        "inode/directory" = "org.gnome.Nautilus.desktop";
+        "text/html" = "firefox.desktop";
+        "x-scheme-handler/http" = "firefox.desktop";
+        "x-scheme-handler/https" = "firefox.desktop";
+      };
+      defaultApplicationPackages = [ pkgs.vlc ];
+    };
+  };
 }

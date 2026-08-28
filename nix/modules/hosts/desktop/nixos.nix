@@ -38,6 +38,12 @@ in
       };
     };
 
+    # Swaylock needs a PAM service when installed through Home Manager. The
+    # explicit Kanidm package avoids evaluating nixpkgs' intentionally removed
+    # unversioned alias while constructing PAM rules, even when Kanidm is off.
+    security.pam.services.swaylock = { };
+    services.kanidm.package = pkgs.kanidm_1_11;
+
     # XDG Desktop Portal: provides file chooser, screen cast, notifications, etc.
     xdg.portal = {
       enable = true;
