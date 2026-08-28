@@ -14,6 +14,7 @@
     };
     sketchybar.enable = lib.mkEnableOption "SketchyBar status bar (macOS)";
     renpho.enable = lib.mkEnableOption "Renpho smart-scale panel pill";
+    aiQuota.showCountdown = lib.mkEnableOption "reset countdown display in AI quota bar pills";
   };
 
   imports = [

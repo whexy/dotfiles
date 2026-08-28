@@ -2,7 +2,7 @@
 #
 # Each provider is one Liquid Glass capsule with stacked, read-only quota
 # tracks. The shortest window is on top; weekly and monthly windows follow.
-# The time on the right is the reset that can next improve availability.
+# When countdown display is enabled, the reset time is shown on the right.
 args@{
   config,
   lib,
@@ -12,6 +12,7 @@ args@{
 }:
 let
   cfg = config.dotfiles.panel;
+  showCountdown = cfg.aiQuota.showCountdown;
   osConfig = args.osConfig or null;
   barOnTop = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
 
@@ -69,23 +70,27 @@ let
       summary="$(${jq} -c -f ${summaryFilter} --arg provider ${lib.escapeShellArg provider} ${lib.escapeShellArg cacheFile} 2>/dev/null)" || exit 0
 
       if [ "$(printf '%s' "$summary" | ${jq} -r '.present')" != "true" ]; then
-        ${sketchybar} \
-          --set ai_quota.${provider}.icon drawing=off popup.drawing=off \
-          --set ai_quota.${provider}.glass background.drawing=off \
-          --set ai_quota.${provider}.lane.1 drawing=off \
-          --set ai_quota.${provider}.lane.2 drawing=off \
-          --set ai_quota.${provider}.lane.3 drawing=off \
-          --set ai_quota.${provider}.slot drawing=off \
-          --set ai_quota.${provider}.countdown drawing=off \
-          --set ai_quota.${provider}.popup.header drawing=off \
-          --set ai_quota.${provider}.popup.meter.1 drawing=off \
-          --set ai_quota.${provider}.popup.meter.2 drawing=off \
+        hide_args=(
+          --set ai_quota.${provider}.icon drawing=off popup.drawing=off
+          --set ai_quota.${provider}.glass background.drawing=off
+          --set ai_quota.${provider}.lane.1 drawing=off
+          --set ai_quota.${provider}.lane.2 drawing=off
+          --set ai_quota.${provider}.lane.3 drawing=off
+          --set ai_quota.${provider}.slot drawing=off
+          ${lib.optionalString showCountdown "--set ai_quota.${provider}.countdown drawing=off"}
+          --set ai_quota.${provider}.popup.header drawing=off
+          --set ai_quota.${provider}.popup.meter.1 drawing=off
+          --set ai_quota.${provider}.popup.meter.2 drawing=off
           --set ai_quota.${provider}.popup.meter.3 drawing=off
+        )
+        ${sketchybar} "''${hide_args[@]}"
         exit 0
       fi
 
       display_remaining="$(printf '%s' "$summary" | ${jq} -r '.display_meter.remaining // 0 | round')"
-      countdown="$(printf '%s' "$summary" | ${jq} -r '.display_meter.countdown // "—"')"
+      ${lib.optionalString showCountdown ''
+        countdown="$(printf '%s' "$summary" | ${jq} -r '.display_meter.countdown // "—"')"
+      ''}
       if [ "$display_remaining" -le 10 ]; then
         color=${colors.red}
       elif [ "$display_remaining" -le 30 ]; then
@@ -98,7 +103,7 @@ let
         --set ai_quota.${provider}.glass background.drawing=on
         --set ai_quota.${provider}.icon drawing=on
         --set ai_quota.${provider}.slot drawing=on
-        --set ai_quota.${provider}.countdown drawing=on label="$countdown" label.color="$color"
+        ${lib.optionalString showCountdown ''--set ai_quota.${provider}.countdown drawing=on label="$countdown" label.color="$color"''}
       )
       lane_count="$(printf '%s' "$summary" | ${jq} -r '[.compact_meters[:3][]] | length')"
       for slot in 1 2 3; do
@@ -211,10 +216,14 @@ let
       subscribe = [ "ai_quota_refresh" ];
     };
 
+  trackWidth = 42;
+  rightPadding = 8;
+  slotWidth = if showCountdown then trackWidth else (trackWidth + rightPadding);
+
   mkLaneItem = provider: slot: {
     name = "ai_quota.${provider}.lane.${toString slot}";
     kind = "slider";
-    width = 54;
+    width = trackWidth;
     side = "left";
     settings = {
       drawing = "off";
@@ -240,7 +249,7 @@ let
     side = "left";
     settings = {
       drawing = "off";
-      width = 54;
+      width = slotWidth;
       padding_left = 0;
       padding_right = 0;
       icon = "";
@@ -359,18 +368,22 @@ let
     }
   ];
 
-  providerItems = p: [
-    (mkIconItem p.name p)
-    (mkLaneItem p.name 1)
-    (mkLaneItem p.name 2)
-    (mkLaneItem p.name 3)
-    (mkSlotItem p.name)
-    (mkCountdownItem p.name)
-    (mkPopupHeaderItem p.name p)
-    (mkPopupMeterItem p.name 1)
-    (mkPopupMeterItem p.name 2)
-    (mkPopupMeterItem p.name 3)
-  ];
+  providerItems =
+    p:
+    [
+      (mkIconItem p.name p)
+      (mkLaneItem p.name 1)
+      (mkLaneItem p.name 2)
+      (mkLaneItem p.name 3)
+      (mkSlotItem p.name)
+    ]
+    ++ lib.optional showCountdown (mkCountdownItem p.name)
+    ++ [
+      (mkPopupHeaderItem p.name p)
+      (mkPopupMeterItem p.name 1)
+      (mkPopupMeterItem p.name 2)
+      (mkPopupMeterItem p.name 3)
+    ];
 
   providerBracket = p: {
     name = "ai_quota.${p.name}.glass";
@@ -380,8 +393,8 @@ let
       "ai_quota.${p.name}.lane.2"
       "ai_quota.${p.name}.lane.3"
       "ai_quota.${p.name}.slot"
-      "ai_quota.${p.name}.countdown"
-    ];
+    ]
+    ++ lib.optional showCountdown "ai_quota.${p.name}.countdown";
     settings = {
       "background.drawing" = "on";
       "background.color" = colors.glass;
