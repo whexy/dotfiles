@@ -25,4 +25,7 @@
     "deepseek-v4-flash"
     "deepseek-v4-pro"
   ];
+  openrouter = [
+    "z-ai/glm-5.3-flash"
+  ];
 }

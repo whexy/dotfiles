@@ -39,6 +39,7 @@
       "openai/gpt-5.6-sol"
       "deepseek/deepseek-v4-flash"
       "deepseek/deepseek-v4-pro"
+      "openrouter/z-ai/glm-5.3-flash"
       "anthropic/claude-opus-5"
       "anthropic/claude-sonnet-5"
       "anthropic/claude-fable-5"
