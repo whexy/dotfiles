@@ -1,4 +1,5 @@
-// Fetch quota for direct subscriptions and accounts on the tailnet AI proxy.
+// Fetch quota for direct subscriptions and accounts on the tailnet AI proxy,
+// plus per-provider/model usage and cost aggregates from CLIProxyAPI.
 //
 // Proxy providers use CLIProxyAPI's management /api-call endpoint. Direct
 // providers authenticate from their own agenix-provisioned key files.
@@ -11,6 +12,7 @@ import (
 	"context"
 	"encoding/json"
 	"fmt"
+	"io"
 	"math"
 	"net/http"
 	"os"
@@ -24,6 +26,7 @@ import (
 const (
 	apiBase          = "https://ai-proxy.at-basking.ts.net"
 	mgmt             = apiBase + "/v0/management"
+	usageInsightsURL = mgmt + "/plugins/usage-insights/models"
 	defaultKeyFile   = "~/.secrets/ai-proxy-mgmt-key"
 	defaultOCKeyFile = "~/.secrets/opencode-api-key"
 	opencodeUsageURL = "https://opencode.ai/zen/go/v1/usage"
@@ -220,6 +223,39 @@ type Account struct {
 type Provider struct {
 	Provider string    `json:"provider"`
 	Accounts []Account `json:"accounts"`
+}
+
+type UsageAggregate struct {
+	APICalls         int64   `json:"api_calls"`
+	FailedAPICalls   int64   `json:"failed_api_calls"`
+	InputTokens      int64   `json:"input_tokens"`
+	CacheReadTokens  int64   `json:"cache_read_tokens"`
+	CacheWriteTokens int64   `json:"cache_write_tokens"`
+	OutputTokens     int64   `json:"output_tokens"`
+	TotalTokens      int64   `json:"total_tokens"`
+	CacheHitRate     float64 `json:"cache_hit_rate"`
+	CostUSD          float64 `json:"cost_usd"`
+	PricedAPICalls   int64   `json:"priced_api_calls"`
+	UnpricedAPICalls int64   `json:"unpriced_api_calls"`
+}
+
+type ModelUsage struct {
+	Provider string `json:"provider"`
+	Model    string `json:"model"`
+	UsageAggregate
+}
+
+type UsagePeriod struct {
+	From         string `json:"from"`
+	To           string `json:"to"`
+	EndExclusive bool   `json:"end_exclusive"`
+}
+
+type UsageInsights struct {
+	GeneratedAt string         `json:"generated_at"`
+	Models      []ModelUsage   `json:"models"`
+	Period      UsagePeriod    `json:"period"`
+	Totals      UsageAggregate `json:"totals"`
 }
 
 type rawMeter struct {
@@ -587,6 +623,30 @@ func listAuthFiles(client *http.Client, key string) ([]authFile, error) {
 	return out.Files, nil
 }
 
+func fetchUsageInsights(client *http.Client, key, url string) (*UsageInsights, error) {
+	ctx, cancel := context.WithTimeout(context.Background(), 20*time.Second)
+	defer cancel()
+	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
+	if err != nil {
+		return nil, err
+	}
+	req.Header.Set("Authorization", "Bearer "+key)
+	resp, err := client.Do(req)
+	if err != nil {
+		return nil, err
+	}
+	defer resp.Body.Close()
+	if resp.StatusCode != http.StatusOK {
+		body, _ := io.ReadAll(io.LimitReader(resp.Body, 512))
+		return nil, fmt.Errorf("HTTP %d: %s", resp.StatusCode, strings.TrimSpace(string(body)))
+	}
+	var out UsageInsights
+	if err := json.NewDecoder(resp.Body).Decode(&out); err != nil {
+		return nil, err
+	}
+	return &out, nil
+}
+
 func truncate(s string, n int) string {
 	if len(s) <= n {
 		return s
@@ -712,6 +772,144 @@ func printAccount(acct Account) {
 	}
 }
 
+func compactCount(n int64) string {
+	value := float64(n)
+	for _, unit := range []struct {
+		suffix string
+		scale  float64
+	}{
+		{"B", 1e9},
+		{"M", 1e6},
+		{"K", 1e3},
+	} {
+		if math.Abs(value) >= unit.scale {
+			return strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.2f", value/unit.scale), "0"), ".") + unit.suffix
+		}
+	}
+	return strconv.FormatInt(n, 10)
+}
+
+func formatCostUSD(cost float64) string {
+	if cost == 0 {
+		return "$0.00"
+	}
+	formatted := strings.TrimRight(strings.TrimRight(fmt.Sprintf("%.6f", cost), "0"), ".")
+	if !strings.Contains(formatted, ".") {
+		formatted += ".00"
+	}
+	return "$" + formatted
+}
+
+func usagePeriodLabel(period UsagePeriod) string {
+	to, err := time.Parse(time.RFC3339Nano, period.To)
+	if err != nil {
+		return "model usage"
+	}
+	if period.From == "1970-01-01T00:00:00Z" {
+		return "model usage · all history through " + to.UTC().Format("2006-01-02 15:04 UTC")
+	}
+	from, err := time.Parse(time.RFC3339Nano, period.From)
+	if err != nil {
+		return "model usage · through " + to.UTC().Format("2006-01-02 15:04 UTC")
+	}
+	return fmt.Sprintf("model usage · %s to %s UTC", from.UTC().Format("2006-01-02 15:04"), to.UTC().Format("2006-01-02 15:04"))
+}
+
+func aggregateUsage(models []ModelUsage) UsageAggregate {
+	var total UsageAggregate
+	for _, model := range models {
+		total.APICalls += model.APICalls
+		total.FailedAPICalls += model.FailedAPICalls
+		total.InputTokens += model.InputTokens
+		total.CacheReadTokens += model.CacheReadTokens
+		total.CacheWriteTokens += model.CacheWriteTokens
+		total.OutputTokens += model.OutputTokens
+		total.TotalTokens += model.TotalTokens
+		total.CostUSD += model.CostUSD
+		total.PricedAPICalls += model.PricedAPICalls
+		total.UnpricedAPICalls += model.UnpricedAPICalls
+	}
+	if input := total.InputTokens + total.CacheReadTokens; input > 0 {
+		total.CacheHitRate = float64(total.CacheReadTokens) / float64(input)
+	}
+	return total
+}
+
+func usageCells(model string, usage UsageAggregate) []string {
+	return []string{
+		model,
+		strconv.FormatInt(usage.APICalls, 10),
+		strconv.FormatInt(usage.FailedAPICalls, 10),
+		compactCount(usage.InputTokens),
+		compactCount(usage.CacheReadTokens) + "/" + compactCount(usage.CacheWriteTokens),
+		compactCount(usage.OutputTokens),
+		compactCount(usage.TotalTokens),
+		fmt.Sprintf("%.1f%%", usage.CacheHitRate*100),
+		formatCostUSD(usage.CostUSD),
+		fmt.Sprintf("%d/%d", usage.PricedAPICalls, usage.UnpricedAPICalls),
+	}
+}
+
+func printUsageTable(models []ModelUsage, period UsagePeriod) {
+	models = append([]ModelUsage(nil), models...)
+	sort.SliceStable(models, func(i, j int) bool {
+		if models[i].CostUSD != models[j].CostUSD {
+			return models[i].CostUSD > models[j].CostUSD
+		}
+		if models[i].APICalls != models[j].APICalls {
+			return models[i].APICalls > models[j].APICalls
+		}
+		return models[i].Model < models[j].Model
+	})
+
+	headers := []string{"MODEL", "CALLS", "FAIL", "INPUT", "CACHE READ/WRITE", "OUTPUT", "TOTAL", "HIT", "COST", "PRICED/UNPRICED"}
+	rows := make([][]string, 0, len(models)+1)
+	for _, model := range models {
+		rows = append(rows, usageCells(model.Model, model.UsageAggregate))
+	}
+	if len(models) > 1 {
+		rows = append(rows, usageCells("TOTAL", aggregateUsage(models)))
+	}
+	widths := make([]int, len(headers))
+	for i, header := range headers {
+		widths[i] = len(header)
+	}
+	for _, row := range rows {
+		for i, cell := range row {
+			if len(cell) > widths[i] {
+				widths[i] = len(cell)
+			}
+		}
+	}
+
+	formatRow := func(row []string) string {
+		parts := make([]string, len(row))
+		for i, cell := range row {
+			if i == 0 {
+				parts[i] = fmt.Sprintf("%-*s", widths[i], cell)
+			} else {
+				parts[i] = fmt.Sprintf("%*s", widths[i], cell)
+			}
+		}
+		return strings.Join(parts, "  ")
+	}
+	separator := make([]string, len(widths))
+	for i, width := range widths {
+		separator[i] = strings.Repeat("─", width)
+	}
+
+	fmt.Println("  " + paint(usagePeriodLabel(period), bold))
+	fmt.Println("    " + paint(formatRow(headers), dim))
+	fmt.Println("    " + paint(strings.Join(separator, "  "), dim))
+	for i, row := range rows {
+		if len(models) > 1 && i == len(rows)-1 {
+			fmt.Println("    " + paint(formatRow(row), bold))
+		} else {
+			fmt.Println("    " + formatRow(row))
+		}
+	}
+}
+
 func main() {
 	mgmtKey := loadKey("MGMT_KEY", "MGMT_KEY_FILE", defaultKeyFile)
 	opencodeKey := loadKey("OPENCODE_API_KEY", "OPENCODE_API_KEY_FILE", defaultOCKeyFile)
@@ -724,6 +922,19 @@ func main() {
 	type ocResult struct{ provider *Provider }
 	ocCh := make(chan ocResult, 1)
 	go func() { ocCh <- ocResult{fetchOpencodeGo(client, opencodeKey, now)} }()
+
+	type usageResult struct {
+		insights *UsageInsights
+		err      error
+	}
+	var usageCh chan usageResult
+	if mgmtKey != "" {
+		usageCh = make(chan usageResult, 1)
+		go func() {
+			insights, err := fetchUsageInsights(client, mgmtKey, usageInsightsURL)
+			usageCh <- usageResult{insights, err}
+		}()
+	}
 
 	var providers []Provider
 	if mgmtKey != "" {
@@ -767,8 +978,18 @@ func main() {
 	if oc := (<-ocCh).provider; oc != nil {
 		providers = append(providers, *oc)
 	}
-	if len(providers) == 0 {
-		fmt.Fprintln(os.Stderr, "No configured accounts with a known quota endpoint found.")
+
+	var usageInsights *UsageInsights
+	if usageCh != nil {
+		result := <-usageCh
+		if result.err != nil {
+			fmt.Fprintf(os.Stderr, "warning: failed to fetch model usage insights: %s\n", result.err)
+		} else {
+			usageInsights = result.insights
+		}
+	}
+	if len(providers) == 0 && (usageInsights == nil || len(usageInsights.Models) == 0) {
+		fmt.Fprintln(os.Stderr, "No configured accounts with a known quota endpoint or model usage found.")
 		os.Exit(1)
 	}
 
@@ -780,19 +1001,50 @@ func main() {
 	}
 	if jsonOut {
 		out, _ := json.Marshal(struct {
-			Providers []Provider `json:"providers"`
-		}{providers})
+			Providers     []Provider     `json:"providers"`
+			UsageInsights *UsageInsights `json:"usage_insights,omitempty"`
+		}{providers, usageInsights})
 		fmt.Println(string(out))
 		return
 	}
 
-	for i, entry := range providers {
-		if i > 0 {
+	usageByProvider := map[string][]ModelUsage{}
+	if usageInsights != nil {
+		for _, model := range usageInsights.Models {
+			usageByProvider[model.Provider] = append(usageByProvider[model.Provider], model)
+		}
+	}
+
+	printed := map[string]bool{}
+	sections := 0
+	for _, entry := range providers {
+		if sections > 0 {
 			fmt.Println()
 		}
 		fmt.Println(paint(entry.Provider, bold, magenta))
 		for _, acct := range entry.Accounts {
 			printAccount(acct)
 		}
+		if models := usageByProvider[entry.Provider]; len(models) > 0 {
+			printUsageTable(models, usageInsights.Period)
+		}
+		printed[entry.Provider] = true
+		sections++
+	}
+
+	var usageOnly []string
+	for provider := range usageByProvider {
+		if !printed[provider] {
+			usageOnly = append(usageOnly, provider)
+		}
+	}
+	sort.Strings(usageOnly)
+	for _, provider := range usageOnly {
+		if sections > 0 {
+			fmt.Println()
+		}
+		fmt.Println(paint(provider, bold, magenta))
+		printUsageTable(usageByProvider[provider], usageInsights.Period)
+		sections++
 	}
 }
