@@ -150,7 +150,7 @@ let
 
   fetcherItem = {
     name = "ai_quota.fetch";
-    side = "left";
+    side = "right";
     settings = {
       drawing = "off";
       updates = "on";
@@ -169,7 +169,7 @@ let
     }:
     {
       name = "ai_quota.${provider}.icon";
-      side = "left";
+      side = "right";
       settings = {
         drawing = "off";
         updates = "on";
@@ -187,7 +187,7 @@ let
         "label.drawing" = "off";
         "background.drawing" = "off";
         "popup.horizontal" = "off";
-        "popup.align" = "left";
+        "popup.align" = "right";
         "popup.y_offset" = if barOnTop then "-8" else "8";
         "popup.height" = 34;
         "popup.blur_radius" = 28;
@@ -209,7 +209,7 @@ let
     name = "ai_quota.${provider}.lane.${toString slot}";
     kind = "slider";
     width = trackWidth;
-    side = "left";
+    side = "right";
     settings = {
       drawing = "off";
       width = 0;
@@ -231,7 +231,7 @@ let
 
   mkSlotItem = provider: {
     name = "ai_quota.${provider}.slot";
-    side = "left";
+    side = "right";
     settings = {
       drawing = "off";
       width = slotWidth;
@@ -248,7 +248,7 @@ let
 
   mkCountdownItem = provider: {
     name = "ai_quota.${provider}.countdown";
-    side = "left";
+    side = "right";
     settings = {
       drawing = "off";
       icon = "";
@@ -329,6 +329,9 @@ let
     clickScript = "${sketchybar} --trigger ai_quota_refresh";
   };
 
+  # Listed left-to-right as they should appear on the bar; the render order is
+  # reversed below because SketchyBar stacks right-side items from the right
+  # edge inwards.
   providers = [
     {
       name = "claude";
@@ -338,18 +341,18 @@ let
       accent = colors.orange;
     }
     {
-      name = "kimi";
-      title = "Kimi";
-      logo = ./logos/kimi.png;
-      logoScale = 0.025;
-      accent = colors.blue;
-    }
-    {
       name = "codex";
       title = "Codex";
       logo = ./logos/codex.png;
       logoScale = 0.027;
       accent = colors.green;
+    }
+    {
+      name = "kimi";
+      title = "Kimi";
+      logo = ./logos/kimi.png;
+      logoScale = 0.025;
+      accent = colors.blue;
     }
     {
       name = "opencode-go";
@@ -362,14 +365,16 @@ let
 
   providerItems =
     p:
-    [
-      (mkIconItem p.name p)
-      (mkLaneItem p.name 1)
-      (mkLaneItem p.name 2)
-      (mkLaneItem p.name 3)
-      (mkSlotItem p.name)
-    ]
-    ++ lib.optional showCountdown (mkCountdownItem p.name)
+    lib.reverseList (
+      [
+        (mkIconItem p.name p)
+        (mkLaneItem p.name 1)
+        (mkLaneItem p.name 2)
+        (mkLaneItem p.name 3)
+        (mkSlotItem p.name)
+      ]
+      ++ lib.optional showCountdown (mkCountdownItem p.name)
+    )
     ++ [
       (mkPopupHeaderItem p.name p)
       (mkPopupMeterItem p.name 1)
@@ -401,7 +406,9 @@ in
   config = lib.mkIf enabled {
     dotfiles.panel.sketchybar = {
       events = [ "ai_quota_refresh" ];
-      items = [ fetcherItem ] ++ lib.concatMap providerItems providers;
+      # mkAfter keeps the quota pills to the left of the other right-side
+      # pills (renpho, battery, clock) regardless of module import order.
+      items = lib.mkAfter ([ fetcherItem ] ++ lib.concatMap providerItems (lib.reverseList providers));
       brackets = map providerBracket providers;
     };
   };

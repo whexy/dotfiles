@@ -26,7 +26,6 @@ let
   colors = {
     bar = "0x00000000"; # fully transparent, wallpaper shows through
     fg = "0xffffffff"; # primary text/icons
-    fgDim = "0xb3ffffff"; # 70% white, secondary text and dim icons
     glass = "0x1affffff"; # 10% white, default item capsule
     glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
     red = "0xffff453a"; # systemRed: muted, critical
@@ -86,49 +85,7 @@ let
   };
 
   clockPlugin = mkPlugin "clock" ''
-    ${sketchybar} --set "$NAME" label="$(/bin/date '+%a %b %d  %H:%M:%S')"
-  '';
-
-  volumePlugin = mkPlugin "volume" ''
-    if [ "$SENDER" = "mouse.clicked" ]; then
-      /usr/bin/osascript -e 'set volume output muted not (output muted of (get volume settings))'
-    fi
-
-    volume="$(/usr/bin/osascript -e 'output volume of (get volume settings)')"
-    muted="$(/usr/bin/osascript -e 'output muted of (get volume settings)')"
-
-    if [ "$muted" = "true" ] || [ "$volume" -eq 0 ]; then
-      icon="󰖁"
-      color=${colors.red}
-    elif [ "$volume" -lt 35 ]; then
-      icon="󰕿"
-      color=${colors.fg}
-    elif [ "$volume" -lt 70 ]; then
-      icon="󰖀"
-      color=${colors.fg}
-    else
-      icon="󰕾"
-      color=${colors.fg}
-    fi
-
-    ${sketchybar} --set "$NAME" icon="$icon" icon.color="$color" label="$volume%"
-  '';
-
-  cpuPlugin = mkPlugin "cpu" ''
-    cores="$(/usr/sbin/sysctl -n hw.logicalcpu)"
-    cpu="$(/bin/ps -A -o %cpu= | /usr/bin/awk -v cores="$cores" '{ total += $1 } END { printf "%.0f", total / cores }')"
-    ${sketchybar} --set "$NAME" label="$cpu%"
-  '';
-
-  memoryPlugin = mkPlugin "memory" ''
-    total="$(/usr/sbin/sysctl -n hw.memsize)"
-    page_size="$(/usr/sbin/sysctl -n hw.pagesize)"
-    free_pages="$(/usr/bin/vm_stat | /usr/bin/awk '/Pages free/ { gsub("\\.", "", $3); print $3 }')"
-    inactive_pages="$(/usr/bin/vm_stat | /usr/bin/awk '/Pages inactive/ { gsub("\\.", "", $3); print $3 }')"
-    available=$(( (free_pages + inactive_pages) * page_size ))
-    used=$(( total - available ))
-    used_gib="$(/usr/bin/awk -v bytes="$used" 'BEGIN { printf "%.1f", bytes / 1073741824 }')"
-    ${sketchybar} --set "$NAME" label="''${used_gib}G"
+    ${sketchybar} --set "$NAME" label="$(/bin/date '+%b %d %H:%M')"
   '';
 
   batteryPlugin = mkPlugin "battery" ''
@@ -164,13 +121,16 @@ let
   # Bar items, declared as data and rendered below.
   # ---------------------------------------------------------------------------
 
+  # SketchyBar lays right-side items out right-to-left in the order they are
+  # added, so these two anchor the far right and every contributed right-side
+  # item lands to their left.
   baseItems = [
     {
       name = "clock";
       side = "right";
       settings = {
         icon = "󰥔";
-        update_freq = 1;
+        update_freq = 15;
         script = clockPlugin;
       };
       clickScript = "/usr/bin/open -a Calendar";
@@ -187,41 +147,6 @@ let
         "system_woke"
         "power_source_change"
       ];
-    }
-    {
-      name = "volume";
-      side = "right";
-      settings.script = volumePlugin;
-      subscribe = [
-        "volume_change"
-        "mouse.clicked"
-      ];
-    }
-    # CPU and memory share one capsule via the `stats` bracket below, so their
-    # own backgrounds stay off and their inner padding collapses.
-    {
-      name = "cpu";
-      side = "right";
-      settings = {
-        icon = "󰍛";
-        "icon.color" = colors.fgDim;
-        "background.drawing" = "off";
-        padding_right = 0;
-        update_freq = 5;
-        script = cpuPlugin;
-      };
-    }
-    {
-      name = "memory";
-      side = "right";
-      settings = {
-        icon = "󰘚";
-        "icon.color" = colors.fgDim;
-        "background.drawing" = "off";
-        padding_left = 0;
-        update_freq = 5;
-        script = memoryPlugin;
-      };
     }
   ];
 
@@ -307,16 +232,6 @@ let
     ${lib.concatMapStringsSep "\n" (event: "${sketchybar} --add event ${event}") cfg.sketchybar.events}
 
     ${lib.concatMapStringsSep "\n" renderItem allItems}
-
-    # Group CPU and memory under one glass capsule (must come after its
-    # members are added).
-    ${sketchybar} --add bracket stats cpu memory \
-      --set stats background.drawing=on \
-                  background.color=${colors.glass} \
-                  background.height=26 \
-                  background.corner_radius=13 \
-                  background.border_width=1 \
-                  background.border_color=${colors.glassBorder}
 
     ${lib.concatMapStringsSep "\n" renderBracket cfg.sketchybar.brackets}
 
