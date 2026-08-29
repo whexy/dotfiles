@@ -73,6 +73,8 @@ in
 ]
 ++ lib.optionals proxyAccounts (
   map proxy [
+    "claude-opus-5"
+    "claude-fable-5"
     "gpt-5.6-sol"
     "gpt-5.6-terra"
     "kimi-k3"

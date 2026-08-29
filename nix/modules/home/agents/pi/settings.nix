@@ -29,6 +29,8 @@
     "ai-proxy/gpt-5.6-sol"
     "ai-proxy/kimi-k3-256k"
     "ai-proxy/kimi-k3"
+    "ai-proxy/claude-opus-5"
+    "ai-proxy/claude-fable-5"
   ]
   ++ [
     # OpenCode Go subscription
