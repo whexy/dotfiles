@@ -6,7 +6,7 @@
   dotfiles = {
     agents = {
       enable = lib.mkDefault true;
-      enableApiAccounts = lib.mkDefault true;
+      enableApiAccounts = lib.mkDefault false;
       enableProxyAccounts = lib.mkDefault true;
     };
     ssh.enable = lib.mkDefault true;
