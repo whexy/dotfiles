@@ -343,6 +343,83 @@ func parseKimi(body []byte) (*string, []rawMeter, [][2]string, error) {
 	return &subtitle, meters, notes, nil
 }
 
+func parseClaude(body []byte) (*string, []rawMeter, [][2]string, error) {
+	type legacyWindow struct {
+		Utilization any `json:"utilization"`
+		ResetsAt    any `json:"resets_at"`
+	}
+	type limit struct {
+		Kind     string `json:"kind"`
+		Percent  any    `json:"percent"`
+		ResetsAt any    `json:"resets_at"`
+		Scope    struct {
+			Model struct {
+				DisplayName string `json:"display_name"`
+			} `json:"model"`
+		} `json:"scope"`
+	}
+	var resp struct {
+		FiveHour          *legacyWindow `json:"five_hour"`
+		SevenDay          *legacyWindow `json:"seven_day"`
+		SevenDayOAuthApps *legacyWindow `json:"seven_day_oauth_apps"`
+		SevenDayOpus      *legacyWindow `json:"seven_day_opus"`
+		SevenDaySonnet    *legacyWindow `json:"seven_day_sonnet"`
+		SevenDayCowork    *legacyWindow `json:"seven_day_cowork"`
+		IguanaNecktie     *legacyWindow `json:"iguana_necktie"`
+		Limits            []limit       `json:"limits"`
+	}
+	if err := json.Unmarshal(body, &resp); err != nil {
+		return nil, nil, nil, err
+	}
+
+	var meters []rawMeter
+	for _, entry := range resp.Limits {
+		label := ""
+		switch entry.Kind {
+		case "session":
+			label = "5-hour"
+		case "weekly_all":
+			label = "weekly"
+		case "weekly_scoped":
+			if entry.Scope.Model.DisplayName != "" {
+				label = "weekly " + entry.Scope.Model.DisplayName
+			} else {
+				label = "weekly scoped"
+			}
+		}
+		pct, ok := toFloat(entry.Percent)
+		if label != "" && ok {
+			meters = append(meters, rawMeter{label: label, pct: pct, reset: parseTime(entry.ResetsAt)})
+		}
+	}
+	if len(meters) > 0 {
+		return nil, meters, nil, nil
+	}
+
+	// Older OAuth tokens expose fixed top-level windows instead of limits[].
+	for _, entry := range []struct {
+		label  string
+		window *legacyWindow
+	}{
+		{"5-hour", resp.FiveHour},
+		{"weekly", resp.SevenDay},
+		{"weekly OAuth apps", resp.SevenDayOAuthApps},
+		{"weekly Opus", resp.SevenDayOpus},
+		{"weekly Sonnet", resp.SevenDaySonnet},
+		{"weekly Cowork", resp.SevenDayCowork},
+		{"weekly Fable", resp.IguanaNecktie},
+	} {
+		if entry.window == nil {
+			continue
+		}
+		pct, ok := toFloat(entry.window.Utilization)
+		if ok {
+			meters = append(meters, rawMeter{label: entry.label, pct: pct, reset: parseTime(entry.window.ResetsAt)})
+		}
+	}
+	return nil, meters, nil, nil
+}
+
 func parseCodex(body []byte) (*string, []rawMeter, [][2]string, error) {
 	type window struct {
 		UsedPercent        any `json:"used_percent"`
@@ -523,6 +600,21 @@ type providerSpec struct {
 }
 
 var providerSpecs = map[string]providerSpec{
+	"claude": {
+		// Anthropic does not document this OAuth subscription endpoint, so
+		// keep its request shape aligned with Claude Code and fail gracefully.
+		request: requestSpec{
+			Method: "GET",
+			URL:    "https://api.anthropic.com/api/oauth/usage",
+			Header: map[string]string{
+				"Authorization":  "Bearer $TOKEN$",
+				"Accept":         "application/json",
+				"anthropic-beta": "oauth-2025-04-20",
+				"User-Agent":     "claude-code/2.1.80",
+			},
+		},
+		parse: parseClaude,
+	},
 	"kimi": {
 		request: requestSpec{
 			Method: "GET",
@@ -562,7 +654,7 @@ var providerSpecs = map[string]providerSpec{
 }
 
 // providerOrder fixes output ordering (Go maps don't iterate in order).
-var providerOrder = []string{"kimi", "codex", "antigravity"}
+var providerOrder = []string{"claude", "kimi", "codex", "antigravity"}
 
 // --- HTTP plumbing ---
 
@@ -747,7 +839,7 @@ func accountDisplayName(acct Account) string {
 	}
 
 	name := strings.TrimSuffix(acct.Name, ".json")
-	for _, prefix := range []string{"antigravity-", "codex-", "kimi-"} {
+	for _, prefix := range []string{"antigravity-", "claude-", "codex-", "kimi-"} {
 		name = strings.TrimPrefix(name, prefix)
 	}
 	return name
