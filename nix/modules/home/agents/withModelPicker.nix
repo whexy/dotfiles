@@ -17,6 +17,12 @@
   #   env     - static env vars (attrset of strings)
   #   secrets - env var -> secret file path, read at runtime
   #   args    - extra CLI args prepended to the invocation
+  #   fusion  - after picking one of `candidates`, further fzf prompts
+  #             assign per-role models, restricted to candidates sharing
+  #             the picked label's "provider/" prefix (so endpoint and
+  #             key stay consistent):
+  #               roles      - [{ name, prompt, export }]
+  #               candidates - entries with label/env/secrets
   entries,
 }:
 let
@@ -42,6 +48,44 @@ let
       ;;
   '';
 
+  mkFusionArm =
+    entry:
+    let
+      roles = entry.fusion.roles;
+      candidates = entry.fusion.candidates;
+      total = toString (lib.length roles + 1);
+      # The picked candidate's env brings endpoint, key, and the main
+      # ANTHROPIC_MODEL; fusion only overrides the role defaults after.
+      mkCase = c: ''
+        ${lib.escapeShellArg c.label})
+          ${lib.concatStringsSep "\n      " (
+            lib.mapAttrsToList exportStatic (c.env or { }) ++ lib.mapAttrsToList exportSecret (c.secrets or { })
+          )}
+          ;;
+      '';
+      mkRole = i: role: ''
+        ${role.name}=$(printf '%s\n' "''${candidates[@]}" |
+          grep -F "''${main%%/*}/" |
+          ${pkgs.fzf}/bin/fzf --prompt='[${toString (i + 1)}/${total}] ${role.prompt}> ' --reverse) || exit 0
+        export ${role.export}="''${${role.name}#*/}"
+      '';
+    in
+    ''
+      ${lib.escapeShellArg entry.label})
+        candidates=(${lib.concatStringsSep " " (map lib.escapeShellArg (map (c: c.label) candidates))})
+        main=$(printf '%s\n' "''${candidates[@]}" |
+          ${pkgs.fzf}/bin/fzf --prompt='[1/${total}] main model> ' --reverse) || exit 0
+        case "$main" in
+        ${lib.concatMapStrings mkCase candidates}esac
+        export CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1
+        export CLAUDE_CODE_SUBAGENT_MODEL="''${main#*/}"
+        ${lib.concatImapStrings mkRole roles}
+        extra_args=()
+        ;;
+    '';
+
+  mkEntryArm = entry: if entry ? fusion then mkFusionArm entry else mkArm entry;
+
   picker = pkgs.writeShellScriptBin name ''
     set -euo pipefail
 
@@ -61,7 +105,7 @@ let
 
     extra_args=()
     case "$choice" in
-    ${lib.concatMapStrings mkArm entries}
+    ${lib.concatMapStrings mkEntryArm entries}
     esac
 
     exec "$real" "''${extra_args[@]}" "$@"

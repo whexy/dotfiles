@@ -77,38 +77,74 @@ let
     };
     secrets.ANTHROPIC_API_KEY = config.age.secrets.opencode-api-key.path;
   };
+  modelEntries =
+    map opencodeGo [
+      "qwen3.8-max"
+      "deepseek-v4-pro"
+      "deepseek-v4-flash"
+    ]
+    ++ lib.optionals apiAccounts (
+      map openrouter [
+        "z-ai/glm-5.3-flash"
+      ]
+    )
+    ++ lib.optionals proxyAccounts (
+      map (proxy anthropicEnv) [
+        "claude-opus-5"
+        "claude-fable-5"
+      ]
+      ++ map (proxy mapOpenAI) [
+        "gpt-5.6-sol"
+        "gpt-5.6-terra"
+        "gpt-5.6-luna"
+      ]
+      ++ map (proxy pin) [
+        "kimi-k3"
+        "gemini-3.1-pro-preview"
+        "gemini-3.7-flash"
+      ]
+    )
+    ++ lib.optionals apiAccounts (
+      map anthropic [
+        "claude-opus-5"
+        "claude-sonnet-5"
+        "claude-fable-5"
+      ]
+    );
 in
 [ { label = "default (claude.ai login)"; } ]
-++ map opencodeGo [
-  "qwen3.8-max"
-  "deepseek-v4-pro"
-  "deepseek-v4-flash"
+++ modelEntries
+++ [
+  # Fusion mode: the main pick fixes the provider (endpoint + key), and
+  # each remaining role is then picked from that provider's models only.
+  # Roles override the ANTHROPIC_DEFAULT_*_MODEL vars; the main model
+  # itself comes from the picked candidate's ANTHROPIC_MODEL.
+  {
+    label = "fusion (one model per role)";
+    fusion = {
+      roles = [
+        {
+          name = "fable";
+          prompt = "FABLE model";
+          export = "ANTHROPIC_DEFAULT_FABLE_MODEL";
+        }
+        {
+          name = "opus";
+          prompt = "OPUS model";
+          export = "ANTHROPIC_DEFAULT_OPUS_MODEL";
+        }
+        {
+          name = "sonnet";
+          prompt = "SONNET model";
+          export = "ANTHROPIC_DEFAULT_SONNET_MODEL";
+        }
+        {
+          name = "haiku";
+          prompt = "HAIKU model";
+          export = "ANTHROPIC_DEFAULT_HAIKU_MODEL";
+        }
+      ];
+      candidates = modelEntries;
+    };
+  }
 ]
-++ lib.optionals apiAccounts (
-  map openrouter [
-    "z-ai/glm-5.3-flash"
-  ]
-)
-++ lib.optionals proxyAccounts (
-  map (proxy anthropicEnv) [
-    "claude-opus-5"
-    "claude-fable-5"
-  ]
-  ++ map (proxy mapOpenAI) [
-    "gpt-5.6-sol"
-    "gpt-5.6-terra"
-    "gpt-5.6-luna"
-  ]
-  ++ map (proxy pin) [
-    "kimi-k3"
-    "gemini-3.1-pro-preview"
-    "gemini-3.7-flash"
-  ]
-)
-++ lib.optionals apiAccounts (
-  map anthropic [
-    "claude-opus-5"
-    "claude-sonnet-5"
-    "claude-fable-5"
-  ]
-)
