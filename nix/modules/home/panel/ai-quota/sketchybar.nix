@@ -203,7 +203,12 @@ let
 
   trackWidth = 42;
   rightPadding = 8;
-  slotWidth = if showCountdown then trackWidth else (trackWidth + rightPadding);
+
+  # A lane paints its track leftwards from its own right edge, so the trailing
+  # gap has to come from the lane's own right padding; a wider `slot` would
+  # only pad the side away from the capsule edge. The countdown label already
+  # supplies that gap when it is drawn.
+  laneRightPadding = if showCountdown then 0 else rightPadding;
 
   mkLaneItem = provider: slot: {
     name = "ai_quota.${provider}.lane.${toString slot}";
@@ -214,7 +219,7 @@ let
       drawing = "off";
       width = 0;
       padding_left = 0;
-      padding_right = 0;
+      padding_right = laneRightPadding;
       y_offset = 0;
       "slider.background.color" = colors.track;
       "slider.background.height" = 4;
@@ -234,7 +239,7 @@ let
     side = "right";
     settings = {
       drawing = "off";
-      width = slotWidth;
+      width = trackWidth;
       padding_left = 0;
       padding_right = 0;
       icon = "";
@@ -363,18 +368,21 @@ let
     }
   ];
 
+  # Right-side items stack from the right edge inwards, so a pill's parts are
+  # added in reverse of their visual order. Sliders are the exception: they
+  # paint their track in the layout flow direction, which runs leftwards here,
+  # so each lane must precede the `slot` whose width reserves the track's space
+  # rather than follow the icon it would otherwise paint over.
   providerItems =
     p:
-    lib.reverseList (
-      [
-        (mkIconItem p.name p)
-        (mkLaneItem p.name 1)
-        (mkLaneItem p.name 2)
-        (mkLaneItem p.name 3)
-        (mkSlotItem p.name)
-      ]
-      ++ lib.optional showCountdown (mkCountdownItem p.name)
-    )
+    lib.optional showCountdown (mkCountdownItem p.name)
+    ++ [
+      (mkLaneItem p.name 1)
+      (mkLaneItem p.name 2)
+      (mkLaneItem p.name 3)
+      (mkSlotItem p.name)
+      (mkIconItem p.name p)
+    ]
     ++ [
       (mkPopupHeaderItem p.name p)
       (mkPopupMeterItem p.name 1)
