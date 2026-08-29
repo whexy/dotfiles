@@ -28,11 +28,9 @@ let
   colors = {
     fg = "0xffffffff";
     gray = "0xff98989d";
-    yellow = "0xffffb340";
-    red = "0xffff453a";
-    blue = "0xff0a84ff";
-    orange = "0xffff9f0a";
-    green = "0xff30d158";
+    blue = "0xff007cff";
+    orange = "0xffd97757";
+    green = "0xff10a37f";
     track = "0x26ffffff";
     glass = "0x1affffff";
     glassBorder = "0x40ffffff";
@@ -87,17 +85,10 @@ let
         exit 0
       fi
 
-      display_remaining="$(printf '%s' "$summary" | ${jq} -r '.display_meter.remaining // 0 | round')"
       ${lib.optionalString showCountdown ''
         countdown="$(printf '%s' "$summary" | ${jq} -r '.display_meter.countdown // "—"')"
       ''}
-      if [ "$display_remaining" -le 10 ]; then
-        color=${colors.red}
-      elif [ "$display_remaining" -le 30 ]; then
-        color=${colors.yellow}
-      else
-        color=${accent}
-      fi
+      color=${accent}
 
       args=(
         --set ai_quota.${provider}.glass background.drawing=on
@@ -140,13 +131,7 @@ let
         meter_remaining="$(printf '%s' "$summary" | ${jq} -r --argjson index "$meter_index" '.compact_meters[$index].remaining // empty | round')"
         meter_reset="$(printf '%s' "$summary" | ${jq} -r --argjson index "$meter_index" '.compact_meters[$index].reset // "—"')"
         if [ -n "$meter_remaining" ]; then
-          if [ "$meter_remaining" -le 10 ]; then
-            meter_color=${colors.red}
-          elif [ "$meter_remaining" -le 30 ]; then
-            meter_color=${colors.yellow}
-          else
-            meter_color=${accent}
-          fi
+          meter_color=${accent}
           args+=(
             --set "$popup_meter"
             drawing=on
@@ -346,6 +331,13 @@ let
 
   providers = [
     {
+      name = "claude";
+      title = "Claude";
+      logo = ./logos/claude.png;
+      logoScale = 0.026;
+      accent = colors.orange;
+    }
+    {
       name = "kimi";
       title = "Kimi";
       logo = ./logos/kimi.png;
@@ -364,7 +356,7 @@ let
       title = "OpenCode Go";
       logo = ./logos/opencode-go.png;
       logoScale = 0.025;
-      accent = colors.orange;
+      accent = colors.gray;
     }
   ];
 

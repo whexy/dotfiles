@@ -5,6 +5,13 @@
 
   providers = [
     {
+      name = "claude";
+      title = "Claude";
+      variable = "claude";
+      icon = "󰚩";
+      logo = ./logos/claude.png;
+    }
+    {
       name = "kimi";
       title = "Kimi";
       variable = "kimi";

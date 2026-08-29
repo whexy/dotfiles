@@ -172,24 +172,20 @@ in
           font-weight: bold;
         }
 
+        .quota-claude .quota-countdown {
+          color: #d97757;
+        }
+
         .quota-kimi .quota-countdown {
-          color: #a8c7fa;
+          color: #007cff;
         }
 
         .quota-codex .quota-countdown {
-          color: #b1d18b;
+          color: #10a37f;
         }
 
         .quota-opencode-go .quota-countdown {
-          color: #ffb77d;
-        }
-
-        .quota.warning .quota-countdown {
-          color: $warning;
-        }
-
-        .quota.critical .quota-countdown {
-          color: $error;
+          color: #98989d;
         }
 
         .quota.error {
@@ -200,82 +196,68 @@ in
           color: $on-surface-variant;
         }
 
+        .quota-track.gray progress,
+        .quota-detail-bar.gray progress {
+          background-color: #98989d;
+        }
+
+        .quota-track.grayDim progress,
+        .quota-detail-bar.grayDim progress {
+          background-color: rgba(152, 152, 157, 0.7);
+        }
+
+        .quota-track.grayFaint progress,
+        .quota-detail-bar.grayFaint progress {
+          background-color: rgba(152, 152, 157, 0.45);
+        }
+
         .quota-track.blue progress,
         .quota-detail-bar.blue progress {
-          background-color: #a8c7fa;
+          background-color: #007cff;
         }
 
         .quota-track.blueDim progress,
         .quota-detail-bar.blueDim progress {
-          background-color: rgba(168, 199, 250, 0.7);
+          background-color: rgba(0, 124, 255, 0.7);
         }
 
         .quota-track.blueFaint progress,
         .quota-detail-bar.blueFaint progress {
-          background-color: rgba(168, 199, 250, 0.45);
+          background-color: rgba(0, 124, 255, 0.45);
         }
 
         .quota-track.green progress,
         .quota-detail-bar.green progress {
-          background-color: #b1d18b;
+          background-color: #10a37f;
         }
 
         .quota-track.greenDim progress,
         .quota-detail-bar.greenDim progress {
-          background-color: rgba(177, 209, 139, 0.7);
+          background-color: rgba(16, 163, 127, 0.7);
         }
 
         .quota-track.greenFaint progress,
         .quota-detail-bar.greenFaint progress {
-          background-color: rgba(177, 209, 139, 0.45);
+          background-color: rgba(16, 163, 127, 0.45);
         }
 
         .quota-track.orange progress,
         .quota-detail-bar.orange progress {
-          background-color: #ffb77d;
+          background-color: #d97757;
         }
 
         .quota-track.orangeDim progress,
         .quota-detail-bar.orangeDim progress {
-          background-color: rgba(255, 183, 125, 0.7);
+          background-color: rgba(217, 119, 87, 0.7);
         }
 
         .quota-track.orangeFaint progress,
         .quota-detail-bar.orangeFaint progress {
-          background-color: rgba(255, 183, 125, 0.45);
-        }
-
-        .quota-track.warning progress,
-        .quota-detail-bar.warning progress {
-          background-color: $warning;
-        }
-
-        .quota-track.warningDim progress,
-        .quota-detail-bar.warningDim progress {
-          background-color: rgba(234, 196, 109, 0.7);
-        }
-
-        .quota-track.warningFaint progress,
-        .quota-detail-bar.warningFaint progress {
-          background-color: rgba(234, 196, 109, 0.45);
-        }
-
-        .quota-track.critical progress,
-        .quota-detail-bar.critical progress {
-          background-color: $error;
-        }
-
-        .quota-track.criticalDim progress,
-        .quota-detail-bar.criticalDim progress {
-          background-color: rgba(242, 184, 181, 0.7);
-        }
-
-        .quota-track.criticalFaint progress,
-        .quota-detail-bar.criticalFaint progress {
-          background-color: rgba(242, 184, 181, 0.45);
+          background-color: rgba(217, 119, 87, 0.45);
         }
 
         // Material 3 elevated card used by the click-toggle details window.
+        #ai-quota-details-claude,
         #ai-quota-details-kimi,
         #ai-quota-details-codex,
         #ai-quota-details-opencode-go {
