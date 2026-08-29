@@ -31,6 +31,75 @@ func TestHumanDeltaUsesElapsedUnits(t *testing.T) {
 	}
 }
 
+func TestParseClaudePrefersLimits(t *testing.T) {
+	body := []byte(`{
+		"five_hour":{"utilization":99,"resets_at":"2026-08-29T01:00:00Z"},
+		"limits":[
+			{"kind":"session","percent":12.5,"resets_at":"2026-08-29T06:50:00Z","scope":null},
+			{"kind":"weekly_all","percent":34,"resets_at":"2026-09-05T06:00:00Z","scope":null},
+			{"kind":"weekly_scoped","percent":7,"resets_at":null,"scope":{"model":{"display_name":"Fable"}}},
+			{"kind":"unknown","percent":100,"resets_at":null,"scope":null}
+		]
+	}`)
+
+	_, meters, _, err := parseClaude(body)
+	if err != nil {
+		t.Fatalf("parseClaude() error = %v", err)
+	}
+	if len(meters) != 3 {
+		t.Fatalf("len(meters) = %d, want 3", len(meters))
+	}
+	wantLabels := []string{"5-hour", "weekly", "weekly Fable"}
+	wantPct := []float64{12.5, 34, 7}
+	for i := range meters {
+		if meters[i].label != wantLabels[i] || meters[i].pct != wantPct[i] {
+			t.Errorf("meters[%d] = %+v, want label %q pct %v", i, meters[i], wantLabels[i], wantPct[i])
+		}
+	}
+	if meters[0].reset == nil || meters[0].reset.UTC().Format("2006-01-02T15:04:05Z") != "2026-08-29T06:50:00Z" {
+		t.Errorf("session reset = %v", meters[0].reset)
+	}
+	if meters[2].reset != nil {
+		t.Errorf("scoped reset = %v, want nil", meters[2].reset)
+	}
+}
+
+func TestParseClaudeFallsBackToLegacyWindows(t *testing.T) {
+	body := []byte(`{
+		"five_hour":{"utilization":8,"resets_at":"2026-08-29T06:50:00Z"},
+		"seven_day":{"utilization":21,"resets_at":"2026-09-05T06:00:00Z"},
+		"seven_day_opus":{"utilization":55,"resets_at":null},
+		"seven_day_sonnet":null
+	}`)
+
+	_, meters, _, err := parseClaude(body)
+	if err != nil {
+		t.Fatalf("parseClaude() error = %v", err)
+	}
+	if len(meters) != 3 {
+		t.Fatalf("len(meters) = %d, want 3", len(meters))
+	}
+	wantLabels := []string{"5-hour", "weekly", "weekly Opus"}
+	for i, want := range wantLabels {
+		if meters[i].label != want {
+			t.Errorf("meters[%d].label = %q, want %q", i, meters[i].label, want)
+		}
+	}
+}
+
+func TestClaudeProviderSpec(t *testing.T) {
+	spec, ok := providerSpecs["claude"]
+	if !ok {
+		t.Fatal("claude provider spec is missing")
+	}
+	if spec.request.URL != "https://api.anthropic.com/api/oauth/usage" {
+		t.Errorf("URL = %q", spec.request.URL)
+	}
+	if got := spec.request.Header["anthropic-beta"]; got != "oauth-2025-04-20" {
+		t.Errorf("anthropic-beta = %q", got)
+	}
+}
+
 func TestFetchUsageInsights(t *testing.T) {
 	server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		if got := r.Header.Get("Authorization"); got != "Bearer secret" {
@@ -116,6 +185,7 @@ func TestAccountDisplayNamePrefersUserIdentity(t *testing.T) {
 	}{
 		{Account{Name: "codex-generated-name.json", Subtitle: &subtitle}, subtitle},
 		{Account{Name: "antigravity-person@example.com.json"}, "person@example.com"},
+		{Account{Name: "claude-person@example.com.json"}, "person@example.com"},
 		{Account{Name: "OpenCode Go"}, "OpenCode Go"},
 	}
 	for _, tt := range tests {
