@@ -1,6 +1,6 @@
 # claude-code provider/model entries for the fzf picker wrapper.
-# claude reads ANTHROPIC_MODEL, authenticating with ANTHROPIC_API_KEY
-# (direct API) or ANTHROPIC_BASE_URL + ANTHROPIC_AUTH_TOKEN (proxy).
+# claude reads ANTHROPIC_MODEL and authenticates with ANTHROPIC_API_KEY.
+# Compatible providers additionally require ANTHROPIC_BASE_URL.
 {
   config,
   lib,
@@ -8,36 +8,48 @@
   proxyAccounts,
 }:
 let
-  # Claude Code resolves several internal roles to model aliases, not
-  # the selected session model: the Bash permission classifier uses the
-  # sonnet alias (claude-sonnet-5 by default, opus alias as fallback),
-  # background tasks use the haiku alias (ANTHROPIC_SMALL_FAST_MODEL is
-  # deprecated in favor of ANTHROPIC_DEFAULT_HAIKU_MODEL), and subagents
-  # run their own resolution (built-in Explore hardcodes a haiku ID).
-  # Catalog endpoints serve neither the default claude-* IDs nor the
-  # aliases, so every role is pinned to the selected model; otherwise
-  # the classifier blocks every Bash call and subagents fall back to a
-  # claude.ai login prompt. Unknown model window enforcement is off so
-  # context usage comes from the API instead of an assumed 200k window.
-  pinAll = model: {
+  # Claude models keep Claude Code's native family resolution. OpenAI
+  # models map Claude's cost/capability tiers onto the proxy catalog.
+  # Other compatible models cannot satisfy those aliases, so every role
+  # is pinned to the selected model. Unknown model window enforcement is
+  # disabled for non-Claude IDs so the API remains the source of truth.
+  anthropicEnv = model: {
     ANTHROPIC_MODEL = model;
-    ANTHROPIC_SMALL_FAST_MODEL = model;
-    ANTHROPIC_DEFAULT_HAIKU_MODEL = model;
-    ANTHROPIC_DEFAULT_SONNET_MODEL = model;
-    ANTHROPIC_DEFAULT_OPUS_MODEL = model;
-    ANTHROPIC_DEFAULT_FABLE_MODEL = model;
-    CLAUDE_CODE_SUBAGENT_MODEL = model;
-    CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
   };
+  select =
+    model:
+    anthropicEnv model
+    // {
+      CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
+    };
+  mapOpenAI =
+    model:
+    select model
+    // {
+      ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-5.6-luna";
+      ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-5.6-terra";
+      ANTHROPIC_DEFAULT_OPUS_MODEL = "gpt-5.6-sol";
+      ANTHROPIC_DEFAULT_FABLE_MODEL = "gpt-5.6-sol";
+    };
+  pin =
+    model:
+    select model
+    // {
+      ANTHROPIC_DEFAULT_HAIKU_MODEL = model;
+      ANTHROPIC_DEFAULT_SONNET_MODEL = model;
+      ANTHROPIC_DEFAULT_OPUS_MODEL = model;
+      ANTHROPIC_DEFAULT_FABLE_MODEL = model;
+      CLAUDE_CODE_SUBAGENT_MODEL = model;
+    };
   # The tailnet AI proxy (CLIProxyAPI) exposes an Anthropic-compatible
   # endpoint serving its whole catalog; Claude Code appends /v1/messages
-  # to the base URL.
-  proxy = model: {
+  # to the base URL. It accepts the key in the x-api-key header.
+  proxy = mapping: model: {
     label = "ai-proxy/${model}";
-    env = pinAll model // {
+    env = mapping model // {
       ANTHROPIC_BASE_URL = "https://ai-proxy.at-basking.ts.net";
     };
-    secrets.ANTHROPIC_AUTH_TOKEN = config.age.secrets.ai-proxy-api-key.path;
+    secrets.ANTHROPIC_API_KEY = config.age.secrets.ai-proxy-api-key.path;
   };
   anthropic = model: {
     label = "anthropic/${model}";
@@ -49,7 +61,7 @@ let
   # with empty signatures, which OpenRouter accepts on replay.
   openrouter = model: {
     label = "openrouter/${model}";
-    env = pinAll model // {
+    env = pin model // {
       ANTHROPIC_BASE_URL = "https://openrouter.ai/api";
     };
     secrets.ANTHROPIC_API_KEY = config.age.secrets.openrouter-api-key.path;
@@ -60,7 +72,7 @@ let
   # answer, grok-4.6, gpt-5.6-luna, and glm-5.3-flash are rejected.
   opencodeGo = model: {
     label = "opencode-go/${model}";
-    env = pinAll model // {
+    env = pin model // {
       ANTHROPIC_BASE_URL = "https://opencode.ai/zen/go";
     };
     secrets.ANTHROPIC_API_KEY = config.age.secrets.opencode-api-key.path;
@@ -78,12 +90,17 @@ in
   ]
 )
 ++ lib.optionals proxyAccounts (
-  map proxy [
+  map (proxy anthropicEnv) [
     "claude-opus-5"
     "claude-fable-5"
-    "kimi-k3"
+  ]
+  ++ map (proxy mapOpenAI) [
     "gpt-5.6-sol"
     "gpt-5.6-terra"
+    "gpt-5.6-luna"
+  ]
+  ++ map (proxy pin) [
+    "kimi-k3"
     "gemini-3.1-pro-preview"
     "gemini-3.7-flash"
   ]
