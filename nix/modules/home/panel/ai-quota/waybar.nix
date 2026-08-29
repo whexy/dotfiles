@@ -69,6 +69,7 @@ in
     // builtins.listToAttrs (map (p: pillModule p.name p.icon) providers);
 
     programs.waybar.style = lib.mkAfter ''
+      #custom-ai-quota-claude,
       #custom-ai-quota-kimi,
       #custom-ai-quota-codex,
       #custom-ai-quota-opencode-go {
@@ -76,28 +77,33 @@ in
         margin: 3px 2px;
         border-radius: 10px;
         background-color: #3c3836;
-        color: #b8bb26;
         transition: all 0.3s ease;
       }
 
+      #custom-ai-quota-claude {
+        color: #d97757;
+      }
+
+      #custom-ai-quota-kimi {
+        color: #007cff;
+      }
+
+      #custom-ai-quota-codex {
+        color: #10a37f;
+      }
+
+      #custom-ai-quota-opencode-go {
+        color: #98989d;
+      }
+
+      #custom-ai-quota-claude:hover,
       #custom-ai-quota-kimi:hover,
       #custom-ai-quota-codex:hover,
       #custom-ai-quota-opencode-go:hover {
         background-color: #504945;
       }
 
-      #custom-ai-quota-kimi.warning,
-      #custom-ai-quota-codex.warning,
-      #custom-ai-quota-opencode-go.warning {
-        color: #d79921;
-      }
-
-      #custom-ai-quota-kimi.critical,
-      #custom-ai-quota-codex.critical,
-      #custom-ai-quota-opencode-go.critical {
-        color: #fb4934;
-      }
-
+      #custom-ai-quota-claude.error,
       #custom-ai-quota-kimi.error,
       #custom-ai-quota-codex.error,
       #custom-ai-quota-opencode-go.error {
@@ -105,6 +111,7 @@ in
       }
 
       /* Collapse absent providers entirely. */
+      #custom-ai-quota-claude.empty,
       #custom-ai-quota-kimi.empty,
       #custom-ai-quota-codex.empty,
       #custom-ai-quota-opencode-go.empty {

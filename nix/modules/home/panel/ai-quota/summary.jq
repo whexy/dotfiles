@@ -29,17 +29,22 @@ def bar:
   | ("█" * $f) + ("░" * (14 - $f));
 
 def tag:
-  gsub("-hour"; "h")
-  | gsub("-week"; "w")
-  | gsub("-day"; "d")
-  | gsub("-minute"; "m")
-  | gsub("^weekly$"; "wk")
-  | gsub("^daily$"; "1d");
+  if . == "weekly" then "wk"
+  elif . == "daily" then "1d"
+  elif . == "monthly" then "mo"
+  elif test("^weekly ") then sub("^weekly "; "wk ")
+  else
+    gsub("-hour"; "h")
+    | gsub("-week"; "w")
+    | gsub("-day"; "d")
+    | gsub("-minute"; "m")
+  end;
 
 def meter_tag:
   if . == "weekly" then "Weekly"
   elif . == "daily" then "Daily"
   elif . == "monthly" then "Monthly"
+  elif test("^weekly ") then sub("^weekly "; "Weekly ")
   elif test("^[0-9]+-hour$") then
     capture("^(?<n>[0-9]+)-hour$") | "\(.n)h"
   elif test("^[0-9]+-minute$") then
@@ -56,6 +61,7 @@ def pill_tag:
   if . == "weekly" then "WK"
   elif . == "daily" then "1D"
   elif . == "monthly" then "MO"
+  elif test("^weekly ") then sub("^weekly "; "WK ") | ascii_upcase
   elif test("^[0-9]+-hour$") then
     (capture("^(?<n>[0-9]+)-hour$").n + "H")
   elif test("^[0-9]+-minute$") then
@@ -70,7 +76,7 @@ def pill_tag:
 
 def window_span:
   if .label == "daily" then 86400
-  elif .label == "weekly" then 604800
+  elif (.label | test("^weekly($| )")) then 604800
   elif .label == "monthly" then 2592000
   elif (.label | test("^[0-9]+-minute$")) then
     (.label | capture("^(?<n>[0-9]+)-minute$").n | tonumber) * 60
@@ -134,10 +140,7 @@ def smart_meter:
 
 def window_color($accent):
   (if .span >= 2592000 then "Faint" elif .span >= 604800 then "Dim" else "" end) as $dim
-  | if .state == "critical" then "critical" + $dim
-  elif .state == "warning" then "warning" + $dim
-  else $accent + $dim
-  end;
+  | $accent + $dim;
 
 # Coding-quota meters only; the review pool is displayed but never binds.
 def coding:
@@ -152,9 +155,9 @@ def compact_meter_line:
   + (if .reset_human then " · resets " + .reset_human else "" end);
 
 def provider_accent:
-  if . == "kimi" then "blue"
+  if . == "claude" then "orange"
+  elif . == "kimi" then "blue"
   elif . == "codex" then "green"
-  elif . == "opencode-go" then "orange"
   else "gray"
   end;
 
@@ -193,11 +196,6 @@ def provider_accent:
         | ($provider | provider_accent) as $accent
         | ([$best.account | coding | sort_by(window_span)[] | compact_meter | . + {color: (. | window_color($accent))}]) as $meters
         | ($meters | smart_meter) as $display
-        | ($display.state
-          | if . == "critical" then "critical"
-            elif . == "warning" then "warning"
-            else $accent
-            end) as $display_color
         | {
             present: true,
             state: $state,
@@ -206,7 +204,7 @@ def provider_accent:
             countdown_meter: ($display.label // null),
             display_meter: ($display + {
               countdown: ($display.reset_in | countdown),
-              color: $display_color,
+              color: $accent,
             }),
             label: (
               ($best.binding.label | tag)
