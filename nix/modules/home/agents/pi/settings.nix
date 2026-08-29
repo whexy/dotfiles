@@ -16,6 +16,8 @@
 
   packages = [
     "npm:pi-web-access"
+    "npm:pi-subagents"
+    "npm:@narumitw/pi-goal"
   ];
 
   npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
@@ -54,4 +56,9 @@
     "ai-proxy/gemini-3.7-flash"
     "ai-proxy/gemini-3.1-pro-preview"
   ];
+
+  subagents = {
+    defaultProvider = "opencode-go";
+    defaultModel = "glm-5.3-flash";
+  };
 }
