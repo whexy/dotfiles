@@ -2,7 +2,7 @@
 {
   imports = flake.lib.nixosHost {
     system = "x86_64-linux";
-    hostName = "nixos-wsl";
+    hostName = "wsl";
     wsl = true;
     caps = [
       "base"
