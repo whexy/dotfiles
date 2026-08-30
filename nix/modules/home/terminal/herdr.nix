@@ -11,5 +11,10 @@ in
 {
   config = lib.mkIf cfg.herdr.enable {
     home.packages = [ pkgs.llm-agents.herdr ];
+
+    xdg.configFile."herdr/config.toml".text = ''
+      [theme]
+      name = "gruvbox"
+    '';
   };
 }
