@@ -29,16 +29,24 @@ steps:
         experimental-features = nix-command flakes
     commands:
       - nix flake update
-      # Commit flake.lock on a bot branch and open/update a PR as the App.
+      # Commit and push flake.lock directly to the repository's primary branch.
       # No-op (exit 0) when flake.lock is unchanged.
       - |
-        nix run --accept-flake-config .#github-pr -- \
-          --branch bot/flake-update \
-          --base master \
-          --title "chore: update flake inputs" \
-          --message "chore: update flake inputs" \
-          --body 'Automated flake.lock update from the nightly cron.' \
-          -- flake.lock
+        if git diff --quiet -- flake.lock; then
+          echo "No changes to flake.lock"
+          exit 0
+        fi
+
+        git config user.name "whexy-bot[bot]"
+        git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
+        git add flake.lock
+        git commit -m "chore: update flake inputs"
+
+        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
+        origin_url="$(git remote get-url origin)"
+        trap 'git remote set-url origin "$origin_url"' EXIT
+        git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
+        git push origin HEAD:master
   # Run lint checks and evaluate NixOS configurations without building every
   # Blueprint-generated host closure. `nix flake check --all-systems` is too
   # memory-heavy for this repo after Blueprint host discovery.
