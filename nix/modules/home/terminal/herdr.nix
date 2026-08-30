@@ -15,6 +15,12 @@ in
     xdg.configFile."herdr/config.toml".text = ''
       [theme]
       name = "gruvbox"
+
+      [ui.toast]
+      delivery = "terminal"
+
+      [experimental]
+      kitty_graphics = true
     '';
   };
 }
