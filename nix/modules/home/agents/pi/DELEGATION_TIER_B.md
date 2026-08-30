@@ -96,3 +96,5 @@ Examples:
 - consequential change → implement → `reviewer`, with `oracle` when the underlying decision is uncertain.
 
 After receiving subagent results, integrate and judge them yourself. Subagents provide evidence and specialized work; they do not transfer responsibility for the final decision.
+
+When launching a subagent, you must explicitly choose a model. Do not rely on default behavior.
