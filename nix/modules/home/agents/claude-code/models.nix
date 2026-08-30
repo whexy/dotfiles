@@ -100,7 +100,6 @@ let
       ]
       ++ map (proxy pin) [
         "kimi-k3"
-        "gemini-3.1-pro-preview"
         "gemini-3.7-flash"
       ]
     )
