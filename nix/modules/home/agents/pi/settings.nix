@@ -60,9 +60,4 @@
     "ai-proxy/gemini-3.7-flash"
     "ai-proxy/gemini-3.1-pro-preview"
   ];
-
-  subagents = {
-    defaultProvider = "opencode-go";
-    defaultModel = "glm-5.3-flash";
-  };
 }
