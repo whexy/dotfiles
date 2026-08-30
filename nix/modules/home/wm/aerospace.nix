@@ -9,6 +9,10 @@ let
   cfg = config.dotfiles.wm;
   osConfig = args.osConfig or null;
   autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
+  # On notched MacBook panels macOS reserves the menu-bar height at the top of
+  # the visible frame even with the menu bar auto-hidden, so a top gap there
+  # would double-count it (see paneru.nix for the same treatment).
+  macbookScreen = osConfig != null && (osConfig.dotfiles.hardware.display.macbookScreen or true);
   sketchybar = lib.getExe pkgs.sketchybar;
 in
 {
@@ -75,7 +79,8 @@ in
           outer = {
             left = 0;
             right = 0;
-            top = if (config.dotfiles.panel.sketchybar.enable && autoHideMenuBar) then 34 else 0;
+            top =
+              if (config.dotfiles.panel.sketchybar.enable && autoHideMenuBar && !macbookScreen) then 34 else 0;
             bottom = if (config.dotfiles.panel.sketchybar.enable && !autoHideMenuBar) then 34 else 0;
           };
         };
