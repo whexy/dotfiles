@@ -84,30 +84,24 @@ pkgs.writeShellScriptBin "github-pr" ''
     export GH_TOKEN
 
     # --- Commit as the App's bot user ------------------------------------------
-    # GET /user rejects installation tokens (403 "Resource not accessible by
-    # integration") and GET /app requires a JWT, so resolve the bot identity
-    # via endpoints that accept installation tokens: GET /repos/{owner}/{repo}/
-    # installation for the app slug, then GET /users/<slug>[bot] for the bot
-    # user's login and numeric ID.
+    # GET /user and GET /app reject installation tokens, and since ~Aug 2026
+    # GET /repos/{owner}/{repo}/installation rejects them too (401 "A JSON web
+    # token could not be decoded"; that endpoint now requires a JWT). Resolve
+    # the app slug via GET /app with a JWT instead, then use the installation
+    # token only for GET /users/<slug>[bot] to get the bot's login and ID.
     echo "==> Resolving bot identity"
     origin_url=$(git remote get-url origin)
     repo=$(printf '%s' "$origin_url" |
       ${pkgs.gnused}/bin/sed -e 's#.*github\.com[:/]##' -e 's#\.git$##')
-    installation=$(
-      ${pkgs.curl}/bin/curl -fsS \
-        -H "Authorization: Bearer $GH_TOKEN" \
-        -H "Accept: application/vnd.github+json" \
-        "https://api.github.com/repos/$repo/installation"
-    )
-    app_slug=$(printf '%s' "$installation" | ${pkgs.gnused}/bin/sed -n 's/.*"app_slug"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
+    app_slug=$(${perSystem.self.github-app-token}/bin/github-app-token --app-slug)
     bot=$(
       ${pkgs.curl}/bin/curl -fsS \
         -H "Authorization: Bearer $GH_TOKEN" \
         -H "Accept: application/vnd.github+json" \
         "https://api.github.com/users/$app_slug%5Bbot%5D"
     )
-    bot_login=$(printf '%s' "$bot" | ${pkgs.gnused}/bin/sed -n 's/.*"login"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p')
-    bot_id=$(printf '%s' "$bot" | ${pkgs.gnused}/bin/sed -n 's/.*"id"[[:space:]]*:[[:space:]]*\([0-9]\+\).*/\1/p')
+    bot_login=$(printf '%s' "$bot" | ${pkgs.jq}/bin/jq -er .login)
+    bot_id=$(printf '%s' "$bot" | ${pkgs.jq}/bin/jq -er .id)
     git config user.name "$bot_login"
     git config user.email "$bot_id+$bot_login@users.noreply.github.com"
 
