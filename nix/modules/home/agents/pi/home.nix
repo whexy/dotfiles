@@ -27,6 +27,19 @@ in
 {
   packages = [ pkgs.llm-agents.pi ];
   homeFiles = {
+    # Shared global rules; pi-specific delegation guidance is tiered by
+    # proxy availability (TIER A allows liberal subagent spawning on the
+    # proxy, TIER B is conservative). Other agents consume the plain
+    # AGENTS.md.
+    ".pi/agent/AGENTS.md".text =
+      builtins.readFile ../AGENTS.md
+      + "\n"
+      + (
+        if proxyAccounts then
+          builtins.readFile ./DELEGATION_TIER_A.md
+        else
+          builtins.readFile ./DELEGATION_TIER_B.md
+      );
     ".pi/agent/settings.json".text = builtins.toJSON settings;
     ".pi/agent/models.json".text = builtins.toJSON models;
     ".pi/agent/spending-guard.json".text = builtins.toJSON { enabled = false; };
