@@ -27,6 +27,9 @@ in
       extraConfig = ''
         set-option -g default-command "${defaultShellCmd}"
 
+        set -g extended-keys on
+        set -g extended-keys-format csi-u
+
         bind C-b send-prefix
         bind C-k clear-history
         bind -n M-g display-popup -d "#{pane_current_path}" -E "tmux new-session -A -s scratch"
