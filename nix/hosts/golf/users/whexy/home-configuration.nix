@@ -3,6 +3,6 @@
   imports = [ inputs.self.homeModules.host-user ];
 
   dotfiles = {
-    wm.darwin.windowManager = "paneru";
+    wm.darwin.windowManager = "aerospace";
   };
 }
