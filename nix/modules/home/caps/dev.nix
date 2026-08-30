@@ -15,6 +15,7 @@
       git.enable = lib.mkDefault true;
     };
     terminal.zellij.enable = lib.mkDefault true;
+    terminal.herdr.enable = lib.mkDefault true;
     shell = {
       zsh.devExtras = lib.mkDefault true;
       nushell.enable = lib.mkDefault true;
