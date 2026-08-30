@@ -7,7 +7,6 @@ args@{
   config,
   lib,
   pkgs,
-  perSystem,
   ...
 }:
 let
@@ -16,7 +15,10 @@ let
   osConfig = args.osConfig or null;
   barOnTop = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
 
-  aiQuota = "${perSystem.self.ai-quota}/bin/ai-quota";
+  shared = import ./shared.nix;
+  inherit (shared) apiUrl updateInterval;
+
+  curl = lib.getExe pkgs.curl;
   sketchybar = lib.getExe pkgs.sketchybar;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
@@ -41,7 +43,8 @@ let
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
 
   fetchPlugin = mkPlugin "fetch" ''
-    out="$(${aiQuota} --json 2>/dev/null)" || exit 0
+    out="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0
+    printf '%s\n' "$out" | ${jq} -e '.providers | arrays' >/dev/null 2>&1 || exit 0
     mkdir -p ${lib.escapeShellArg (builtins.dirOf cacheFile)}
     tmp="${cacheFile}.tmp.$$"
     trap 'rm -f "$tmp"' EXIT
@@ -154,7 +157,7 @@ let
     settings = {
       drawing = "off";
       updates = "on";
-      update_freq = 60;
+      update_freq = updateInterval;
       script = fetchPlugin;
     };
   };
@@ -360,10 +363,10 @@ let
       accent = colors.blue;
     }
     {
-      name = "opencode-go";
-      title = "OpenCode Go";
-      logo = ./logos/opencode-go.png;
-      logoScale = 0.025;
+      name = "antigravity";
+      title = "Antigravity";
+      logo = ./logos/antigravity.png;
+      logoScale = 0.026;
       accent = colors.gray;
     }
   ];
