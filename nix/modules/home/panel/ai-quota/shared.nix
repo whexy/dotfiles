@@ -1,7 +1,7 @@
-# Shared metadata for the AI-quota bar renderers.
-{ perSystem, ... }:
+# Shared API and provider metadata for the AI-quota bar renderers.
 {
-  aiQuota = "${perSystem.self.ai-quota}/bin/ai-quota";
+  apiUrl = "https://ai-quota.clusters.work/api/quota";
+  updateInterval = 30;
 
   providers = [
     {
@@ -26,11 +26,11 @@
       logo = ./logos/codex.png;
     }
     {
-      name = "opencode-go";
-      title = "OpenCode Go";
-      variable = "opencode_go";
-      icon = "󰘦";
-      logo = ./logos/opencode-go.png;
+      name = "antigravity";
+      title = "Antigravity";
+      variable = "antigravity";
+      icon = "󰇂";
+      logo = ./logos/antigravity.png;
     }
   ];
 }

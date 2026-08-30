@@ -7,7 +7,6 @@ args@{
   config,
   lib,
   pkgs,
-  perSystem,
   ...
 }:
 let
@@ -15,9 +14,10 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  shared = import ./shared.nix { inherit perSystem; };
-  inherit (shared) aiQuota providers;
+  shared = import ./shared.nix;
+  inherit (shared) apiUrl providers updateInterval;
 
+  curl = lib.getExe pkgs.curl;
   eww = lib.getExe pkgs.eww;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
@@ -26,7 +26,7 @@ let
     cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin) && config.dotfiles.agents.enable;
 
   quotaScript = pkgs.writeShellScript "eww-ai-quota" ''
-    raw="$(${aiQuota} --json 2>/dev/null)" || exit 0
+    raw="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0
     ${lib.concatMapStringsSep "\n" (p: ''
       ${p.variable}="$(printf '%s\n' "$raw" | ${jq} -c -f ${summaryFilter} --arg provider ${p.name} 2>/dev/null)" || exit 0
     '') providers}
@@ -114,7 +114,7 @@ in
   config = lib.mkIf enabled {
     dotfiles.panel.eww = {
       defs = ''
-        (defpoll AI_QUOTA :interval "60s"
+        (defpoll AI_QUOTA :interval "${toString updateInterval}s"
           :initial '{${
             lib.concatMapStringsSep "," (
               p:
@@ -184,7 +184,7 @@ in
           color: #10a37f;
         }
 
-        .quota-opencode-go .quota-countdown {
+        .quota-antigravity .quota-countdown {
           color: #98989d;
         }
 
@@ -260,7 +260,7 @@ in
         #ai-quota-details-claude,
         #ai-quota-details-kimi,
         #ai-quota-details-codex,
-        #ai-quota-details-opencode-go {
+        #ai-quota-details-antigravity {
           background-color: transparent;
         }
 

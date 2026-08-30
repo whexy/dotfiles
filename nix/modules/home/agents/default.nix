@@ -109,7 +109,7 @@ in
         }
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
-        packages = lib.concatMap (a: a.packages or [ ]) agents ++ [ perSystem.self.ai-quota ];
+        packages = lib.concatMap (a: a.packages or [ ]) agents;
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
       };
@@ -142,12 +142,6 @@ in
         ai-proxy-api-key = {
           file = ../../../../secrets/ai-proxy-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/ai-proxy-api-key";
-        };
-        # Management key for the CLIProxyAPI /v0/management endpoints,
-        # consumed by the ai-quota package.
-        ai-proxy-mgmt-key = {
-          file = ../../../../secrets/ai-proxy-mgmt-key.age;
-          path = "${config.home.homeDirectory}/.secrets/ai-proxy-mgmt-key";
         };
       };
 

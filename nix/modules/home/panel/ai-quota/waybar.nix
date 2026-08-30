@@ -6,7 +6,6 @@ args@{
   config,
   lib,
   pkgs,
-  perSystem,
   ...
 }:
 let
@@ -14,9 +13,10 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  shared = import ./shared.nix { inherit perSystem; };
-  inherit (shared) aiQuota providers;
+  shared = import ./shared.nix;
+  inherit (shared) apiUrl providers updateInterval;
 
+  curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
   summaryFilter = ./summary.jq;
 
@@ -28,10 +28,12 @@ let
   pillScript =
     provider: icon:
     pkgs.writeShellScript "waybar-ai-quota-${provider}" ''
-      raw="$(${aiQuota} --json 2>/dev/null)" ||
-        exec ${jq} -cn '{text: "", tooltip: "quota fetch failed", class: "error"}'
+      raw="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" ||
+        exec ${jq} -cn --arg icon '${icon}' \
+          '{text: ($icon + " …"), tooltip: "quota fetch failed", class: "error"}'
       summary="$(printf '%s\n' "$raw" | ${jq} -c -f ${summaryFilter} --arg provider ${provider} 2>/dev/null)" ||
-        exec ${jq} -cn '{text: "", tooltip: "quota response unreadable", class: "error"}'
+        exec ${jq} -cn --arg icon '${icon}' \
+          '{text: ($icon + " …"), tooltip: "quota response unreadable", class: "error"}'
 
       exec ${jq} -cn --argjson s "$summary" --arg icon '${icon}' '
         def meter:
@@ -41,6 +43,12 @@ let
 
         if $s.present == false then
           { text: "", tooltip: "", class: "empty" }
+        elif $s.state == "error" then
+          {
+            text: ($icon + " …"),
+            tooltip: ($s.compact_lines | join("\n")),
+            class: "error"
+          }
         else
           {
             text: ($icon + " " + ($s | meter) + " " + (($s.remaining | round) | tostring) + "%"),
@@ -54,7 +62,7 @@ let
     provider: icon:
     lib.nameValuePair "custom/ai-quota-${provider}" {
       exec = pillScript provider icon;
-      interval = 60;
+      interval = updateInterval;
       return-type = "json";
       escape = false;
       format = "{}";
@@ -72,7 +80,7 @@ in
       #custom-ai-quota-claude,
       #custom-ai-quota-kimi,
       #custom-ai-quota-codex,
-      #custom-ai-quota-opencode-go {
+      #custom-ai-quota-antigravity {
         padding: 2px 10px;
         margin: 3px 2px;
         border-radius: 10px;
@@ -92,21 +100,21 @@ in
         color: #10a37f;
       }
 
-      #custom-ai-quota-opencode-go {
+      #custom-ai-quota-antigravity {
         color: #98989d;
       }
 
       #custom-ai-quota-claude:hover,
       #custom-ai-quota-kimi:hover,
       #custom-ai-quota-codex:hover,
-      #custom-ai-quota-opencode-go:hover {
+      #custom-ai-quota-antigravity:hover {
         background-color: #504945;
       }
 
       #custom-ai-quota-claude.error,
       #custom-ai-quota-kimi.error,
       #custom-ai-quota-codex.error,
-      #custom-ai-quota-opencode-go.error {
+      #custom-ai-quota-antigravity.error {
         color: #928374;
       }
 
@@ -114,7 +122,7 @@ in
       #custom-ai-quota-claude.empty,
       #custom-ai-quota-kimi.empty,
       #custom-ai-quota-codex.empty,
-      #custom-ai-quota-opencode-go.empty {
+      #custom-ai-quota-antigravity.empty {
         padding: 0;
         margin: 0;
         min-width: 0;

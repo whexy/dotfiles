@@ -29,10 +29,10 @@ def bar:
   | ("█" * $f) + ("░" * (14 - $f));
 
 def tag:
-  if . == "weekly" then "wk"
-  elif . == "daily" then "1d"
-  elif . == "monthly" then "mo"
-  elif test("^weekly ") then sub("^weekly "; "wk ")
+  if (. | ascii_downcase) == "weekly" then "wk"
+  elif (. | ascii_downcase) == "daily" then "1d"
+  elif (. | ascii_downcase) == "monthly" then "mo"
+  elif test("^weekly "; "i") then sub("^weekly "; "wk "; "i")
   else
     gsub("-hour"; "h")
     | gsub("-week"; "w")
@@ -41,10 +41,10 @@ def tag:
   end;
 
 def meter_tag:
-  if . == "weekly" then "Weekly"
-  elif . == "daily" then "Daily"
-  elif . == "monthly" then "Monthly"
-  elif test("^weekly ") then sub("^weekly "; "Weekly ")
+  if (. | ascii_downcase) == "weekly" then "Weekly"
+  elif (. | ascii_downcase) == "daily" then "Daily"
+  elif (. | ascii_downcase) == "monthly" then "Monthly"
+  elif test("^weekly "; "i") then sub("^weekly "; "Weekly "; "i")
   elif test("^[0-9]+-hour$") then
     capture("^(?<n>[0-9]+)-hour$") | "\(.n)h"
   elif test("^[0-9]+-minute$") then
@@ -58,10 +58,10 @@ def meter_tag:
   end;
 
 def pill_tag:
-  if . == "weekly" then "WK"
-  elif . == "daily" then "1D"
-  elif . == "monthly" then "MO"
-  elif test("^weekly ") then sub("^weekly "; "WK ") | ascii_upcase
+  if (. | ascii_downcase) == "weekly" then "WK"
+  elif (. | ascii_downcase) == "daily" then "1D"
+  elif (. | ascii_downcase) == "monthly" then "MO"
+  elif test("^weekly "; "i") then sub("^weekly "; "WK "; "i") | ascii_upcase
   elif test("^[0-9]+-hour$") then
     (capture("^(?<n>[0-9]+)-hour$").n + "H")
   elif test("^[0-9]+-minute$") then
@@ -75,8 +75,10 @@ def pill_tag:
   end;
 
 def window_span:
-  if .label == "daily" then 86400
-  elif (.label | test("^weekly($| )")) then 604800
+  (.duration_seconds // 0) as $duration
+  | if $duration > 0 then $duration
+  elif .label == "daily" then 86400
+  elif (.label | test("^weekly($| )"; "i")) then 604800
   elif .label == "monthly" then 2592000
   elif (.label | test("^[0-9]+-minute$")) then
     (.label | capture("^(?<n>[0-9]+)-minute$").n | tonumber) * 60
@@ -90,7 +92,7 @@ def window_span:
   end;
 
 def remaining:
-  (100 - (.pct // 0))
+  (100 - (.pct // .percent // 0))
   | if . < 0 then 0 elif . > 100 then 100 else . end;
 
 def state:
@@ -147,17 +149,18 @@ def coding:
   [.meters[] | select((.label | ascii_downcase) | startswith("review") | not)];
 
 def meter_line:
-  "  \(.label)  \(.pct | bar)  \(100 - .pct | round)% left"
+  "  \(.label)  \((.pct // .percent // 0) | bar)  \(100 - (.pct // .percent // 0) | round)% left"
   + (if .reset_human then " · resets " + .reset_human else "" end);
 
 def compact_meter_line:
-  "\(.label | tag)  \(.pct | bar)  \(100 - .pct | round)% left"
+  "\(.label | tag)  \((.pct // .percent // 0) | bar)  \(100 - (.pct // .percent // 0) | round)% left"
   + (if .reset_human then " · resets " + .reset_human else "" end);
 
 def provider_accent:
   if . == "claude" then "orange"
   elif . == "kimi" then "blue"
   elif . == "codex" then "green"
+  elif . == "antigravity" then "gray"
   else "gray"
   end;
 
@@ -170,7 +173,7 @@ def provider_accent:
     |     [
         $healthy[]
         | . as $account
-        | (coding | max_by(.pct)) as $binding
+        | (coding | max_by(.pct // .percent // 0)) as $binding
         | select($binding != null)
         | {account: $account, binding: $binding}
       ] as $ranked
@@ -187,7 +190,7 @@ def provider_accent:
           compact_meters: [],
         }
       else
-        ($ranked | min_by(.binding.pct)) as $best
+        ($ranked | min_by(.binding.pct // .binding.percent // 0)) as $best
         | ($best.binding | remaining) as $remaining
         | (if $remaining <= 20 then "critical"
           elif $remaining <= 50 then "warning"
