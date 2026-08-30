@@ -101,8 +101,8 @@ in
 
       home = {
         # Single source of truth for global agent rules; every agent reads it.
+        # pi gets extra tool-specific guidance appended by its own home.nix.
         file = {
-          ".pi/agent/AGENTS.md".source = ./AGENTS.md;
           ".config/opencode/AGENTS.md".source = ./AGENTS.md;
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".claude/CLAUDE.md".source = ./AGENTS.md;
@@ -119,6 +119,10 @@ in
           file = ../../../../secrets/opencode-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/opencode-api-key";
         };
+        openrouter-api-key = {
+          file = ../../../../secrets/openrouter-api-key.age;
+          path = "${config.home.homeDirectory}/.secrets/openrouter-api-key";
+        };
       }
       // lib.optionalAttrs cfg.enableApiAccounts {
         openai-api-key = {
@@ -132,10 +136,6 @@ in
         deepseek-api-key = {
           file = ../../../../secrets/deepseek-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
-        };
-        openrouter-api-key = {
-          file = ../../../../secrets/openrouter-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/openrouter-api-key";
         };
       }
       // lib.optionalAttrs cfg.enableProxyAccounts {

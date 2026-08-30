@@ -16,8 +16,8 @@
 
   packages = [
     "npm:pi-web-access"
-    "npm:pi-subagents"
     "npm:@narumitw/pi-goal"
+    "npm:pi-subagents"
   ];
 
   npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
@@ -35,17 +35,21 @@
   ]
   ++ [
     # OpenCode Go subscription
-    "opencode-go/deepseek-v4-pro"
     "opencode-go/deepseek-v4-flash"
-    "opencode-go/grok-4.6"
+    "opencode-go/deepseek-v4-pro"
+    "opencode-go/glm-5.3"
+    "opencode-go/kimi-k3"
     "opencode-go/gpt-5.6-luna"
+    # OpenRouter
+    "openrouter/z-ai/glm-5.3-flash"
+    "openrouter/z-ai/glm-5.3"
+    "openrouter/moonshotai/kimi-k3"
   ]
   ++ lib.optionals apiAccounts [
     # Pay by APIs
     "openai/gpt-5.6-sol"
     "deepseek/deepseek-v4-flash"
     "deepseek/deepseek-v4-pro"
-    "openrouter/z-ai/glm-5.3-flash"
     "anthropic/claude-opus-5"
     "anthropic/claude-sonnet-5"
     "anthropic/claude-fable-5"
