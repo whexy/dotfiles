@@ -2,7 +2,7 @@
 
 # Every external command is referenced by absolute store path so the script's
 # nix closure is self-contained. Do not rely on tools being on PATH: the CI
-# container image (nixos/nix) ships coreutils/curl but, e.g., no sed.
+# container image (nixos/nix) ships coreutils/curl but, e.g., no sed or jq.
 pkgs.writeShellScriptBin "github-app-token" ''
   set -euo pipefail
 
@@ -30,10 +30,24 @@ pkgs.writeShellScriptBin "github-app-token" ''
         -binary |
       b64url
   )
+  jwt="$unsigned.$signature"
 
+  # --app-slug prints the App's slug, which names its bot user ("<slug>[bot]").
+  # Must use JWT auth: GET /app rejects installation tokens.
+  if [ "''${1:-}" = "--app-slug" ]; then
+    ${pkgs.curl}/bin/curl -fsS \
+      -H "Authorization: Bearer $jwt" \
+      -H "Accept: application/vnd.github+json" \
+      "https://api.github.com/app" |
+      ${pkgs.jq}/bin/jq -er .slug
+    exit 0
+  fi
+
+  # jq -e fails on a missing/null token field, so a malformed success body
+  # cannot silently produce an empty token that 401s downstream.
   ${pkgs.curl}/bin/curl -fsS -X POST \
-    -H "Authorization: Bearer $unsigned.$signature" \
+    -H "Authorization: Bearer $jwt" \
     -H "Accept: application/vnd.github+json" \
     "https://api.github.com/app/installations/$GITHUB_APP_INSTALLATION_ID/access_tokens" |
-    ${pkgs.gnused}/bin/sed -n 's/.*"token"[[:space:]]*:[[:space:]]*"\([^"]*\)".*/\1/p'
+    ${pkgs.jq}/bin/jq -er .token
 ''
