@@ -77,7 +77,7 @@ in
             mouse_follows_focus = true,
             horizontal_mouse_warp = 1,
             preset_column_widths = { 0.33, 0.5, 0.66 },
-            auto_center = false,
+            auto_center = true,
             window_resize_cycle = true,
             virtual_workspace_animations = false,
             reap_empty_workspaces = true,
