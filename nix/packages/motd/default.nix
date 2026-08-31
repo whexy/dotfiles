@@ -10,6 +10,7 @@ pkgs.writers.writePython3Bin "motd"
   ''
     """Render a compact, responsive system dashboard for interactive shells."""
 
+    import json
     import os
     import platform
     import re
@@ -366,6 +367,33 @@ pkgs.writers.writePython3Bin "motd"
         return " · ".join(sessions) if sessions else paint("inactive", DIM)
 
 
+    def get_herdr_info():
+        output = command(["herdr", "workspace", "list"], timeout=0.3)
+        try:
+            workspaces = json.loads(output).get("result", {}).get("workspaces", [])
+        except Exception:
+            workspaces = []
+
+        entries = []
+        for workspace in workspaces:
+            number = workspace.get("number", "?")
+            label = workspace.get("label") or "workspace"
+            tabs = workspace.get("tab_count", 0)
+            panes = workspace.get("pane_count", 0)
+            state = "focused" if workspace.get("focused") else workspace.get("agent_status", "idle")
+            state_color = GREEN if workspace.get("focused") else GRAY
+            entries.append(
+                "%s %st %sp %s"
+                % (
+                    paint("%s:%s" % (number, label), BOLD),
+                    tabs,
+                    panes,
+                    paint(state, state_color),
+                )
+            )
+        return " · ".join(entries) if entries else paint("inactive", DIM)
+
+
     def card(title: str, rows, width: int):
         inner_width = width - 4
         title_text = "─ %s " % paint(title.upper(), BOLD, CYAN)
@@ -435,6 +463,7 @@ pkgs.writers.writePython3Bin "motd"
             ("Tailscale", get_tailscale_ipv4()),
         ]
         workspaces = [
+            ("Herdr", get_herdr_info()),
             ("tmux", get_tmux_info()),
             ("zellij", get_zellij_info()),
         ]
