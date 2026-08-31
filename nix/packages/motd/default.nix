@@ -427,9 +427,12 @@ pkgs.writers.writePython3Bin "motd"
 
     def print_pair(left, right, gap=2):
         left_width = visible_len(left[0])
+        right_width = visible_len(right[0])
         height = max(len(left), len(right))
-        left = left[:-1] + [""] * (height - len(left)) + left[-1:]
-        right = right[:-1] + [""] * (height - len(right)) + right[-1:]
+        left_blank = paint("│" + " " * (left_width - 2) + "│", GRAY)
+        right_blank = paint("│" + " " * (right_width - 2) + "│", GRAY)
+        left = left[:-1] + [left_blank] * (height - len(left)) + left[-1:]
+        right = right[:-1] + [right_blank] * (height - len(right)) + right[-1:]
         for left_line, right_line in zip(left, right):
             print(fit(left_line, left_width) + " " * gap + right_line)
 
