@@ -31,7 +31,7 @@
     "ai-proxy/kimi-k3-256k"
     "ai-proxy/kimi-k3"
     "ai-proxy/claude-opus-5"
-    "ai-proxy/claude-fable-5"
+    "ai-proxy/claude-fable-5-1"
   ]
   ++ [
     # OpenCode Go subscription
@@ -52,7 +52,7 @@
     "deepseek/deepseek-v4-pro"
     "anthropic/claude-opus-5"
     "anthropic/claude-sonnet-5"
-    "anthropic/claude-fable-5"
+    "anthropic/claude-fable-5-1"
   ]
   ++ lib.optionals proxyAccounts [
     "ai-proxy/gpt-5.6-terra"
