@@ -91,7 +91,7 @@ let
     ++ lib.optionals proxyAccounts (
       map (proxy anthropicEnv) [
         "claude-opus-5"
-        "claude-fable-5"
+        "claude-fable-5-1"
       ]
       ++ map (proxy mapOpenAI) [
         "gpt-5.6-sol"
@@ -107,7 +107,7 @@ let
       map anthropic [
         "claude-opus-5"
         "claude-sonnet-5"
-        "claude-fable-5"
+        "claude-fable-5-1"
       ]
     );
 in

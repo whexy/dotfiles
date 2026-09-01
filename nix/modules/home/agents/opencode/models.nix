@@ -18,7 +18,7 @@
   anthropic = [
     "claude-opus-5"
     "claude-sonnet-5"
-    "claude-fable-5"
+    "claude-fable-5-1"
   ];
   deepseek = [
     "deepseek-v4-flash"
