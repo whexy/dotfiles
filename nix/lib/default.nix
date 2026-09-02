@@ -74,6 +74,7 @@ in
       modules ? [ ],
       overlays ? [ ],
       wsl ? false,
+      incusContainer ? false,
     }:
     [
       # External option providers. Their behavior remains inert until a
@@ -109,7 +110,13 @@ in
     ]
     ++ capsModules caps
     ++ modules
-    ++ lib.optionals wsl [ inputs.nixos-wsl.nixosModules.wsl ];
+    ++ lib.optionals wsl [ inputs.nixos-wsl.nixosModules.wsl ]
+    # The LXC profile sets boot.isContainer unconditionally, so it cannot be
+    # option-gated inside the incusContainer platform module.
+    ++ lib.optionals incusContainer [
+      ({ modulesPath, ... }: { imports = [ (modulesPath + "/virtualisation/lxc-container.nix") ]; })
+      { dotfiles.platform.incusContainer.enable = true; }
+    ];
 
   darwinHost =
     {

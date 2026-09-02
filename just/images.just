@@ -105,6 +105,39 @@ build-zoozve:
     echo "  incus launch zoozve-image zoozve --vm -c security.secureboot=false"
     echo "  incus console zoozve"
 
+# Build an Incus system container image (rootfs + metadata tarballs).
+build-neith:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    mkdir -p result/neith
+
+    echo "Building neith container rootfs..."
+    ROOTFS=$(nix build \
+        .#nixosConfigurations.neith.config.system.build.tarball \
+        --no-link \
+        --print-out-paths)
+    ROOTFS_FILE=$(find "$ROOTFS/tarball" -name '*.tar.xz' -type f -print -quit)
+    cp -L "$ROOTFS_FILE" result/neith/neith.tar.xz
+
+    METADATA=$(nix build \
+        .#nixosConfigurations.neith.config.system.build.metadata \
+        --no-link \
+        --print-out-paths)
+    METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
+    cp -L "$METADATA_FILE" result/neith/incus-metadata.tar.xz
+    chmod u+w result/neith/*.tar.xz
+
+    echo ""
+    echo "Build complete!"
+    echo "Rootfs:   result/neith/neith.tar.xz"
+    echo "Metadata: result/neith/incus-metadata.tar.xz"
+    echo ""
+    echo "Import on the Incus host (nesting is needed for Docker/Podman inside):"
+    echo "  incus image import --alias neith-image result/neith/incus-metadata.tar.xz result/neith/neith.tar.xz"
+    echo "  incus launch neith-image neith -c security.nesting=true"
+    echo "  incus exec neith -- login -f whexy"
+
 # Build WSL tarball for import (requires sudo)
 build-wsl:
     @mkdir -p result/wsl

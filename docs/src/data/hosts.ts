@@ -59,6 +59,14 @@ export const categories: Category[] = [
         note: "Incus VM with LUKS-encrypted root and guest agent. Auto-upgrading.",
       },
       {
+        label: "neith",
+        hardware: "Incus container",
+        caps: ["base", "dev"],
+        cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#neith",
+        nhCmd: "nh os switch --hostname neith github:whexy/dotfiles",
+        note: "Incus system container for development. Auto-upgrading.",
+      },
+      {
         label: "skokie",
         hardware: "Apple silicon desktop VM",
         caps: ["base", "dev", "gui"],
@@ -178,6 +186,13 @@ export const categories: Category[] = [
         caps: ["base", "dev"],
         cmd: "just build-phobos",
         note: "LUKS-encrypted qcow2 + Incus metadata. Import with incus image import.",
+      },
+      {
+        label: "neith image",
+        hardware: "Incus container image",
+        caps: ["base", "dev"],
+        cmd: "just build-neith",
+        note: "Rootfs + Incus metadata tarballs. Import with incus image import.",
       },
     ],
   },

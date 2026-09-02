@@ -57,7 +57,7 @@ Signing commits are optional.
 Tools like `git` are configured to sign commits by default. The signing key are
 provided by either a local 1Password agent (on a physical machine, like `golf`,
 `sheridan`, and `ellison`), or a forwarded agent through SSH (on a remote
-machine, like `mudd`, `phobos`, and `zoozve`).
+machine, like `mudd`, `neith`, `phobos`, and `zoozve`).
 
 If signing agent is currently unavailable (e.g., SSH forwarding is not working),
 commit without signing.
