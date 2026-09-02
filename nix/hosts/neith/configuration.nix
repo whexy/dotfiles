@@ -8,6 +8,7 @@
       "base"
       "dev"
     ];
+    modules = [ ./nvidia.nix ];
   };
 
   dotfiles.system.autoUpgrade.enable = true;
