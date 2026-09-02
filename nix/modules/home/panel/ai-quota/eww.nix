@@ -12,6 +12,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
+  showCountdown = cfg.aiQuota.showCountdown;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   shared = import ./shared.nix;
@@ -74,8 +75,10 @@ let
             (for meter in {jq(AI_QUOTA, ".\"${p.name}\".compact_meters[:3]")}
               (progress :class {"quota-track " + meter.color}
                 :orientation "h" :width 58 :value {meter.remaining})))
-          (label :class "quota-countdown"
-            :text {jq(AI_QUOTA, ".\"${p.name}\".display_meter.countdown // \"—\"", "r")}))))
+          ${lib.optionalString showCountdown ''
+            (label :class "quota-countdown"
+              :text {jq(AI_QUOTA, ".\"${p.name}\".display_meter.countdown // \"—\"", "r")})
+          ''})))
 
     (defwidget ai-quota-details-${p.name} []
       (box :class "quota-details" :orientation "v" :space-evenly false

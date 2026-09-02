@@ -11,6 +11,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
+  showCountdown = cfg.aiQuota.showCountdown;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   shared = import ./shared.nix;
@@ -51,7 +52,7 @@ let
           }
         else
           {
-            text: ($icon + " " + ($s | meter) + " " + (($s.remaining | round) | tostring) + "%"),
+            text: ($icon + " " + ($s | meter) + " " + (($s.remaining | round) | tostring) + "%"${lib.optionalString showCountdown ''+ " " + ($s.display_meter.countdown // "—")''}),
             tooltip: ($s.compact_lines | join("\n")),
             class: $s.state
           }
