@@ -4,10 +4,13 @@
 # cannot hide.
 {
   opencode-go = [
+    "muse-spark-1.3-contributor"
+    "glm-5.3"
     "glm-5.3-flash"
     "deepseek-v4-flash"
     "deepseek-v4-pro"
     "grok-4.6"
+    "kimi-k3"
     "gpt-5.6-luna"
   ];
   openai = [
@@ -25,6 +28,8 @@
     "deepseek-v4-pro"
   ];
   openrouter = [
+    "z-ai/glm-5.3"
     "z-ai/glm-5.3-flash"
+    "moonshotai/kimi-k3"
   ];
 }
