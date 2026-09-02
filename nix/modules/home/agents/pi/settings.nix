@@ -32,6 +32,7 @@
         # (61) GPT-5.6 Sol
         "ai-proxy/gpt-5.6-sol"
         # (61) Grok 4.6
+        "ai-proxy/grok-4.6"
         "opencode-go/grok-4.6"
         # (60) Kimi K3
         "ai-proxy/kimi-k3-256k"
