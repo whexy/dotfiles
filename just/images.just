@@ -138,6 +138,38 @@ build-neith:
     echo "  incus launch neith-image neith -c security.nesting=true"
     echo "  incus exec neith -- login -f whexy"
 
+build-deimos:
+    #!/usr/bin/env bash
+    set -euo pipefail
+
+    mkdir -p result/deimos
+
+    echo "Building deimos container rootfs..."
+    ROOTFS=$(nix build \
+        .#nixosConfigurations.deimos.config.system.build.tarball \
+        --no-link \
+        --print-out-paths)
+    ROOTFS_FILE=$(find "$ROOTFS/tarball" -name '*.tar.xz' -type f -print -quit)
+    cp -L "$ROOTFS_FILE" result/deimos/deimos.tar.xz
+
+    METADATA=$(nix build \
+        .#nixosConfigurations.deimos.config.system.build.metadata \
+        --no-link \
+        --print-out-paths)
+    METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
+    cp -L "$METADATA_FILE" result/deimos/incus-metadata.tar.xz
+    chmod u+w result/deimos/*.tar.xz
+
+    echo ""
+    echo "Build complete!"
+    echo "Rootfs:   result/deimos/deimos.tar.xz"
+    echo "Metadata: result/deimos/incus-metadata.tar.xz"
+    echo ""
+    echo "Import on the Incus host (nesting is needed for Docker/Podman inside):"
+    echo "  incus image import --alias deimos-image result/deimos/incus-metadata.tar.xz result/deimos/deimos.tar.xz"
+    echo "  incus launch deimos-image deimos -c security.nesting=true"
+    echo "  incus exec deimos -- login -f whexy"
+
 # Build WSL tarball for import (requires sudo)
 build-wsl:
     @mkdir -p result/wsl
