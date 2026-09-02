@@ -54,6 +54,35 @@ in
   # /etc/set-environment, hence the separate manager default.
   systemd.settings.Manager.DefaultEnvironment = "LD_LIBRARY_PATH=/run/opengl-driver/lib";
 
+  # Docker GPU support. The nixpkgs nvidia-container-toolkit module is not
+  # used: its CDI generator interpolates hardware.nvidia.package, which would
+  # build an unfree driver unrelated to the 580 series the hypervisor mounts
+  # in. Auto-discovery finds the real driver on its own here, so the generator
+  # only needs the toolkit itself.
+  systemd.services.nvidia-cdi-generator = {
+    description = "Generate CDI specification for the host Nvidia driver";
+    wantedBy = [ "multi-user.target" ];
+    before = [ "docker.service" ];
+    serviceConfig = {
+      Type = "oneshot";
+      RemainAfterExit = true;
+      RuntimeDirectory = "cdi";
+      # Discovery locates the tools by PATH lookup and records whatever it
+      # finds as the in-container path. Restricting PATH to the runtime's own
+      # mount point keeps them at /usr/bin, where images expect them, rather
+      # than at the /run/current-system/sw/bin symlinks added above.
+      Environment = "PATH=/usr/bin";
+      ExecStart = lib.concatStringsSep " " [
+        (lib.getExe' pkgs.nvidia-container-toolkit "nvidia-ctk")
+        "cdi generate"
+        "--format=json"
+        "--output=/run/cdi/nvidia.json"
+        "--nvidia-cdi-hook-path ${lib.getOutput "tools" pkgs.nvidia-container-toolkit}/bin/nvidia-cdi-hook"
+        "--ldconfig-path ${lib.getExe' pkgs.glibc.bin "ldconfig"}"
+      ];
+    };
+  };
+
   # nix-ld only covers unpatched binaries; Nix-built Python loading CUDA and
   # GL wheels needs the host driver and these libraries on the regular path.
   environment.sessionVariables.LD_LIBRARY_PATH = [
