@@ -69,18 +69,15 @@ let
   '';
 
   startScript = pkgs.writeShellScript "eww-bar-open" ''
-    # The daemon unit starts concurrently; wait for its socket before opening.
-    socket="''${XDG_RUNTIME_DIR:-/run/user/$(id -u)}/eww/eww.sock"
+    # The daemon unit starts concurrently. Probe its IPC endpoint instead of
+    # guessing the socket name, which includes a config-path hash in Eww 0.6.
     for _ in {1..40}; do
-      [ -S "$socket" ] && break
+      ${eww} ping >/dev/null 2>&1 && exec ${eww} open bar
       ${sleep} 0.25
     done
 
-    # This unit's X-Restart-Triggers pin the generated config store paths, so
-    # HM's sd-switch reruns it whenever the config changes; eww does not watch
-    # its files on its own.
-    ${eww} reload 2>/dev/null || true
-    exec ${eww} open bar
+    echo "Timed out waiting for the Eww daemon" >&2
+    exit 1
   '';
 
   renderWidgets = names: lib.concatStringsSep " " (map (n: "(${n})") names);
@@ -256,6 +253,29 @@ in
       systemd.enable = true;
     };
 
+    # Eww watches its config directory and reloads immediately when Home
+    # Manager relinks either file. Stop it before linkGeneration so the config
+    # swap cannot hot-reload the systray widget while libdbusmenu is live.
+    home.activation.stopEwwBeforeRelink =
+      lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ]
+        ''
+          config_changed=false
+          ${pkgs.diffutils}/bin/cmp -s \
+            ${lib.escapeShellArg config.xdg.configFile."eww/eww.yuck".source} \
+            ${lib.escapeShellArg "${config.xdg.configHome}/eww/eww.yuck"} \
+            || config_changed=true
+          ${pkgs.diffutils}/bin/cmp -s \
+            ${lib.escapeShellArg config.xdg.configFile."eww/eww.scss".source} \
+            ${lib.escapeShellArg "${config.xdg.configHome}/eww/eww.scss"} \
+            || config_changed=true
+
+          if [[ $config_changed == true ]] \
+            && ${pkgs.systemd}/bin/systemctl --user --quiet is-active eww.service; then
+            run ${pkgs.systemd}/bin/systemctl --user stop eww.service
+          fi
+          unset config_changed
+        '';
+
     # Start the watcher independently so tray clients can register before the
     # visible host exists and keep their registration across Eww reloads.
     services.status-notifier-watcher = {
@@ -290,24 +310,32 @@ in
         Install.WantedBy = [ "graphical-session.target" ];
       };
 
-      eww.Unit = {
-        Requires = [ "status-notifier-watcher.service" ];
-        After = [ "status-notifier-watcher.service" ];
+      eww = {
+        Unit = {
+          Requires = [ "status-notifier-watcher.service" ];
+          After = [ "status-notifier-watcher.service" ];
+          # Restart the daemon rather than hot-reloading its systray widget.
+          # Consecutive reloads can corrupt libdbusmenu state and abort Eww.
+          X-Restart-Triggers = [
+            yuckFile
+            scssFile
+          ];
+        };
+        Service = {
+          Restart = "on-failure";
+          RestartSec = 1;
+        };
       };
     };
 
     # The HM eww module only starts the daemon; this opens the bar window
-    # once the daemon socket is up, and reruns on every config change to
-    # reload it (see startScript).
+    # once its IPC endpoint is ready. Config changes restart the daemon above,
+    # which pulls this unit in again through eww.service.wants.
     systemd.user.services.eww-bar = {
       Unit = {
         Description = "Eww status bar window";
         BindsTo = [ "eww.service" ];
         After = [ "eww.service" ];
-        X-Restart-Triggers = [
-          yuckFile
-          scssFile
-        ];
       };
       Service = {
         Type = "oneshot";
