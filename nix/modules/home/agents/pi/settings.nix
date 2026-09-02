@@ -57,6 +57,6 @@
   ++ lib.optionals proxyAccounts [
     "ai-proxy/gpt-5.6-terra"
     "ai-proxy/gpt-5.6-luna"
-    "ai-proxy/gemini-3.7-flash"
+    "ai-proxy/gemini-3.8-flash"
   ];
 }
