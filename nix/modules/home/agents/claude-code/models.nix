@@ -100,7 +100,7 @@ let
       ]
       ++ map (proxy pin) [
         "kimi-k3"
-        "gemini-3.7-flash"
+        "gemini-3.8-flash"
       ]
     )
     ++ lib.optionals apiAccounts (
