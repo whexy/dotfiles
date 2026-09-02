@@ -285,27 +285,16 @@ in
   config = lib.mkIf (cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin) {
     home.packages = [ pkgs.sketchybar ];
 
+    # The LaunchAgent runs the immutable generated config directly. Its plist
+    # therefore changes with the config, so Home Manager bootouts and
+    # bootstraps the bar exactly once; a separate file onChange would race it
+    # and cause the clear/refill/clear/refill sequence seen during switches.
     xdg.configFile."sketchybar/sketchybarrc".source = sketchybarConfig;
-
-    # Restart the bar whenever its config changes. `sketchybar --reload` only
-    # re-runs the config path resolved when the process started, so after a
-    # switch it keeps replaying the *previous* generation's sketchybarrc (and
-    # drops any items the new config added). Kickstarting the launchd agent
-    # re-execs sketchybar against the freshly linked config. Guard on the
-    # process so a config change on fresh install doesn't fail the switch.
-    xdg.configFile."sketchybar/sketchybarrc".onChange = ''
-      if /usr/bin/pgrep -x sketchybar >/dev/null 2>&1; then
-        echo "SketchyBar config changed, restarting..."
-        /bin/launchctl kickstart -k "gui/$(/usr/bin/id -u)/org.nix-community.home.sketchybar"
-      else
-        echo "SketchyBar not running; new config will be loaded on next launch"
-      fi
-    '';
 
     launchd.agents.sketchybar = mkAgent "sketchybar" [
       sketchybar
       "--config"
-      "${config.xdg.configHome}/sketchybar/sketchybarrc"
+      "${sketchybarConfig}"
     ];
   };
 }
