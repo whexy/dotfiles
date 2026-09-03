@@ -9,6 +9,7 @@
       "dev"
     ];
     modules = [ ./nvidia.nix ];
+    overlays = [ flake.lib.overlays.docker-runc-lxc ];
   };
 
   dotfiles.system.autoUpgrade.enable = true;
