@@ -7,6 +7,14 @@ import { join } from "node:path";
 const BASE_URL = "https://ai-proxy.at-basking.ts.net/v1";
 const API_KEY_PATH = join(process.env.HOME!, ".secrets", "ai-proxy-api-key");
 
+// pi-ai's bundled registry is frozen at pi release time, while `pi update
+// --models` refreshes provider catalogs into this cache. Models released after
+// the pi build exist only in the cache, so it must be consulted first.
+const MODELS_STORE_PATH = join(
+  process.env.PI_CODING_AGENT_DIR ?? join(process.env.HOME!, ".pi", "agent"),
+  "models-store.json",
+);
+
 // Providers checked first when resolving a model id.
 const PREFERRED_PROVIDERS = [
   "openai",
@@ -41,19 +49,43 @@ type ModelIndex = {
   byId: Map<string, Model>;
 };
 
-function buildModelIndex(): ModelIndex {
-  const providerNames = [
-    ...PREFERRED_PROVIDERS,
-    ...getProviders().filter(
-      (provider) =>
-        !PREFERRED_PROVIDERS.includes(
-          provider as (typeof PREFERRED_PROVIDERS)[number],
-        ),
-    ),
-  ];
+// Reads refreshed catalogs from the models store. A missing or malformed cache
+// yields an empty map so discovery falls back to the bundled registry.
+async function readCachedModels(): Promise<Map<string, Model[]>> {
+  try {
+    const store = JSON.parse(await readFile(MODELS_STORE_PATH, "utf8")) as
+      | Record<string, { models?: Model[] }>
+      | undefined;
+    return new Map(
+      Object.entries(store ?? {}).flatMap(([provider, entry]) =>
+        Array.isArray(entry?.models) ? [[provider, entry.models]] : [],
+      ),
+    );
+  } catch {
+    return new Map();
+  }
+}
+
+// Cached entries win over bundled ones sharing an id.
+function mergeModels(cached: Model[], bundled: Model[]): Model[] {
+  const ids = new Set(cached.map((model) => model.id));
+  return [...cached, ...bundled.filter((model) => !ids.has(model.id))];
+}
+
+function buildModelIndex(cached: Map<string, Model[]>): ModelIndex {
+  const rest = [...getProviders(), ...cached.keys()].filter(
+    (provider) =>
+      !PREFERRED_PROVIDERS.includes(
+        provider as (typeof PREFERRED_PROVIDERS)[number],
+      ),
+  );
+  const providerNames = [...new Set([...PREFERRED_PROVIDERS, ...rest])];
 
   const byProvider = new Map(
-    providerNames.map((provider) => [provider, getModels(provider)]),
+    providerNames.map((provider) => [
+      provider,
+      mergeModels(cached.get(provider) ?? [], getModels(provider)),
+    ]),
   );
   const byId = new Map<string, Model>();
   for (const provider of providerNames) {
@@ -74,7 +106,7 @@ function findBundledModel(
   const candidateProviders = [
     owner ? OWNER_TO_PROVIDER[owner] : undefined,
     id.startsWith("claude-") ? "anthropic" : undefined,
-    id.startsWith("gemini-") ? "google" : undefined,
+    id.startsWith("gemini-") || id.startsWith("gemma-") ? "google" : undefined,
   ];
 
   for (const provider of candidateProviders) {
@@ -132,7 +164,7 @@ async function fetchServedModels(
 
 export default async function (pi: ExtensionAPI) {
   const apiKey = (await readFile(API_KEY_PATH, "utf8")).trim();
-  const index = buildModelIndex();
+  const index = buildModelIndex(await readCachedModels());
   const served = await fetchServedModels(apiKey);
   const models = served.flatMap(({ id, owner }) => {
     const model = resolveModel(id, owner, index);
