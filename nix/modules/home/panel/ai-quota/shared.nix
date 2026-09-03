@@ -32,5 +32,12 @@
       icon = "󰇂";
       logo = ./logos/antigravity.png;
     }
+    {
+      name = "grok";
+      title = "Grok";
+      variable = "grok";
+      icon = "󰬅";
+      logo = ./logos/grok.png;
+    }
   ];
 }

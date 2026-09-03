@@ -81,7 +81,8 @@ in
       #custom-ai-quota-claude,
       #custom-ai-quota-kimi,
       #custom-ai-quota-codex,
-      #custom-ai-quota-antigravity {
+      #custom-ai-quota-antigravity,
+      #custom-ai-quota-grok {
         padding: 2px 10px;
         margin: 3px 2px;
         border-radius: 10px;
@@ -105,17 +106,23 @@ in
         color: #98989d;
       }
 
+      #custom-ai-quota-grok {
+        color: #ffffff;
+      }
+
       #custom-ai-quota-claude:hover,
       #custom-ai-quota-kimi:hover,
       #custom-ai-quota-codex:hover,
-      #custom-ai-quota-antigravity:hover {
+      #custom-ai-quota-antigravity:hover,
+      #custom-ai-quota-grok:hover {
         background-color: #504945;
       }
 
       #custom-ai-quota-claude.error,
       #custom-ai-quota-kimi.error,
       #custom-ai-quota-codex.error,
-      #custom-ai-quota-antigravity.error {
+      #custom-ai-quota-antigravity.error,
+      #custom-ai-quota-grok.error {
         color: #928374;
       }
 
@@ -123,7 +130,8 @@ in
       #custom-ai-quota-claude.empty,
       #custom-ai-quota-kimi.empty,
       #custom-ai-quota-codex.empty,
-      #custom-ai-quota-antigravity.empty {
+      #custom-ai-quota-antigravity.empty,
+      #custom-ai-quota-grok.empty {
         padding: 0;
         margin: 0;
         min-width: 0;
