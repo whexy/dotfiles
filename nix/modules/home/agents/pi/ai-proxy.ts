@@ -4,7 +4,7 @@ import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
 
 const BASE_URL = "https://ai-proxy.at-basking.ts.net/v1";
-const MODELS_DEV_URL = "https://models.dev/api.json";
+const CATALOG_BASE_URL = "https://pi.dev";
 const API_KEY_PATH = join(process.env.HOME!, ".secrets", "ai-proxy-api-key");
 const AGENT_DIR =
   process.env.PI_CODING_AGENT_DIR ?? join(process.env.HOME!, ".pi", "agent");
@@ -20,7 +20,7 @@ const OWNER_TO_PROVIDER: Record<string, string> = {
   xai: "xai",
 };
 
-// Proxy-specific variants reuse canonical models.dev metadata and change only
+// Proxy-specific variants reuse the canonical catalog entry and change only
 // the property that differs at the proxy boundary.
 const MODEL_ALIASES: Record<
   string,
@@ -34,36 +34,18 @@ const MODEL_ALIASES: Record<
 };
 
 type ServedModel = { id: string; owner?: string };
-type ModelCache = { version: 1; models: Record<string, Model | null> };
-type ModelsDevModel = {
-  id: string;
-  name?: string;
-  reasoning?: boolean;
-  reasoning_options?: Array<
-    { type: "effort"; values?: string[] } | { type: "toggle" }
-  >;
-  modalities?: { input?: string[] };
-  limit?: { context?: number; output?: number };
-  cost?: {
-    input?: number;
-    output?: number;
-    cache_read?: number;
-    cache_write?: number;
-  };
-};
-type ModelsDevCatalog = Record<
-  string,
-  { models?: Record<string, ModelsDevModel> }
->;
+type ModelCache = { version: 2; models: Record<string, Model | null> };
+// null caches a known-absent model so we stop re-fetching for it.
+type ProviderCatalog = Record<string, Model> | null;
 
 function emptyCache(): ModelCache {
-  return { version: 1, models: {} };
+  return { version: 2, models: {} };
 }
 
 async function readCache(): Promise<ModelCache> {
   try {
     const cache = JSON.parse(await readFile(CACHE_PATH, "utf8")) as ModelCache;
-    return cache?.version === 1 && cache.models ? cache : emptyCache();
+    return cache?.version === 2 && cache.models ? cache : emptyCache();
   } catch {
     return emptyCache();
   }
@@ -129,82 +111,48 @@ function findModel(
   );
 }
 
-function thinkingLevelMap(
-  options: ModelsDevModel["reasoning_options"],
-): Model["thinkingLevelMap"] | undefined {
-  if (!options?.length) return undefined;
+// Catalog entries are already pi Models carrying the wire-compat metadata the
+// proxy's upstreams need; strip only the fields the registration overrides.
+function normalizeModel(source: Model): Model {
+  const { provider: _p, baseUrl: _b, api: _a, ...model } = source;
+  return model;
+}
 
-  const values = new Set(
-    options.flatMap((option) =>
-      option.type === "effort" ? (option.values ?? []) : [],
-    ),
+// The catalog serves one provider per endpoint. A 404/501 means the provider
+// has no remote catalog; other failures throw so callers can retry later.
+async function fetchProviderCatalog(
+  provider: string,
+): Promise<ProviderCatalog> {
+  const url = new URL(
+    `/api/models/providers/${encodeURIComponent(provider)}`,
+    CATALOG_BASE_URL,
   );
-  const hasToggle = options.some((option) => option.type === "toggle");
-  const levels = ["minimal", "low", "medium", "high", "xhigh", "max"] as const;
-  return {
-    off: null,
-    ...Object.fromEntries(
-      levels.map((level) => [
-        level,
-        values.has(level)
-          ? level
-          : hasToggle && level === "high"
-            ? "high"
-            : null,
-      ]),
-    ),
-  };
-}
-
-function normalizeModel(provider: string, model: ModelsDevModel): Model {
-  const input = model.modalities?.input ?? ["text"];
-  return {
-    id: model.id,
-    name: model.name ?? model.id,
-    provider,
-    api: "openai-completions",
-    baseUrl: BASE_URL,
-    reasoning: model.reasoning ?? false,
-    input: input.includes("image") ? ["text", "image"] : ["text"],
-    cost: {
-      input: model.cost?.input ?? 0,
-      output: model.cost?.output ?? 0,
-      cacheRead: model.cost?.cache_read ?? 0,
-      cacheWrite: model.cost?.cache_write ?? 0,
-    },
-    contextWindow: model.limit?.context ?? 128_000,
-    maxTokens: model.limit?.output ?? 16_384,
-    thinkingLevelMap: thinkingLevelMap(model.reasoning_options),
-  };
-}
-
-function findCatalogModel(
-  served: ServedModel,
-  catalog: ModelsDevCatalog,
-): { provider: string; model: ModelsDevModel } | undefined {
-  const id = sourceId(served.id);
-  for (const provider of providerCandidates(served.id, served.owner)) {
-    const model = catalog[provider]?.models?.[id];
-    if (model) return { provider, model };
-  }
-
-  for (const [provider, entry] of Object.entries(catalog)) {
-    const model = entry.models?.[id];
-    if (model) return { provider, model };
-  }
-  return undefined;
-}
-
-async function fetchCatalog(): Promise<ModelsDevCatalog> {
-  const response = await fetch(MODELS_DEV_URL, {
-    signal: AbortSignal.timeout(15_000),
+  const response = await fetch(url, {
+    headers: { accept: "application/json" },
+    signal: AbortSignal.timeout(10_000),
   });
+  if (response.status === 404 || response.status === 501) return null;
   if (!response.ok) {
     throw new Error(
-      `models.dev catalog fetch failed: ${response.status} ${response.statusText}`,
+      `Model catalog request failed for ${provider}: ${response.status} ${response.statusText}`,
     );
   }
-  return (await response.json()) as ModelsDevCatalog;
+
+  const payload = (await response.json()) as unknown;
+  const entries: Model[] = Array.isArray(payload)
+    ? payload
+    : typeof payload === "object" &&
+        payload !== null &&
+        Array.isArray((payload as { models?: Model[] }).models)
+      ? (payload as { models: Model[] }).models
+      : typeof payload === "object" && payload !== null
+        ? Object.values(payload)
+        : [];
+  const catalog: Record<string, Model> = {};
+  for (const model of entries) {
+    if (typeof model?.id === "string") catalog[model.id] = model;
+  }
+  return catalog;
 }
 
 async function resolveModels(served: ServedModel[]): Promise<Model[]> {
@@ -214,19 +162,47 @@ async function resolveModels(served: ServedModel[]): Promise<Model[]> {
   );
 
   if (missing.length > 0) {
-    const catalog = await fetchCatalog();
+    // One fetch per provider per run, shared across models.
+    const catalogs = new Map<string, Promise<ProviderCatalog>>();
+    const catalogFor = (provider: string): Promise<ProviderCatalog> => {
+      if (!catalogs.has(provider)) {
+        catalogs.set(provider, fetchProviderCatalog(provider));
+      }
+      return catalogs.get(provider)!;
+    };
+
     let changed = false;
     for (const model of missing) {
-      const match = findCatalogModel(model, catalog);
-      if (match) {
-        cache.models[`${match.provider}/${match.model.id}`] = normalizeModel(
-          match.provider,
-          match.model,
-        );
-      } else {
-        cache.models[cacheKeys(model.id, model.owner)[0]] = null;
+      const canonicalId = sourceId(model.id);
+      const candidates = providerCandidates(model.id, model.owner);
+      const outcomes = await Promise.all(
+        candidates.map((provider) =>
+          catalogFor(provider)
+            .then((catalog) => ({ provider, catalog, failed: false }))
+            .catch(() => ({ provider, catalog: null, failed: true })),
+        ),
+      );
+
+      let resolved: { provider: string; model: Model } | undefined;
+      let known = candidates.length === 0;
+      for (const { provider, catalog, failed } of outcomes) {
+        if (failed) continue;
+        known = true;
+        const match = catalog?.[canonicalId];
+        if (match && !resolved) resolved = { provider, model: match };
       }
-      changed = true;
+
+      if (resolved) {
+        cache.models[`${resolved.provider}/${canonicalId}`] = normalizeModel(
+          resolved.model,
+        );
+        changed = true;
+      } else if (known) {
+        // Only cache absence when every candidate endpoint answered; a
+        // transient failure must retry on the next start.
+        cache.models[cacheKeys(model.id, model.owner)[0]] = null;
+        changed = true;
+      }
     }
     if (changed) await writeCache(cache);
   }
