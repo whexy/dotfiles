@@ -377,6 +377,13 @@ let
       logoScale = 0.026;
       accent = colors.white;
     }
+    {
+      name = "opencode-go";
+      title = "OpenCode Go";
+      logo = ./logos/opencode-go.png;
+      logoScale = 0.025;
+      accent = colors.gray;
+    }
   ];
 
   # Right-side items stack from the right edge inwards, so a pill's parts are

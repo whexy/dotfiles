@@ -195,6 +195,10 @@ in
           color: #ffffff;
         }
 
+        .quota-opencode-go .quota-countdown {
+          color: #98989d;
+        }
+
         .quota.error {
           color: $on-surface-variant;
         }
@@ -283,7 +287,8 @@ in
         #ai-quota-details-kimi,
         #ai-quota-details-codex,
         #ai-quota-details-antigravity,
-        #ai-quota-details-grok {
+        #ai-quota-details-grok,
+        #ai-quota-details-opencode-go {
           background-color: transparent;
         }
 
