@@ -191,6 +191,10 @@ in
           color: #98989d;
         }
 
+        .quota-grok .quota-countdown {
+          color: #ffffff;
+        }
+
         .quota.error {
           color: $on-surface-variant;
         }
@@ -259,11 +263,27 @@ in
           background-color: rgba(217, 119, 87, 0.45);
         }
 
+        .quota-track.white progress,
+        .quota-detail-bar.white progress {
+          background-color: #ffffff;
+        }
+
+        .quota-track.whiteDim progress,
+        .quota-detail-bar.whiteDim progress {
+          background-color: rgba(255, 255, 255, 0.7);
+        }
+
+        .quota-track.whiteFaint progress,
+        .quota-detail-bar.whiteFaint progress {
+          background-color: rgba(255, 255, 255, 0.45);
+        }
+
         // Material 3 elevated card used by the click-toggle details window.
         #ai-quota-details-claude,
         #ai-quota-details-kimi,
         #ai-quota-details-codex,
-        #ai-quota-details-antigravity {
+        #ai-quota-details-antigravity,
+        #ai-quota-details-grok {
           background-color: transparent;
         }
 

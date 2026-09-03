@@ -156,16 +156,22 @@ def compact_meter_line:
   "\(.label | tag)  \((.pct // .percent // 0) | bar)  \(100 - (.pct // .percent // 0) | round)% left"
   + (if .reset_human then " · resets " + .reset_human else "" end);
 
+def matches_provider($target):
+  .provider == $target
+  or ($target == "grok" and .provider == "xai")
+  or ($target == "xai" and .provider == "grok");
+
 def provider_accent:
   if . == "claude" then "orange"
   elif . == "kimi" then "blue"
   elif . == "codex" then "green"
   elif . == "antigravity" then "gray"
+  elif . == "grok" or . == "xai" then "white"
   else "gray"
   end;
 
 . as $root
-| ([$root.providers[] | select(.provider == $provider)] | .[0] // null)
+| ([$root.providers[] | select(matches_provider($provider))] | .[0] // null)
 | if . == null then
     { present: false }
   else
@@ -221,7 +227,7 @@ def provider_accent:
                 end)
             ),
             lines: [
-              ([$root.providers[] | select(.provider == $provider)]
+              ([$root.providers[] | select(matches_provider($provider))]
                 | .[0]
                 | .accounts[]
                 | if .error then
@@ -237,7 +243,7 @@ def provider_accent:
               )
             ],
             compact_lines: [
-              ([$root.providers[] | select(.provider == $provider)]
+              ([$root.providers[] | select(matches_provider($provider))]
                 | .[0]
                 | .accounts[]
                 | select(.error == null)

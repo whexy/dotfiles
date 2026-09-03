@@ -33,6 +33,7 @@ let
     blue = "0xff007cff";
     orange = "0xffd97757";
     green = "0xff10a37f";
+    white = "0xffffffff";
     track = "0x26ffffff";
     glass = "0x1affffff";
     glassBorder = "0x40ffffff";
@@ -368,6 +369,13 @@ let
       logo = ./logos/antigravity.png;
       logoScale = 0.026;
       accent = colors.gray;
+    }
+    {
+      name = "grok";
+      title = "Grok";
+      logo = ./logos/grok.png;
+      logoScale = 0.026;
+      accent = colors.white;
     }
   ];
 

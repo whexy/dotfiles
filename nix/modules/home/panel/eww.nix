@@ -248,8 +248,8 @@ in
   config = lib.mkIf enabled {
     programs.eww = {
       enable = true;
-      yuckConfig = builtins.readFile yuckFile;
-      scssConfig = builtins.readFile scssFile;
+      yuckConfig = yuck;
+      scssConfig = scss;
       systemd.enable = true;
     };
 
