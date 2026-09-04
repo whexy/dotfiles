@@ -34,6 +34,8 @@ in
     ".pi/agent/AGENTS.md".text =
       builtins.readFile ../AGENTS.md
       + "\n"
+      + builtins.readFile ./SPECIAL_INSTRUCTION.md
+      + "\n"
       + (
         if proxyAccounts then
           builtins.readFile ./DELEGATION_TIER_A.md
