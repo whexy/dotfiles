@@ -159,9 +159,7 @@ def compact_meter_line:
 def matches_provider($target):
   .provider == $target
   or ($target == "grok" and .provider == "xai")
-  or ($target == "xai" and .provider == "grok")
-  or ($target == "opencode" and .provider == "opencode-go")
-  or ($target == "opencode-go" and .provider == "opencode");
+  or ($target == "xai" and .provider == "grok");
 
 def provider_accent:
   if . == "claude" then "orange"
@@ -169,7 +167,6 @@ def provider_accent:
   elif . == "codex" then "green"
   elif . == "antigravity" then "gray"
   elif . == "grok" or . == "xai" then "white"
-  elif . == "opencode-go" or . == "opencode" then "gray"
   else "gray"
   end;
 

@@ -39,12 +39,5 @@
       icon = "󰬅";
       logo = ./logos/grok.png;
     }
-    {
-      name = "opencode-go";
-      title = "OpenCode Go";
-      variable = "opencode_go";
-      icon = "󰘦";
-      logo = ./logos/opencode-go.png;
-    }
   ];
 }
