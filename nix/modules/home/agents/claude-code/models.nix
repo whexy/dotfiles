@@ -29,7 +29,7 @@ let
       ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-5.6-luna";
       ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-5.6-terra";
       ANTHROPIC_DEFAULT_OPUS_MODEL = "gpt-5.6-sol";
-      ANTHROPIC_DEFAULT_FABLE_MODEL = "gpt-5.6-sol";
+      ANTHROPIC_DEFAULT_FABLE_MODEL = "gpt-6-astra";
     };
   pin =
     model:
@@ -74,6 +74,7 @@ let
         "claude-fable-5-1"
       ]
       ++ map (proxy mapOpenAI) [
+        "gpt-6-astra"
         "gpt-5.6-sol"
         "gpt-5.6-terra"
         "gpt-5.6-luna"

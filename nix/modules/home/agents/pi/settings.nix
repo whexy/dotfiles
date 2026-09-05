@@ -30,15 +30,15 @@
         "ai-proxy/claude-opus-5"
         # (62) Muse Spark 1.3
         "openrouter/meta/muse-spark-1.3-contributor"
-        # (61) GPT-5.6 Sol
+        # (61) GPT-5.6 Sol, GPT-6-astra
         "ai-proxy/gpt-5.6-sol"
+        "ai-proxy/gpt-6-astra"
         # (61) Grok 4.6
         "ai-proxy/grok-4.6"
-        # (60) Kimi K3
+        # (60) Kimi K3, GLM 5.3
         "ai-proxy/kimi-k3-256k"
         "ai-proxy/kimi-k3"
         "openrouter/moonshotai/kimi-k3"
-        # (60) GLM 5.3
         "openrouter/z-ai/glm-5.3"
         # (59) Gemini 3.8 Flash
         "ai-proxy/gemini-3.8-flash"
@@ -52,6 +52,7 @@
         "ai-proxy/gpt-5.6-luna"
 
         # API billing (payed by lab)
+        "openai/gpt-6-astra"
         "openai/gpt-5.6-sol"
         "openai/gpt-5.6-terra"
         "openai/gpt-5.6-luna"
