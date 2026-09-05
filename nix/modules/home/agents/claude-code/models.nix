@@ -56,9 +56,6 @@ let
     env.ANTHROPIC_MODEL = model;
     secrets.ANTHROPIC_API_KEY = config.age.secrets.anthropic-api-key.path;
   };
-  # OpenRouter serves an Anthropic-compatible endpoint; the base URL omits
-  # /v1 because Claude Code appends /v1/messages. GLM emits thinking blocks
-  # with empty signatures, which OpenRouter accepts on replay.
   openrouter = model: {
     label = "openrouter/${model}";
     env = pin model // {
@@ -66,28 +63,11 @@ let
     };
     secrets.ANTHROPIC_API_KEY = config.age.secrets.openrouter-api-key.path;
   };
-  # OpenCode Go subscription (https://opencode.ai/zen/go); always
-  # available. Claude Code speaks the Anthropic Messages API; verified
-  # against /v1/messages (x-api-key auth): qwen and deepseek models
-  # answer, grok-4.6, gpt-5.6-luna, and glm-5.3-flash are rejected.
-  opencodeGo = model: {
-    label = "opencode-go/${model}";
-    env = pin model // {
-      ANTHROPIC_BASE_URL = "https://opencode.ai/zen/go";
-    };
-    secrets.ANTHROPIC_API_KEY = config.age.secrets.opencode-api-key.path;
-  };
   modelEntries =
-    map opencodeGo [
-      "qwen3.8-max"
-      "deepseek-v4-pro"
-      "deepseek-v4-flash"
+    map openrouter [
+      "meta/muse-spark-1.3-contributor"
+      "z-ai/glm-5.3-flash"
     ]
-    ++ lib.optionals apiAccounts (
-      map openrouter [
-        "z-ai/glm-5.3-flash"
-      ]
-    )
     ++ lib.optionals proxyAccounts (
       map (proxy anthropicEnv) [
         "claude-opus-5"

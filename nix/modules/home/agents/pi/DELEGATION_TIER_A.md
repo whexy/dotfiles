@@ -17,8 +17,7 @@ Do not spawn agents merely because they are available. Avoid duplicating work th
 Prefer providers in this order:
 
 1. ai-proxy
-2. opencode-go
-3. openrouter
+2. openrouter
 
 When a preferred model is unavailable from the current providere, first try the
 same model from the next provider before substituing a different model.

@@ -14,13 +14,7 @@ Do not spawn agents merely because they are available. Avoid duplicating work th
 
 ## Providers
 
-Prefer providers in this order:
-
-1. opencode-go
-2. openrouter
-
-When a preferred model is unavailable from the current providere, first try the
-same model from the next provider before substituing a different model.
+Every delegated model is served by `openrouter`.
 
 Never use `openai` or `anthropic` directly unless user explicitly asks for it.
 
@@ -37,7 +31,7 @@ Never use `openai` or `anthropic` directly unless user explicitly asks for it.
   Preferred: **GLM-5.3, high/max** for substantial implementation; **GLM-5.3-Flash, high** for routine changes.
 
 - `reviewer` — independent code/task review, edge cases, tests, simplicity, and small fixes.
-  Preferred: **Kimi K3, high/max**; **DeepSeek V4 Pro, max**; **Qwen3.8 Max, high/max**.
+  Preferred: **Kimi K3, high/max**; **Muse Spark 1.3, high**.
 
 - `oracle` — adversarial second opinion for important, ambiguous, or difficult-to-reverse decisions.
   Preferred: **Kimi K3, max**.
@@ -53,8 +47,8 @@ The reviewer should provide an independent error distribution, not another sampl
 
 Preferred pairings:
 
-- `worker: GLM-5.3 / GLM-5.3-Flash` → `reviewer: Kimi K3`, `DeepSeek V4 Pro`, or `Qwen3.8 Max`
-- `worker: Kimi K3` → `reviewer: GLM-5.3` or `DeepSeek V4 Pro`
+- `worker: GLM-5.3 / GLM-5.3-Flash` → `reviewer: Kimi K3` or `Muse Spark 1.3`
+- `worker: Kimi K3` → `reviewer: GLM-5.3` or `Muse Spark 1.3`
 
 Do not use GLM-5.3 and GLM-5.3-Flash as worker/reviewer counterparts; treat them as the same model family for review independence.
 

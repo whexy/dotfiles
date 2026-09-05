@@ -15,40 +15,80 @@ let
   cfg = config.dotfiles.agents;
 in
 {
-  options.dotfiles.agents = {
-    enable = lib.mkEnableOption "agents";
-    enableApiAccounts = lib.mkEnableOption "enable models billed by API";
-    enableProxyAccounts = lib.mkEnableOption "enable models served by the tailnet AI proxy";
+  options.dotfiles.agents =
+    let
+      # Every agent picks the best account tier available on the host:
+      # the tailnet proxy first, then lab-billed API keys, then the
+      # always-present OpenRouter key.
+      byTier =
+        {
+          proxy,
+          api,
+          fallback,
+        }:
+        if cfg.enableProxyAccounts then
+          proxy
+        else if cfg.enableApiAccounts then
+          api
+        else
+          fallback;
+      mkModelOption =
+        description: tiers:
+        lib.mkOption {
+          type = lib.types.str;
+          default = byTier tiers;
+          defaultText = lib.literalExpression ''
+            if config.dotfiles.agents.enableProxyAccounts then "${tiers.proxy}"
+            else if config.dotfiles.agents.enableApiAccounts then "${tiers.api}"
+            else "${tiers.fallback}"
+          '';
+          inherit description;
+        };
+    in
+    {
+      enable = lib.mkEnableOption "agents";
+      enableApiAccounts = lib.mkEnableOption "enable models billed by API";
+      enableProxyAccounts = lib.mkEnableOption "enable models served by the tailnet AI proxy";
 
-    gcai.model = lib.mkOption {
-      type = lib.types.str;
-      default =
-        if cfg.enableProxyAccounts then "ai-proxy/gpt-5.6-luna" else "opencode-go/deepseek-v4-flash";
-      defaultText = lib.literalExpression ''
-        if config.dotfiles.agents.enableProxyAccounts
-        then "ai-proxy/gpt-5.6-luna"
-        else "opencode-go/deepseek-v4-flash"
-      '';
-      description = "provider/model gcai uses to generate commit messages with pi";
+      defaultProvider = mkModelOption "provider serving the default model" {
+        proxy = "ai-proxy";
+        api = "openai";
+        fallback = "openrouter";
+      };
+      defaultModel = mkModelOption "model agents use unless told otherwise" {
+        proxy = "claude-opus-5";
+        api = "gpt-5.6-sol";
+        fallback = "z-ai/glm-5.3-flash";
+      };
+
+      defaultCheapProvider = mkModelOption "provider serving the cheap model" {
+        proxy = "ai-proxy";
+        api = "openai";
+        fallback = "openrouter";
+      };
+      defaultCheapModel = mkModelOption "model for bulk or low-stakes work" {
+        proxy = "claude-sonnet-5";
+        api = "gpt-5.6-luna";
+        fallback = "meta/muse-spark-1.3-contributor";
+      };
     };
-  };
 
   config = lib.mkIf cfg.enable (
     let
       apiAccounts = cfg.enableApiAccounts;
       proxyAccounts = cfg.enableProxyAccounts;
-      withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
-      opencode = import ./opencode/home.nix {
-        inherit
-          pkgs
-          config
-          lib
-          apiAccounts
-          proxyAccounts
+      defaults = {
+        inherit (cfg)
+          defaultProvider
+          defaultModel
+          defaultCheapProvider
+          defaultCheapModel
           ;
+        default = "${cfg.defaultProvider}/${cfg.defaultModel}";
+        cheap = "${cfg.defaultCheapProvider}/${cfg.defaultCheapModel}";
       };
+      withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
       agents = [
-        opencode
         (import ./pi/home.nix {
           inherit
             pkgs
@@ -56,6 +96,7 @@ in
             lib
             apiAccounts
             proxyAccounts
+            defaults
             ;
         })
         (import ./claude-code/home.nix {
@@ -83,8 +124,8 @@ in
             pkgs
             lib
             perSystem
+            defaults
             ;
-          model = cfg.gcai.model;
         })
       ];
     in
@@ -103,7 +144,6 @@ in
         # Single source of truth for global agent rules; every agent reads it.
         # pi gets extra tool-specific guidance appended by its own home.nix.
         file = {
-          ".config/opencode/AGENTS.md".source = ./AGENTS.md;
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".claude/CLAUDE.md".source = ./AGENTS.md;
         }
@@ -115,10 +155,6 @@ in
       };
 
       age.secrets = {
-        opencode-api-key = {
-          file = ../../../../secrets/opencode-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/opencode-api-key";
-        };
         openrouter-api-key = {
           file = ../../../../secrets/openrouter-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/openrouter-api-key";
@@ -142,13 +178,6 @@ in
         ai-proxy-api-key = {
           file = ../../../../secrets/ai-proxy-api-key.age;
           path = "${config.home.homeDirectory}/.secrets/ai-proxy-api-key";
-        };
-      };
-
-      programs = {
-        opencode = {
-          enable = true;
-          inherit (opencode) package settings tui;
         };
       };
     }
