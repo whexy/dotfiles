@@ -23,15 +23,18 @@ pkgs.writeShellApplication {
   ];
 
   text = ''
-    model="''${GCAI_MODEL:-opencode-go/deepseek-v4-flash}"
-    model_name="''${model##*/}"
+    # The Home Manager wrapper picks the model from the host's account
+    # tier; there is no sensible provider-agnostic default here.
+    if [ -z "''${GCAI_MODEL:-}" ]; then
+      echo "gcai: GCAI_MODEL is not set" >&2
+      exit 1
+    fi
 
     message=$(
       pi -p --no-session \
-        --model "$model" \
+        --model "$GCAI_MODEL" \
         "Write a commit message for the staged changes in this repository.
-        Follow VCS rules. Reply with plain text, no code fences, no surrounding quotes.
-        You are pi, a coding agent. Model: $model_name."
+        Follow VCS rules. Reply with plain text, no code fences, no surrounding quotes."
     )
 
     # Strip stray code fences and leading blank lines from the reply.

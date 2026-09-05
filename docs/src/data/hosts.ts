@@ -243,7 +243,7 @@ export const stack: { name: string; note: string }[] = [
   { name: "blueprint", note: "flake structure, zero boilerplate" },
   { name: "treefmt", note: "one formatter to rule them all" },
   { name: "nix-index-database", note: "comma for everything" },
-  { name: "llm-agents", note: "opencode, claude-code & codex, pinned" },
+  { name: "llm-agents", note: "pi, claude-code & codex, pinned" },
 ];
 
 /** Commands cycled through in the hero terminal. */

@@ -4,6 +4,7 @@
   lib,
   apiAccounts,
   proxyAccounts,
+  defaults,
 }:
 let
   settings = import ./settings.nix {
@@ -12,6 +13,7 @@ let
       lib
       apiAccounts
       proxyAccounts
+      defaults
       ;
   };
   models = import ./models.nix {
@@ -22,7 +24,7 @@ let
       apiAccounts
       ;
   };
-  webSearch = import ./web-search.nix { inherit proxyAccounts; };
+  webSearch = import ./web-search.nix { inherit defaults; };
 in
 {
   packages = [ pkgs.llm-agents.pi ];

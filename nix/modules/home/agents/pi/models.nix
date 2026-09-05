@@ -9,7 +9,6 @@ let
 in
 {
   providers = {
-    opencode-go.apiKey = secretKey config.age.secrets.opencode-api-key.path;
     openrouter.apiKey = secretKey config.age.secrets.openrouter-api-key.path;
   }
   # Providers billed per API key; only wired when API accounts are enabled.

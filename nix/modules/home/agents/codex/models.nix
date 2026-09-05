@@ -39,38 +39,8 @@ let
       model
     ];
   };
-  # OpenCode Go subscription (https://opencode.ai/zen/go); always
-  # available. Codex only supports the Responses wire protocol
-  # (wire_api "chat" was removed); the Go /v1/responses endpoint serves
-  # every Go model regardless of the documented per-model endpoint.
-  # A custom provider is defined via -c overrides and reads its key from
-  # OPENCODE_GO_API_KEY.
-  opencodeGo = model: {
-    label = "opencode-go/${model}";
-    secrets.OPENCODE_GO_API_KEY = config.age.secrets.opencode-api-key.path;
-    args = [
-      "-c"
-      ''model_provider="opencode-go"''
-      "-c"
-      ''model_providers.opencode-go.name="OpenCode Go"''
-      "-c"
-      ''model_providers.opencode-go.base_url="https://opencode.ai/zen/go/v1"''
-      "-c"
-      ''model_providers.opencode-go.wire_api="responses"''
-      "-c"
-      ''model_providers.opencode-go.env_key="OPENCODE_GO_API_KEY"''
-      "-m"
-      model
-    ];
-  };
 in
 [ { label = "default (ChatGPT login)"; } ]
-++ map opencodeGo [
-  "grok-4.6"
-  "gpt-5.6-luna"
-  "deepseek-v4-pro"
-  "deepseek-v4-flash"
-]
 ++ lib.optionals proxyAccounts (
   map proxy [
     "claude-opus-5"
