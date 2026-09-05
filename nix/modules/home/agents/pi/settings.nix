@@ -15,6 +15,7 @@
     "npm:pi-web-access"
     "npm:@narumitw/pi-goal"
     "npm:pi-subagents"
+    "npm:pi-background-tasks"
   ];
 
   npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
