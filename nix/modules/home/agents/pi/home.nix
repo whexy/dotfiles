@@ -26,6 +26,14 @@ let
       ;
   };
   webSearch = import ./web-search.nix { inherit defaults; };
+
+  # A launch failure caches a 24h model exclusion that outlives its cause and
+  # cannot be cleared from inside a running session, so a transient proxy or
+  # config error blocks that model for the rest of the day. Five minutes still
+  # absorbs a flapping provider without surviving the fix for it.
+  subagentConfig = {
+    modelExclusions.defaultTtlMs = 5 * 60 * 1000;
+  };
 in
 {
   packages = [ pkgs.llm-agents.pi ];
@@ -46,6 +54,7 @@ in
           builtins.readFile ./DELEGATION_TIER_B.md
       );
     ".pi/agent/settings.json".text = builtins.toJSON settings;
+    ".pi/agent/extensions/subagent/config.json".text = builtins.toJSON subagentConfig;
     ".pi/agent/models.json".text = builtins.toJSON models;
     ".pi/agent/spending-guard.json".text = builtins.toJSON { enabled = false; };
     ".pi/web-search.json".text = builtins.toJSON webSearch;
