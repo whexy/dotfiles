@@ -11,6 +11,7 @@ let
     inherit
       pkgs
       lib
+      config
       apiAccounts
       proxyAccounts
       defaults
