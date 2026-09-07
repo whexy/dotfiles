@@ -10,31 +10,21 @@ let
   # Keep cycling order and per-model thinking defaults in one ordered list.
   model = id: thinkingLevel: { inherit id thinkingLevel; };
   models = [
-    # (DEFAULT, 54) Claude Opus 5
+    # Daily drivers
     (model "ai-proxy/claude-opus-5" "high")
-    # (55) GPT-6 Astra
     (model "ai-proxy/gpt-6-astra" "low")
-    # (57) Claude Fable 5.1
-    (model "ai-proxy/claude-fable-5-1" "medium")
-    # (53) Muse Spark 1.3
-    (model "openrouter/meta/muse-spark-1.3-contributor" null)
-    # (51) GPT-5.6 Sol
-    (model "ai-proxy/gpt-5.6-sol" "high")
-    # (51) Grok 4.6
-    (model "ai-proxy/grok-4.6" "high")
-    # (50) Kimi K3
-    (model "ai-proxy/kimi-k3-256k" "max")
-    (model "ai-proxy/kimi-k3" "max")
-    (model "openrouter/moonshotai/kimi-k3" "max")
-    # (49) GLM 5.3
-    (model "openrouter/z-ai/glm-5.3" "max")
-    # (47) Gemini 3.8 Flash
-    (model "ai-proxy/gemini-3.8-flash" "high")
 
-    # Two cheap models for simpler task
-    # (46) GLM-5.3-Flash
+    # Powerful intelligence
+    (model "ai-proxy/claude-fable-5-1" "medium")
+    (model "openrouter/meta/muse-spark-1.3-contributor" "max")
+
+    # DEI models
+    (model "openrouter/z-ai/glm-5.3" "max")
+    (model "ai-proxy/grok-4.6" "high")
+    (model "openrouter/moonshotai/kimi-k3" "max")
+    (model "ai-proxy/gpt-5.6-sol" "high")
     (model "openrouter/z-ai/glm-5.3-flash" null)
-    # (43) GPT-5.6 Luna
+    (model "ai-proxy/gemini-3.8-flash" "high")
     (model "ai-proxy/gpt-5.6-luna" "max")
 
     # API billing (paid by lab)
@@ -50,7 +40,11 @@ let
     model:
     if lib.hasPrefix "ai-proxy/" model.id then
       proxyAccounts
-    else if lib.hasPrefix "openai/" model.id || lib.hasPrefix "anthropic/" model.id then
+    else if
+      lib.hasPrefix "openrouter/" model.id
+      || lib.hasPrefix "openai/" model.id
+      || lib.hasPrefix "anthropic/" model.id
+    then
       apiAccounts
     else
       true;
