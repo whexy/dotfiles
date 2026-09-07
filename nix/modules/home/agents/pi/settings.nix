@@ -6,6 +6,56 @@
   proxyAccounts,
   defaults,
 }:
+let
+  # Keep cycling order and per-model thinking defaults in one ordered list.
+  model = id: thinkingLevel: { inherit id thinkingLevel; };
+  models = [
+    # (DEFAULT, 54) Claude Opus 5
+    (model "ai-proxy/claude-opus-5" "high")
+    # (55) GPT-6 Astra
+    (model "ai-proxy/gpt-6-astra" "low")
+    # (57) Claude Fable 5.1
+    (model "ai-proxy/claude-fable-5-1" "medium")
+    # (53) Muse Spark 1.3
+    (model "openrouter/meta/muse-spark-1.3-contributor" null)
+    # (51) GPT-5.6 Sol
+    (model "ai-proxy/gpt-5.6-sol" "high")
+    # (51) Grok 4.6
+    (model "ai-proxy/grok-4.6" "high")
+    # (50) Kimi K3
+    (model "ai-proxy/kimi-k3-256k" "max")
+    (model "ai-proxy/kimi-k3" "max")
+    (model "openrouter/moonshotai/kimi-k3" "max")
+    # (49) GLM 5.3
+    (model "openrouter/z-ai/glm-5.3" "max")
+    # (47) Gemini 3.8 Flash
+    (model "ai-proxy/gemini-3.8-flash" "high")
+
+    # Two cheap models for simpler task
+    # (46) GLM-5.3-Flash
+    (model "openrouter/z-ai/glm-5.3-flash" null)
+    # (43) GPT-5.6 Luna
+    (model "ai-proxy/gpt-5.6-luna" "max")
+
+    # API billing (paid by lab)
+    (model "openai/gpt-6-astra" null)
+    (model "openai/gpt-5.6-sol" null)
+    (model "openai/gpt-5.6-terra" null)
+    (model "openai/gpt-5.6-luna" null)
+    (model "anthropic/claude-fable-5-1" null)
+    (model "anthropic/claude-opus-5" null)
+    (model "anthropic/claude-sonnet-5" null)
+  ];
+  modelEnabled =
+    model:
+    if lib.hasPrefix "ai-proxy/" model.id then
+      proxyAccounts
+    else if lib.hasPrefix "openai/" model.id || lib.hasPrefix "anthropic/" model.id then
+      apiAccounts
+    else
+      true;
+  enabledModels = lib.filter modelEnabled models;
+in
 {
   enableInstallTelemetry = false;
   enableAnalytics = false;
@@ -125,53 +175,10 @@
     };
 
   # Scoped models for Ctrl+P cycling (`/scoped-models`).
-  enabledModels =
-    let
-      models = [
-        # (DEFAULT, 54) Claude Opus 5
-        "ai-proxy/claude-opus-5:high"
-        # (55) GPT-6 Astra
-        "ai-proxy/gpt-6-astra:low"
-        # (57) Claude Fable 5.1
-        "ai-proxy/claude-fable-5-1:medium"
-        # (53) Muse Spark 1.3
-        "openrouter/meta/muse-spark-1.3-contributor"
-        # (51) GPT-5.6 Sol
-        "ai-proxy/gpt-5.6-sol:high"
-        # (51) Grok 4.6
-        "ai-proxy/grok-4.6:high"
-        # (50) Kimi K3
-        "ai-proxy/kimi-k3-256k:max"
-        "ai-proxy/kimi-k3:max"
-        "openrouter/moonshotai/kimi-k3:max"
-        # (49) GLM 5.3
-        "openrouter/z-ai/glm-5.3:max"
-        # (47) Gemini 3.8 Flash
-        "ai-proxy/gemini-3.8-flash:high"
-
-        # Two cheap models for simpler task
-        # (46) GLM-5.3-Flash
-        "openrouter/z-ai/glm-5.3-flash"
-        # (43) GPT-5.6 Luna
-        "ai-proxy/gpt-5.6-luna:max"
-
-        # API billing (payed by lab)
-        "openai/gpt-6-astra"
-        "openai/gpt-5.6-sol"
-        "openai/gpt-5.6-terra"
-        "openai/gpt-5.6-luna"
-        "anthropic/claude-fable-5-1"
-        "anthropic/claude-opus-5"
-        "anthropic/claude-sonnet-5"
-      ];
-      modelEnabled =
-        model:
-        if lib.hasPrefix "ai-proxy/" model then
-          proxyAccounts
-        else if lib.hasPrefix "openai/" model || lib.hasPrefix "anthropic/" model then
-          apiAccounts
-        else
-          true;
-    in
-    lib.filter modelEnabled models;
+  enabledModels = map (model: model.id) enabledModels;
+  modelThinkingLevels = builtins.listToAttrs (
+    map (model: lib.nameValuePair model.id model.thinkingLevel) (
+      lib.filter (model: model.thinkingLevel != null) enabledModels
+    )
+  );
 }
