@@ -4,6 +4,10 @@ Ordinary SSH shells retain the forwarded `SSH_AUTH_SOCK` supplied by sshd.
 Persistent tmux and Zellij shells use `~/.ssh/ssh-agent.sock`, served by a
 small per-user proxy. No private keys are stored by the proxy.
 
+Routing applies only inside an inbound SSH session. On a local desktop the
+configured 1Password `IdentityAgent` stays in effect even when a keyring or
+gpg-agent exports its own `SSH_AUTH_SOCK`.
+
 Each new forwarded socket is registered when a managed Zsh or Nushell starts
 outside a multiplexer. The newest registered socket is preferred. Reopening a
 shell with the same socket does not change its priority. The registry survives
