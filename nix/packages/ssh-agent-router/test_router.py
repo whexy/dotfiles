@@ -194,6 +194,16 @@ class RouterTests(unittest.TestCase):
         self.assertEqual(nested.returncode, 0, nested.stderr)
         self.assertEqual(len(router.read_agents(self.state)), 1)
 
+    def test_has_agent_ignores_local_desktop_agents(self):
+        forwarded = self.command("has-agent", SSH_AUTH_SOCK="/tmp/ssh-XXXX/agent.1")
+        self.assertEqual(forwarded.returncode, 0)
+        local = self.command(
+            "has-agent", SSH_CONNECTION="", SSH_AUTH_SOCK="/run/user/1000/gcr/ssh"
+        )
+        self.assertEqual(local.returncode, 1)
+        bare = self.command("has-agent", SSH_AUTH_SOCK="")
+        self.assertEqual(bare.returncode, 1)
+
     def test_concurrent_registration_and_daemon_restart(self):
         agents = [self.agent(str(index).encode()) for index in range(4)]
         with concurrent.futures.ThreadPoolExecutor() as executor:
