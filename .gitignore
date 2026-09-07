@@ -3,6 +3,9 @@ result/
 .envrc.local
 .pre-commit-config.yaml
 
+# pi agent background-task scratch
+.pi/
+
 # docs site (astro)
 docs/node_modules/
 docs/dist/
