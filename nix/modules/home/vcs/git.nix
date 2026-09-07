@@ -44,9 +44,6 @@ in
             format = "ssh";
             ssh = {
               allowedSignersFile = "~/.git_allowed_signers";
-            }
-            // lib.optionalAttrs pkgs.stdenv.isDarwin {
-              program = "/Applications/1Password.app/Contents/MacOS/op-ssh-sign";
             };
           };
 
