@@ -27,22 +27,23 @@ Never use `openai` or `anthropic` directly unless user explicitly asks for it.
 ## Subagents
 
 - `scout` — fast codebase reconnaissance: files, entry points, data flow, risks.
-  Preferred: **GPT-5.6 Sol, medium**.
+  Preferred: Gemini 3.8 Flash, high; GPT-5.6 Sol, medium; Grok 4.6, high.
 
 - `researcher` — web/docs research, evidence gathering, concise sourced briefs.
-  Preferred: **Claude Opus 5, high**; **Kimi K3, max** for very large document/context workloads.
+  Preferred: Gemini 3.8 Flash, high (good at web search);
+  For very large document/context workloads use Claude Opus 5, high.
 
 - `worker` — implementation, edits, validation, and tests.
-  Preferred: **Claude Opus 5, high**; **GPT-5.6 Sol, high**.
+  Preferred: Claude Opus 5, high; GPT-5.6 Sol, high.
 
 - `reviewer` — independent code/task review, edge cases, tests, simplicity, and small fixes.
-  Preferred: **GPT-5.6 Sol, high**; **Claude Opus 5, high**.
+  Preferred: GPT-5.6 Sol, high; Claude Opus 5, high.
 
 - `oracle` — adversarial second opinion for important, ambiguous, or difficult-to-reverse decisions.
-  Preferred: **Claude Fable 5, high**.
+  Preferred: Claude Fable 5.1, high; GPT-6 Astra, high.
 
 - `delegate` — lightweight general-purpose delegated work.
-  Preferred: **GLM-5.3, medium/max**; **GPT-5.6 Sol, medium**.
+  Preferred: GPT-5.6 Sol, medium; Grok 4.6, medium/high.
 
 **When both `worker` and `reviewer` are used on the same task, they must use different model families.** The reviewer should provide an independent error distribution rather than another sample from the implementation model.
 
