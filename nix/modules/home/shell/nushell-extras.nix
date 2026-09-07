@@ -75,18 +75,6 @@ in
           venv = "overlay use .venv/bin/activate.nu";
         };
 
-        extraEnv = ''
-          # Pin ssh socket to a fixed path
-          # so tmux & zellij sessions can always get new sock without restart
-          if ($env.SSH_AUTH_SOCK? != null and ($env.SSH_AUTH_SOCK | str starts-with "/tmp/")) {
-            let fixed_sock = $"($env.HOME)/.ssh/ssh-agent.sock"
-            try {
-              ^ln -sf $env.SSH_AUTH_SOCK $fixed_sock
-              $env.SSH_AUTH_SOCK = $fixed_sock
-            }
-          }
-        '';
-
         extraConfig = ''
           # nix run nixpkgs# shortcut
           def nr [pkg: string, ...rest: string] {

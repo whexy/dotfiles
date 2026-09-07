@@ -183,13 +183,6 @@ in
                 [[ -n "$line" ]] && pushd "$line"
               }
 
-              # Pin ssh socket to a fixed path
-              # so tmux & zellij sessions can always get new sock without restart
-              if [[ -n "$SSH_AUTH_SOCK" && "$SSH_AUTH_SOCK" == /tmp/* ]]; then
-                ln -sf "$SSH_AUTH_SOCK" $HOME/.ssh/ssh-agent.sock
-                export SSH_AUTH_SOCK="$HOME/.ssh/ssh-agent.sock"
-              fi
-
               # nix run nixpkg# shortcut
               nr() {
                 if [ $# -lt 1 ]; then

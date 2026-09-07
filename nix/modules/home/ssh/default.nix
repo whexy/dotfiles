@@ -26,7 +26,10 @@ let
       "auto";
 in
 {
-  imports = [ inputs.oh-my-ghostty.homeModules.ssh-window ];
+  imports = [
+    inputs.oh-my-ghostty.homeModules.ssh-window
+    ./agent-router.nix
+  ];
 
   options.dotfiles.ssh = {
     enable = lib.mkEnableOption "ssh";
