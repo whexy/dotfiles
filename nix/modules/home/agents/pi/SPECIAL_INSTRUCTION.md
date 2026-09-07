@@ -3,7 +3,7 @@
 Pi injects `PI_*` environment variables into the agent's shell. To find out
 which model you are running as, inspect them (e.g. `env | grep '^PI_'`):
 
-- `PI_PROVIDER` — the provider serving the model (e.g. `ai-proxy`, `opencode-go`).
+- `PI_PROVIDER` — the provider serving the model (e.g. `ai-proxy`, `openrouter`).
 - `PI_MODEL` — the model id currently in use.
 - `PI_REASONING_LEVEL` — the active thinking level.
 
