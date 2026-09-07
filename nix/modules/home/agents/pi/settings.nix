@@ -128,32 +128,32 @@
   enabledModels =
     let
       models = [
-        # (66) Claude Fable 5.1
-        "ai-proxy/claude-fable-5-1"
-        # (63) Claude Opus 5
-        "ai-proxy/claude-opus-5"
-        # (62) Muse Spark 1.3
+        # (DEFAULT, 54) Claude Opus 5
+        "ai-proxy/claude-opus-5:high"
+        # (55) GPT-6 Astra
+        "ai-proxy/gpt-6-astra:low"
+        # (57) Claude Fable 5.1
+        "ai-proxy/claude-fable-5-1:medium"
+        # (53) Muse Spark 1.3
         "openrouter/meta/muse-spark-1.3-contributor"
-        # (61) GPT-5.6 Sol, GPT-6-astra
-        "ai-proxy/gpt-5.6-sol"
-        "ai-proxy/gpt-6-astra"
-        # (61) Grok 4.6
-        "ai-proxy/grok-4.6"
-        # (60) Kimi K3, GLM 5.3
-        "ai-proxy/kimi-k3-256k"
-        "ai-proxy/kimi-k3"
-        "openrouter/moonshotai/kimi-k3"
-        "openrouter/z-ai/glm-5.3"
-        # (59) Gemini 3.8 Flash
-        "ai-proxy/gemini-3.8-flash"
-        # (58) Claude Sonnet 5
-        "ai-proxy/claude-sonnet-5"
+        # (51) GPT-5.6 Sol
+        "ai-proxy/gpt-5.6-sol:high"
+        # (51) Grok 4.6
+        "ai-proxy/grok-4.6:high"
+        # (50) Kimi K3
+        "ai-proxy/kimi-k3-256k:max"
+        "ai-proxy/kimi-k3:max"
+        "openrouter/moonshotai/kimi-k3:max"
+        # (49) GLM 5.3
+        "openrouter/z-ai/glm-5.3:max"
+        # (47) Gemini 3.8 Flash
+        "ai-proxy/gemini-3.8-flash:high"
 
         # Two cheap models for simpler task
-        # (57) GLM-5.3-Flash
+        # (46) GLM-5.3-Flash
         "openrouter/z-ai/glm-5.3-flash"
-        # (52) GPT-5.6 Luna
-        "ai-proxy/gpt-5.6-luna"
+        # (43) GPT-5.6 Luna
+        "ai-proxy/gpt-5.6-luna:max"
 
         # API billing (payed by lab)
         "openai/gpt-6-astra"
