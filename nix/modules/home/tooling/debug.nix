@@ -13,6 +13,7 @@
         bpftrace
         ltrace
         perf
+        reptyr
         rr
         strace
       ]
