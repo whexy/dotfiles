@@ -31,7 +31,8 @@ Options:
                       (reptyr -T); use for pipelines and subprocess trees
   -s, --force-stdio   attach fds 0-2 even without a controlling tty (reptyr -s)
   -n, --no-attach     create the session but stay in the current terminal
-      --relax-yama    temporarily allow ptrace for the migration (needs sudo)
+      --no-relax-yama do not touch kernel.yama.ptrace_scope; migration then
+                      only works if the target called PR_SET_PTRACER itself
       --name NAME     session name (default: adopt-<command>-<pid>)
       --timeout SECS  migration handshake timeout (default: 20)
   -h, --help          show this help
@@ -41,7 +42,12 @@ EOF
 tree=0
 force_stdio=0
 attach=1
-relax_yama=0
+# kernel.yama.ptrace_scope defaults to 1 wherever the Yama LSM is built in, which
+# is every stock NixOS kernel. At that setting a tracer must be an ancestor of
+# the target, and reptyr traces from a forked child that is only ever a sibling,
+# so no ordinary job is attachable unless the target opted in via PR_SET_PTRACER.
+# Relaxing the sysctl for the migration is therefore the normal path.
+relax_yama=1
 session=""
 pid=""
 timeout=20
@@ -52,6 +58,7 @@ while [ $# -gt 0 ]; do
   -s | --force-stdio) force_stdio=1 ;;
   -n | --no-attach) attach=0 ;;
   --relax-yama) relax_yama=1 ;;
+  --no-relax-yama) relax_yama=0 ;;
   --name)
     [ $# -ge 2 ] || die "--name needs an argument"
     session=$2
@@ -129,13 +136,15 @@ restore_yama() {
   fi
 }
 
-if [ "$yama_orig" != 0 ]; then
-  if [ "$relax_yama" = 1 ]; then
-    sudo -n sysctl -q -w kernel.yama.ptrace_scope=0 2>/dev/null ||
-      die "could not relax kernel.yama.ptrace_scope (needs passwordless sudo)"
+# The window stays open only until the migration is observed; restore_yama runs
+# on the success path before attaching and from the EXIT trap on every failure.
+if [ "$yama_orig" != 0 ] && [ "$relax_yama" = 1 ]; then
+  if sudo -n sysctl -q -w kernel.yama.ptrace_scope=0 2>/dev/null; then
     yama_relaxed=1
   else
-    note "kernel.yama.ptrace_scope=$yama_orig blocks ptrace of non-descendants; retry with --relax-yama if this fails"
+    # Not fatal: a target that opted in with PR_SET_PTRACER is still attachable,
+    # and a genuine denial is reported with context once reptyr fails.
+    note "could not relax kernel.yama.ptrace_scope=$yama_orig (needs passwordless sudo); trying anyway"
   fi
 fi
 
@@ -234,8 +243,12 @@ report_failure() {
   if [ -s "$err_file" ]; then
     sed "s/^/$self: reptyr: /" "$err_file" >&2
   fi
-  if [ "$yama_orig" != 0 ] && [ "$relax_yama" = 0 ]; then
-    note "kernel.yama.ptrace_scope=$yama_orig is the most likely cause; retry with --relax-yama"
+  if [ "$yama_orig" != 0 ] && [ "$yama_relaxed" = 0 ]; then
+    if [ "$relax_yama" = 0 ]; then
+      note "kernel.yama.ptrace_scope=$yama_orig is the most likely cause; drop --no-relax-yama"
+    else
+      note "kernel.yama.ptrace_scope=$yama_orig is the most likely cause; relaxing it needs passwordless sudo"
+    fi
   fi
   if kill -0 "$pid" 2>/dev/null; then
     note "job $pid left as-is (state $(ps -o stat= -p "$pid" | tr -d ' ')); recover it with fg"
