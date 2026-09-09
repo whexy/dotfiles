@@ -17,8 +17,9 @@
 #   - `lines` lists every account x every meter for detailed tooltips;
 #   - `compact_lines` keeps the quota windows and text progress bars for
 #     tooltips that only support text;
-#   - `compact_meters` describes the best account's windows for renderers
-#     that can draw native progress bars;
+#   - `columns` aligns each account's coding windows, with null for missing slots;
+#   - `detail_meters` includes account labels in stable column order;
+#   - `compact_meters` retains the best account's windows for countdown selection;
 #   - `display_meter` is the one window a compact pill should show. Normally it
 #     is the binding window; when multiple windows are exhausted it is the one
 #     with the latest reset, because earlier resets cannot restore availability.
@@ -175,7 +176,20 @@ def provider_accent:
 | if . == null then
     { present: false }
   else
-    [.accounts[] | select(.error == null and (.meters | length > 0))] as $healthy
+    (.accounts | sort_by(.id // .name)) as $accounts
+    | ($provider | provider_accent) as $accent
+    | ([$accounts[] | coding[]] | unique_by(.label) | sort_by(window_span, .label) | .[:3] | map(.label)) as $windows
+    | [$accounts[] | . as $account | {
+        id: (.id // .name), name, error,
+        meters: [$windows[] | . as $window
+          | ([$account | coding[] | select(.label == $window)] | .[0])
+          | if . == null or $account.error != null then null
+            else compact_meter | . + {color: window_color($accent)} end]
+      }] as $columns
+    | [$accounts[] | . as $account | coding | sort_by(window_span, .label)[]
+        | compact_meter | . + {account: $account.name, color: window_color($accent)}
+        | select($account.error == null)] as $details
+    | [.accounts[] | select(.error == null and (.meters | length > 0))] as $healthy
     |     [
         $healthy[]
         | . as $account
@@ -194,6 +208,8 @@ def provider_accent:
           display_meter: null,
           compact_lines: ["no usable coding-quota windows"],
           compact_meters: [],
+          columns: $columns,
+          detail_meters: $details,
         }
       else
         ($ranked | min_by(.binding.pct // .binding.percent // 0)) as $best
@@ -245,13 +261,14 @@ def provider_accent:
             compact_lines: [
               ([$root.providers[] | select(matches_provider($provider))]
                 | .[0]
-                | .accounts[]
-                | select(.error == null)
-                | coding[]
-                | compact_meter_line
+                | .accounts | sort_by(.id // .name)[]
+                | if .error then "✗ \(.name): \(.error)"
+                  else .name, (coding[] | compact_meter_line) end
               )
             ],
             compact_meters: $meters,
+            columns: $columns,
+            detail_meters: $details,
           }
       end
   end

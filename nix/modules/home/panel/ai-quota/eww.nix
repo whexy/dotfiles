@@ -70,11 +70,13 @@ let
           :visible {jq(AI_QUOTA, ".\"${p.name}\".present")}
           (image :class "quota-icon" :path "${p.logo}"
             :image-width 16 :image-height 16 :preserve-aspect-ratio true)
-          (box :class "quota-tracks" :orientation "v" :spacing 2
-            :space-evenly false :valign "center"
-            (for meter in {jq(AI_QUOTA, ".\"${p.name}\".compact_meters[:3]")}
-              (progress :class {"quota-track " + meter.color}
-                :orientation "h" :width 58 :value {meter.remaining})))
+          (box :class "quota-tracks" :orientation "h" :spacing 2
+            :width 58 :space-evenly true :valign "center"
+            (for column in {jq(AI_QUOTA, ".\"${p.name}\".columns // []")}
+              (box :orientation "v" :spacing 2 :space-evenly false
+                (for meter in {column.meters}
+                  (progress :class {"quota-track " + (meter == null ? "missing" : meter.color)}
+                    :orientation "h" :value {meter == null ? 0 : meter.remaining})))))
           ${lib.optionalString showCountdown ''
             (label :class "quota-countdown"
               :text {jq(AI_QUOTA, ".\"${p.name}\".display_meter.countdown // \"—\"", "r")})
@@ -92,11 +94,11 @@ let
             :onclick "${eww} close ai-quota-details-${p.name}" "󰅖"))
         (box :class "quota-details-meters" :orientation "v" :spacing 10
           :space-evenly false
-          (for meter in {jq(AI_QUOTA, ".\"${p.name}\".compact_meters[:3]")}
+          (for meter in {jq(AI_QUOTA, ".\"${p.name}\".detail_meters // []")}
             (box :class "quota-detail-meter" :orientation "v" :space-evenly false
               (box :class "quota-detail-labels" :space-evenly false
                 (label :class {"quota-detail-name " + meter.color}
-                  :halign "start" :hexpand true :text {meter.label})
+                  :halign "start" :hexpand true :text {meter.account + " · " + meter.label})
                 (label :class "quota-detail-value" :halign "end"
                   :text {round(meter.remaining, 0) + "%"}))
               (progress :class {"quota-detail-bar " + meter.color}
@@ -153,7 +155,7 @@ in
 
         .quota-track,
         .quota-track trough {
-          min-width: 58px;
+          min-width: 0;
         }
 
         .quota-track trough {
@@ -202,6 +204,8 @@ in
         .quota.error .quota-countdown {
           color: $on-surface-variant;
         }
+
+        .quota-track.missing { opacity: 0; }
 
         .quota-track.gray progress,
         .quota-detail-bar.gray progress {
