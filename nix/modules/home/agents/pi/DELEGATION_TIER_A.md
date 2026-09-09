@@ -34,10 +34,10 @@ Never use `openai` or `anthropic` directly unless user explicitly asks for it.
   For very large document/context workloads use Claude Opus 5, high.
 
 - `worker` — implementation, edits, validation, and tests.
-  Preferred: Claude Opus 5, high; GPT-5.6 Sol, high.
+  Preferred: Claude Opus 5, high; GPT-6 Astra, low.
 
 - `reviewer` — independent code/task review, edge cases, tests, simplicity, and small fixes.
-  Preferred: GPT-5.6 Sol, high; Claude Opus 5, high.
+  Preferred: GPT-6 Astra, low; Claude Opus 5, high.
 
 - `oracle` — adversarial second opinion for important, ambiguous, or difficult-to-reverse decisions.
   Preferred: Claude Fable 5.1, high; GPT-6 Astra, high.
@@ -49,8 +49,8 @@ Never use `openai` or `anthropic` directly unless user explicitly asks for it.
 
 Examples:
 
-- `worker: Claude Opus 5` → `reviewer: GPT-5.6 Sol`
-- `worker: GPT-5.6 Sol` → `reviewer: Claude Opus 5`
+- `worker: Claude Opus 5` → `reviewer: GPT-6 Astra`
+- `worker: GPT-6 Astra` → `reviewer: Claude Opus 5`
 
 ## Oracle
 
