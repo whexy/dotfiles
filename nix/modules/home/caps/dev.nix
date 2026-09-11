@@ -26,6 +26,7 @@
     };
     editor = {
       neovim.dev = lib.mkDefault true;
+      neovim.nightly = lib.mkDefault true;
       c.enable = lib.mkDefault true;
       config.enable = lib.mkDefault true;
       go.enable = lib.mkDefault true;

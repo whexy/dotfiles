@@ -19,12 +19,19 @@ let
       hash = "sha256-ybSdRHuNOTLGo39B5Q4oJLjqYlwa3pm85eVfrFcrOL8=";
     };
   };
+  # Only the package comes from the nightly flake; nixvim still builds plugins
+  # and the wrapper from our own nixpkgs.
+  neovimPackage =
+    if cfg.neovim.nightly then
+      inputs.neovim-nightly.packages.${pkgs.stdenv.hostPlatform.system}.default
+    else
+      pkgs.neovim-unwrapped;
 in
 {
   config = lib.mkIf cfg.neovim.enable {
     programs.nixvim = {
       enable = true;
-      package = pkgs.neovim-unwrapped;
+      package = neovimPackage;
       nixpkgs.source = inputs.nixpkgs.outPath;
       wrapRc = true;
       impureRtp = true;
