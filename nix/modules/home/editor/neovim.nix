@@ -19,19 +19,26 @@ let
       hash = "sha256-ybSdRHuNOTLGo39B5Q4oJLjqYlwa3pm85eVfrFcrOL8=";
     };
   };
+  # Nightly Neovim tracks master, so plugins pinned by the stable channel can
+  # be older than the core changes they depend on (flash.nvim's FFI hooks, for
+  # example, break until the plugin adapts to a Neovim refactor). Build the
+  # whole plugin set from nixpkgs-unstable whenever the editor follows
+  # nightly; the stable channel stays authoritative for release Neovim.
+  nixvimNixpkgs = if cfg.neovim.nightly then inputs.nixpkgs-unstable else inputs.nixpkgs;
+
   # Only the package comes from the nightly flake; nixvim still builds plugins
-  # and the wrapper from our own nixpkgs.
+  # and the wrapper from the nixpkgs selected above.
   #
   # The neovim wrapper derives its Lua environment from `neovim-unwrapped.lua`,
-  # but the Lua rocks it collects propagate our own LuaJIT, so the two LuaJIT
-  # versions collide in buildEnv. passthru does not affect the derivation hash,
-  # so realigning it keeps the substitutable nightly build.
+  # but the Lua rocks it collects propagate that nixpkgs' LuaJIT, so the two
+  # LuaJIT versions collide in buildEnv. passthru does not affect the
+  # derivation hash, so realigning it keeps the substitutable nightly build.
   neovimPackage =
     if cfg.neovim.nightly then
       inputs.neovim-nightly.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
         passthru = old.passthru // {
-          inherit (pkgs) luajit;
-          lua = pkgs.luajit;
+          inherit (pkgs.unstable) luajit;
+          lua = pkgs.unstable.luajit;
         };
       })
     else
@@ -42,7 +49,10 @@ in
     programs.nixvim = {
       enable = true;
       package = neovimPackage;
-      nixpkgs.source = inputs.nixpkgs.outPath;
+      nixpkgs.source = nixvimNixpkgs.outPath;
+      # Nixvim tracks the stable release while the nightly plugin set comes from
+      # nixpkgs-unstable, so its release check always reports a mismatch here.
+      version.enableNixpkgsReleaseCheck = !cfg.neovim.nightly;
       wrapRc = true;
       impureRtp = true;
       extraPlugins = [ modernBorland ];
