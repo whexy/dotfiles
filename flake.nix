@@ -38,6 +38,19 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    # Hercules CI evaluates neovim-nightly-overlay through its `dev` partition,
+    # whose lock pins this nixpkgs, so only builds against this exact revision
+    # land in nix-community.cachix.org. Following our own nixpkgs (or the
+    # overlay's newer top-level lock) means building neovim from source on every
+    # update. Refresh this rev when upstream updates flake/dev/flake.lock;
+    # `just check-nvim-cache` reports whether the pin still hits the cache.
+    neovim-nightly-nixpkgs.url = "github:NixOS/nixpkgs/8d8c1fa5b412c223ffa47410867813290cdedfef";
+
+    neovim-nightly = {
+      url = "github:nix-community/neovim-nightly-overlay";
+      inputs.nixpkgs.follows = "neovim-nightly-nixpkgs";
+    };
+
     nixos-wsl = {
       url = "github:nix-community/NixOS-WSL";
       inputs.nixpkgs.follows = "nixpkgs";

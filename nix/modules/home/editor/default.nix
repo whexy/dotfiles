@@ -7,6 +7,7 @@
     neovim = {
       enable = lib.mkEnableOption "Neovim";
       dev = lib.mkEnableOption "the full-featured development Neovim setup";
+      nightly = lib.mkEnableOption "the nightly Neovim build from neovim-nightly-overlay";
     };
     neovide.enable = lib.mkEnableOption "Neovide (Neovim GUI)";
 
