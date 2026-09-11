@@ -21,9 +21,19 @@ let
   };
   # Only the package comes from the nightly flake; nixvim still builds plugins
   # and the wrapper from our own nixpkgs.
+  #
+  # The neovim wrapper derives its Lua environment from `neovim-unwrapped.lua`,
+  # but the Lua rocks it collects propagate our own LuaJIT, so the two LuaJIT
+  # versions collide in buildEnv. passthru does not affect the derivation hash,
+  # so realigning it keeps the substitutable nightly build.
   neovimPackage =
     if cfg.neovim.nightly then
-      inputs.neovim-nightly.packages.${pkgs.stdenv.hostPlatform.system}.default
+      inputs.neovim-nightly.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
+        passthru = old.passthru // {
+          inherit (pkgs) luajit;
+          lua = pkgs.luajit;
+        };
+      })
     else
       pkgs.neovim-unwrapped;
 in
