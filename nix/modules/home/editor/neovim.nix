@@ -135,30 +135,6 @@ in
           };
         }
         {
-          mode = "n";
-          key = "<C-h>";
-          action = "<C-w>h";
-          options.desc = "Move to left window";
-        }
-        {
-          mode = "n";
-          key = "<C-j>";
-          action = "<C-w>j";
-          options.desc = "Move to below window";
-        }
-        {
-          mode = "n";
-          key = "<C-k>";
-          action = "<C-w>k";
-          options.desc = "Move to above window";
-        }
-        {
-          mode = "n";
-          key = "<C-l>";
-          action = "<C-w>l";
-          options.desc = "Move to right window";
-        }
-        {
           mode = [
             "i"
             "n"
