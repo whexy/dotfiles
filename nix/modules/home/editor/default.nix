@@ -1,7 +1,13 @@
 # Editor group: Neovim, Neovide, and per-language editing support. Each
 # `editor.<language>.enable` installs the language toolchain together with
 # its language servers and formatters.
-{ inputs, lib, ... }:
+{
+  config,
+  inputs,
+  lib,
+  pkgs,
+  ...
+}:
 {
   options.dotfiles.editor = {
     neovim = {
@@ -45,4 +51,11 @@
     ./typst.nix
     ./zig.nix
   ];
+
+  # Plugins built outside nixvim's own option set must come from the same
+  # channel nixvim builds with, or a nightly Neovim gets stable-pinned plugins
+  # that predate the core changes they depend on. nixvim follows
+  # `nixpkgs.source` for its own plugin set; this arg keeps everything else
+  # aligned with it.
+  config._module.args.vimPkgs = if config.dotfiles.editor.neovim.nightly then pkgs.unstable else pkgs;
 }

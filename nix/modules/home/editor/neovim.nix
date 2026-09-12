@@ -4,15 +4,16 @@
   inputs,
   lib,
   pkgs,
+  vimPkgs,
   ...
 }:
 let
   cfg = config.dotfiles.editor;
   nostalgiaModeFile = "${config.xdg.stateHome}/dotfiles/nostalgia";
-  modernBorland = pkgs.vimUtils.buildVimPlugin {
+  modernBorland = vimPkgs.vimUtils.buildVimPlugin {
     pname = "vim-colors-modern-borland";
     version = "2024-03-03";
-    src = pkgs.fetchFromGitHub {
+    src = vimPkgs.fetchFromGitHub {
       owner = "letorbi";
       repo = "vim-colors-modern-borland";
       rev = "9da28b3049481ac098f555834db1607a265eb7bc";
