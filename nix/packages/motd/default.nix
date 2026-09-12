@@ -235,27 +235,40 @@ pkgs.writers.writePython3Bin "motd"
             return "unknown", None
 
 
-    def get_generation():
-        for path in ("/nix/var/nix/profiles/system", "/run/current-system"):
-            if os.path.islink(path):
-                try:
-                    match = re.search(r"system-(\d+)-link", os.readlink(path))
-                    if match:
-                        return "#%s · system" % match.group(1)
-                except Exception:
-                    pass
+    def relative_age(timestamp: float) -> str:
+        seconds = max(0, int(datetime.now().timestamp() - timestamp))
+        if seconds < 90:
+            return "just now"
 
-        for path in (
-            os.path.expanduser("~/.local/state/nix/profiles/home-manager"),
-            os.path.expanduser("~/.nix-profile"),
+        scale = (
+            ("minute", 60, 3600),
+            ("hour", 3600, 86400),
+            ("day", 86400, 604800),
+            ("week", 604800, 2592000),
+            ("month", 2592000, 31536000),
+            ("year", 31536000, None),
+        )
+        for unit, size, limit in scale:
+            if limit is None or seconds < limit:
+                count = max(1, seconds // size)
+                return "%d %s%s ago" % (count, unit, "" if count == 1 else "s")
+
+
+    def get_activation():
+        # The profile symlink is replaced on every switch, so its own mtime is the
+        # activation time; the generation it points at may be much older on rollback.
+        for label, path in (
+            ("system", "/nix/var/nix/profiles/system"),
+            ("system", "/run/current-system"),
+            ("home-manager", os.path.expanduser("~/.local/state/nix/profiles/home-manager")),
+            ("home-manager", os.path.expanduser("~/.nix-profile")),
         ):
-            if os.path.islink(path):
-                try:
-                    match = re.search(r"home-manager-(\d+)-link", os.readlink(path))
-                    if match:
-                        return "#%s · home-manager" % match.group(1)
-                except Exception:
-                    pass
+            if not os.path.islink(path):
+                continue
+            try:
+                return "%s · %s" % (relative_age(os.lstat(path).st_mtime), label)
+            except Exception:
+                pass
         return "unavailable"
 
 
@@ -462,7 +475,7 @@ pkgs.writers.writePython3Bin "motd"
             ("Memory", memory),
             ("Root", root_disk),
             ("Nix store", get_nix_store()),
-            ("Generation", get_generation()),
+            ("Activated", get_activation()),
         ]
         connectivity = [
             ("Local IPv4", get_ipv4()),
