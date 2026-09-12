@@ -3,7 +3,7 @@
 {
   config,
   lib,
-  pkgs,
+  vimPkgs,
   ...
 }:
 let
@@ -190,14 +190,14 @@ in
         hardtime.enable = true;
       };
 
-      extraPlugins = with pkgs.vimPlugins; [
+      extraPlugins = with vimPkgs.vimPlugins; [
         refjump-nvim
         nvim-lsp-file-operations
         # Not packaged in nixpkgs; built from source.
-        (pkgs.vimUtils.buildVimPlugin {
+        (vimPkgs.vimUtils.buildVimPlugin {
           pname = "tiny-code-action.nvim";
           version = "0d040ed";
-          src = pkgs.fetchFromGitHub {
+          src = vimPkgs.fetchFromGitHub {
             owner = "rachartier";
             repo = "tiny-code-action.nvim";
             rev = "0d040ed81f7953118b81cd12681fcdfcac069803";
