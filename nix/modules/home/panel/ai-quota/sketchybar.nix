@@ -3,6 +3,13 @@
 # Each provider is one Liquid Glass capsule with stacked, read-only quota
 # tracks. The shortest window is on top; weekly and monthly windows follow.
 # When countdown display is enabled, the reset time is shown on the right.
+#
+# Every item a refresh can touch is declared up front, and a refresh only
+# flips properties in a single message. Adding an item rebuilds its window and
+# restacks the bar, and each `sketchybar` invocation ends in a repaint, so
+# removing and re-adding the tracks painted one empty frame per refresh.
+# SketchyBar drops property writes that do not change a value, so unchanged
+# quotas now repaint nothing at all.
 args@{
   config,
   lib,
@@ -43,6 +50,15 @@ let
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
 
+  # A window further from binding is drawn fainter than the binding one.
+  dim = alpha: accent: "0x${alpha}${lib.removePrefix "0xff" accent}";
+
+  # The item pool is preallocated, so accounts and windows past these bounds
+  # are not rendered; summary.jq already caps each account at three windows.
+  maxColumns = 3;
+  maxRows = 3;
+  maxPopupMeters = maxColumns * maxRows;
+
   fetchPlugin = mkPlugin "fetch" ''
     out="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0
     printf '%s\n' "$out" | ${jq} -e '.providers | arrays' >/dev/null 2>&1 || exit 0
@@ -60,8 +76,8 @@ let
     mkPlugin "toggle-${provider}" ''
       # Restore cached values first in case a native slider consumed the click,
       # then toggle the details immediately while a forced refresh runs.
-      ${sketchybar} --trigger ai_quota_refresh
-      ${sketchybar} --set ai_quota.${provider}.icon popup.drawing=toggle
+      ${sketchybar} --trigger ai_quota_refresh \
+        --set ai_quota.${provider}.icon popup.drawing=toggle
       ${fetchPlugin} >/dev/null 2>&1 &
     '';
 
@@ -72,9 +88,9 @@ let
       summary="$(${jq} -c -f ${summaryFilter} --arg provider ${lib.escapeShellArg provider} ${lib.escapeShellArg cacheFile} 2>/dev/null)" || exit 0
 
       if [ "$(printf '%s' "$summary" | ${jq} -r '.present')" != "true" ]; then
-        ${sketchybar} --remove '/ai_quota.${provider}.lane\..*/' \
-          --remove '/ai_quota.${provider}.popup.meter\..*/'
         hide_args=(
+          --set '/ai_quota\.${provider}\.lane\..*/' drawing=off
+          --set '/ai_quota\.${provider}\.popup\.meter\..*/' drawing=off
           --set ai_quota.${provider}.icon drawing=off popup.drawing=off
           --set ai_quota.${provider}.glass background.drawing=off
           --set ai_quota.${provider}.slot drawing=off
@@ -88,66 +104,71 @@ let
       ${lib.optionalString showCountdown ''
         countdown="$(printf '%s' "$summary" | ${jq} -r '.display_meter.countdown // "—"')"
       ''}
-      color=${accent}
-
       args=(
         --set ai_quota.${provider}.glass background.drawing=on
         --set ai_quota.${provider}.icon drawing=on
         --set ai_quota.${provider}.slot drawing=on
-        ${lib.optionalString showCountdown ''--set ai_quota.${provider}.countdown drawing=on label="$countdown" label.color="$color"''}
+        --set ai_quota.${provider}.popup.header drawing=on
+        ${lib.optionalString showCountdown ''--set ai_quota.${provider}.countdown drawing=on label="$countdown"''}
       )
+
       # Zero-width sliders share the reserved track slot. Right padding offsets
       # each account column without changing the capsule's layout width.
-      ${sketchybar} --remove '/ai_quota.${provider}.lane\..*/' \
-        --remove '/ai_quota.${provider}.popup.meter\..*/'
-      column_count="$(printf '%s' "$summary" | ${jq} '.columns | length')"
-      if [ "$column_count" -gt 0 ]; then
-        column_width=$(((${toString trackWidth} - 2 * (column_count - 1)) / column_count))
+      while IFS=$'\t' read -r column row columns rows used remaining span; do
+        lane="ai_quota.${provider}.lane.$column.$row"
+        if [ "$used" != 1 ]; then
+          args+=(--set "$lane" drawing=off)
+          continue
+        fi
+        column_width=$(((${toString trackWidth} - 2 * (columns - 1)) / columns))
         [ "$column_width" -ge 1 ] || column_width=1
-        while IFS=$'\t' read -r column row rows remaining span; do
-          lane="ai_quota.${provider}.lane.$column.$row"
-          case "$rows:$row" in
-            2:0) lane_y=4 ;; 2:1) lane_y=-4 ;;
-            3:0) lane_y=6 ;; 3:1) lane_y=0 ;; 3:2) lane_y=-6 ;;
-            *) lane_y=0 ;;
-          esac
-          lane_color="$color"
-          if [ "$span" -ge 2592000 ]; then
-            lane_color="0x66''${color#0xff}"
-          elif [ "$span" -ge 604800 ]; then
-            lane_color="0xaa''${color#0xff}"
-          fi
-          offset=$(( ${toString laneRightPadding} + (column_count - column - 1) * (column_width + 2) ))
-          args+=(--add slider "$lane" right "$column_width"
-            --move "$lane" before ai_quota.${provider}.slot
-            --set "$lane" width=0 padding_left=0 padding_right="$offset"
-            y_offset="$lane_y" slider.percentage="$remaining"
-            slider.highlight_color="$lane_color" slider.background.color=${colors.track}
-            slider.background.height=4 slider.background.corner_radius=2
-            slider.knob.drawing=off icon.drawing=off label.drawing=off
-            background.drawing=off click_script=${togglePlugin provider})
-        done < <(printf '%s' "$summary" | ${jq} -r '
-          .columns | to_entries[] | .key as $column | .value.meters
-          | length as $rows | to_entries[] | select(.value != null)
-          | [$column, .key, $rows, (.value.remaining | round), .value.span] | @tsv')
-      fi
-
-      args+=(--set ai_quota.${provider}.popup.header drawing=on)
-      while IFS=$'\t' read -r slot meter_label meter_remaining meter_reset; do
-        popup_meter="ai_quota.${provider}.popup.meter.$slot"
-        args+=(--add slider "$popup_meter" popup.ai_quota.${provider}.icon 118
-          --set "$popup_meter" padding_left=8 padding_right=8
-          icon="$meter_label" icon.font=".AppleSystemUIFont:Semibold:11.5"
-          icon.color="$color" label="''${meter_remaining}% · ''${meter_reset}"
-          label.font=".AppleSystemUIFont:Medium:11.5" label.color=${colors.fg}
-          slider.percentage="$meter_remaining" slider.highlight_color="$color"
-          slider.background.color=${colors.track} slider.background.height=6
-          slider.background.corner_radius=3 slider.knob.drawing=off
-          background.drawing=off click_script="${sketchybar} --trigger ai_quota_refresh")
+        case "$rows:$row" in
+          2:0) lane_y=4 ;; 2:1) lane_y=-4 ;;
+          3:0) lane_y=6 ;; 3:1) lane_y=0 ;; 3:2) lane_y=-6 ;;
+          *) lane_y=0 ;;
+        esac
+        lane_color=${accent}
+        if [ "$span" -ge 2592000 ]; then
+          lane_color=${dim "66" accent}
+        elif [ "$span" -ge 604800 ]; then
+          lane_color=${dim "aa" accent}
+        fi
+        offset=$(( ${toString laneRightPadding} + (columns - column - 1) * (column_width + 2) ))
+        args+=(--set "$lane" drawing=on slider.width="$column_width"
+          padding_right="$offset" y_offset="$lane_y"
+          slider.percentage="$remaining" slider.highlight_color="$lane_color")
       done < <(printf '%s' "$summary" | ${jq} -r '
-        .detail_meters | to_entries[]
-        | [.key, (.value.account + " · " + .value.label),
-           (.value.remaining | round), (.value.reset // "—")] | @tsv')
+        (.columns[:${toString maxColumns}]) as $columns
+        | ($columns | length) as $count
+        | range(0; ${toString maxColumns}) as $column
+        | (($columns[$column].meters // [])[:${toString maxRows}]) as $meters
+        | ($meters | length) as $rows
+        | range(0; ${toString maxRows}) as $row
+        | ($meters[$row] // null) as $meter
+        | [$column, $row, $count, $rows,
+           (if $meter == null then 0 else 1 end),
+           (if $meter == null then 0 else ($meter.remaining | round) end),
+           (if $meter == null then 0 else $meter.span end)] | @tsv')
+
+      while IFS=$'\t' read -r slot used meter_label meter_remaining meter_reset; do
+        popup_meter="ai_quota.${provider}.popup.meter.$slot"
+        if [ "$used" != 1 ]; then
+          args+=(--set "$popup_meter" drawing=off)
+          continue
+        fi
+        args+=(--set "$popup_meter" drawing=on icon="$meter_label"
+          label="''${meter_remaining}% · ''${meter_reset}"
+          slider.percentage="$meter_remaining")
+      done < <(printf '%s' "$summary" | ${jq} -r '
+        .detail_meters as $meters
+        | range(0; ${toString maxPopupMeters}) as $slot
+        | ($meters[$slot] // null) as $meter
+        | [$slot,
+           (if $meter == null then 0 else 1 end),
+           (if $meter == null then "" else ($meter.account + " · " + $meter.label) end),
+           (if $meter == null then 0 else ($meter.remaining | round) end),
+           (if $meter == null then "—" else ($meter.reset // "—") end)] | @tsv')
+
       ${sketchybar} "''${args[@]}"
     '';
 
@@ -213,6 +234,60 @@ let
   # supplies that gap when it is drawn.
   laneRightPadding = if showCountdown then 0 else rightPadding;
 
+  # One slider per (account column, window row) the pill can ever show. Each
+  # starts hidden and is only revealed for the slots a refresh actually fills.
+  mkLaneItems =
+    provider: accent:
+    lib.concatMap (
+      column:
+      map (row: {
+        name = "ai_quota.${provider}.lane.${toString column}.${toString row}";
+        kind = "slider";
+        width = trackWidth;
+        side = "right";
+        settings = {
+          drawing = "off";
+          width = 0;
+          padding_left = 0;
+          padding_right = laneRightPadding;
+          "slider.highlight_color" = accent;
+          "slider.background.color" = colors.track;
+          "slider.background.height" = 4;
+          "slider.background.corner_radius" = 2;
+          "slider.knob.drawing" = "off";
+          "icon.drawing" = "off";
+          "label.drawing" = "off";
+          "background.drawing" = "off";
+        };
+        clickScript = toString (togglePlugin provider);
+      }) (lib.range 0 (maxRows - 1))
+    ) (lib.range 0 (maxColumns - 1));
+
+  mkPopupMeterItems =
+    provider: accent:
+    map (slot: {
+      name = "ai_quota.${provider}.popup.meter.${toString slot}";
+      kind = "slider";
+      width = 118;
+      side = "popup.ai_quota.${provider}.icon";
+      settings = {
+        drawing = "off";
+        padding_left = 8;
+        padding_right = 8;
+        "icon.font" = ".AppleSystemUIFont:Semibold:11.5";
+        "icon.color" = accent;
+        "label.font" = ".AppleSystemUIFont:Medium:11.5";
+        "label.color" = colors.fg;
+        "slider.highlight_color" = accent;
+        "slider.background.color" = colors.track;
+        "slider.background.height" = 6;
+        "slider.background.corner_radius" = 3;
+        "slider.knob.drawing" = "off";
+        "background.drawing" = "off";
+      };
+      clickScript = "${sketchybar} --trigger ai_quota_refresh";
+    }) (lib.range 0 (maxPopupMeters - 1));
+
   mkSlotItem = provider: {
     name = "ai_quota.${provider}.slot";
     side = "right";
@@ -230,7 +305,7 @@ let
     clickScript = toString (togglePlugin provider);
   };
 
-  mkCountdownItem = provider: {
+  mkCountdownItem = provider: accent: {
     name = "ai_quota.${provider}.countdown";
     side = "right";
     settings = {
@@ -238,6 +313,7 @@ let
       icon = "";
       "icon.drawing" = "off";
       label = "—";
+      "label.color" = accent;
       "label.font" = ".AppleSystemUIFont:Medium:11.5";
       "label.width" = 44;
       "label.align" = "center";
@@ -324,14 +400,16 @@ let
   # rather than follow the icon it would otherwise paint over.
   providerItems =
     p:
-    lib.optional showCountdown (mkCountdownItem p.name)
+    lib.optional showCountdown (mkCountdownItem p.name p.accent)
+    # Sliders paint their track in the layout flow direction, so every lane is
+    # declared before the `slot` that reserves its space.
+    ++ mkLaneItems p.name p.accent
     ++ [
       (mkSlotItem p.name)
       (mkIconItem p.name p)
     ]
-    ++ [
-      (mkPopupHeaderItem p.name p)
-    ];
+    ++ [ (mkPopupHeaderItem p.name p) ]
+    ++ mkPopupMeterItems p.name p.accent;
 
   providerBracket = p: {
     name = "ai_quota.${p.name}.glass";
