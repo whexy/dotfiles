@@ -151,6 +151,7 @@ in
         reviewer.tools =
           readTools
           ++ [
+            "bash"
             "contact_supervisor"
           ]
           ++ lookupTools
