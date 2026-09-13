@@ -4,9 +4,11 @@
   lib,
   apiAccounts,
   proxyAccounts,
+  proxy,
   defaults,
 }:
 let
+  aiProxyExtension = import ./ai-proxy.nix { inherit pkgs proxy; };
   settings = import ./settings.nix {
     inherit
       pkgs
@@ -14,6 +16,7 @@ let
       config
       apiAccounts
       proxyAccounts
+      aiProxyExtension
       defaults
       ;
   };
@@ -63,6 +66,6 @@ in
   }
   // lib.optionalAttrs proxyAccounts {
     # Discover the proxy catalog and clone matching model metadata from pi.
-    ".pi/agent/extensions/ai-proxy.ts".source = ./ai-proxy.ts;
+    ".pi/agent/extensions/ai-proxy.ts".source = aiProxyExtension;
   };
 }

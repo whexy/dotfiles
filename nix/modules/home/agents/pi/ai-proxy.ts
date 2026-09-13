@@ -1,11 +1,48 @@
 import type { ExtensionAPI } from "@earendil-works/pi-coding-agent";
 import type { Model } from "@earendil-works/pi-ai";
+import { execFile } from "node:child_process";
 import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
 import { dirname, join } from "node:path";
+import { promisify } from "node:util";
 
-const BASE_URL = "https://ai-proxy.at-basking.ts.net/v1";
 const CATALOG_BASE_URL = "https://pi.dev";
-const API_KEY_PATH = join(process.env.HOME!, ".secrets", "ai-proxy-api-key");
+
+// Injected by Home Manager (see proxy.nix). The secret paths are agenix
+// shell fragments rather than literal paths, so they are only valid inside
+// a shell; `readSecret` is the single place that resolves them.
+type AiProxyConfig = {
+  baseUrl: string;
+  apiKeyPath: string;
+  cfAccessIdPath: string;
+  cfAccessSecretPath: string;
+  cat: string;
+};
+
+// Loading this source directly instead of the generated file leaves the config
+// unset; name that cause rather than failing as a bare ReferenceError.
+function loadConfig(): AiProxyConfig {
+  const config = (globalThis as { __AI_PROXY_CONFIG__?: AiProxyConfig })
+    .__AI_PROXY_CONFIG__;
+  if (!config) {
+    throw new Error(
+      "ai-proxy: __AI_PROXY_CONFIG__ is unset; load the extension built by " +
+        "pi/ai-proxy.nix rather than this source file.",
+    );
+  }
+  return config;
+}
+
+const {
+  baseUrl: PROXY_BASE_URL,
+  apiKeyPath: API_KEY_PATH,
+  // The proxy is published on the public internet behind Cloudflare Access;
+  // without the service token every request stops at the 403 login page.
+  cfAccessIdPath: CF_ACCESS_ID_PATH,
+  cfAccessSecretPath: CF_ACCESS_SECRET_PATH,
+  cat: CAT,
+} = loadConfig();
+
+const BASE_URL = `${PROXY_BASE_URL}/v1`;
 const AGENT_DIR =
   process.env.PI_CODING_AGENT_DIR ?? join(process.env.HOME!, ".pi", "agent");
 const CACHE_PATH = join(AGENT_DIR, "cache", "ai-proxy-models.json");
@@ -224,9 +261,36 @@ async function resolveModels(served: ServedModel[]): Promise<Model[]> {
   });
 }
 
-async function fetchServedModels(apiKey: string): Promise<ServedModel[]> {
+const execFileAsync = promisify(execFile);
+
+// `${XDG_RUNTIME_DIR}/...` on Linux and `$(getconf ...)/...` on Darwin only
+// mean anything to a shell, so read through one instead of expanding the
+// fragment here and having to track agenix's platform-specific forms.
+async function readSecret(path: string): Promise<string> {
+  const { stdout } = await execFileAsync(
+    "/bin/sh",
+    ["-c", `${CAT} "${path}"`],
+    {
+      encoding: "utf8",
+    },
+  );
+  const secret = stdout.trim();
+  if (!secret) {
+    throw new Error(`ai-proxy: secret is empty or unreadable: ${path}`);
+  }
+  return secret;
+}
+
+async function fetchServedModels(
+  apiKey: string,
+  cfAccess: Record<string, string>,
+): Promise<ServedModel[]> {
   const response = await fetch(`${BASE_URL}/models`, {
-    headers: { Authorization: `Bearer ${apiKey}` },
+    headers: { Authorization: `Bearer ${apiKey}`, ...cfAccess },
+    // undici strips Authorization across origins but forwards custom headers,
+    // so a redirect would hand the Cloudflare Access token to whatever origin
+    // it names. Refuse to follow rather than leak it.
+    redirect: "error",
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
@@ -244,15 +308,29 @@ async function fetchServedModels(apiKey: string): Promise<ServedModel[]> {
 }
 
 export default async function (pi: ExtensionAPI) {
-  const apiKey = (await readFile(API_KEY_PATH, "utf8")).trim();
-  const served = await fetchServedModels(apiKey);
+  const [apiKey, cfAccessId, cfAccessSecret] = await Promise.all([
+    readSecret(API_KEY_PATH),
+    readSecret(CF_ACCESS_ID_PATH),
+    readSecret(CF_ACCESS_SECRET_PATH),
+  ]);
+  const served = await fetchServedModels(apiKey, {
+    "CF-Access-Client-Id": cfAccessId,
+    "CF-Access-Client-Secret": cfAccessSecret,
+  });
   const models = await resolveModels(served);
 
   pi.registerProvider("ai-proxy", {
     name: "AI Proxy",
     baseUrl: BASE_URL,
-    apiKey: `!cat ${JSON.stringify(API_KEY_PATH)}`,
+    // pi runs `!` values through a shell and resolves them per request, so
+    // the agenix path expands and a re-decrypted token is picked up without
+    // restarting the session. The double quotes are what make it expand.
+    apiKey: `!${CAT} "${API_KEY_PATH}"`,
     api: "openai-completions",
+    headers: {
+      "CF-Access-Client-Id": `!${CAT} "${CF_ACCESS_ID_PATH}"`,
+      "CF-Access-Client-Secret": `!${CAT} "${CF_ACCESS_SECRET_PATH}"`,
+    },
     models,
   });
 }

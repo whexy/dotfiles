@@ -3,7 +3,7 @@
 # Tool-specific config lives in each tool's folder, which exports a common
 # contract: packages, homeFiles, shellAliases. This module keeps only shared
 # concerns: options, the global AGENTS.md, agenix secrets, and merging.
-args@{
+{
   pkgs,
   config,
   lib,
@@ -11,14 +11,13 @@ args@{
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.agents;
 in
 {
   options.dotfiles.agents =
     let
       # Every agent picks the best account tier available on the host:
-      # the tailnet proxy first, then lab-billed API keys, then the
+      # the AI proxy first, then lab-billed API keys, then the
       # always-present OpenRouter key.
       byTier =
         {
@@ -48,7 +47,7 @@ in
     {
       enable = lib.mkEnableOption "agents";
       enableApiAccounts = lib.mkEnableOption "enable models billed by API";
-      enableProxyAccounts = lib.mkEnableOption "enable models served by the tailnet AI proxy";
+      enableProxyAccounts = lib.mkEnableOption "enable models served by the AI proxy";
 
       defaultProvider = mkModelOption "provider serving the default model" {
         proxy = "ai-proxy";
@@ -88,6 +87,7 @@ in
         cheap = "${cfg.defaultCheapProvider}/${cfg.defaultCheapModel}";
       };
       withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
+      proxy = import ./proxy.nix { inherit config; };
       agents = [
         (import ./pi/home.nix {
           inherit
@@ -96,6 +96,7 @@ in
             lib
             apiAccounts
             proxyAccounts
+            proxy
             defaults
             ;
         })
@@ -106,6 +107,7 @@ in
             lib
             apiAccounts
             proxyAccounts
+            proxy
             withModelPicker
             ;
         })
@@ -116,6 +118,7 @@ in
             lib
             apiAccounts
             proxyAccounts
+            proxy
             withModelPicker
             ;
         })
@@ -130,16 +133,6 @@ in
       ];
     in
     {
-      # The AI proxy lives on the tailnet; integrated hosts must run
-      # Tailscale. Standalone homes manage connectivity themselves.
-      assertions = [
-        {
-          assertion =
-            !cfg.enableProxyAccounts || (osConfig == null || osConfig.dotfiles.network.tailscale.enable);
-          message = "dotfiles.agents.enableProxyAccounts requires dotfiles.network.tailscale.enable";
-        }
-      ];
-
       home = {
         # Single source of truth for global agent rules; every agent reads it.
         # pi gets extra tool-specific guidance appended by its own home.nix.
@@ -154,31 +147,24 @@ in
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
       };
 
+      # Secrets stay at agenix's default runtime location. Every consumer
+      # reads `config.age.secrets.*.path` through a shell, which is what
+      # expands the `${XDG_RUNTIME_DIR}` / `$(getconf ...)` fragment agenix
+      # generates, so no agent needs a hardcoded path.
       age.secrets = {
-        openrouter-api-key = {
-          file = ../../../../secrets/openrouter-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/openrouter-api-key";
-        };
+        openrouter-api-key.file = ../../../../secrets/openrouter-api-key.age;
       }
       // lib.optionalAttrs cfg.enableApiAccounts {
-        openai-api-key = {
-          file = ../../../../secrets/openai-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/openai-api-key";
-        };
-        anthropic-api-key = {
-          file = ../../../../secrets/anthropic-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/anthropic-api-key";
-        };
-        deepseek-api-key = {
-          file = ../../../../secrets/deepseek-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/deepseek-api-key";
-        };
+        openai-api-key.file = ../../../../secrets/openai-api-key.age;
+        anthropic-api-key.file = ../../../../secrets/anthropic-api-key.age;
+        deepseek-api-key.file = ../../../../secrets/deepseek-api-key.age;
       }
       // lib.optionalAttrs cfg.enableProxyAccounts {
-        ai-proxy-api-key = {
-          file = ../../../../secrets/ai-proxy-api-key.age;
-          path = "${config.home.homeDirectory}/.secrets/ai-proxy-api-key";
-        };
+        ai-proxy-api-key.file = ../../../../secrets/ai-proxy-api-key.age;
+        # The proxy is reachable from the public internet through
+        # Cloudflare Access; every agent must present the service token.
+        cf-access-dotfiles-id.file = ../../../../secrets/cf-access-dotfiles-id.age;
+        cf-access-dotfiles-secret.file = ../../../../secrets/cf-access-dotfiles-secret.age;
       };
     }
   );
