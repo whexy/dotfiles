@@ -50,46 +50,13 @@ specifically asked.
 
 For version control systems like git.
 
-**Signing**
+Read the `git-commit` skill before running `git commit` or `git tag`, and
+before writing a pull request summary. It is the authority on message format,
+signing, tagging, and the mandatory tooling disclosure trailer. Do not
+reconstruct those rules from memory.
 
-Signing commits are optional.
-
-Tools like `git` are configured to sign commits by default. The signing key are
-provided by either a local 1Password agent (on a physical machine, like `golf`,
-`sheridan`, and `ellison`), or a forwarded agent through SSH (on a remote
-machine, like `mudd`, `neith`, `phobos`, and `zoozve`).
-
-If signing agent is currently unavailable (e.g., SSH forwarding is not working),
-commit without signing.
-
-**Commit Messages**
-
-Title must follow format: `type(scope): description`.
-Common types includes feat, fix, docs, style, refactor, test, and chore.
-Example: `feat(auth): implement JWT token refresh strategy`
-
-Commit message must be plain text, no markdown. Bullet list is allowed.
-
-**Tagging commits**
-
-Run `git tag <tag-name>` will stuck the session since I have `tag.gpgsign=true`.
-By default, you should use commands like `git tag -s v0.1 -m "v0.1"`.
-
-**Disclosure**
-
-All covered use of automated tooling for a contribution must be disclosed as
-part of that contribution.
-
-In the case of LLM‐based AI tooling used for commits, this must be in the form
-of an `Assisted-by:` commit trailer, including at least the tool name and the
-primary model name and version used for the contribution.
-A `Co-authored-by:` trailer does **not** satisfy this policy and shall **never**
-be included in commit messages.
-Example: `Assisted-by: Codex, gpt-5.6 sol medium`
-
-Any adequate form of disclosure is permitted for other kinds of tooling and
-contribution. Pull request summaries and review comments must be disclosed
-separately to commits.
+If that skill is not available in this session, ask me for the rules instead of
+guessing.
 
 ### Coding
 
