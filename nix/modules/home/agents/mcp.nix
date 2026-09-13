@@ -11,6 +11,38 @@
 let
   cfg = config.dotfiles.agents;
   firefox = config.dotfiles.browser.firefox.automation;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
+
+  # Keep the desktop browser's force-installed extensions out of automation.
+  #
+  # The policy engine installs them into the profile regardless of the profile
+  # or the extension scope prefs, and on macOS the policies come from the
+  # per-user org.mozilla.firefox defaults domain, so a dedicated profile does
+  # not escape them. They then open their own onboarding tabs, which an agent
+  # has to read past on every session.
+  #
+  # Firefox reads that domain through NSUserDefaults, whose search list puts a
+  # process's own argv (the argument domain) ahead of the persisted one, so an
+  # -ExtensionSettings pair on the command line masks the stored value for
+  # that launch alone and writes nothing. Firefox itself does not recognise
+  # the flag and logs a warning; Cocoa consumes it before Firefox parses argv.
+  #
+  # Only ExtensionSettings is masked, so the remaining policies (tracking
+  # protection, telemetry, suggest) still apply. Disabling the whole engine
+  # with -EnterprisePoliciesEnabled NO would drop those too, which is why the
+  # HttpsOnlyMode prefs below are still needed.
+  #
+  # The value has to reach Firefox as a string: the server's argument parser
+  # coerces a bare 0/1 to a number and then fails on a non-string argv entry.
+  # The --firefoxArg=-Foo form is likewise required, or the parser claims the
+  # leading dash as one of its own options.
+  #
+  # Cocoa-only. On Linux these policies arrive through the wrapped package's
+  # policies.json instead, where there is no argument domain to override.
+  unpolicedExtensions = lib.optionals isDarwin [
+    "--firefoxArg=-ExtensionSettings"
+    "--firefoxArg={}"
+  ];
 in
 {
   servers = lib.optionalAttrs cfg.firefoxDevtools.enable {
@@ -51,7 +83,8 @@ in
         # install location, which a Nix-installed browser is not in.
         "--firefox-path"
         firefox.binaryPath
-      ];
+      ]
+      ++ unpolicedExtensions;
     };
   };
 }
