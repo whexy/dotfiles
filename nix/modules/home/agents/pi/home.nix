@@ -6,6 +6,7 @@
   proxyAccounts,
   proxy,
   defaults,
+  mcp,
 }:
 let
   aiProxyExtension = import ./ai-proxy.nix { inherit pkgs proxy; };
@@ -18,6 +19,7 @@ let
       proxyAccounts
       aiProxyExtension
       defaults
+      mcp
       ;
   };
   models = import ./models.nix {
@@ -61,6 +63,14 @@ in
     ".pi/agent/models.json".text = builtins.toJSON models;
     ".pi/agent/spending-guard.json".text = builtins.toJSON { enabled = false; };
     ".pi/web-search.json".text = builtins.toJSON webSearch;
+  }
+  // lib.optionalAttrs (mcp.servers != { }) {
+    # pi has no built-in MCP client; pi-mcp-adapter (enabled in settings.nix)
+    # reads this file and exposes one proxy tool the agent searches, instead
+    # of loading every server's tool definitions into the context window.
+    ".pi/agent/mcp.json".text = builtins.toJSON { mcpServers = mcp.servers; };
+  }
+  // {
     # Desktop notification on agent settle (see extensions/notify.ts).
     ".pi/agent/extensions/notify.ts".source = ./extensions/notify.ts;
   }

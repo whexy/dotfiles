@@ -35,6 +35,11 @@ in
       networkmanager.enable = lib.mkDefault true;
     };
     services.openssh.enable = lib.mkDefault true;
+    # Agents drive Firefox headlessly. Only has an effect on Darwin, where
+    # the browser comes from a Homebrew cask; on NixOS the home browser group
+    # installs it.
+    browser.firefox.automation.enable = lib.mkDefault true;
+    homebrew.enable = lib.mkDefault true;
     shell.nushell.enable = lib.mkDefault true;
     monitoring = {
       nodeExporter.enable = lib.mkDefault true;

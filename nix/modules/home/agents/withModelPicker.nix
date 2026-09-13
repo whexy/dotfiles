@@ -26,6 +26,9 @@
   #               roles      - [{ name, prompt, export }]
   #               candidates - entries with label/env/secrets
   entries,
+  # Args prepended to every invocation, including scripted launches that
+  # skip the picker.
+  extraArgs ? [ ],
 }:
 let
   exportStatic = var: value: "export ${var}=${lib.escapeShellArg value}";
@@ -119,11 +122,12 @@ let
     set -euo pipefail
 
     real=${lib.escapeShellArg (package + "/bin/${name}")}
+    base_args=(${lib.concatStringsSep " " (map lib.escapeShellArg extraArgs)})
 
     # Arguments or a pipe mean a scripted launch: the caller already
     # chose the model and env.
     if [ "$#" -gt 0 ] || [ ! -t 0 ]; then
-      exec "$real" "$@"
+      exec "$real" "''${base_args[@]}" "$@"
     fi
 
     choice=$(
@@ -137,7 +141,7 @@ let
     ${lib.concatMapStrings mkEntryArm entries}
     esac
 
-    exec "$real" "''${extra_args[@]}" "$@"
+    exec "$real" "''${base_args[@]}" "''${extra_args[@]}" "$@"
   '';
 in
 # Re-expose the upstream package with bin/<name> shadowed by the picker.
