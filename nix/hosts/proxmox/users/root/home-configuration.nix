@@ -16,7 +16,7 @@
     autoUpgrade.enable = true;
     agents = {
       enable = true;
-      enableApiAccounts = true;
+      enableApiAccounts = false;
       enableProxyAccounts = true;
     };
   };

@@ -15,8 +15,8 @@
   ];
   dotfiles = {
     autoUpgrade.enable = true;
-    agents.enableProxyAccounts = false;
-    agents.enableApiAccounts = true;
+    agents.enableProxyAccounts = true;
+    agents.enableApiAccounts = false;
   };
 
   targets.genericLinux.enable = true;
