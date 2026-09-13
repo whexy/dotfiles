@@ -88,6 +88,20 @@ in
       };
       withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
       proxy = import ./proxy.nix { inherit config; };
+
+      # Every skill is a directory holding a SKILL.md, per the Agent Skills
+      # standard all three harnesses implement.
+      skillNames = lib.attrNames (
+        lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
+      );
+      # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
+      # for skills it downloads from the account, so it gets one symlink per
+      # skill instead of the whole directory.
+      claudeSkills = lib.listToAttrs (
+        map (
+          name: lib.nameValuePair ".claude/skills/${name}" { source = ./skills + "/${name}"; }
+        ) skillNames
+      );
       agents = [
         (import ./pi/home.nix {
           inherit
@@ -139,7 +153,11 @@ in
         file = {
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".claude/CLAUDE.md".source = ./AGENTS.md;
+          # User-scope skill location for both pi and codex; adding a skill is
+          # a new directory under ./skills, never a change here.
+          ".agents/skills".source = ./skills;
         }
+        // claudeSkills
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
         packages = lib.concatMap (a: a.packages or [ ]) agents;
