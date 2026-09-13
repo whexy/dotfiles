@@ -14,5 +14,6 @@
   nixpkgs.overlays = [
     flake.lib.overlays.unstable
     flake.lib.overlays.tailscale-security
+    flake.lib.overlays.firefox-devtools-mcp-profile
   ];
 }
