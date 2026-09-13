@@ -7,11 +7,30 @@
   lib,
   apiAccounts,
   proxyAccounts,
+  proxy,
 }:
 let
-  proxy = model: {
+  # The proxy sits behind Cloudflare Access. `env_http_headers` maps a
+  # header onto the env var holding its value, so the picker exports the
+  # service token and codex reads it at request time.
+  #
+  # The whole map must be one inline table: `-c` splits a dotted path on
+  # every `.` without honouring TOML quoting, so a quoted header segment
+  # silently lands under the wrong key and the headers never get sent.
+  # Assigning `env_http_headers` also drops the provider's implicit
+  # `env_key`, so it is stated explicitly.
+  cfAccessHeaders = "model_providers.cliproxyapi.env_http_headers={${
+    lib.concatStringsSep "," (
+      lib.mapAttrsToList (
+        header: var: "${builtins.toJSON header}=${builtins.toJSON var}"
+      ) proxy.cfAccessHeaderEnv
+    )
+  }}";
+  aiProxy = model: {
     label = "ai-proxy/${model}";
-    secrets.OPENAI_API_KEY = config.age.secrets.ai-proxy-api-key.path;
+    secrets = proxy.cfAccessSecrets // {
+      OPENAI_API_KEY = proxy.apiKeyPath;
+    };
     args = [
       "-c"
       ''preferred_auth_method="apikey"''
@@ -20,11 +39,15 @@ let
       "-c"
       ''model_providers.cliproxyapi.name="CLIProxyAPI"''
       "-c"
-      ''model_providers.cliproxyapi.base_url="https://ai-proxy.at-basking.ts.net/v1"''
+      ''model_providers.cliproxyapi.base_url="${proxy.baseUrl}/v1"''
       "-c"
       ''model_providers.cliproxyapi.wire_api="responses"''
       "-c"
       "model_providers.cliproxyapi.requires_openai_auth=true"
+      "-c"
+      ''model_providers.cliproxyapi.env_key="OPENAI_API_KEY"''
+      "-c"
+      cfAccessHeaders
       "-m"
       model
     ];
@@ -42,7 +65,7 @@ let
 in
 [ { label = "default (ChatGPT login)"; } ]
 ++ lib.optionals proxyAccounts (
-  map proxy [
+  map aiProxy [
     "claude-opus-5"
     "claude-fable-5-1"
     "gpt-6-astra"

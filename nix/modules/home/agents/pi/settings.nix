@@ -4,6 +4,7 @@
   config,
   apiAccounts,
   proxyAccounts,
+  aiProxyExtension,
   defaults,
 }:
 let
@@ -77,7 +78,9 @@ in
         (npmExtension "pi-web-access/index.ts")
         (npmExtension "pi-background-tasks/extensions/background-tasks.ts")
       ]
-      ++ lib.optional proxyAccounts "${./ai-proxy.ts}";
+      # The generated extension, not the bare source: the source alone reads a
+      # config that only the generator injects.
+      ++ lib.optional proxyAccounts "${aiProxyExtension}";
 
       # Loading an extension only registers its tools; an agent with an explicit
       # allowlist still drops anything it does not name, so each grant below

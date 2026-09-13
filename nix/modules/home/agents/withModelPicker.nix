@@ -13,10 +13,12 @@
   # Upstream package providing bin/<name>.
   package,
   # Selection entries:
-  #   label   - shown in fzf, e.g. "anthropic/claude-opus-5"
-  #   env     - static env vars (attrset of strings)
-  #   secrets - env var -> secret file path, read at runtime
-  #   args    - extra CLI args prepended to the invocation
+  #   label    - shown in fzf, e.g. "anthropic/claude-opus-5"
+  #   env      - static env vars (attrset of strings)
+  #   secrets  - env var -> secret file path, read at runtime
+  #   envExprs - env var -> shell expression, evaluated after `secrets`
+  #              so it can reference the values they exported
+  #   args     - extra CLI args prepended to the invocation
   #   fusion  - after picking one of `candidates`, further fzf prompts
   #             assign per-role models, restricted to candidates sharing
   #             the picked label's "provider/" prefix (so endpoint and
@@ -28,21 +30,46 @@
 let
   exportStatic = var: value: "export ${var}=${lib.escapeShellArg value}";
 
+  # agenix secret paths are shell fragments, not literal paths:
+  # "''${XDG_RUNTIME_DIR}/agenix/..." on Linux and
+  # "$(getconf DARWIN_USER_TEMP_DIR)/agenix/..." on Darwin. Single quotes
+  # would pass them through unexpanded and every secret would read as
+  # missing, so they are emitted double-quoted and left for the shell to
+  # resolve. Nix generates these paths; they are not user input.
+  shellPath = path: "\"${path}\"";
+
+  # -s, not -r: a zero-byte file from an interrupted or concurrent agenix
+  # decryption is readable, and exporting it empty turns a local secret
+  # problem into a confusing remote 401 at the provider.
+  #
+  # $(...) strips trailing newlines but keeps embedded CR/LF, which would
+  # forge extra entries in newline-separated header vars like
+  # ANTHROPIC_CUSTOM_HEADERS. Reject such a value rather than silently
+  # rewriting a credential.
   exportSecret =
     var: path:
     lib.concatStringsSep "\n" [
-      "if [ ! -r ${lib.escapeShellArg path} ]; then"
-      "  echo '${name}: missing secret: ${path}' >&2"
+      "if [ ! -s ${shellPath path} ]; then"
+      "  echo \"${name}: missing secret: ${path}\" >&2"
       "  exit 1"
       "fi"
-      "export ${var}=\"$(cat ${lib.escapeShellArg path})\""
+      "export ${var}=\"$(cat ${shellPath path})\""
+      "case \"\${${var}}\" in"
+      "  *[$'\\r\\n']*)"
+      "    echo \"${name}: secret contains a line break: ${path}\" >&2"
+      "    exit 1"
+      "    ;;"
+      "esac"
     ];
+
+  exportExpr = var: expr: "export ${var}=${expr}";
 
   mkArm = entry: ''
     ${lib.escapeShellArg entry.label})
       ${lib.concatStringsSep "\n  " (
         lib.mapAttrsToList exportStatic (entry.env or { })
         ++ lib.mapAttrsToList exportSecret (entry.secrets or { })
+        ++ lib.mapAttrsToList exportExpr (entry.envExprs or { })
         ++ [ "extra_args=(${lib.concatStringsSep " " (map lib.escapeShellArg (entry.args or [ ]))})" ]
       )}
       ;;
@@ -59,7 +86,9 @@ let
       mkCase = c: ''
         ${lib.escapeShellArg c.label})
           ${lib.concatStringsSep "\n      " (
-            lib.mapAttrsToList exportStatic (c.env or { }) ++ lib.mapAttrsToList exportSecret (c.secrets or { })
+            lib.mapAttrsToList exportStatic (c.env or { })
+            ++ lib.mapAttrsToList exportSecret (c.secrets or { })
+            ++ lib.mapAttrsToList exportExpr (c.envExprs or { })
           )}
           ;;
       '';

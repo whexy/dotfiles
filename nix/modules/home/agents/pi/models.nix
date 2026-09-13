@@ -5,7 +5,9 @@
   apiAccounts,
 }:
 let
-  secretKey = path: "!${pkgs.coreutils}/bin/cat ${path}";
+  # pi runs `!` values through a shell, so the quotes are what expand the
+  # `${XDG_RUNTIME_DIR}` / `$(getconf ...)` fragment in an agenix path.
+  secretKey = path: ''!${pkgs.coreutils}/bin/cat "${path}"'';
 in
 {
   providers = {

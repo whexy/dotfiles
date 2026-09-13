@@ -6,6 +6,7 @@
   lib,
   apiAccounts,
   proxyAccounts,
+  proxy,
 }:
 let
   # Claude models keep Claude Code's native family resolution. OpenAI
@@ -41,15 +42,25 @@ let
       ANTHROPIC_DEFAULT_FABLE_MODEL = model;
       CLAUDE_CODE_SUBAGENT_MODEL = model;
     };
-  # The tailnet AI proxy (CLIProxyAPI) exposes an Anthropic-compatible
-  # endpoint serving its whole catalog; Claude Code appends /v1/messages
-  # to the base URL. It accepts the key in the x-api-key header.
-  proxy = mapping: model: {
+  # The AI proxy (CLIProxyAPI) exposes an Anthropic-compatible endpoint
+  # serving its whole catalog; Claude Code appends /v1/messages to the
+  # base URL. It accepts the key in the x-api-key header.
+  #
+  # The endpoint sits behind Cloudflare Access, whose service token goes
+  # in ANTHROPIC_CUSTOM_HEADERS: `Name: Value` pairs, newline-separated.
+  aiProxy = mapping: model: {
     label = "ai-proxy/${model}";
     env = mapping model // {
-      ANTHROPIC_BASE_URL = "https://ai-proxy.at-basking.ts.net";
+      ANTHROPIC_BASE_URL = proxy.baseUrl;
     };
-    secrets.ANTHROPIC_API_KEY = config.age.secrets.ai-proxy-api-key.path;
+    secrets = proxy.cfAccessSecrets // {
+      ANTHROPIC_API_KEY = proxy.apiKeyPath;
+    };
+    envExprs.ANTHROPIC_CUSTOM_HEADERS = ''"${
+      lib.concatStringsSep "\n" (
+        lib.mapAttrsToList (header: var: "${header}: \${${var}}") proxy.cfAccessHeaderEnv
+      )
+    }"'';
   };
   anthropic = model: {
     label = "anthropic/${model}";
@@ -69,17 +80,17 @@ let
       "z-ai/glm-5.3-flash"
     ]
     ++ lib.optionals proxyAccounts (
-      map (proxy anthropicEnv) [
+      map (aiProxy anthropicEnv) [
         "claude-opus-5"
         "claude-fable-5-1"
       ]
-      ++ map (proxy mapOpenAI) [
+      ++ map (aiProxy mapOpenAI) [
         "gpt-6-astra"
         "gpt-5.6-sol"
         "gpt-5.6-terra"
         "gpt-5.6-luna"
       ]
-      ++ map (proxy pin) [
+      ++ map (aiProxy pin) [
         "kimi-k3"
         "gemini-3.8-flash"
       ]

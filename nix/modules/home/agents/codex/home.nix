@@ -4,6 +4,7 @@
   lib,
   apiAccounts,
   proxyAccounts,
+  proxy,
   withModelPicker,
 }:
 {
@@ -17,6 +18,7 @@
           lib
           apiAccounts
           proxyAccounts
+          proxy
           ;
       };
     })
