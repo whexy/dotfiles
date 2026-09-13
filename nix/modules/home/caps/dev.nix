@@ -15,6 +15,7 @@
     browser.firefox.automation.enable = lib.mkDefault true;
     ssh.enable = lib.mkDefault true;
     rclone.enable = lib.mkDefault false;
+    nix.ghTokenFlakes.enable = lib.mkDefault true;
     vcs = {
       git.enable = lib.mkDefault true;
     };

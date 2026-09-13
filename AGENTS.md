@@ -99,6 +99,21 @@ asserts `nixpkgs.config == { }` when `nixpkgs.pkgs` is set. Host-specific
 hardware lives beside the host as `hardware.nix`; reusable platform and image
 behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 
+## Private flake fetches
+
+`dotfiles.nix.ghTokenFlakes` (home, on the `dev` and `dev-lite` caps) lets
+`nix run github:whexy/<private>` work without a stored secret. Activation runs
+`nix-gh-token`, which writes the `gh` CLI token into
+`~/.config/nix/gh-token.conf`; the Home Manager-owned `nix.conf` pulls it in
+with `!include`. No `gh` login means the fragment is deleted and everything
+behaves as if the feature were off.
+
+Tokens are bound to owner scopes (`github.com/whexy`), never bare
+`github.com`: a bare stale token turns every _public_ flake fetch into an
+HTTP 401, whereas an owner-scoped one degrades to a warning plus anonymous
+access. Keep the fragment out of `nix.settings`/git, and refresh it by
+re-running activation after `gh auth login`.
+
 ## Verification
 
 (Before verification, remember to use `git add` to add new files, as flake
