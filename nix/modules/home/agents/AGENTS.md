@@ -22,10 +22,9 @@ Hierarchy Standard are not guaranteed. glibc is not always at
 
 **Blueprint**
 
-Most of my projects have flake configured with `numtide/blueprint`.
-It uses a folder structure to auto discover devshells, packages, formatters,
-checks, etc. Details about blueprint folder structure can be seen here:
-https://numtide.github.io/blueprint/main/getting-started/folder_structure/
+Most of my projects have flake configured with `numtide/blueprint`, which
+derives flake outputs from a folder structure. Read the `nix-blueprint` skill
+before adding, moving, or wiring a file in such a flake.
 
 **Dev Environment**
 
