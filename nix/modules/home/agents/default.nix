@@ -49,6 +49,8 @@ in
       enableApiAccounts = lib.mkEnableOption "enable models billed by API";
       enableProxyAccounts = lib.mkEnableOption "enable models served by the AI proxy";
 
+      firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
+
       defaultProvider = mkModelOption "provider serving the default model" {
         proxy = "ai-proxy";
         api = "openai";
@@ -88,6 +90,7 @@ in
       };
       withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
       proxy = import ./proxy.nix { inherit config; };
+      mcp = import ./mcp.nix { inherit pkgs config lib; };
 
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard all three harnesses implement.
@@ -112,6 +115,7 @@ in
             proxyAccounts
             proxy
             defaults
+            mcp
             ;
         })
         (import ./claude-code/home.nix {
@@ -123,6 +127,7 @@ in
             proxyAccounts
             proxy
             withModelPicker
+            mcp
             ;
         })
         (import ./codex/home.nix {
@@ -134,6 +139,7 @@ in
             proxyAccounts
             proxy
             withModelPicker
+            mcp
             ;
         })
         (import ./gcai/home.nix {

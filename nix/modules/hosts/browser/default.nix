@@ -3,6 +3,9 @@
 { lib, ... }:
 {
   options.dotfiles.browser = {
-    firefox.enable = lib.mkEnableOption "Firefox";
+    firefox = {
+      enable = lib.mkEnableOption "Firefox";
+      automation.enable = lib.mkEnableOption "Firefox as a headless automation target for agents";
+    };
   };
 }

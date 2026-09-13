@@ -8,7 +8,11 @@
       enable = lib.mkDefault true;
       enableApiAccounts = lib.mkDefault false;
       enableProxyAccounts = lib.mkDefault true;
+      firefoxDevtools.enable = lib.mkDefault true;
     };
+    # Agents drive Firefox headlessly, so a dev machine needs the browser
+    # whether or not it has a display.
+    browser.firefox.automation.enable = lib.mkDefault true;
     ssh.enable = lib.mkDefault true;
     rclone.enable = lib.mkDefault false;
     vcs = {

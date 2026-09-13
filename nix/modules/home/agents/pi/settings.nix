@@ -6,6 +6,7 @@
   proxyAccounts,
   aiProxyExtension,
   defaults,
+  mcp,
 }:
 let
   # Keep cycling order and per-model thinking defaults in one ordered list.
@@ -62,7 +63,10 @@ in
     "npm:@narumitw/pi-goal"
     "npm:pi-subagents"
     "npm:pi-background-tasks"
-  ];
+  ]
+  # pi ships no MCP client by design; the adapter adds one that keeps server
+  # tool definitions out of the context window until they are searched.
+  ++ lib.optional (mcp.servers != { }) "npm:pi-mcp-adapter";
 
   npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
 
