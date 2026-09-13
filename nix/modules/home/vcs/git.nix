@@ -29,6 +29,12 @@ in
         enable = true;
         lfs.enable = true;
 
+        # Agent scratch directories are per-machine and never belong to a repo.
+        ignores = [
+          ".pi/"
+          ".claude/"
+        ];
+
         signing = {
           key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn";
           signByDefault = true;
