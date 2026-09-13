@@ -20,6 +20,15 @@ in
         enable = true;
         enableCompletion = true;
 
+        # Upstream dumps to $ZDOTDIR/.zcompdump; keep it out of $HOME. Unused when
+        # oh-my-zsh is enabled, which runs its own compinit (see zsh-extras.nix).
+        completionInit = ''
+          zcompdump_dir="''${XDG_CACHE_HOME:-$HOME/.cache}/zsh"
+          [[ -d $zcompdump_dir ]] || mkdir -p $zcompdump_dir
+          autoload -U compinit && compinit -d "$zcompdump_dir/zcompdump-$ZSH_VERSION"
+          unset zcompdump_dir
+        '';
+
         history = {
           save = 10000;
           size = 10000;

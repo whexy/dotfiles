@@ -141,6 +141,13 @@ in
               ''
             ))
 
+            # oh-my-zsh runs compinit itself (at order 800) and defaults the dump
+            # to $HOME; redirect it before it is sourced.
+            (lib.mkOrder 550 ''
+              ZSH_COMPDUMP="''${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-''${HOST%%.*}-$ZSH_VERSION"
+              [[ -d ''${ZSH_COMPDUMP:h} ]] || mkdir -p ''${ZSH_COMPDUMP:h}
+            '')
+
             # Main shell configuration (default order 1000).
             ''
               # fzf configuration
