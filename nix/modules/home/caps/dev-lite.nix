@@ -10,6 +10,7 @@
       enableProxyAccounts = lib.mkDefault true;
     };
     ssh.enable = lib.mkDefault true;
+    nix.ghTokenFlakes.enable = lib.mkDefault true;
     vcs = {
       git.enable = lib.mkDefault true;
     };
