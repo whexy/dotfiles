@@ -175,12 +175,22 @@ def serve(state, proxy, lock_fd):
             ).start()
 
 
+def in_multiplexer():
+    # herdr marks panes with an explicit value rather than mere presence, so it
+    # is compared exactly the way herdr's own shell integrations do.
+    return bool(
+        os.environ.get("TMUX")
+        or os.environ.get("ZELLIJ")
+        or os.environ.get("HERDR_ENV") == "1"
+    )
+
+
 def shell_socket():
     state, proxy = locations()
     current = os.environ.get("SSH_AUTH_SOCK", "")
     if not os.environ.get("SSH_CONNECTION"):
         return current
-    if os.environ.get("TMUX") or os.environ.get("ZELLIJ"):
+    if in_multiplexer():
         register(state, proxy)
         return str(proxy)
     if current and Path(current) != proxy:

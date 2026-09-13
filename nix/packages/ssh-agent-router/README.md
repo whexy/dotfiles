@@ -1,8 +1,8 @@
 # SSH agent routing
 
 Ordinary SSH shells retain the forwarded `SSH_AUTH_SOCK` supplied by sshd.
-Persistent tmux and Zellij shells use `~/.ssh/ssh-agent.sock`, served by a
-small per-user proxy. No private keys are stored by the proxy.
+Persistent tmux, Zellij, and herdr shells use `~/.ssh/ssh-agent.sock`, served
+by a small per-user proxy. No private keys are stored by the proxy.
 
 Routing applies only inside an inbound SSH session. On a local desktop the
 configured 1Password `IdentityAgent` stays in effect even when a keyring or
@@ -25,7 +25,8 @@ opens a new connection and can select another agent.
 ## Office and laptop workflow
 
 1. Connect from the office desktop: the desktop agent is registered.
-2. Connect from a laptop and attach to tmux: the laptop agent is newer and wins.
+2. Connect from a laptop and attach to a multiplexer: the laptop agent is newer
+   and wins.
 3. Close the laptop connection: subsequent requests fall back to the desktop.
 4. Reconnect from the laptop: its new socket takes priority again.
 
