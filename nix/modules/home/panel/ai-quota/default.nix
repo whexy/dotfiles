@@ -7,5 +7,6 @@
     ./sketchybar.nix
     ./waybar.nix
     ./eww.nix
+    ./tmux.nix
   ];
 }
