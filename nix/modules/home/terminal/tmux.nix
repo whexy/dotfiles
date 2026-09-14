@@ -37,7 +37,7 @@ in
         set -g renumber-windows on
         set-option -g focus-events on
         set -g set-clipboard on
-        set -g status-position top
+        set -g status-position bottom
         set -g status-right-length 200
         set -g status-left-length 100
       '';
