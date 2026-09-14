@@ -20,7 +20,6 @@
       git.enable = lib.mkDefault true;
     };
     terminal = {
-      zellij.enable = lib.mkDefault true;
       adopt.enable = lib.mkDefault true;
     };
     shell = {
