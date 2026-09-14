@@ -178,14 +178,6 @@ create_session() {
     zellij attach --create-background "$session" >/dev/null
     zellij --session "$session" run -- "$runner" >/dev/null
     ;;
-  herdr)
-    local created
-    created=$(herdr tab create --cwd "$PWD" --label "$session" --no-focus) ||
-      die "could not create a herdr tab; is a herdr session running?"
-    herdr_tab=$(printf '%s' "$created" | jq -er '.result.tab.tab_id')
-    herdr_pane=$(printf '%s' "$created" | jq -er '.result.root_pane.pane_id')
-    herdr pane run "$herdr_pane" "$runner" >/dev/null
-    ;;
   esac
 }
 
@@ -193,7 +185,6 @@ destroy_session() {
   case "$backend" in
   tmux) tmux kill-session -t "$session" 2>/dev/null || true ;;
   zellij) zellij delete-session "$session" --force >/dev/null 2>&1 || true ;;
-  herdr) [ -n "${herdr_tab:-}" ] && herdr tab close "$herdr_tab" >/dev/null 2>&1 || true ;;
   esac
 }
 
@@ -211,16 +202,6 @@ attach_session() {
       note "already inside zellij; attach elsewhere with: zellij attach $session"
     else
       zellij attach "$session"
-    fi
-    ;;
-  herdr)
-    if [ "${HERDR_ENV:-}" = 1 ]; then
-      herdr tab focus "$herdr_tab" >/dev/null
-    else
-      local running
-      running=$(herdr session list | awk 'NR > 1 && $2 == "running" { print $1; exit }')
-      [ -n "$running" ] || die "no running herdr session to attach to"
-      herdr session attach "$running"
     fi
     ;;
   esac

@@ -68,7 +68,7 @@ class RouterTests(unittest.TestCase):
         self.env = dict(
             os.environ, HOME=str(self.home), SSH_CONNECTION="test-connection"
         )
-        for name in ("SSH_AUTH_SOCK", "TMUX", "ZELLIJ", "HERDR_ENV"):
+        for name in ("SSH_AUTH_SOCK", "TMUX", "ZELLIJ"):
             self.env.pop(name, None)
         self.agents = []
 
@@ -180,17 +180,13 @@ class RouterTests(unittest.TestCase):
         ordinary = self.command("shell", SSH_AUTH_SOCK=str(agent.path))
         self.assertEqual(ordinary.returncode, 0, ordinary.stderr)
         self.assertEqual(ordinary.stdout.strip(), str(agent.path))
-        panes = (("TMUX", "session"), ("ZELLIJ", "session"), ("HERDR_ENV", "1"))
+        panes = (("TMUX", "session"), ("ZELLIJ", "session"))
         for variable, value in panes:
             pane = self.command(
                 "shell", SSH_AUTH_SOCK=str(agent.path), **{variable: value}
             )
             self.assertEqual(pane.returncode, 0, pane.stderr)
             self.assertEqual(pane.stdout.strip(), str(self.proxy))
-        # herdr sets HERDR_ENV=1 inside panes; any other value is not a pane.
-        outside = self.command("shell", SSH_AUTH_SOCK=str(agent.path), HERDR_ENV="0")
-        self.assertEqual(outside.returncode, 0, outside.stderr)
-        self.assertEqual(outside.stdout.strip(), str(agent.path))
         local = self.command(
             "shell", SSH_CONNECTION="", SSH_AUTH_SOCK="/local/1password"
         )

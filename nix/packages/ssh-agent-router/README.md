@@ -1,7 +1,7 @@
 # SSH agent routing
 
 Ordinary SSH shells retain the forwarded `SSH_AUTH_SOCK` supplied by sshd.
-Persistent tmux, Zellij, and herdr shells use `~/.ssh/ssh-agent.sock`, served
+Persistent tmux and Zellij shells use `~/.ssh/ssh-agent.sock`, served
 by a small per-user proxy. No private keys are stored by the proxy.
 
 Routing applies only inside an inbound SSH session. On a local desktop the

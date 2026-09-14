@@ -21,7 +21,6 @@
     };
     terminal = {
       zellij.enable = lib.mkDefault true;
-      herdr.enable = lib.mkDefault true;
       adopt.enable = lib.mkDefault true;
     };
     shell = {

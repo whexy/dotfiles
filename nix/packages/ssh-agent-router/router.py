@@ -176,13 +176,7 @@ def serve(state, proxy, lock_fd):
 
 
 def in_multiplexer():
-    # herdr marks panes with an explicit value rather than mere presence, so it
-    # is compared exactly the way herdr's own shell integrations do.
-    return bool(
-        os.environ.get("TMUX")
-        or os.environ.get("ZELLIJ")
-        or os.environ.get("HERDR_ENV") == "1"
-    )
+    return bool(os.environ.get("TMUX") or os.environ.get("ZELLIJ"))
 
 
 def shell_socket():
