@@ -187,7 +187,10 @@ in
             selector = ''textarea:not([readonly],[aria-readonly]),div[role="textbox"],[contenteditable="true"]'';
           };
         };
-        hardtime.enable = true;
+        hardtime = {
+          enable = true;
+          settings.disable_mouse = false;
+        };
       };
 
       extraPlugins = with vimPkgs.vimPlugins; [
