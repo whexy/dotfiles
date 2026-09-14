@@ -57,8 +57,9 @@ const OWNER_TO_PROVIDER: Record<string, string> = {
   xai: "xai",
 };
 
-// Proxy-specific variants reuse the canonical catalog entry and change only
-// the property that differs at the proxy boundary.
+// Models the catalog cannot answer for borrow a canonical entry and change
+// only what differs: a proxy-specific variant of that entry, or a model whose
+// vendor has no catalog provider and which is wire-compatible with its base.
 const MODEL_ALIASES: Record<
   string,
   { provider: string; id: string; overrides?: Partial<Model> }
@@ -67,6 +68,25 @@ const MODEL_ALIASES: Record<
     provider: "moonshotai",
     id: "kimi-k3",
     overrides: { contextWindow: 256 * 1024 },
+  },
+  // Cognition post-trained SWE-2 from Kimi K3, so it inherits that model's
+  // wire compatibility; its RL trains every reasoning effort in one run,
+  // which is why medium is a real level here and not on the base model.
+  "devin/swe-2": {
+    provider: "moonshotai",
+    id: "kimi-k3",
+    overrides: {
+      name: "Devin SWE-2",
+      thinkingLevelMap: {
+        off: null,
+        minimal: null,
+        low: null,
+        medium: "medium",
+        high: "high",
+        xhigh: null,
+        max: "max",
+      },
+    },
   },
 };
 

@@ -18,6 +18,7 @@ let
 
     # Powerful intelligence
     (model "ai-proxy/claude-fable-5-1" "medium")
+    (model "ai-proxy/devin/swe-2" "high")
     (model "openrouter/meta/muse-spark-1.3-contributor" "max")
 
     # DEI models

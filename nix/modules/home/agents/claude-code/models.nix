@@ -93,6 +93,7 @@ let
       ++ map (aiProxy pin) [
         "kimi-k3"
         "gemini-3.8-flash"
+        "devin/swe-2"
       ]
     )
     ++ lib.optionals apiAccounts (
