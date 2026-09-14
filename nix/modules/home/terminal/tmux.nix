@@ -38,7 +38,7 @@ in
         set-option -g focus-events on
         set -g set-clipboard on
         set -g status-position top
-        set -g status-right-length 100
+        set -g status-right-length 200
         set -g status-left-length 100
       '';
 
@@ -47,7 +47,6 @@ in
         resurrect
         continuum
         copycat
-        cpu
         {
           plugin = yank;
           extraConfig = "set -g @custom_copy_command 'true'";
@@ -67,8 +66,7 @@ in
             set -g @catppuccin_status_module_text_bg '#{E:@thm_mantle}'
 
             set -g status-left '#{E:@catppuccin_status_session}'
-            set -gF status-right "#{E:@catppuccin_status_cpu}"
-            set -agF status-right "#{@catppuccin_status_user}"
+            set -g status-right ""
           '';
         }
       ];
