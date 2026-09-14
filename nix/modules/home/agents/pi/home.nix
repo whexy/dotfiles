@@ -32,6 +32,23 @@ let
   };
   webSearch = import ./web-search.nix { inherit defaults; };
 
+  # Delegation policy is a skill, not prompt text: it only applies once the
+  # agent is already about to launch a subagent, and AGENTS.md keeps the gate
+  # that sends it here. The roster half depends on which providers this host
+  # has, so the file is assembled rather than symlinked, which also keeps it
+  # out of ../skills (one store symlink shared with codex and claude, neither
+  # of which has a subagent tool).
+  delegationPolicy = pkgs.writeText "delegation-policy-SKILL.md" (
+    builtins.readFile ./skills/delegation-policy/SKILL_BASE.md
+    + "\n"
+    + (
+      if proxyAccounts then
+        builtins.readFile ./skills/delegation-policy/ROSTER_TIER_A.md
+      else
+        builtins.readFile ./skills/delegation-policy/ROSTER_TIER_B.md
+    )
+  );
+
   # A launch failure caches a 24h model exclusion that outlives its cause and
   # cannot be cleared from inside a running session, so a transient proxy or
   # config error blocks that model for the rest of the day. Five minutes still
@@ -43,21 +60,11 @@ in
 {
   packages = [ pkgs.llm-agents.pi ];
   homeFiles = {
-    # Shared global rules; pi-specific delegation guidance is tiered by
-    # proxy availability (TIER A allows liberal subagent spawning on the
-    # proxy, TIER B is conservative). Other agents consume the plain
-    # AGENTS.md.
+    # Shared global rules plus the pi-only `whoami` mechanism. Other agents
+    # consume the plain AGENTS.md.
     ".pi/agent/AGENTS.md".text =
-      builtins.readFile ../AGENTS.md
-      + "\n"
-      + builtins.readFile ./SPECIAL_INSTRUCTION.md
-      + "\n"
-      + (
-        if proxyAccounts then
-          builtins.readFile ./DELEGATION_TIER_A.md
-        else
-          builtins.readFile ./DELEGATION_TIER_B.md
-      );
+      builtins.readFile ../AGENTS.md + "\n" + builtins.readFile ./SPECIAL_INSTRUCTION.md;
+    ".pi/agent/skills/delegation-policy/SKILL.md".source = delegationPolicy;
     ".pi/agent/settings.json".text = builtins.toJSON settings;
     ".pi/agent/extensions/subagent/config.json".text = builtins.toJSON subagentConfig;
     ".pi/agent/models.json".text = builtins.toJSON models;
