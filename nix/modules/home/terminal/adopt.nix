@@ -1,6 +1,6 @@
-# totmux / tozellij / toherdr: move an already-running job into a multiplexer.
+# totmux / tozellij: move an already-running job into a multiplexer.
 #
-# One script drives all three backends; the Nix prelude below pins the backend
+# One script drives both backends; the Nix prelude below pins the backend
 # and the reptyr path. A wrapper is only installed when its backend is enabled,
 # and only on Linux, since reptyr is Linux/FreeBSD-only.
 {
@@ -16,16 +16,13 @@ let
     backend:
     pkgs.writeShellApplication {
       name = "to${backend}";
-      runtimeInputs =
-        with pkgs;
-        [
-          coreutils
-          gnugrep
-          gnused
-          gawk
-          procps
-        ]
-        ++ lib.optionals (backend == "herdr") [ jq ];
+      runtimeInputs = with pkgs; [
+        coreutils
+        gnugrep
+        gnused
+        gawk
+        procps
+      ];
       # The script reads the backend and reptyr path from this prelude instead
       # of argv[0], so a renamed or symlinked wrapper still targets one backend.
       text = ''
@@ -37,9 +34,7 @@ let
     };
 
   wrappers =
-    lib.optional cfg.tmux.enable (adopt "tmux")
-    ++ lib.optional cfg.zellij.enable (adopt "zellij")
-    ++ lib.optional cfg.herdr.enable (adopt "herdr");
+    lib.optional cfg.tmux.enable (adopt "tmux") ++ lib.optional cfg.zellij.enable (adopt "zellij");
 in
 {
   config = lib.mkIf (cfg.adopt.enable && pkgs.stdenv.isLinux) {
