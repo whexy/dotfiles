@@ -20,14 +20,14 @@
     }
     {
       name = "codex";
-      title = "Codex";
+      title = "GPT";
       variable = "codex";
       icon = "󰚩";
       logo = ./logos/codex.png;
     }
     {
       name = "antigravity";
-      title = "Antigravity";
+      title = "Gemini";
       variable = "antigravity";
       icon = "󰇂";
       logo = ./logos/antigravity.png;
