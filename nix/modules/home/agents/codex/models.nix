@@ -72,6 +72,7 @@ in
     "gpt-5.6-sol"
     "gpt-5.6-terra"
     "kimi-k3"
+    "devin/swe-2"
   ]
 )
 ++ lib.optionals apiAccounts (
