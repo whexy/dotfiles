@@ -58,7 +58,11 @@ let
   };
 in
 {
-  packages = [ pkgs.llm-agents.pi ];
+  # Extension install scripts invoke node through PATH, even with an absolute npmCommand.
+  packages = [
+    pkgs.llm-agents.pi
+    pkgs.nodejs
+  ];
   homeFiles = {
     # Shared global rules plus the pi-only `whoami` mechanism. Other agents
     # consume the plain AGENTS.md.
