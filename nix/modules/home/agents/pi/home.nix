@@ -48,14 +48,6 @@ let
         builtins.readFile ./skills/delegation-policy/ROSTER_TIER_B.md
     )
   );
-
-  # A launch failure caches a 24h model exclusion that outlives its cause and
-  # cannot be cleared from inside a running session, so a transient proxy or
-  # config error blocks that model for the rest of the day. Five minutes still
-  # absorbs a flapping provider without surviving the fix for it.
-  subagentConfig = {
-    modelExclusions.defaultTtlMs = 5 * 60 * 1000;
-  };
 in
 {
   # Extension install scripts invoke node through PATH, even with an absolute npmCommand.
@@ -70,7 +62,6 @@ in
       builtins.readFile ../AGENTS.md + "\n" + builtins.readFile ./SPECIAL_INSTRUCTION.md;
     ".pi/agent/skills/delegation-policy/SKILL.md".source = delegationPolicy;
     ".pi/agent/settings.json".text = builtins.toJSON settings;
-    ".pi/agent/extensions/subagent/config.json".text = builtins.toJSON subagentConfig;
     ".pi/agent/models.json".text = builtins.toJSON models;
     ".pi/agent/spending-guard.json".text = builtins.toJSON { enabled = false; };
     ".pi/web-search.json".text = builtins.toJSON webSearch;
