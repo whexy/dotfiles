@@ -1,10 +1,11 @@
-{ inputs, config, ... }:
+{ inputs, ... }:
 {
   imports = [
     inputs.self.homeModules.all
   ]
   ++ inputs.self.lib.homeCapsModules [
     "base"
+    "sysadmin"
   ];
 
   nixpkgs.config.allowUnfree = true;
@@ -12,16 +13,7 @@
     inputs.self.lib.overlays.unstable
     inputs.self.lib.overlays.llm-tools
   ];
-  dotfiles = {
-    autoUpgrade.enable = true;
-    agents = {
-      enable = true;
-      enableApiAccounts = false;
-      enableProxyAccounts = true;
-    };
-  };
-
-  age.identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
+  dotfiles.autoUpgrade.enable = true;
 
   targets.genericLinux.enable = true;
   targets.genericLinux.gpu.enable = false;
