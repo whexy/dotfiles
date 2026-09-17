@@ -14,6 +14,9 @@
     # (macOS uses Karabiner from the home keyboard group).
     keyboard.kanata.enable = lib.mkDefault true;
     keyboard.fcitx5.enable = lib.mkDefault true;
+    # Privileged helper for the Vicinae launcher's paste and snippet
+    # expansion; only has an effect on NixOS.
+    launcher.inputServer.enable = lib.mkDefault true;
     security = {
       # Desktop authentication services and 1Password GUI; only have an effect on NixOS.
       keyring.enable = lib.mkDefault true;

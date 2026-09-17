@@ -30,6 +30,7 @@ in
         lib.optionalAttrs (!isDarwin) {
           # Linux desktop (Wayland/niri)
           wm.niri.enable = lib.mkDefault true;
+          launcher.vicinae.enable = lib.mkDefault true;
           keyboard.fcitx5.enable = lib.mkDefault true;
           desktop = {
             mako.enable = lib.mkDefault true;
