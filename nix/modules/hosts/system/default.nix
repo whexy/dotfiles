@@ -8,7 +8,7 @@ in
     timezone.enable = lib.mkEnableOption "the dotfiles timezone (America/Chicago)";
 
     autoUpgrade = {
-      enable = lib.mkEnableOption "daily auto-upgrade from github:whexy/dotfiles";
+      enable = lib.mkEnableOption "daily auto-upgrade from the upstream dotfiles repo";
 
       configuration = lib.mkOption {
         type = lib.types.str;
@@ -16,9 +16,9 @@ in
         defaultText = "config.dotfiles.host.hostName";
         description = ''
           The nixosConfigurations.<name> (NixOS) or
-          darwinConfigurations.<name> (Darwin) output of
-          github:whexy/dotfiles to switch to. Override when the flake output
-          name differs from the runtime hostname (e.g. moore has
+          darwinConfigurations.<name> (Darwin) output of the upstream repo
+          (flake.lib.upstreamRef) to switch to. Override when the flake
+          output name differs from the runtime hostname (e.g. moore has
           networking.hostName "moore-vm").
         '';
         example = "remote-dev";
