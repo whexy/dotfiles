@@ -20,6 +20,7 @@ let
 in
 {
   dotfiles = {
+    nix.nh.enable = lib.mkDefault true;
     monitors.htop.enable = lib.mkDefault true;
     monitors.btop.enable = lib.mkDefault true;
     terminal.tmux.enable = lib.mkDefault true;
@@ -49,7 +50,6 @@ in
         podman
         rsync
         wget
-        nh
         unzip
         zstd
       ]
