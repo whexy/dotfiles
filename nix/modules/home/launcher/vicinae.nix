@@ -6,7 +6,9 @@
 # session service; the niri binds in wm/niri.nix only send IPC commands to it.
 args@{
   config,
+  inputs,
   lib,
+  pkgs,
   ...
 }:
 let
@@ -14,6 +16,7 @@ let
   cfg = config.dotfiles.launcher;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
   inputServerEnabled = osConfig.dotfiles.launcher.inputServer.enable or false;
+  storeExtensions = inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system};
 in
 {
   config = lib.mkIf (cfg.vicinae.enable && !isDarwin) {
@@ -38,6 +41,11 @@ in
         # command, without paying for an index query on every keystroke.
         search_files_in_root = false;
       };
+
+      extensions = [
+        storeExtensions.niri
+        storeExtensions.nix
+      ];
     };
 
     # The daemon otherwise looks for the helper next to its own binary, where
