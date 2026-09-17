@@ -50,6 +50,7 @@
       network.enable = lib.mkDefault true;
       extras.enable = lib.mkDefault true;
       debug.enable = lib.mkDefault true;
+      woodpecker.enable = lib.mkDefault true;
     };
   };
 
