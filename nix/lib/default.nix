@@ -2,6 +2,12 @@
 let
   inherit (inputs.nixpkgs) lib;
 
+  # Where this repo is published. Machines fetch their own definition from
+  # here when they upgrade themselves, so it is a runtime input to the
+  # configuration rather than a documentation string. Changing the repo
+  # location means changing it here.
+  upstreamRef = "github:whexy/dotfiles";
+
   overlays = {
     container-darwin = import ../overlays/container-darwin.nix;
     direnv-darwin = import ../overlays/direnv-darwin.nix;
@@ -60,6 +66,7 @@ let
 in
 {
   inherit
+    upstreamRef
     overlays
     capsModules
     homeCapsModules

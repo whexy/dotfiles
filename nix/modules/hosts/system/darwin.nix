@@ -1,5 +1,10 @@
 # System Darwin configuration: nix-darwin state version and auto-upgrade.
-{ config, lib, ... }:
+{
+  config,
+  flake,
+  lib,
+  ...
+}:
 let
   cfg = config.dotfiles.system;
 in
@@ -7,12 +12,12 @@ in
   config = lib.mkMerge [
     { system.stateVersion = 6; }
 
-    # Daily auto-upgrade of this host from github:whexy/dotfiles.
+    # Daily auto-upgrade of this host from the upstream repo.
     #
     # NixOS uses system.autoUpgrade (nixos-upgrade.service/.timer); Darwin
     # has no equivalent, so we install a root launchd daemon that runs the
     # same command:
-    #   darwin-rebuild switch --refresh --flake github:whexy/dotfiles#<configuration>
+    #   darwin-rebuild switch --refresh --flake <upstreamRef>#<configuration>
     #
     # StartCalendarInterval behaves like the NixOS timer's `persistent = true`:
     # launchd coalesces missed runs into a single job on the next wake, unlike
@@ -26,7 +31,7 @@ in
 
           exec ${lib.getExe config.system.build.darwin-rebuild} switch \
             --refresh \
-            --flake github:whexy/dotfiles#${cfg.autoUpgrade.configuration}
+            --flake ${flake.lib.upstreamRef}#${cfg.autoUpgrade.configuration}
         '';
 
         serviceConfig = {
