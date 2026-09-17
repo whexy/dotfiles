@@ -5,7 +5,10 @@
 { flake, lib, ... }:
 {
   dotfiles = {
-    nix.caches.enable = lib.mkDefault true;
+    nix = {
+      caches.enable = lib.mkDefault true;
+      pinRegistry.enable = lib.mkDefault true;
+    };
     shell.zsh.enable = lib.mkDefault true;
     # No-op on Darwin: the compat group only ships a nixos.nix.
     compat.envfs.enable = lib.mkDefault true;
