@@ -1,4 +1,4 @@
-# Nix group: user-level nix.conf.
+# Nix group: user-level nix.conf and the nh CLI helper.
 {
   config,
   lib,
@@ -10,6 +10,8 @@ let
   tokenFile = "${config.xdg.configHome}/nix/gh-token.conf";
 in
 {
+  imports = [ ./nh.nix ];
+
   options.dotfiles.nix = {
     ghTokenFlakes = {
       enable = lib.mkEnableOption "using the gh CLI token for private `github:` flake fetches";
