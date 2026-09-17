@@ -13,7 +13,6 @@
       qemu
       sqlite
       watchexec
-      woodpecker-cli
       xh
       yazi
       yq

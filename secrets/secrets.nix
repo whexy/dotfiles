@@ -8,6 +8,7 @@ in
   "b2-key.age".publicKeys = [ key ];
   "b2-crypt-password.age".publicKeys = [ key ];
   "beszel-token.age".publicKeys = [ key ];
+  "woodpecker-token.age".publicKeys = [ key ];
   "nas-webdav-pass.age".publicKeys = [ key ];
   "cf-access-dotfiles-id.age".publicKeys = [ key ];
   "cf-access-dotfiles-secret.age".publicKeys = [ key ];

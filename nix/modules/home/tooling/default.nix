@@ -9,6 +9,14 @@
     network.enable = lib.mkEnableOption "network diagnostic tools";
     extras.enable = lib.mkEnableOption "extra dev utilities";
     debug.enable = lib.mkEnableOption "Linux tracing, profiling, and fuzzing tools";
+    woodpecker = {
+      enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
+      server = lib.mkOption {
+        type = lib.types.str;
+        default = "https://make.clusters.work";
+        description = "Woodpecker server URL passed as WOODPECKER_SERVER.";
+      };
+    };
   };
 
   imports = [
@@ -16,5 +24,6 @@
     ./debug.nix
     ./extras.nix
     ./network.nix
+    ./woodpecker.nix
   ];
 }
