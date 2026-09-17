@@ -231,6 +231,7 @@ export const stack: { name: string; note: string }[] = [
   { name: "zsh", note: "shell" },
   { name: "ghostty", note: "terminal emulator" },
   { name: "niri", note: "scrollable-tiling wayland compositor" },
+  { name: "vicinae", note: "launcher, clipboard history and command palette" },
   { name: "waybar", note: "status bar" },
   { name: "sketchybar", note: "status bar for macOS" },
   { name: "aerospace", note: "tiling wm for macOS" },

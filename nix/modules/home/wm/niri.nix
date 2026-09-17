@@ -109,6 +109,11 @@ in
         # Skip the hotkey overlay on startup (we have custom binds)
         hotkey-overlay.skip-at-startup = true;
 
+        # Vicinae opens apps and URLs without an xdg-activation token, so
+        # without this the compositor refuses the focus handoff and launched
+        # windows come up unfocused behind the current column.
+        debug.honor-xdg-activation-with-invalid-serial = [ ];
+
         # Static output configuration derived from dotfiles.hardware.monitors declarations.
         # Connectors not listed there fall back to the IPC script below.
         outputs = niriOutputs;
@@ -228,22 +233,28 @@ in
             "${meh}+M".action.maximize-column = [ ];
 
             # ── Launcher & Clipboard (Hyper +) ───────────────────────
-            # App launcher (fuzzel)
+            # Command palette. `toggle` talks to the running vicinae daemon
+            # over IPC, so the bind is cheap even though the process is big.
             "${hyper}+Space" = {
-              action.spawn = "fuzzel";
+              action.spawn = [
+                "vicinae"
+                "toggle"
+              ];
               repeat = false;
             };
             "${meh}+Space" = {
-              action.spawn = "fuzzel";
+              action.spawn = [
+                "vicinae"
+                "toggle"
+              ];
               repeat = false;
             };
 
-            # Clipboard history picker
+            # Clipboard history, straight into the matching vicinae command.
             "${hyper}+C" = {
               action.spawn = [
-                "sh"
-                "-c"
-                "cliphist list | fuzzel -d | cliphist decode | wl-copy"
+                "vicinae"
+                "vicinae://launch/clipboard/history"
               ];
               repeat = false;
             };
