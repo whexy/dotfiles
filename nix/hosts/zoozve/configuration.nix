@@ -10,8 +10,12 @@
     modules = [ ./disk-config.nix ];
   };
 
+  # Incus guest on venus, sharing its public IP with k8s-4 and the other
+  # personal VM there; each node needs its own WireGuard port so the host's
+  # masquerade keeps preserving it. k8s-4 holds the default 41641.
   dotfiles = {
     system.autoUpgrade.enable = true;
+    network.tailscale.port = 41643;
     platform.incusVm = {
       enable = true;
       # The hypervisor is not fully trusted. Disable every agent API that can
