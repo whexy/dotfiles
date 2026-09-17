@@ -14,6 +14,10 @@ in
     (lib.mkIf cfg.networkmanager.enable { networking.networkmanager.enable = true; })
 
     (lib.mkIf cfg.tailscale.enable {
+      services.tailscale = {
+        enable = true;
+        port = cfg.tailscale.port;
+      };
       networking.firewall.trustedInterfaces = [ "tailscale0" ];
     })
   ];
