@@ -83,22 +83,6 @@ Also repeat with a different Nix Bash after a system update. This probe does not
 validate all activation operations, signing-certificate renewal, or daemon
 self-replacement during a real switch. Production integration needs those tests.
 
-## Observed result
-
-On the tested macOS 27.0 machine (build 26A428):
-
-- Revision 1 without FDA failed to create the temporary directory with
-  `Operation not permitted`, exiting with code 1.
-- After granting FDA only to **Dotfiles Updater Probe**, revision 1 created and
-  removed the temporary symlink successfully, exiting with code 0.
-- Replacing the app with revision 2, signed with the same Apple Development
-  identity, succeeded without changing the FDA grant. The executable hashes
-  differed and the designated signing requirements matched.
-
-This verifies the tested user-switching process chain and one signed executable
-replacement. It does not yet verify a different Nix Bash, full system activation,
-certificate renewal, or production daemon lifecycle behavior.
-
 ## Remove
 
 After the probe exits, unload it and remove only its own artifacts:

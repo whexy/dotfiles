@@ -12,7 +12,7 @@ in
 {
   config = lib.mkMerge [
     # Auto-upgrade of this host from the upstream repo, via the dotfiles-upgraded
-    # daemon (packages/dotfiles-upgraded, docs/design/auto-upgrade-daemon.md).
+    # daemon (packages/dotfiles-upgraded).
     # It replaces the stock nixos-upgrade.timer rather than joining it: two
     # concurrent rebuilds would contend on the Nix store lock.
     (lib.mkIf cfg.autoUpgrade.enable {

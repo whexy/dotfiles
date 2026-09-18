@@ -1,6 +1,6 @@
 # Auto-upgrade of a standalone Home Manager setup (non-NixOS hosts) from the
 # upstream repo, via the dotfiles-upgraded daemon running as a long-lived user
-# service (packages/dotfiles-upgraded, docs/design/auto-upgrade-daemon.md).
+# service (packages/dotfiles-upgraded).
 #
 # The daemon polls upstream, waits for CI to pass on the new commit, and then
 # runs the same command documented for manual use, plus --refresh:
