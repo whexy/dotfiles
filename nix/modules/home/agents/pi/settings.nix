@@ -13,7 +13,7 @@ let
   model = id: thinkingLevel: { inherit id thinkingLevel; };
   models = [
     # Daily drivers
-    (model "ai-proxy/claude-opus-5" "high")
+    (model "ai-proxy/claude-opus-5" "medium")
     (model "ai-proxy/gpt-6-astra" "low")
 
     # Powerful intelligence
