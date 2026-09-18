@@ -3,6 +3,8 @@
   config,
   flake,
   lib,
+  pkgs,
+  perSystem,
   ...
 }:
 let
@@ -12,38 +14,40 @@ in
   config = lib.mkMerge [
     { system.stateVersion = 6; }
 
-    # Daily auto-upgrade of this host from the upstream repo.
-    #
-    # NixOS uses system.autoUpgrade (nixos-upgrade.service/.timer); Darwin
-    # has no equivalent, so we install a root launchd daemon that runs the
-    # same command:
-    #   darwin-rebuild switch --refresh --flake <upstreamRef>#<configuration>
-    #
-    # StartCalendarInterval behaves like the NixOS timer's `persistent = true`:
-    # launchd coalesces missed runs into a single job on the next wake, unlike
-    # cron which drops them.
+    # Auto-upgrade of this host from the upstream repo, via the dotfiles-upgraded
+    # daemon (packages/dotfiles-upgraded, docs/design/auto-upgrade-daemon.md).
+    # The daemon schedules and jitters internally, so launchd only has to keep
+    # it alive; the calendar-interval job and its `sleep $((RANDOM % 2700))`
+    # jitter it needed are gone.
     (lib.mkIf cfg.autoUpgrade.enable {
-      launchd.daemons.dotfiles-auto-upgrade = {
+      launchd.daemons.dotfiles-upgraded = {
         script = ''
-          # Randomize the 04:00 run by up to 45 minutes (matching the NixOS
-          # timer's randomizedDelaySec) so all hosts don't build at once.
-          sleep $((RANDOM % 2700))
-
-          exec ${lib.getExe config.system.build.darwin-rebuild} switch \
-            --refresh \
-            --flake ${flake.lib.upstreamRef}#${cfg.autoUpgrade.configuration}
+          exec ${lib.getExe perSystem.self.dotfiles-upgraded} \
+            --mode=darwin \
+            --configuration=${lib.escapeShellArg cfg.autoUpgrade.configuration} \
+            --flake=${lib.escapeShellArg flake.lib.upstreamRef} \
+            --state-dir=/var/lib/dotfiles-upgraded \
+            --poll-interval=${lib.escapeShellArg cfg.autoUpgrade.pollInterval} \
+            --max-attempts=${toString cfg.autoUpgrade.maxAttempts} \
+            --require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}
         '';
 
-        serviceConfig = {
-          StartCalendarInterval = [
-            {
-              Hour = 4;
-              Minute = 0;
-            }
-          ];
+        # darwin-rebuild shells out to nix and git, and launchd daemons start
+        # with a minimal PATH that contains neither.
+        environment.PATH = "${
+          lib.makeBinPath [
+            pkgs.gitMinimal
+            config.nix.package
+            config.system.build.darwin-rebuild
+          ]
+        }:/usr/bin:/bin";
 
-          StandardOutPath = "/var/log/dotfiles-auto-upgrade.log";
-          StandardErrorPath = "/var/log/dotfiles-auto-upgrade.log";
+        serviceConfig = {
+          KeepAlive = true;
+          RunAtLoad = true;
+
+          StandardOutPath = "/var/log/dotfiles-upgraded.log";
+          StandardErrorPath = "/var/log/dotfiles-upgraded.log";
           ProcessType = "Background";
         };
       };
