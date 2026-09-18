@@ -35,8 +35,8 @@ package upgrades from unloading the process performing activation.
 
 3. Add **Dotfiles Updater.app** to Full Disk Access in System Settings and enable
    it. This is a different identity from **Dotfiles Updater Probe**; the probe's
-   grant does not transfer. No Bash or Nix FDA grants are required by the tested
-   process chain.
+   grant does not transfer. Grant access to the app, not individual Nix-store
+   Bash or Nix binaries.
 
 4. Enable `dotfiles.system.autoUpgrade.enable` for the host. **Publish this
    configuration to the tracked upstream and let CI pass before starting the
@@ -60,18 +60,6 @@ When transferring the bundle to another Mac, use `scp -rp` to preserve executabl
 permissions. Still apply the explicit executable mode above after installation.
 If launchd previously failed to spawn a non-executable launcher, unload and
 bootstrap the job after fixing permissions rather than issuing `kickstart`.
-
-## Verified deployment
-
-Golf and Sheridan both completed full daemon-driven activation of commit
-`d89e653c6d0556ed4759ff4af52f8605130d1295`, including Home Manager, with
-`lastError: null` and zero consecutive failures. Golf also logged the successful
-exit and restart of the Nix-managed updater under the stable launcher. Both
-machines retain their own FDA grant for the production app.
-
-This validates unattended activation on these installations. Permission retention
-across signed binary replacement was tested separately with the FDA probe; signing
-certificate renewal remains untested.
 
 ## Observe and recover
 
@@ -105,7 +93,8 @@ entrypoint and daemon, not the plist or signed launcher.
 
 The native launcher intentionally stays outside Nix's changing store paths.
 Updating it requires an explicit signed replacement while the daemon is stopped.
-Certificate renewal, other macOS versions, and full activation must be validated
-separately from the successful FDA probe. There is no unauthenticated arbitrary
+After changing the signing certificate or upgrading macOS, verify a full
+daemon-driven activation; the FDA probe alone does not exercise all activation
+operations. There is no unauthenticated arbitrary
 local-flake activation endpoint; routine updates follow the configured upstream
 and existing CI gate.
