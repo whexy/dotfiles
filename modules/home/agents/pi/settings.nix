@@ -117,6 +117,15 @@ in
     {
       inherit defaultExtensions;
       agentOverrides = {
+        # Native children keep the operator-wide rules as well as project rules.
+        scout.inheritGlobalContext = true;
+        researcher.inheritGlobalContext = true;
+        worker.inheritGlobalContext = true;
+        reviewer.inheritGlobalContext = true;
+        oracle.inheritGlobalContext = true;
+        delegate.inheritGlobalContext = true;
+        evidence-auditor.inheritGlobalContext = true;
+
         # Recon reads what is already on disk; a build it cannot outlive would
         # only stall the handoff it exists to produce.
         scout.tools = readTools ++ [
