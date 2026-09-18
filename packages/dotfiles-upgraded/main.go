@@ -27,17 +27,18 @@ func main() {
 }
 
 type options struct {
-	mode           string
-	configuration  string
-	flakeRef       string
-	repo           string
-	ref            string
-	stateDir       string
-	pollInterval   time.Duration
-	maxAttempts    int
-	requireCIPass  bool
-	switchTimeout  time.Duration
-	pendingTimeout time.Duration
+	exitAfterSwitch bool
+	mode            string
+	configuration   string
+	flakeRef        string
+	repo            string
+	ref             string
+	stateDir        string
+	pollInterval    time.Duration
+	maxAttempts     int
+	requireCIPass   bool
+	switchTimeout   time.Duration
+	pendingTimeout  time.Duration
 }
 
 func run() error {
@@ -53,6 +54,7 @@ func run() error {
 	flag.BoolVar(&opt.requireCIPass, "require-ci-pass", true, "only switch to commits whose GitHub commit status is success")
 	flag.DurationVar(&opt.switchTimeout, "switch-timeout", 6*time.Hour, "hard limit on a single rebuild")
 	flag.DurationVar(&opt.pendingTimeout, "pending-timeout", 2*time.Hour, "give up on a commit whose CI stays pending this long")
+	flag.BoolVar(&opt.exitAfterSwitch, "exit-after-switch", false, "exit after a successful switch so a stable supervisor can reload the active binary")
 	flag.Parse()
 
 	if opt.mode == "" {
@@ -98,12 +100,13 @@ func run() error {
 	}
 
 	eng := engine.New(engine.Config{
-		Ref:            opt.ref,
-		PollInterval:   opt.pollInterval,
-		MaxAttempts:    opt.maxAttempts,
-		RequireCIPass:  opt.requireCIPass,
-		PendingTimeout: opt.pendingTimeout,
-		JitterSeed:     hostname + "/" + opt.configuration,
+		ExitAfterSwitch: opt.exitAfterSwitch,
+		Ref:             opt.ref,
+		PollInterval:    opt.pollInterval,
+		MaxAttempts:     opt.maxAttempts,
+		RequireCIPass:   opt.requireCIPass,
+		PendingTimeout:  opt.pendingTimeout,
+		JitterSeed:      hostname + "/" + opt.configuration,
 	}, client, sw, store, realClock{}, log)
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)

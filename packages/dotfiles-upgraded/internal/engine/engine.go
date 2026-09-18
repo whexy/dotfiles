@@ -37,11 +37,13 @@ type Switcher interface {
 
 // Config holds the tuning the module surface exposes.
 type Config struct {
-	Ref            string
-	PollInterval   time.Duration
-	MaxAttempts    int
-	RequireCIPass  bool
-	PendingTimeout time.Duration
+	// ExitAfterSwitch lets a stable supervisor reload the newly activated binary.
+	ExitAfterSwitch bool
+	Ref             string
+	PollInterval    time.Duration
+	MaxAttempts     int
+	RequireCIPass   bool
+	PendingTimeout  time.Duration
 	// JitterSeed keeps each host's tick offset stable and distinct, so the
 	// fleet does not converge on a synchronised poll.
 	JitterSeed string
@@ -103,7 +105,11 @@ func New(cfg Config, refs Refs, sw Switcher, store Store, clock Clock, log *slog
 // Run polls until ctx ends.
 func (e *Engine) Run(ctx context.Context) {
 	for {
+		previous := e.st.LastSuccessSha
 		wait := e.RunOnce(ctx)
+		if e.Config.ExitAfterSwitch && e.st.LastSuccessSha != previous {
+			return
+		}
 		if ctx.Err() != nil {
 			return
 		}

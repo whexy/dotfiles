@@ -1,5 +1,7 @@
 { flake, ... }:
 {
+  dotfiles.system.autoUpgrade.enable = true;
+
   imports = flake.lib.darwinHost {
     system = "aarch64-darwin";
     hostName = "golf";
