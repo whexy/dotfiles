@@ -50,7 +50,7 @@ in
           WatchPaths = [ config.age.secrets.beszel-token.path ];
           EnvironmentVariables = {
             KEY = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIBlZA5rswnKHS8M8ZMxqTxlJ8FM0Y9Pt9jrt52kGfC3m";
-            HUB_URL = "https://beszel.at-basking.ts.net";
+            HUB_URL = "https://if.clusters.work";
             PORT = "45876";
           };
           StandardOutPath = "/var/log/beszel-agent.log";
