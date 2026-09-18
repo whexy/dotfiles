@@ -10,4 +10,6 @@
     ];
     modules = [ ./hardware.nix ];
   };
+
+  dotfiles.system.autoUpgrade.enable = true;
 }
