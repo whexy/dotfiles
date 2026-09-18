@@ -109,6 +109,9 @@ func (s *Store) Load() State {
 
 // Save persists the state atomically.
 func (s *Store) Save(st State) error {
+	if st.IgnoredShas == nil {
+		st.IgnoredShas = []string{}
+	}
 	return s.writeJSON(stateFile, st)
 }
 

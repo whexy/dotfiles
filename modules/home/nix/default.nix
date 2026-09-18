@@ -46,8 +46,8 @@ in
 
       # gh reads its token from the keyring, so the value cannot be captured at
       # build time. If the token is later rotated the fragment goes stale and
-      # fetches under `scopes` warn and fall back to anonymous access, which
-      # only reaches public repos; re-running activation repairs it.
+      # every fetch under `scopes` fails with HTTP 401 until activation runs
+      # again, which validates the token and drops the fragment.
       activation.nixGhToken = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
         run ${perSystem.self.nix-gh-token}/bin/nix-gh-token \
           --out ${lib.escapeShellArg tokenFile} \
