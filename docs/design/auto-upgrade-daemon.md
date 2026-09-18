@@ -373,6 +373,18 @@ The module changes in §5.3 replace rather than add, which enforces this.
 Because hosts pull, a host converts itself when it picks up the commit
 enabling the daemon on it.
 
+Rollout record (2026-09-17): NixOS (`mudd`) and standalone HM (`venus`)
+converted and completed an unattended switch. **Darwin is not enabled on any
+host.** An unattended `darwin-rebuild switch` from a root launchd daemon fails
+during Home Manager activation with `Operation not permitted` on files under
+`~/Library/Application Support` (TCC: the daemon lacks the Full Disk Access
+that an interactive terminal has); the same class of failure (Homebrew
+prompting for sudo, protected paths) is why the previous Darwin calendar job
+was also left disabled. The daemon itself behaved correctly on `golf`: it
+streamed the activation log, retried with backoff, and would have ignored the
+SHA after `maxAttempts`. Fixing Darwin unattended activation is a separate
+task; until then Darwin hosts are upgraded manually.
+
 ## 6. CI implications
 
 `.woodpecker.yml` becomes load-bearing: it is the gate on what reaches the

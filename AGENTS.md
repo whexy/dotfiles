@@ -109,10 +109,12 @@ with `!include`. No `gh` login means the fragment is deleted and everything
 behaves as if the feature were off.
 
 Tokens are bound to owner scopes (`github.com/whexy`), never bare
-`github.com`: a bare stale token turns every _public_ flake fetch into an
-HTTP 401, whereas an owner-scoped one degrades to a warning plus anonymous
-access. Keep the fragment out of `nix.settings`/git, and refresh it by
-re-running activation after `gh auth login`.
+`github.com`, so a stale token can only break fetches under that owner rather
+than every _public_ flake fetch. A rejected token still fails those fetches
+with HTTP 401 (Nix does not fall back to anonymous access), which is why
+`nix-gh-token` probes the token against the API and drops the fragment when
+GitHub rejects it. Keep the fragment out of `nix.settings`/git, and refresh it
+by re-running activation after `gh auth login`.
 
 ## Verification
 

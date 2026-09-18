@@ -40,6 +40,15 @@ pkgs.writeShellScriptBin "nix-gh-token" ''
     token=$(${pkgs.gh}/bin/gh auth token 2>/dev/null || true)
   fi
 
+  # `gh auth token` hands back whatever is stored, revoked or not, and Nix's
+  # tarball fetcher hard-fails with HTTP 401 on a rejected token instead of
+  # retrying anonymously. Probe the token so a rotated one is dropped rather
+  # than materialised.
+  if [ -n "$token" ] && ! GH_TOKEN="$token" ${pkgs.gh}/bin/gh api user --silent 2>/dev/null; then
+    echo "nix-gh-token: stored gh token was rejected by GitHub; not writing $out" >&2
+    token=""
+  fi
+
   # A logged-out `gh` still exits 0 in some configurations, so emptiness of the
   # output is the only reliable signal.
   if [ -z "$token" ] || [ ''${#scopes[@]} -eq 0 ]; then
