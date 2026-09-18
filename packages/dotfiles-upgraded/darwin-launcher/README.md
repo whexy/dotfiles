@@ -29,6 +29,7 @@ package upgrades from unloading the process performing activation.
      '/Applications/Dotfiles Updater.app'
    sudo chown -R root:wheel '/Applications/Dotfiles Updater.app'
    sudo chmod -R go-w '/Applications/Dotfiles Updater.app'
+   sudo chmod 755 '/Applications/Dotfiles Updater.app/Contents/MacOS/dotfiles-updater-launcher'
    codesign --verify --strict '/Applications/Dotfiles Updater.app'
    ```
 
@@ -54,6 +55,23 @@ package upgrades from unloading the process performing activation.
    prompts. The initial foreground switch may still need your terminal's privacy
    access; it is not evidence of the daemon's FDA attribution. Verify a subsequent
    daemon-driven switch through its log.
+
+When transferring the bundle to another Mac, use `scp -rp` to preserve executable
+permissions. Still apply the explicit executable mode above after installation.
+If launchd previously failed to spawn a non-executable launcher, unload and
+bootstrap the job after fixing permissions rather than issuing `kickstart`.
+
+## Verified deployment
+
+Golf and Sheridan both completed full daemon-driven activation of commit
+`d89e653c6d0556ed4759ff4af52f8605130d1295`, including Home Manager, with
+`lastError: null` and zero consecutive failures. Golf also logged the successful
+exit and restart of the Nix-managed updater under the stable launcher. Both
+machines retain their own FDA grant for the production app.
+
+This validates unattended activation on these installations. Permission retention
+across signed binary replacement was tested separately with the FDA probe; signing
+certificate renewal remains untested.
 
 ## Observe and recover
 
