@@ -17,4 +17,8 @@
       flake.lib.overlays.ssh-wsl
     ];
   };
+
+  dotfiles = {
+    system.autoUpgrade.enable = true;
+  };
 }
