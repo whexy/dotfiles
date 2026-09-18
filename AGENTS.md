@@ -3,12 +3,12 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 
 ## Layout
 
-- `/nix/hosts` - Blueprint host definitions
-- `/nix/modules/hosts` - semantic system setting groups shared by NixOS and Darwin
-- `/nix/modules/caps` - system capability preset modules
-- `/nix/modules/home` - semantic Home Manager software groups
-- `/nix/modules/home/caps` - Home Manager capability preset modules
-- `/nix/overlays` - nixpkgs overlays
+- `/hosts` - Blueprint host definitions
+- `/modules/hosts` - semantic system setting groups shared by NixOS and Darwin
+- `/modules/caps` - system capability preset modules
+- `/modules/home` - semantic Home Manager software groups
+- `/modules/home/caps` - Home Manager capability preset modules
+- `/overlays` - nixpkgs overlays
 
 ### System configs
 
@@ -19,12 +19,12 @@ still belongs to that semantic group. For example, passwordless sudo,
 
 Each group follows this pattern:
 
-- `nix/modules/hosts/<group>/default.nix` - declares `dotfiles.<group>.*`
+- `modules/hosts/<group>/default.nix` - declares `dotfiles.<group>.*`
   options (every option has a default)
-- `nix/modules/hosts/<group>/nixos.nix` - NixOS config gated by those options
-- `nix/modules/hosts/<group>/darwin.nix` - Darwin config gated by those options
+- `modules/hosts/<group>/nixos.nix` - NixOS config gated by those options
+- `modules/hosts/<group>/darwin.nix` - Darwin config gated by those options
 
-`nix/modules/hosts/nixos.nix` and `darwin.nix` recursively aggregate the
+`modules/hosts/nixos.nix` and `darwin.nix` recursively aggregate the
 matching files and exclude the other platform. Platforms, images, user setup,
 and custom hardware metadata are option-driven groups under this same tree;
 there are no separate `modules/nixos` or `modules/darwin` directories.
@@ -42,7 +42,7 @@ Home features represent software, grouped when related. Examples:
 A group's `default.nix` declares its `dotfiles.<group>.*` options and imports
 its config files; config is gated with `lib.mkIf`. Standalone software can put
 options and config together in its own `default.nix`. `homeModules.all`
-aggregates all feature modules, while presets under `nix/modules/home/caps`
+aggregates all feature modules, while presets under `modules/home/caps`
 are imported selectively.
 
 ## Capabilities
@@ -50,8 +50,8 @@ are imported selectively.
 Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, `service`), but
 **caps are not options or features**. They are preset modules:
 
-- `nix/modules/caps/<cap>.nix` assigns system `dotfiles.*` options
-- `nix/modules/home/caps/<cap>.nix` assigns Home Manager software options and
+- `modules/caps/<cap>.nix` assigns system `dotfiles.*` options
+- `modules/home/caps/<cap>.nix` assigns Home Manager software options and
   cap-specific package lists
 
 Feature option defaults have the lowest priority. Importing a cap assigns
@@ -68,7 +68,7 @@ and simply have no config on the other platform.
 
 ## Putting them together
 
-Blueprint discovers hosts from `nix/hosts/<name>`. NixOS hosts use
+Blueprint discovers hosts from `hosts/<name>`. NixOS hosts use
 `configuration.nix`; Darwin hosts use `darwin-configuration.nix`. Both are
 blueprint's native loaders, so blueprint wires Home Manager for every host: it
 imports the HM module, discovers users from
@@ -132,5 +132,5 @@ Enter it with `nix develop`, or automatically via `direnv allow` (uses
 that run treefmt + statix + nil + deadnix before each commit. The same checks
 run in CI via `nix flake check` / `just check` (`checks.<system>.pre-commit`).
 
-Formatter definitions live in `nix/treefmt.nix` (single source of truth, shared by
+Formatter definitions live in `treefmt.nix` (single source of truth, shared by
 `nix fmt`, the pre-commit hook, and the flake check).
