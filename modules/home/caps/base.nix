@@ -53,6 +53,9 @@ in
         unzip
         zstd
       ]
+      # Native hosts get the CLI from the tailscaled service; WSL has no
+      # daemon of its own and drives the Windows client instead.
+      ++ lib.optionals isWsl [ tailscale-wsl ]
       ++ lib.optionals (!isDarwin) [
         git # macOS: use native git to avoid keychain prompt
       ];
