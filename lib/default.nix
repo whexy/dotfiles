@@ -15,6 +15,7 @@ let
     lkl-bigmem = import ../overlays/lkl-bigmem.nix;
     op-wsl = import ../overlays/op-wsl.nix;
     ssh-wsl = import ../overlays/ssh-wsl.nix;
+    tailscale-wsl = import ../overlays/tailscale-wsl.nix;
     unstable = import ../overlays/unstable.nix { inherit (inputs) nixpkgs-unstable; };
     tailscale-security = import ../overlays/tailscale-security.nix;
     firefox-devtools-mcp-profile = import ../overlays/firefox-devtools-mcp-profile.nix;
