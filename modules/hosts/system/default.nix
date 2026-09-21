@@ -54,6 +54,28 @@ in
           Disabling this removes the only gate on what reaches this host.
         '';
       };
+
+      maxJobs = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 2;
+        description = ''
+          Derivations the daemon's rebuild may build concurrently
+          (Nix's max-jobs). Unattended builds land at arbitrary times, so
+          they are throttled below the machine's capacity to leave room
+          for whatever else the host is doing; a manual rebuild is
+          unaffected and still uses the system-wide default.
+        '';
+      };
+
+      cores = lib.mkOption {
+        type = lib.types.ints.positive;
+        default = 2;
+        description = ''
+          Cores offered to each individual derivation the daemon builds
+          (Nix's cores, i.e. $NIX_BUILD_CORES). Peak load is roughly
+          maxJobs * cores, since a parallel build takes both.
+        '';
+      };
     };
 
     fwupd.enable = lib.mkEnableOption "Linux Vendor firmware service";

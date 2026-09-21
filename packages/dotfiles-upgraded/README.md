@@ -119,6 +119,13 @@ nh home switch <flake>/<sha> --refresh --no-nom -c <configuration> -b backup
 `PATH` must contain `git` and Nix. Runtime failures are retried and recorded;
 the process exits non-zero only on a bad configuration.
 
+Build parallelism is not a flag: the daemon runs whatever rebuild it is given,
+and the modules throttle it by exporting `NIX_CONFIG` (`max-jobs`, `cores`) in
+the service environment. These settings reach the `nix-daemon` over the socket,
+which is what actually schedules the builds, so an unattended rebuild is capped
+while a manual one still uses the machine default. Limiting the daemon's own
+cgroup would bound this supervisor rather than the builds it triggers.
+
 ## Verification
 
 ```sh
