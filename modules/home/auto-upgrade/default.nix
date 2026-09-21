@@ -103,6 +103,28 @@ in
         Disabling this removes the only gate on what reaches this host.
       '';
     };
+
+    maxJobs = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 2;
+      description = ''
+        Derivations the daemon's rebuild may build concurrently
+        (Nix's max-jobs). Unattended builds land at arbitrary times, so
+        they are throttled below the machine's capacity to leave room for
+        whatever else the host is doing; a manual `nh home switch` is
+        unaffected and still uses the system-wide default.
+      '';
+    };
+
+    cores = lib.mkOption {
+      type = lib.types.ints.positive;
+      default = 2;
+      description = ''
+        Cores offered to each individual derivation the daemon builds
+        (Nix's cores, i.e. $NIX_BUILD_CORES). Peak load is roughly
+        maxJobs * cores, since a parallel build takes both.
+      '';
+    };
   };
 
   config = lib.mkIf cfg.enable {
@@ -131,6 +153,14 @@ in
               ++ lib.optional (config.nix.package != null) config.nix.package
             )
           }:${config.home.homeDirectory}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/bin:/usr/bin:/bin"
+
+          # Throttles only this daemon's builds; the settings reach the
+          # nix-daemon over the socket, which is what actually schedules
+          # them. Home Manager renders this list into the unit verbatim, so
+          # the separator is the literal two-character escape that systemd
+          # expands into a newline, not a real one (which would split the
+          # Environment= line and break the unit).
+          ''NIX_CONFIG=max-jobs = ${toString cfg.maxJobs}\ncores = ${toString cfg.cores}''
         ];
         ExecStart = lib.escapeShellArgs [
           (lib.getExe perSystem.self.dotfiles-upgraded)

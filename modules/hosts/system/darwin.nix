@@ -18,6 +18,9 @@ let
       ]
     }:/usr/bin:/bin:/usr/sbin:/sbin
     export HOME=/var/root
+    # Throttles only this daemon's builds; the settings reach the nix-daemon
+    # over the socket, which is what actually schedules them.
+    export NIX_CONFIG=$'max-jobs = ${toString cfg.autoUpgrade.maxJobs}\ncores = ${toString cfg.autoUpgrade.cores}'
     exec ${lib.getExe perSystem.self.dotfiles-upgraded} \
       --mode=darwin \
       --exit-after-switch \

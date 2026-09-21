@@ -47,6 +47,12 @@ in
           // {
             inherit (config.environment.sessionVariables) NIX_PATH;
             HOME = "/root";
+
+            # Throttles only this daemon's builds; the settings reach the
+            # nix-daemon over the socket, which is what actually schedules
+            # them (a cgroup limit on this unit would bound the supervisor
+            # instead). systemd turns the \n into a real newline.
+            NIX_CONFIG = "max-jobs = ${toString cfg.autoUpgrade.maxJobs}\ncores = ${toString cfg.autoUpgrade.cores}";
           }
           // config.networking.proxy.envVars;
 
