@@ -20,7 +20,11 @@ let
 in
 {
   dotfiles = {
-    nix.nh.enable = lib.mkDefault true;
+    nix = {
+      nh.enable = lib.mkDefault true;
+      caches.enable = lib.mkDefault (osConfig == null);
+      pinRegistry.enable = lib.mkDefault (osConfig == null);
+    };
     monitors.htop.enable = lib.mkDefault true;
     monitors.btop.enable = lib.mkDefault true;
     terminal.tmux.enable = lib.mkDefault true;

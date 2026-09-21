@@ -140,9 +140,8 @@ in
       Service = {
         Type = "simple";
         # nh shells out to nix; the user manager on generic-Linux hosts does
-        # not inherit the login PATH. nix.package is null on these hosts (HM
-        # does not manage the Nix installation), so include the standard
-        # profile locations explicitly.
+        # not inherit the login PATH. Include the standard profile locations
+        # as a fallback when no nix.package is selected for the user.
         Environment = [
           "PATH=${
             lib.makeBinPath (
