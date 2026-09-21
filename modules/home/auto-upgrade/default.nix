@@ -156,10 +156,10 @@ in
           # Throttles only this daemon's builds; the settings reach the
           # nix-daemon over the socket, which is what actually schedules
           # them. Home Manager renders this list into the unit verbatim, so
-          # the separator is the literal two-character escape that systemd
-          # expands into a newline, not a real one (which would split the
-          # Environment= line and break the unit).
-          ''NIX_CONFIG=max-jobs = ${toString cfg.maxJobs}\ncores = ${toString cfg.cores}''
+          # the quotes and the literal two-character escape are both ours:
+          # unquoted, systemd splits the value on the spaces around `=`; a
+          # real newline would split the Environment= line instead.
+          ''"NIX_CONFIG=max-jobs = ${toString cfg.maxJobs}\ncores = ${toString cfg.cores}"''
         ];
         ExecStart = lib.escapeShellArgs [
           (lib.getExe perSystem.self.dotfiles-upgraded)
