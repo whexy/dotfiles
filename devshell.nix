@@ -2,6 +2,7 @@
   inputs,
   flake,
   system,
+  perSystem,
   ...
 }:
 let
@@ -19,6 +20,10 @@ pkgs.mkShell {
     prettier
     shfmt
     taplo
+    # Python packages: interpreter with their dependencies, checker, linter.
+    perSystem.self.agent-settings.devPython
+    basedpyright
+    ruff
   ];
   inherit (preCommit) shellHook;
 }
