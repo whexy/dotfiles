@@ -1,162 +1,53 @@
-# Wrap an agent CLI with an fzf provider/model picker.
-#
-# claude and codex cannot switch models while running; the model must be
-# fixed before launch (claude: ANTHROPIC_* env vars, codex: -m flag). On
-# interactive launches the wrapper prompts with fzf, exports the env for
-# the selected provider/model (reading API keys from agenix secrets at
-# runtime), and execs the real binary. Launches with arguments or without
-# a TTY skip the picker so scripts keep working.
-{ pkgs, lib }:
+# Native user configuration stays writable; only the catalog and policy inputs
+# live in the store. Agent command names never invoke the selection UI.
+{ pkgs }:
 {
-  # Binary name; also becomes the picker's prompt.
   name,
-  # Upstream package providing bin/<name>.
   package,
-  # Selection entries:
-  #   label    - shown in fzf, e.g. "anthropic/claude-opus-5-5"
-  #   env      - static env vars (attrset of strings)
-  #   secrets  - env var -> secret file path, read at runtime
-  #   envExprs - env var -> shell expression, evaluated after `secrets`
-  #              so it can reference the values they exported
-  #   args     - extra CLI args prepended to the invocation
-  #   fusion  - after picking one of `candidates`, further fzf prompts
-  #             assign per-role models, restricted to candidates sharing
-  #             the picked label's "provider/" prefix (so endpoint and
-  #             key stay consistent):
-  #               roles      - [{ name, prompt, export }]
-  #               candidates - entries with label/env/secrets
   entries,
-  # Args prepended to every invocation, including scripted launches that
-  # skip the picker.
-  extraArgs ? [ ],
+  mcpServers ? { },
+  maintainedSettings ? { },
+  resetEnv ? [ ],
 }:
 let
-  exportStatic = var: value: "export ${var}=${lib.escapeShellArg value}";
-
-  # agenix secret paths are shell fragments, not literal paths:
-  # "''${XDG_RUNTIME_DIR}/agenix/..." on Linux and
-  # "$(getconf DARWIN_USER_TEMP_DIR)/agenix/..." on Darwin. Single quotes
-  # would pass them through unexpanded and every secret would read as
-  # missing, so they are emitted double-quoted and left for the shell to
-  # resolve. Nix generates these paths; they are not user input.
-  shellPath = path: "\"${path}\"";
-
-  # -s, not -r: a zero-byte file from an interrupted or concurrent agenix
-  # decryption is readable, and exporting it empty turns a local secret
-  # problem into a confusing remote 401 at the provider.
-  #
-  # $(...) strips trailing newlines but keeps embedded CR/LF, which would
-  # forge extra entries in newline-separated header vars like
-  # ANTHROPIC_CUSTOM_HEADERS. Reject such a value rather than silently
-  # rewriting a credential.
-  exportSecret =
-    var: path:
-    lib.concatStringsSep "\n" [
-      "if [ ! -s ${shellPath path} ]; then"
-      "  echo \"${name}: missing secret: ${path}\" >&2"
-      "  exit 1"
-      "fi"
-      "export ${var}=\"$(cat ${shellPath path})\""
-      "case \"\${${var}}\" in"
-      "  *[$'\\r\\n']*)"
-      "    echo \"${name}: secret contains a line break: ${path}\" >&2"
-      "    exit 1"
-      "    ;;"
-      "esac"
-    ];
-
-  exportExpr = var: expr: "export ${var}=${expr}";
-
-  mkArm = entry: ''
-    ${lib.escapeShellArg entry.label})
-      ${lib.concatStringsSep "\n  " (
-        lib.mapAttrsToList exportStatic (entry.env or { })
-        ++ lib.mapAttrsToList exportSecret (entry.secrets or { })
-        ++ lib.mapAttrsToList exportExpr (entry.envExprs or { })
-        ++ [ "extra_args=(${lib.concatStringsSep " " (map lib.escapeShellArg (entry.args or [ ]))})" ]
-      )}
-      ;;
+  python = pkgs.python3.withPackages (p: [ p.tomlkit ]);
+  manifest = pkgs.writeText "${name}-settings-catalog.json" (
+    builtins.toJSON {
+      inherit
+        name
+        entries
+        mcpServers
+        maintainedSettings
+        resetEnv
+        ;
+      real = "${package}/bin/${name}";
+      fzf = "${pkgs.fzf}/bin/fzf";
+    }
+  );
+  runtime = "${python}/bin/python3 ${./agent-settings.py} ${manifest}";
+  launcher = pkgs.writeShellScriptBin name ''
+    exec ${runtime} launch "$@"
   '';
-
-  mkFusionArm =
-    entry:
-    let
-      roles = entry.fusion.roles;
-      candidates = entry.fusion.candidates;
-      total = toString (lib.length roles + 1);
-      # The picked candidate's env brings endpoint, key, and the main
-      # ANTHROPIC_MODEL; fusion only overrides the role defaults after.
-      mkCase = c: ''
-        ${lib.escapeShellArg c.label})
-          ${lib.concatStringsSep "\n      " (
-            lib.mapAttrsToList exportStatic (c.env or { })
-            ++ lib.mapAttrsToList exportSecret (c.secrets or { })
-            ++ lib.mapAttrsToList exportExpr (c.envExprs or { })
-          )}
-          ;;
-      '';
-      mkRole = i: role: ''
-        ${role.name}=$(printf '%s\n' "''${candidates[@]}" |
-          grep -F "''${main%%/*}/" |
-          ${pkgs.fzf}/bin/fzf --prompt='[${toString (i + 1)}/${total}] ${role.prompt}> ' --reverse) || exit 0
-        export ${role.export}="''${${role.name}#*/}"
-      '';
-    in
-    ''
-      ${lib.escapeShellArg entry.label})
-        candidates=(${lib.concatStringsSep " " (map lib.escapeShellArg (map (c: c.label) candidates))})
-        main=$(printf '%s\n' "''${candidates[@]}" |
-          ${pkgs.fzf}/bin/fzf --prompt='[1/${total}] main model> ' --reverse) || exit 0
-        case "$main" in
-        ${lib.concatMapStrings mkCase candidates}esac
-        export CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT=1
-        export CLAUDE_CODE_SUBAGENT_MODEL="''${main#*/}"
-        ${lib.concatImapStrings mkRole roles}
-        extra_args=()
-        ;;
-    '';
-
-  mkEntryArm = entry: if entry ? fusion then mkFusionArm entry else mkArm entry;
-
-  picker = pkgs.writeShellScriptBin name ''
-    set -euo pipefail
-
-    real=${lib.escapeShellArg (package + "/bin/${name}")}
-    base_args=(${lib.concatStringsSep " " (map lib.escapeShellArg extraArgs)})
-
-    # Arguments or a pipe mean a scripted launch: the caller already
-    # chose the model and env.
-    if [ "$#" -gt 0 ] || [ ! -t 0 ]; then
-      exec "$real" "''${base_args[@]}" "$@"
-    fi
-
-    choice=$(
-      printf '%s\n' ${lib.concatStringsSep " " (map (e: lib.escapeShellArg e.label) entries)} |
-        ${pkgs.fzf}/bin/fzf --prompt='${name}> ' --reverse --height='~100%' \
-          --header='Select provider/model'
-    ) || exit 0
-
-    extra_args=()
-    case "$choice" in
-    ${lib.concatMapStrings mkEntryArm entries}
-    esac
-
-    exec "$real" "''${base_args[@]}" "''${extra_args[@]}" "$@"
+  selector = pkgs.writeShellScriptBin "${name}-select" ''
+    exec ${runtime} select ${launcher}/bin/${name} "$@"
+  '';
+  sync = pkgs.writeShellScriptBin "${name}-settings-sync" ''
+    exec ${runtime} sync "$@"
   '';
 in
-# Re-expose the upstream package with bin/<name> shadowed by the picker.
-pkgs.runCommand "${name}-picker" { meta.mainProgram = name; } ''
-  mkdir -p $out
+pkgs.runCommand "${name}-settings" { meta.mainProgram = name; } ''
+  mkdir -p $out/bin
   for p in ${package}/*; do
-    ln -s "$p" $out/
+    if [ "$(basename "$p")" != bin ]; then
+      ln -s "$p" $out/
+    fi
   done
-  if [ -L $out/bin ]; then
-    rm $out/bin
-    mkdir $out/bin
-    for f in ${package}/bin/*; do
-      ln -s "$f" $out/bin/
-    done
-  fi
-  rm -f $out/bin/${name}
-  ln -s ${picker}/bin/${name} $out/bin/${name}
+  for p in ${package}/bin/*; do
+    if [ "$(basename "$p")" != ${name} ]; then
+      ln -s "$p" $out/bin/
+    fi
+  done
+  ln -s ${launcher}/bin/${name} $out/bin/${name}
+  ln -s ${selector}/bin/${name}-select $out/bin/${name}-select
+  ln -s ${sync}/bin/${name}-settings-sync $out/bin/${name}-settings-sync
 ''

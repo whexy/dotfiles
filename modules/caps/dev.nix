@@ -27,6 +27,7 @@ in
       binfmt.enable = lib.mkDefault true;
     };
     security = {
+      agentPolicy.enable = lib.mkDefault true;
       onepassword.enable = lib.mkDefault true;
       passwordlessSudo.enable = lib.mkDefault true;
     };

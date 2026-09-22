@@ -2,6 +2,7 @@
 { lib, ... }:
 {
   options.dotfiles.security = {
+    agentPolicy.enable = lib.mkEnableOption "managed Claude Nix-store permission rules";
     passwordlessSudo.enable = lib.mkEnableOption "passwordless sudo for the wheel group";
     onepassword.enable = lib.mkEnableOption "1Password system integration (CLI)";
     onepasswordGui.enable = lib.mkEnableOption "1Password GUI (Linux: _1password-gui; macOS: Homebrew cask)";

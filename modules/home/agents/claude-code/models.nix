@@ -56,11 +56,7 @@ let
     secrets = proxy.cfAccessSecrets // {
       ANTHROPIC_API_KEY = proxy.apiKeyPath;
     };
-    envExprs.ANTHROPIC_CUSTOM_HEADERS = ''"${
-      lib.concatStringsSep "\n" (
-        lib.mapAttrsToList (header: var: "${header}: \${${var}}") proxy.cfAccessHeaderEnv
-      )
-    }"'';
+    secretHeaders = proxy.cfAccessHeaderEnv;
   };
   anthropic = model: {
     label = "anthropic/${model}";

@@ -12,6 +12,7 @@ in
   dotfiles = {
     system.timezone.enable = lib.mkDefault true;
     nix.optimise.enable = lib.mkDefault true;
+    security.agentPolicy.enable = lib.mkDefault true;
     security.onepassword.enable = lib.mkDefault true;
     network.tailscale.enable = lib.mkDefault true;
     shell.nushell.enable = lib.mkDefault true;

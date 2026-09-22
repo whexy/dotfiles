@@ -89,7 +89,7 @@ in
         default = "${cfg.defaultProvider}/${cfg.defaultModel}";
         cheap = "${cfg.defaultCheapProvider}/${cfg.defaultCheapModel}";
       };
-      withModelPicker = import ./withModelPicker.nix { inherit pkgs lib; };
+      withModelPicker = import ./withModelPicker.nix { inherit pkgs; };
       proxy = import ./proxy.nix { inherit config; };
       mcp = import ./mcp.nix { inherit pkgs config lib; };
 
@@ -193,9 +193,12 @@ in
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
 
-        activation = cmux.activation // {
-          inherit migrateSkillsDir;
-        };
+        activation =
+          cmux.activation
+          // lib.mergeAttrsList (map (a: a.activation or { }) agents)
+          // {
+            inherit migrateSkillsDir;
+          };
       };
 
       # Secrets stay at agenix's default runtime location. Every consumer
