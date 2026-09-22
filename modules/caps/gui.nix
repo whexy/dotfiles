@@ -2,6 +2,7 @@
 { lib, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
+    terminal.cmux.enable = lib.mkDefault true;
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).
