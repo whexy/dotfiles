@@ -4,6 +4,8 @@ let
   key = "age1tmghvzq2kq9seud5uu9hh833g0v4z2356nsqumknfnluawa6qe9qt6k886";
 in
 {
+  "atuin-key.age".publicKeys = [ key ];
+  "atuin-session.age".publicKeys = [ key ];
   "b2-account.age".publicKeys = [ key ];
   "b2-key.age".publicKeys = [ key ];
   "b2-crypt-password.age".publicKeys = [ key ];
