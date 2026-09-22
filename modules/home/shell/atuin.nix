@@ -6,7 +6,7 @@
 }:
 let
   cfg = config.dotfiles.shell;
-  atuin = pkgs.atuin;
+  inherit (pkgs) atuin;
   provision = pkgs.writeText "atuin-provision.py" ''
     import os
     import pathlib
