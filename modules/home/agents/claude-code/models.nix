@@ -27,9 +27,9 @@ let
     model:
     select model
     // {
-      ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-5.6-luna";
-      ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-5.6-terra";
-      ANTHROPIC_DEFAULT_OPUS_MODEL = "gpt-5.6-sol";
+      ANTHROPIC_DEFAULT_HAIKU_MODEL = "gpt-6-luna";
+      ANTHROPIC_DEFAULT_SONNET_MODEL = "gpt-6-sol";
+      ANTHROPIC_DEFAULT_OPUS_MODEL = "gpt-6-sol";
       ANTHROPIC_DEFAULT_FABLE_MODEL = "gpt-6-astra";
     };
   pin =
@@ -82,13 +82,12 @@ let
       ]
       ++ map (aiProxy mapOpenAI) [
         "gpt-6-astra"
-        "gpt-5.6-sol"
-        "gpt-5.6-terra"
-        "gpt-5.6-luna"
+        "gpt-6-sol"
+        "gpt-6-luna"
       ]
       ++ map (aiProxy pin) [
-        "kimi-k3"
         "gemini-3.8-flash"
+        "grok-4.7"
       ]
     )
     ++ lib.optionals apiAccounts (
