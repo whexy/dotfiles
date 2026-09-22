@@ -6,6 +6,7 @@ import fcntl
 import json
 import os
 from pathlib import Path
+import re
 import subprocess
 import sys
 import tempfile
@@ -97,11 +98,15 @@ def merge_owned(doc, previous, desired):
 
 
 def secret_path(fragment):
-    # These are the two path forms emitted by agenix in this repository.
-    # Do not execute catalog strings as shell programs.
-    if "$(getconf DARWIN_USER_TEMP_DIR)" in fragment:
+    # Agenix may qualify getconf with its Nix store path. Recognize only this
+    # substitution and run the system utility, never a command from the catalog.
+    darwin = re.fullmatch(
+        r"\$\((?:getconf|/usr/bin/getconf|/nix/store/[a-z0-9]{32}-[A-Za-z0-9+._?=-]+/bin/getconf) DARWIN_USER_TEMP_DIR\)(/[^$]*)",
+        fragment,
+    )
+    if darwin:
         temporary = subprocess.check_output(["/usr/bin/getconf", "DARWIN_USER_TEMP_DIR"], text=True).strip()
-        fragment = fragment.replace("$(getconf DARWIN_USER_TEMP_DIR)", temporary)
+        fragment = temporary.rstrip("/") + darwin.group(1)
     fragment = os.path.expandvars(fragment)
     if "$" in fragment or not fragment.startswith("/"):
         raise SettingsError("unresolved credential path")
