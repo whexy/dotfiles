@@ -3,10 +3,11 @@
 # Tool-specific config lives in each tool's folder, which exports a common
 # contract: packages, homeFiles, shellAliases. This module keeps only shared
 # concerns: options, the global AGENTS.md, agenix secrets, and merging.
-{
+args@{
   pkgs,
   config,
   lib,
+  inputs,
   perSystem,
   ...
 }:
@@ -92,19 +93,29 @@ in
       proxy = import ./proxy.nix { inherit config; };
       mcp = import ./mcp.nix { inherit pkgs config lib; };
 
+      # Standalone homes have no `osConfig`; they get no cmux integration.
+      cmux = import ./cmux.nix {
+        inherit
+          pkgs
+          config
+          lib
+          inputs
+          ;
+        osConfig = args.osConfig or { };
+      };
+
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard all three harnesses implement.
-      skillNames = lib.attrNames (
-        lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
-      );
+      skills =
+        lib.mapAttrs (name: _: ./skills + "/${name}") (
+          lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
+        )
+        // cmux.skills;
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
-      # for skills it downloads from the account, so it gets one symlink per
-      # skill instead of the whole directory.
-      claudeSkills = lib.listToAttrs (
-        map (
-          name: lib.nameValuePair ".claude/skills/${name}" { source = ./skills + "/${name}"; }
-        ) skillNames
-      );
+      # for skills it downloads from the account, so every harness gets one
+      # symlink per skill rather than a single directory symlink.
+      mkSkillLinks =
+        prefix: lib.mapAttrs' (name: src: lib.nameValuePair "${prefix}/${name}" { source = src; }) skills;
       agents = [
         (import ./pi/home.nix {
           inherit
@@ -159,16 +170,18 @@ in
         file = {
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".claude/CLAUDE.md".source = ./AGENTS.md;
-          # User-scope skill location for both pi and codex; adding a skill is
-          # a new directory under ./skills, never a change here.
-          ".agents/skills".source = ./skills;
         }
-        // claudeSkills
+        # User-scope skill location for both pi and codex; adding a skill is
+        # a new directory under ./skills, never a change here.
+        // mkSkillLinks ".agents/skills"
+        // mkSkillLinks ".claude/skills"
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
         packages = lib.concatMap (a: a.packages or [ ]) agents;
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
+
+        inherit (cmux) activation;
       };
 
       # Secrets stay at agenix's default runtime location. Every consumer
