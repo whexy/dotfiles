@@ -17,14 +17,14 @@ Never use `openai` or `anthropic` directly unless I explicitly ask for it.
 
 - `researcher` — web/docs research, evidence gathering, concise sourced briefs.
   Preferred: Gemini 3.8 Flash, high (good at web search);
-  for very large document/context workloads use Claude Opus 5, high.
+  for very large document/context workloads use Claude Opus 5.5, high.
 
 - `worker` — implementation, edits, validation, and tests.
-  Preferred: Claude Opus 5, high; GPT-6 Astra, low.
+  Preferred: Claude Opus 5.5, high; GPT-6 Astra, low.
 
 - `reviewer` — independent code/task review, edge cases, tests, simplicity, and
   small fixes.
-  Preferred: GPT-6 Astra, low; Claude Opus 5, high.
+  Preferred: GPT-6 Astra, low; Claude Opus 5.5, high.
 
 - `oracle` — adversarial second opinion for important, ambiguous, or
   difficult-to-reverse decisions.
@@ -40,5 +40,5 @@ reviewer reading a subtle or wide diff.
 
 Example worker/reviewer pairings that keep review independent:
 
-- `worker: Claude Opus 5` → `reviewer: GPT-6 Astra`
-- `worker: GPT-6 Astra` → `reviewer: Claude Opus 5`
+- `worker: Claude Opus 5.5` → `reviewer: GPT-6 Astra`
+- `worker: GPT-6 Astra` → `reviewer: Claude Opus 5.5`

@@ -13,7 +13,7 @@
   # Upstream package providing bin/<name>.
   package,
   # Selection entries:
-  #   label    - shown in fzf, e.g. "anthropic/claude-opus-5"
+  #   label    - shown in fzf, e.g. "anthropic/claude-opus-5-5"
   #   env      - static env vars (attrset of strings)
   #   secrets  - env var -> secret file path, read at runtime
   #   envExprs - env var -> shell expression, evaluated after `secrets`

@@ -66,7 +66,7 @@ in
 [ { label = "default (ChatGPT login)"; } ]
 ++ lib.optionals proxyAccounts (
   map aiProxy [
-    "claude-opus-5"
+    "claude-opus-5-5"
     "claude-fable-5-1"
     "gpt-6-astra"
     "gpt-5.6-sol"
