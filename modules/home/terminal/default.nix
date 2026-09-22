@@ -10,6 +10,7 @@
 
   imports = [
     ./adopt.nix
+    ./cmux.nix
     ./ghostty.nix
     ./tmux.nix
     ./zellij.nix
