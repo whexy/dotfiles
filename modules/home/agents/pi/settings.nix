@@ -63,6 +63,7 @@ in
     "npm:@narumitw/pi-goal"
     "npm:pi-subagents"
     "npm:pi-background-tasks"
+    "npm:@monopi/extension-worktree"
   ]
   # pi ships no MCP client by design; the adapter adds one that keeps server
   # tool definitions out of the context window until they are searched.
