@@ -16,7 +16,11 @@ in
     lib.recursiveUpdate
       {
         terminal.ghostty.enable = lib.mkDefault true;
-        ssh.windowMultiplexing.enable = lib.mkDefault true;
+        # ssh-window multiplexes every host via ControlMaster on `*`, which
+        # cmux's relay ssh then joins instead of opening its own connection,
+        # leaving its reverse forward unestablished. Hosts that drop cmux can
+        # mkForce this back on.
+        ssh.windowMultiplexing.enable = lib.mkDefault (!(osConfig.dotfiles.terminal.cmux.enable or false));
         browser.firefox.enable = lib.mkDefault true;
         panel.waybar.enable = lib.mkDefault (!isDarwin);
         panel.renpho.enable = lib.mkDefault true;
