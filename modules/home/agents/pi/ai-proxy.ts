@@ -71,8 +71,7 @@ const MODEL_ALIASES: Record<
 };
 
 type ServedModel = { id: string; owner?: string };
-type ModelCache = { version: 2; models: Record<string, Model | null> };
-// null caches a known-absent model so we stop re-fetching for it.
+type ModelCache = { version: 2; models: Record<string, Model> };
 type ProviderCatalog = Record<string, Model> | null;
 
 function emptyCache(): ModelCache {
@@ -82,7 +81,12 @@ function emptyCache(): ModelCache {
 async function readCache(): Promise<ModelCache> {
   try {
     const cache = JSON.parse(await readFile(CACHE_PATH, "utf8")) as ModelCache;
-    return cache?.version === 2 && cache.models ? cache : emptyCache();
+    if (cache?.version !== 2 || !cache.models) return emptyCache();
+    // Older caches contain permanent negative entries; retry those lookups.
+    cache.models = Object.fromEntries(
+      Object.entries(cache.models).filter(([, model]) => model != null),
+    );
+    return cache;
   } catch {
     return emptyCache();
   }
@@ -121,19 +125,21 @@ function cacheKeys(id: string, owner?: string): string[] {
 function hasCachedResolution(
   id: string,
   owner: string | undefined,
-  models: Record<string, Model | null>,
+  models: Record<string, Model>,
 ): boolean {
   const canonicalId = sourceId(id);
   return (
-    cacheKeys(id, owner).some((key) => Object.hasOwn(models, key)) ||
-    Object.keys(models).some((key) => key.endsWith(`/${canonicalId}`))
+    cacheKeys(id, owner).some((key) => !!models[key]) ||
+    Object.entries(models).some(
+      ([key, model]) => !!model && key.endsWith(`/${canonicalId}`),
+    )
   );
 }
 
 function findModel(
   id: string,
   owner: string | undefined,
-  models: Record<string, Model | null>,
+  models: Record<string, Model>,
 ): Model | undefined {
   const canonicalId = sourceId(id);
   for (const key of cacheKeys(id, owner)) {
@@ -221,10 +227,8 @@ async function resolveModels(served: ServedModel[]): Promise<Model[]> {
       );
 
       let resolved: { provider: string; model: Model } | undefined;
-      let known = candidates.length === 0;
       for (const { provider, catalog, failed } of outcomes) {
         if (failed) continue;
-        known = true;
         const match = catalog?.[canonicalId];
         if (match && !resolved) resolved = { provider, model: match };
       }
@@ -233,11 +237,6 @@ async function resolveModels(served: ServedModel[]): Promise<Model[]> {
         cache.models[`${resolved.provider}/${canonicalId}`] = normalizeModel(
           resolved.model,
         );
-        changed = true;
-      } else if (known) {
-        // Only cache absence when every candidate endpoint answered; a
-        // transient failure must retry on the next start.
-        cache.models[cacheKeys(model.id, model.owner)[0]] = null;
         changed = true;
       }
     }
