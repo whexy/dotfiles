@@ -13,7 +13,7 @@ let
   model = id: thinkingLevel: { inherit id thinkingLevel; };
   models = [
     # Daily drivers
-    (model "ai-proxy/claude-opus-5" "medium")
+    (model "ai-proxy/claude-opus-5-5" "medium")
     (model "ai-proxy/gpt-6-astra" "low")
 
     # Powerful intelligence
@@ -35,7 +35,7 @@ let
     (model "openai/gpt-5.6-terra" null)
     (model "openai/gpt-5.6-luna" null)
     (model "anthropic/claude-fable-5-1" null)
-    (model "anthropic/claude-opus-5" null)
+    (model "anthropic/claude-opus-5-5" null)
     (model "anthropic/claude-sonnet-5" null)
   ];
   modelEnabled =

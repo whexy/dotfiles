@@ -58,7 +58,7 @@ in
         fallback = "openrouter";
       };
       defaultModel = mkModelOption "model agents use unless told otherwise" {
-        proxy = "claude-opus-5";
+        proxy = "claude-opus-5-5";
         api = "gpt-5.6-sol";
         fallback = "z-ai/glm-5.3-flash";
       };
