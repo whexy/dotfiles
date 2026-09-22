@@ -37,6 +37,35 @@ class SettingsTests(unittest.TestCase):
             manager.launch(args or [])
         return execute.call_args.args
 
+    def test_agenix_credential_path_forms(self):
+        getconf_commands = [
+            "getconf",
+            "/usr/bin/getconf",
+            "/nix/store/bk9qiyaah5manlrb6hvqh0dyf1dk7wn8-getconf-system_cmds-1039/bin/getconf",
+        ]
+        for command in getconf_commands:
+            with self.subTest(command=command), patch.object(s.subprocess, "check_output", return_value="/var/folders/fixture/T/\n") as getconf:
+                path = s.secret_path(f"$({command} DARWIN_USER_TEMP_DIR)/agenix/key")
+                self.assertEqual(path, Path("/var/folders/fixture/T/agenix/key"))
+                getconf.assert_called_once_with(["/usr/bin/getconf", "DARWIN_USER_TEMP_DIR"], text=True)
+        with patch.dict(os.environ, {"XDG_RUNTIME_DIR": "/run/user/1000"}):
+            self.assertEqual(s.secret_path("${XDG_RUNTIME_DIR}/agenix/key"), Path("/run/user/1000/agenix/key"))
+        self.assertEqual(s.secret_path("/run/agenix/key"), Path("/run/agenix/key"))
+
+    def test_credential_paths_reject_arbitrary_commands(self):
+        for fragment in [
+            "$(touch /tmp/unsafe)/agenix/key",
+            "$(getconf DARWIN_USER_TEMP_DIR; echo unsafe)/agenix/key",
+            "$(/tmp/getconf DARWIN_USER_TEMP_DIR)/agenix/key",
+            "$(getconf DARWIN_USER_TEMP_DIR)/$(echo unsafe)",
+            "${UNDEFINED_CREDENTIAL_ROOT}/agenix/key",
+            "relative/key",
+        ]:
+            with self.subTest(fragment=fragment), patch.object(s.subprocess, "check_output") as execute:
+                with self.assertRaises(s.SettingsError):
+                    s.secret_path(fragment)
+                execute.assert_not_called()
+
     def test_persistence_and_no_picker(self):
         for name in ("claude", "codex"):
             manager = self.manager(name)
