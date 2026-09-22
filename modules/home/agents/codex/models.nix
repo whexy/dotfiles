@@ -52,16 +52,15 @@ in
     "claude-opus-5-5"
     "claude-fable-5-1"
     "gpt-6-astra"
-    "gpt-5.6-sol"
-    "gpt-5.6-terra"
-    "kimi-k3"
+    "gpt-6-sol"
+    "gemini-3.8-flash"
+    "grok-4.7"
   ]
 )
 ++ lib.optionals apiAccounts (
   map openai [
     "gpt-6-astra"
-    "gpt-5.6-sol"
-    "gpt-5.6-terra"
-    "gpt-5.6-luna"
+    "gpt-6-sol"
+    "gpt-6-luna"
   ]
 )

@@ -59,7 +59,7 @@ in
       };
       defaultModel = mkModelOption "model agents use unless told otherwise" {
         proxy = "claude-opus-5-5";
-        api = "gpt-5.6-sol";
+        api = "gpt-6-sol";
         fallback = "z-ai/glm-5.3-flash";
       };
 
@@ -70,7 +70,7 @@ in
       };
       defaultCheapModel = mkModelOption "model for bulk or low-stakes work" {
         proxy = "claude-sonnet-5";
-        api = "gpt-5.6-luna";
+        api = "gpt-6-luna";
         fallback = "meta/muse-spark-1.3-contributor";
       };
     };
