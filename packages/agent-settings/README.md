@@ -60,11 +60,20 @@ do not honor these locks: there remains a small compare/replace race and edits t
 several files are not one atomic transaction. Retry a reported conflict rather
 than discarding either writer's configuration.
 
-Run the isolated regression suite with:
+## Development
+
+`withModelPicker.nix` in `modules/home/agents` writes the catalog and wraps each
+agent with `agent-settings <catalog> launch|select|sync`. The package builds
+with its test suite; type checking (basedpyright) and linting (ruff) are separate
+flake checks:
 
 ```sh
-nix build .#checks.aarch64-darwin.agent-settings --no-link -L
+nix build .#checks.aarch64-darwin.pkgs-agent-settings --no-link -L
+nix build .#checks.aarch64-darwin.pkgs-agent-settings-typecheck --no-link -L
+nix build .#checks.aarch64-darwin.pkgs-agent-settings-lint --no-link -L
 ```
 
-Use the appropriate system attribute on Linux. Tests use temporary homes and fake
-agent launches, never real credentials or paid model requests.
+Use the appropriate system attribute on Linux. The dev shell provides the same
+tools; from this directory run `pytest`, `basedpyright`, and `ruff`. Tests use
+temporary homes and fake agent launches, never real credentials or paid model
+requests.

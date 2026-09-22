@@ -1,6 +1,6 @@
 # Native user configuration stays writable; only the catalog and policy inputs
 # live in the store. Agent command names never invoke the selection UI.
-{ pkgs }:
+{ pkgs, agentSettings }:
 {
   name,
   package,
@@ -10,7 +10,6 @@
   resetEnv ? [ ],
 }:
 let
-  python = pkgs.python3.withPackages (p: [ p.tomlkit ]);
   manifest = pkgs.writeText "${name}-settings-catalog.json" (
     builtins.toJSON {
       inherit
@@ -24,7 +23,7 @@ let
       fzf = "${pkgs.fzf}/bin/fzf";
     }
   );
-  runtime = "${python}/bin/python3 ${./agent-settings.py} ${manifest}";
+  runtime = "${pkgs.lib.getExe agentSettings} ${manifest}";
   launcher = pkgs.writeShellScriptBin name ''
     exec ${runtime} launch "$@"
   '';

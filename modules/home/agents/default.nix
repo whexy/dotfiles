@@ -89,7 +89,10 @@ in
         default = "${cfg.defaultProvider}/${cfg.defaultModel}";
         cheap = "${cfg.defaultCheapProvider}/${cfg.defaultCheapModel}";
       };
-      withModelPicker = import ./withModelPicker.nix { inherit pkgs; };
+      withModelPicker = import ./withModelPicker.nix {
+        inherit pkgs;
+        agentSettings = perSystem.self.agent-settings;
+      };
       proxy = import ./proxy.nix { inherit config; };
       mcp = import ./mcp.nix { inherit pkgs config lib; };
 
