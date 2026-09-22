@@ -68,7 +68,7 @@ class RouterTests(unittest.TestCase):
         self.env = dict(
             os.environ, HOME=str(self.home), SSH_CONNECTION="test-connection"
         )
-        for name in ("SSH_AUTH_SOCK", "TMUX", "ZELLIJ"):
+        for name in ("SSH_AUTH_SOCK", "TMUX", "ZELLIJ", "CMUX_SURFACE_ID"):
             self.env.pop(name, None)
         self.agents = []
 
@@ -180,13 +180,19 @@ class RouterTests(unittest.TestCase):
         ordinary = self.command("shell", SSH_AUTH_SOCK=str(agent.path))
         self.assertEqual(ordinary.returncode, 0, ordinary.stderr)
         self.assertEqual(ordinary.stdout.strip(), str(agent.path))
-        panes = (("TMUX", "session"), ("ZELLIJ", "session"))
+        stale = self.home / "closed-connection.sock"
+        panes = (
+            ("TMUX", "session"),
+            ("ZELLIJ", "session"),
+            ("CMUX_SURFACE_ID", "pane"),
+        )
         for variable, value in panes:
-            pane = self.command(
-                "shell", SSH_AUTH_SOCK=str(agent.path), **{variable: value}
-            )
-            self.assertEqual(pane.returncode, 0, pane.stderr)
-            self.assertEqual(pane.stdout.strip(), str(self.proxy))
+            for inherited in (agent.path, stale):
+                pane = self.command(
+                    "shell", SSH_AUTH_SOCK=str(inherited), **{variable: value}
+                )
+                self.assertEqual(pane.returncode, 0, pane.stderr)
+                self.assertEqual(pane.stdout.strip(), str(self.proxy))
         local = self.command(
             "shell", SSH_CONNECTION="", SSH_AUTH_SOCK="/local/1password"
         )
