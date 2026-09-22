@@ -69,6 +69,12 @@ in
             ''
           ))
 
+          # Ctrl+D at an empty prompt is too easy to hit by accident; require an
+          # explicit `exit` to end the session.
+          ''
+            setopt IGNORE_EOF
+          ''
+
           # Manually trigger ghostty integration (only when running inside Ghostty)
           ''
             if [[ "$TERM" == "xterm-ghostty" ]]; then
