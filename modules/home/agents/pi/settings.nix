@@ -22,7 +22,7 @@ let
 
     # DEI models
     (model "openrouter/z-ai/glm-5.3" "max")
-    (model "ai-proxy/grok-4.6" "high")
+    (model "ai-proxy/grok-4.7" "high")
     (model "openrouter/moonshotai/kimi-k3" "max")
     (model "ai-proxy/gpt-5.6-sol" "high")
     (model "openrouter/z-ai/glm-5.3-flash" null)
