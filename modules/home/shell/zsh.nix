@@ -20,6 +20,19 @@ in
         enable = true;
         enableCompletion = true;
 
+        # Tailscale SSH command sessions can register with logind without
+        # exporting its runtime directory. Reuse it only if logind has already
+        # provisioned a private directory for this user; never create one here.
+        envExtra = lib.mkIf pkgs.stdenv.hostPlatform.isLinux ''
+          if [[ -z "''${XDG_RUNTIME_DIR:-}" ]]; then
+            if [[ -d "/run/user/$EUID" && ! -L "/run/user/$EUID" \
+                  && -O "/run/user/$EUID" \
+                  && "$(${pkgs.coreutils}/bin/stat -c %a -- "/run/user/$EUID" 2>/dev/null)" == 700 ]]; then
+              export XDG_RUNTIME_DIR="/run/user/$EUID"
+            fi
+          fi
+        '';
+
         # Upstream dumps to $ZDOTDIR/.zcompdump; keep it out of $HOME. Unused when
         # oh-my-zsh is enabled, which runs its own compinit (see zsh-extras.nix).
         completionInit = ''
