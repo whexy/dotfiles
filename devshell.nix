@@ -1,24 +1,11 @@
 {
   inputs,
   flake,
-  pkgs,
   system,
   ...
 }:
 let
-  treefmtEval = inputs.treefmt-nix.lib.evalModule pkgs ./treefmt.nix;
-  preCommit = inputs.git-hooks.lib.${system}.run {
-    src = flake;
-    hooks = {
-      treefmt = {
-        enable = true;
-        package = treefmtEval.config.build.wrapper;
-      };
-      statix.enable = true;
-      nil.enable = true;
-      deadnix.enable = true;
-    };
-  };
+  inherit (import ./lib/dev-tools.nix { inherit inputs flake; } system) pkgs preCommit;
 in
 pkgs.mkShell {
   packages = with pkgs; [
