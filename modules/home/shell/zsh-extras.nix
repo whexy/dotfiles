@@ -78,11 +78,15 @@ in
         atuin = {
           enable = true;
           settings = {
-            auto_sync = false;
+            auto_sync = true;
+            sync_address = "https://atuin.at-basking.ts.net";
             update_check = false;
             search_mode = "fuzzy";
+            search_mode_shell_up_key_binding = "prefix";
             filter_mode = "global";
-            enter_accept = true;
+            filter_mode_shell_up_key_binding = "workspace";
+            workspaces = true;
+            enter_accept = false;
             style = "compact";
             inline_height = 30;
             store_failed = true;

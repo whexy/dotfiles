@@ -40,6 +40,7 @@ in
   };
 
   imports = [
+    ./atuin.nix
     ./motd.nix
     ./zsh.nix
     ./zsh-extras.nix
