@@ -116,6 +116,18 @@ in
       # symlink per skill rather than a single directory symlink.
       mkSkillLinks =
         prefix: lib.mapAttrs' (name: src: lib.nameValuePair "${prefix}/${name}" { source = src; }) skills;
+
+      # `~/.agents/skills` used to be one symlink to a store directory; it is
+      # now a real directory of per-skill links. Home Manager cannot make that
+      # transition on its own: it tries to back the old symlink up by moving
+      # its read-only store target, fails, and then refuses to overwrite it,
+      # so activation dies before any link is written.
+      # Remove once every host has activated a generation that has this.
+      migrateSkillsDir = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+        if [ -L "$HOME/.agents/skills" ]; then
+          run rm $VERBOSE_ARG "$HOME/.agents/skills"
+        fi
+      '';
       agents = [
         (import ./pi/home.nix {
           inherit
@@ -181,7 +193,9 @@ in
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
 
-        inherit (cmux) activation;
+        activation = cmux.activation // {
+          inherit migrateSkillsDir;
+        };
       };
 
       # Secrets stay at agenix's default runtime location. Every consumer
