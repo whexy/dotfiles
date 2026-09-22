@@ -91,6 +91,13 @@
 
     llm-agents.url = "github:numtide/llm-agents.nix";
 
+    # Upstream's agent skills, consumed as plain files. It is not a flake, so
+    # flake.lock pins the revision our agents read.
+    cmux-skills = {
+      url = "github:manaflow-ai/cmux";
+      flake = false;
+    };
+
     niri = {
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
