@@ -1,8 +1,15 @@
 # dev home cap preset: full development environment.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with lib.mkForce.
-{ config, lib, ... }:
 {
+  config,
+  lib,
+  pkgs,
+  ...
+}:
+{
+  home.packages = [ pkgs.sd ];
+
   dotfiles = {
     agents = {
       enable = lib.mkDefault true;
