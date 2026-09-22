@@ -8,9 +8,11 @@ let
   cfg = config.dotfiles.shell;
   inherit (pkgs) atuin;
   provision = pkgs.writeText "atuin-provision.py" ''
+    import fcntl
     import os
     import pathlib
     import sqlite3
+    import subprocess
     import sys
 
     root = pathlib.Path(sys.argv[1])
@@ -19,9 +21,23 @@ let
     if not key or not token:
         raise SystemExit("Atuin credentials are empty; check agenix decryption")
     root.mkdir(parents=True, exist_ok=True, mode=0o700)
+    # Every shell hook invokes the wrapper, so concurrent shells must not
+    # rekey the store twice.
+    lock = open(root / ".provision.lock", "w")
+    fcntl.flock(lock, fcntl.LOCK_EX)
     key_path = root / "key"
     if key_path.exists() and key_path.read_bytes() != key:
-        raise SystemExit("Atuin key differs from agenix; migrate existing encrypted records before replacing it")
+        # A host that used Atuin before the shared key has records encrypted
+        # with its own key; rekey them so they stay readable and syncable.
+        # rekey saves the new key only after the store is rewritten.
+        subprocess.run(
+            ["${lib.getExe atuin}", "store", "rekey", key.decode().strip()],
+            env={**os.environ, "ATUIN_SESSION": os.environ.get("ATUIN_SESSION", "provision")},
+            stdout=subprocess.DEVNULL,
+            check=True,
+        )
+        if key_path.read_bytes() != key:
+            raise SystemExit("Atuin rekey did not install the agenix key")
 
     def replace(name, data):
         import tempfile
