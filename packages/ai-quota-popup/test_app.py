@@ -1,6 +1,7 @@
 """Run with the packaged interpreter and PYTHONPATH set to its share directory."""
 
 from datetime import datetime, timezone
+import json
 import os
 from pathlib import Path
 import unittest
@@ -9,7 +10,7 @@ from unittest.mock import patch
 os.environ.setdefault("QT_QPA_PLATFORM", "offscreen")
 from PySide6.QtGui import QGuiApplication
 
-from main import Controller, countdown, fetch, parse_time, percentage, project, project_meter
+from main import Controller, countdown, display_label, fetch, parse_time, project, project_meter, usage
 
 
 FIXTURE = Path(__file__).with_name("fixture.json")
@@ -19,41 +20,57 @@ NOW = datetime(2026, 9, 22, 22, 9, tzinfo=timezone.utc)
 class QuotaProjection(unittest.TestCase):
     def test_timeline_uses_actual_reset_and_duration(self):
         data = project_meter({
-            "label": "5h", "remaining": 97,
+            "label": "5h", "percent": 3,
             "reset_at": "2026-09-23T03:00:00Z", "duration_seconds": 18000,
-        }, NOW)
-        self.assertTrue(data["timed"])
-        self.assertAlmostEqual(data["timeFraction"], 540 / 18000)
-        self.assertEqual(data["remaining"], 97)
-        self.assertEqual(data["reset"], "Resets in 4h 51m")
+        }, NOW, NOW)
+        self.assertEqual(data["label"], "5-hour window")
+        self.assertAlmostEqual(data["elapsed"], 540 / 18000)
+        self.assertEqual(data["used"], 3)
+        self.assertEqual(data["countdown"], "4h 51m")
+        self.assertEqual([tick["label"] for tick in data["axis"]], ["10:00", "11:15", "12:30", "1:45", "3:00"])
 
-    def test_missing_or_invalid_timing_omits_axis(self):
+    def test_linear_pace_projection_tints_the_window(self):
+        weekly = {"label": "Weekly", "reset_at": "2026-09-26T22:09:00Z", "duration_seconds": 604800}
+        over = project_meter({**weekly, "percent": 50}, NOW, NOW)
+        self.assertAlmostEqual(over["projection"], 50 / (3 / 7))
+        self.assertEqual(over["tint"], "amber")
+        self.assertEqual(len(over["axis"]), 8)
+        under = project_meter({**weekly, "percent": 10}, NOW, NOW)
+        self.assertEqual(under["tint"], "green")
+
+    def test_missing_timing_and_stale_observation_omit_timeline(self):
         for reset, span in [(None, 3600), ("garbage", 3600), ("2026-09-23T00:00:00Z", 0)]:
             with self.subTest(reset=reset, span=span):
-                data = project_meter({"remaining": 42, "reset_at": reset, "duration_seconds": span}, NOW)
-                self.assertFalse(data["timed"])
-                self.assertEqual(data["reset"], "Reset unavailable")
-        self.assertIsNone(percentage("nan"))
-        self.assertIsNone(parse_time("invalid"))
-        self.assertEqual(countdown(65), "2m")
+                data = project_meter({"percent": 42, "reset_at": reset, "duration_seconds": span}, NOW, NOW)
+                self.assertIsNone(data["elapsed"])
+                self.assertEqual(data["axis"], [])
+        aged = project_meter({"percent": 10, "reset_at": "2026-09-26T22:09:00Z", "duration_seconds": 604800},
+                             parse_time("2026-09-22T20:00:00Z"), NOW)
+        self.assertIsNone(aged["projection"])
+        expired = project_meter({"percent": 10, "reset_at": "2026-09-22T22:00:00Z", "duration_seconds": 18000}, NOW, NOW)
+        self.assertEqual((expired["tint"], expired["countdown"]), ("muted", "Reset pending"))
+        self.assertIsNone(usage("nan"))
+        self.assertEqual(countdown(65), "1m")
+        self.assertEqual(display_label("Weekly fable"), "Weekly Fable")
 
-    def test_all_account_windows_and_absent_providers(self):
-        summaries = fetch(fixture=FIXTURE)
-        cards = project(summaries, now=NOW)
+    def test_account_cards_and_absent_providers(self):
+        cards = project(fetch(fixture=FIXTURE), now=NOW)
         self.assertEqual([card["id"] for card in cards], ["claude", "codex"])
-        self.assertEqual(cards[0]["remaining"], 85)
-        self.assertEqual(cards[0]["accounts"][0]["plan"], "Max plan")
-        self.assertEqual([meter["label"] for meter in cards[0]["accounts"][0]["meters"]],
-                         ["5h", "Weekly", "Weekly fable"])
+        account = cards[0]["accounts"][0]
+        self.assertEqual(account["plan"], "Max plan")
+        self.assertEqual(account["headline"], 13)
+        self.assertEqual([meter["label"] for meter in account["meters"]],
+                         ["5-hour window", "Weekly", "Weekly Fable"])
 
-    def test_error_account_is_not_a_meter(self):
+    def test_error_account_has_no_meters_or_forecast(self):
         summaries = fetch(fixture=FIXTURE)
         summaries["claude"]["accounts"].append({
             "name": "Offline", "error": "Unavailable", "plan": "Team", "meters": [],
         })
-        card = project(summaries, now=NOW)[0]
-        self.assertEqual(card["accounts"][1]["meters"], [])
-        self.assertEqual(card["accounts"][1]["error"], "Unavailable")
+        account = project(summaries, now=NOW)[0]["accounts"][1]
+        self.assertEqual(account["meters"], [])
+        self.assertIsNone(account["forecast"])
+        self.assertEqual(account["error"], "Unavailable")
 
 
 class FakeWindow:
@@ -73,6 +90,15 @@ class FakeWindow:
         pass
 
     def requestActivate(self):
+        pass
+
+    def width(self):
+        return 440
+
+    def height(self):
+        return 660
+
+    def setPosition(self, x, y):
         pass
 
 
@@ -96,6 +122,12 @@ class PopupLifecycle(unittest.TestCase):
             controller.toggle("unknown")
             self.assertFalse(window.visible)
         controller.timer.stop()
+
+    def test_payload_shows_only_selected_provider(self):
+        controller = Controller(fixture=FIXTURE)
+        controller._on_fetched(fetch(fixture=FIXTURE), "")
+        controller.selected = "codex"
+        self.assertEqual([card["title"] for card in json.loads(controller.payload)["cards"]], ["Codex"])
 
     def test_failed_refresh_retains_but_marks_last_good_data_stale(self):
         controller = Controller(fixture=FIXTURE)
