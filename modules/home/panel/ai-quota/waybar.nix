@@ -19,6 +19,8 @@ let
 
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
+  aiQuotaPackage = pkgs.callPackage ../../../../packages/ai-quota-popup { };
+  aiQuotaPopup = lib.getExe aiQuotaPackage;
   summaryFilter = ./summary.jq;
 
   enabled =
@@ -68,10 +70,13 @@ let
       escape = false;
       format = "{}";
       tooltip = true;
+      on-click = "${aiQuotaPopup} --toggle ${provider}";
     };
 in
 {
   config = lib.mkIf enabled {
+    home.packages = [ aiQuotaPackage ];
+
     programs.waybar.settings.mainBar = {
       "modules-right" = lib.mkAfter (map (p: "custom/ai-quota-${p.name}") providers);
     }

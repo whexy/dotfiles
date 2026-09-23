@@ -1,0 +1,63 @@
+{
+  "updated_at": "2026-09-22T22:09:00Z",
+  "providers": [
+    {
+      "provider": "claude",
+      "accounts": [
+        {
+          "id": "sample-claude",
+          "name": "Primary",
+          "plan": "Max plan",
+          "observed_at": "2026-09-22T22:09:00Z",
+          "error": null,
+          "meters": [
+            {
+              "label": "5-hour",
+              "percent": 3,
+              "reset_at": "2026-09-23T03:00:00Z",
+              "duration_seconds": 18000
+            },
+            {
+              "label": "weekly",
+              "percent": 13,
+              "reset_at": "2026-09-26T22:00:00Z",
+              "duration_seconds": 604800
+            },
+            {
+              "label": "weekly fable",
+              "percent": 15,
+              "reset_at": "2026-09-26T22:00:00Z",
+              "duration_seconds": 604800
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "provider": "codex",
+      "accounts": [
+        {
+          "id": "sample-codex",
+          "name": "Personal",
+          "plan": "Plus plan",
+          "observed_at": "2026-09-22T22:09:00Z",
+          "error": null,
+          "meters": [
+            {
+              "label": "5-hour",
+              "percent": 0,
+              "reset_at": "2026-09-23T03:09:00Z",
+              "duration_seconds": 18000
+            },
+            {
+              "label": "weekly",
+              "percent": 34,
+              "reset_at": "2026-09-27T11:09:00Z",
+              "duration_seconds": 604800
+            }
+          ]
+        }
+      ]
+    }
+  ]
+}

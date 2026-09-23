@@ -17,8 +17,11 @@
 #   - `lines` lists every account x every meter for detailed tooltips;
 #   - `compact_lines` keeps the quota windows and text progress bars for
 #     tooltips that only support text;
-#   - `columns` aligns each account's coding windows, with null for missing slots;
+#   - `accounts` retains every coding window and account metadata for details;
+#   - `columns` aligns up to three windows per account for compact renderers,
+#     with null for missing slots;
 #   - `detail_meters` includes account labels in stable column order;
+#   - meters retain raw usage, timing, and observation alongside display fields;
 #   - `compact_meters` retains the best account's windows for countdown selection;
 #   - `display_meter` is the one window a compact pill should show. Normally it
 #     is the binding window; when multiple windows are exhausted it is the one
@@ -108,9 +111,13 @@ def compact_meter:
       label: (.label | meter_tag),
       pill_label: (.label | pill_tag),
       remaining: $remaining,
+      percent: (.pct // .percent // null),
+      observation: (.observation // null),
       reset: (.reset_human // null),
       reset_label: (if .reset_human then "Resets " + .reset_human else "Reset unavailable" end),
       reset_in: (.reset_in // null),
+      reset_at: (.reset_at // null),
+      duration_seconds: (.duration_seconds // null),
       span: window_span,
       state: ($remaining | state),
     };
@@ -149,6 +156,16 @@ def window_color($accent):
 def coding:
   [.meters[] | select((.label | ascii_downcase) | startswith("review") | not)];
 
+def account_info:
+  {
+    id: (.id // .name), name,
+    plan: (.plan // null),
+    subtitle: (.subtitle // null),
+    error: (.error // null),
+    observed_at: (.observed_at // null),
+    observation: (.observation // null),
+  };
+
 def meter_line:
   "  \(.label)  \((.pct // .percent // 0) | bar)  \(100 - (.pct // .percent // 0) | round)% left"
   + (if .reset_human then " · resets " + .reset_human else "" end);
@@ -179,13 +196,18 @@ def provider_accent:
     (.accounts | sort_by(.id // .name)) as $accounts
     | ($provider | provider_accent) as $accent
     | ([$accounts[] | coding[]] | unique_by(.label) | sort_by(window_span, .label) | .[:3] | map(.label)) as $windows
-    | [$accounts[] | . as $account | {
-        id: (.id // .name), name, error,
+    | [$accounts[] | . as $account | account_info + {
         meters: [$windows[] | . as $window
           | ([$account | coding[] | select(.label == $window)] | .[0])
           | if . == null or $account.error != null then null
             else compact_meter | . + {color: window_color($accent)} end]
       }] as $columns
+    | [$accounts[] | account_info + {
+        meters: (if .error != null then [] else
+          [coding | sort_by(window_span, .label)[]
+            | compact_meter | . + {color: window_color($accent)}]
+        end)
+      }] as $detail_accounts
     | [$accounts[] | . as $account | coding | sort_by(window_span, .label)[]
         | compact_meter | . + {account: $account.name, color: window_color($accent)}
         | select($account.error == null)] as $details
@@ -209,6 +231,7 @@ def provider_accent:
           compact_lines: ["no usable coding-quota windows"],
           compact_meters: [],
           columns: $columns,
+          accounts: $detail_accounts,
           detail_meters: $details,
         }
       else
@@ -268,6 +291,7 @@ def provider_accent:
             ],
             compact_meters: $meters,
             columns: $columns,
+            accounts: $detail_accounts,
             detail_meters: $details,
           }
       end

@@ -21,13 +21,14 @@ let
   showCountdown = cfg.aiQuota.showCountdown;
   osConfig = args.osConfig or null;
   barOnTop = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
-
   shared = import ./shared.nix;
   inherit (shared) apiUrl updateInterval;
 
   curl = lib.getExe pkgs.curl;
   sketchybar = lib.getExe pkgs.sketchybar;
   jq = lib.getExe pkgs.jq;
+  aiQuotaPackage = pkgs.callPackage ../../../../packages/ai-quota-popup { };
+  aiQuotaPopup = lib.getExe aiQuotaPackage;
   summaryFilter = ./summary.jq;
   cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
@@ -35,7 +36,6 @@ let
     cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin && config.dotfiles.agents.enable;
 
   colors = {
-    fg = "0xffffffff";
     gray = "0xff98989d";
     blue = "0xff007cff";
     orange = "0xffd97757";
@@ -44,8 +44,6 @@ let
     track = "0x26ffffff";
     glass = "0x1affffff";
     glassBorder = "0x40ffffff";
-    popup = "0xe6121d2c";
-    popupBorder = "0x59ffffff";
   };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
@@ -57,7 +55,6 @@ let
   # are not rendered; summary.jq already caps each account at three windows.
   maxColumns = 3;
   maxRows = 3;
-  maxPopupMeters = maxColumns * maxRows;
 
   fetchPlugin = mkPlugin "fetch" ''
     out="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0
@@ -71,15 +68,9 @@ let
     ${sketchybar} --trigger ai_quota_refresh
   '';
 
-  togglePlugin =
+  popupClick =
     provider:
-    mkPlugin "toggle-${provider}" ''
-      # Restore cached values first in case a native slider consumed the click,
-      # then toggle the details immediately while a forced refresh runs.
-      ${sketchybar} --trigger ai_quota_refresh \
-        --set ai_quota.${provider}.icon popup.drawing=toggle
-      ${fetchPlugin} >/dev/null 2>&1 &
-    '';
+    "AI_QUOTA_BAR_EDGE=${if barOnTop then "top" else "bottom"} ${aiQuotaPopup} --toggle ${provider}";
 
   pillPlugin =
     provider: accent:
@@ -90,12 +81,10 @@ let
       if [ "$(printf '%s' "$summary" | ${jq} -r '.present')" != "true" ]; then
         hide_args=(
           --set '/ai_quota\.${provider}\.lane\..*/' drawing=off
-          --set '/ai_quota\.${provider}\.popup\.meter\..*/' drawing=off
-          --set ai_quota.${provider}.icon drawing=off popup.drawing=off
+          --set ai_quota.${provider}.icon drawing=off
           --set ai_quota.${provider}.glass background.drawing=off
           --set ai_quota.${provider}.slot drawing=off
           ${lib.optionalString showCountdown "--set ai_quota.${provider}.countdown drawing=off"}
-          --set ai_quota.${provider}.popup.header drawing=off
         )
         ${sketchybar} "''${hide_args[@]}"
         exit 0
@@ -108,7 +97,6 @@ let
         --set ai_quota.${provider}.glass background.drawing=on
         --set ai_quota.${provider}.icon drawing=on
         --set ai_quota.${provider}.slot drawing=on
-        --set ai_quota.${provider}.popup.header drawing=on
         ${lib.optionalString showCountdown ''--set ai_quota.${provider}.countdown drawing=on label="$countdown"''}
       )
 
@@ -149,25 +137,6 @@ let
            (if $meter == null then 0 else 1 end),
            (if $meter == null then 0 else ($meter.remaining | round) end),
            (if $meter == null then 0 else $meter.span end)] | @tsv')
-
-      while IFS=$'\t' read -r slot used meter_label meter_remaining meter_reset; do
-        popup_meter="ai_quota.${provider}.popup.meter.$slot"
-        if [ "$used" != 1 ]; then
-          args+=(--set "$popup_meter" drawing=off)
-          continue
-        fi
-        args+=(--set "$popup_meter" drawing=on icon="$meter_label"
-          label="''${meter_remaining}% · ''${meter_reset}"
-          slider.percentage="$meter_remaining")
-      done < <(printf '%s' "$summary" | ${jq} -r '
-        .detail_meters as $meters
-        | range(0; ${toString maxPopupMeters}) as $slot
-        | ($meters[$slot] // null) as $meter
-        | [$slot,
-           (if $meter == null then 0 else 1 end),
-           (if $meter == null then "" else ($meter.account + " · " + $meter.label) end),
-           (if $meter == null then 0 else ($meter.remaining | round) end),
-           (if $meter == null then "—" else ($meter.reset // "—") end)] | @tsv')
 
       ${sketchybar} "''${args[@]}"
     '';
@@ -210,18 +179,8 @@ let
         label = "";
         "label.drawing" = "off";
         "background.drawing" = "off";
-        "popup.horizontal" = "off";
-        "popup.align" = "right";
-        "popup.y_offset" = if barOnTop then "-8" else "8";
-        "popup.height" = 34;
-        "popup.blur_radius" = 28;
-        "popup.background.drawing" = "on";
-        "popup.background.color" = colors.popup;
-        "popup.background.corner_radius" = 14;
-        "popup.background.border_width" = 1;
-        "popup.background.border_color" = colors.popupBorder;
       };
-      clickScript = toString (togglePlugin provider);
+      clickScript = popupClick provider;
       subscribe = [ "ai_quota_refresh" ];
     };
 
@@ -259,34 +218,9 @@ let
           "label.drawing" = "off";
           "background.drawing" = "off";
         };
-        clickScript = toString (togglePlugin provider);
+        clickScript = popupClick provider;
       }) (lib.range 0 (maxRows - 1))
     ) (lib.range 0 (maxColumns - 1));
-
-  mkPopupMeterItems =
-    provider: accent:
-    map (slot: {
-      name = "ai_quota.${provider}.popup.meter.${toString slot}";
-      kind = "slider";
-      width = 118;
-      side = "popup.ai_quota.${provider}.icon";
-      settings = {
-        drawing = "off";
-        padding_left = 8;
-        padding_right = 8;
-        "icon.font" = ".AppleSystemUIFont:Semibold:11.5";
-        "icon.color" = accent;
-        "label.font" = ".AppleSystemUIFont:Medium:11.5";
-        "label.color" = colors.fg;
-        "slider.highlight_color" = accent;
-        "slider.background.color" = colors.track;
-        "slider.background.height" = 6;
-        "slider.background.corner_radius" = 3;
-        "slider.knob.drawing" = "off";
-        "background.drawing" = "off";
-      };
-      clickScript = "${sketchybar} --trigger ai_quota_refresh";
-    }) (lib.range 0 (maxPopupMeters - 1));
 
   mkSlotItem = provider: {
     name = "ai_quota.${provider}.slot";
@@ -302,7 +236,7 @@ let
       "label.drawing" = "off";
       "background.drawing" = "off";
     };
-    clickScript = toString (togglePlugin provider);
+    clickScript = popupClick provider;
   };
 
   mkCountdownItem = provider: accent: {
@@ -321,72 +255,36 @@ let
       "label.padding_right" = 8;
       "background.drawing" = "off";
     };
-    clickScript = toString (togglePlugin provider);
+    clickScript = popupClick provider;
   };
-
-  mkPopupHeaderItem =
-    provider:
-    {
-      logo,
-      logoScale,
-      title,
-      ...
-    }:
-    {
-      name = "ai_quota.${provider}.popup.header";
-      side = "popup.ai_quota.${provider}.icon";
-      settings = {
-        drawing = "off";
-        icon = " ";
-        "icon.width" = 28;
-        "icon.padding_left" = 0;
-        "icon.padding_right" = 0;
-        "icon.background.drawing" = "on";
-        "icon.background.image" = logo;
-        "icon.background.image.scale" = logoScale;
-        "icon.background.image.padding_left" = 7;
-        "icon.background.image.padding_right" = 5;
-        label = title;
-        "label.font" = ".AppleSystemUIFont:Semibold:12.5";
-        "label.color" = colors.fg;
-        "label.padding_left" = 3;
-        "label.padding_right" = 10;
-        "background.drawing" = "off";
-      };
-    };
 
   providers = [
     {
       name = "claude";
-      title = "Claude";
       logo = ./logos/claude.png;
       logoScale = 0.026;
       accent = colors.orange;
     }
     {
       name = "codex";
-      title = "Codex";
       logo = ./logos/codex.png;
       logoScale = 0.027;
       accent = colors.green;
     }
     {
       name = "kimi";
-      title = "Kimi";
       logo = ./logos/kimi.png;
       logoScale = 0.025;
       accent = colors.blue;
     }
     {
       name = "antigravity";
-      title = "Antigravity";
       logo = ./logos/antigravity.png;
       logoScale = 0.026;
       accent = colors.gray;
     }
     {
       name = "grok";
-      title = "Grok";
       logo = ./logos/grok.png;
       logoScale = 0.026;
       accent = colors.white;
@@ -407,9 +305,7 @@ let
     ++ [
       (mkSlotItem p.name)
       (mkIconItem p.name p)
-    ]
-    ++ [ (mkPopupHeaderItem p.name p) ]
-    ++ mkPopupMeterItems p.name p.accent;
+    ];
 
   providerBracket = p: {
     name = "ai_quota.${p.name}.glass";
@@ -430,6 +326,8 @@ let
 in
 {
   config = lib.mkIf enabled {
+    home.packages = [ aiQuotaPackage ];
+
     dotfiles.panel.sketchybar = {
       events = [ "ai_quota_refresh" ];
       # mkAfter keeps the quota pills to the left of the other right-side
