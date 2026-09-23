@@ -20,7 +20,7 @@
     }
     {
       name = "codex";
-      title = "GPT";
+      title = "Codex";
       variable = "codex";
       icon = "󰚩";
       logo = ./logos/codex.png;
