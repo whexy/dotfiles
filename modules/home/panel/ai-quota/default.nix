@@ -23,6 +23,13 @@
           {
             matches = [ { app-id = "^ai-quota-popup$"; } ];
             open-floating = true;
+            # Wayland toplevels cannot place themselves; sit above the
+            # bottom-left pills instead of niri's centered default.
+            default-floating-position = {
+              x = 8;
+              y = 8;
+              relative-to = "bottom-left";
+            };
           }
         ];
       };
