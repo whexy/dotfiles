@@ -73,7 +73,9 @@ let
   modelEntries =
     map openrouter [
       "meta/muse-spark-1.3-contributor"
-      "z-ai/glm-5.3-flash"
+      "xiaomi/mimo-v2.6-pro"
+      "qwen/qwen3.8-max-0902"
+      "z-ai/glm-5.3"
     ]
     ++ lib.optionals proxyAccounts (
       map (aiProxy anthropicEnv) [

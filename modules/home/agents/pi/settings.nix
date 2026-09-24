@@ -14,18 +14,18 @@ let
   models = [
     # Daily drivers
     (model "ai-proxy/claude-opus-5-5" "medium")
-    (model "ai-proxy/gpt-6-astra" "low")
 
     # Powerful intelligence
-    (model "ai-proxy/claude-fable-5-1" "medium")
-    (model "openrouter/meta/muse-spark-1.3-contributor" "max")
+    (model "ai-proxy/claude-fable-5-1" "high")
+    (model "ai-proxy/gpt-6-astra" "high")
 
     # DEI models
-    (model "openrouter/z-ai/glm-5.3" "max")
-    (model "ai-proxy/grok-4.7" "high")
-    (model "openrouter/moonshotai/kimi-k3" "max")
+    (model "openrouter/meta/muse-spark-1.3-contributor" "max")
     (model "ai-proxy/gpt-6-sol" "high")
-    (model "openrouter/z-ai/glm-5.3-flash" null)
+    (model "ai-proxy/grok-4.7" "high")
+    (model "openrouter/xiaomi/mimo-v2.6-pro" null)
+    (model "openrouter/qwen/qwen3.8-max-0902" null)
+    (model "openrouter/z-ai/glm-5.3" "max")
     (model "ai-proxy/gemini-3.8-flash" "high")
     (model "ai-proxy/gpt-6-luna" "max")
 
