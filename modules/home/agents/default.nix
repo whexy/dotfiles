@@ -192,7 +192,8 @@ in
         // mkSkillLinks ".claude/skills"
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
-        packages = lib.concatMap (a: a.packages or [ ]) agents;
+        # CLIs that shared skills drive; every harness reaches them through PATH.
+        packages = [ perSystem.self.wechat-cli ] ++ lib.concatMap (a: a.packages or [ ]) agents;
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
 
