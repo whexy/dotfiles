@@ -12,11 +12,7 @@ let
   };
 
   # The interpreter basedpyright resolves imports against, tests included.
-  devPython = python3.withPackages (p: [
-    p.cryptography
-    p.qrcode
-    p.pytest
-  ]);
+  devPython = python3.withPackages (p: [ p.pytest ]);
 
   sourceCheck =
     name: nativeBuildInputs: script:
@@ -29,15 +25,11 @@ let
 in
 python3.pkgs.buildPythonApplication {
   pname = "wechat-cli";
-  version = "0.1.0";
+  version = "0.2.0";
   pyproject = true;
   inherit src;
 
   build-system = [ python3.pkgs.hatchling ];
-  dependencies = [
-    python3.pkgs.cryptography
-    python3.pkgs.qrcode
-  ];
   nativeCheckInputs = [ python3.pkgs.pytestCheckHook ];
 
   passthru = {
@@ -54,7 +46,7 @@ python3.pkgs.buildPythonApplication {
   };
 
   meta = {
-    description = "Message your own WeChat through Tencent's iLink bot API";
+    description = "Message your own WeChat through the wechat-relay service";
     mainProgram = "wechat";
     platforms = lib.platforms.unix;
   };

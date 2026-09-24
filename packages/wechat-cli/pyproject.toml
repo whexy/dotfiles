@@ -1,9 +1,9 @@
 [project]
 name = "wechat-cli"
-version = "0.1.0"
-description = "Message your own WeChat through Tencent's iLink bot API"
+version = "0.2.0"
+description = "Message your own WeChat through the wechat-relay service"
 requires-python = ">=3.13"
-dependencies = ["cryptography", "qrcode"]
+dependencies = []
 
 [project.scripts]
 wechat = "wechat_cli.cli:main"
