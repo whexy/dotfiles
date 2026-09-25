@@ -7,6 +7,7 @@
 }:
 let
   cfg = config.dotfiles.vcs;
+  signingKey = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn";
 in
 {
   config = lib.mkIf cfg.git.enable {
@@ -19,9 +20,11 @@ in
         GIT_CONFIG_NOSYSTEM = "1";
       };
 
-      file.".git_allowed_signers".text = ''
-        whexy@outlook.com ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn
-      '';
+      file.".git_allowed_signers" = lib.mkIf cfg.git.signing.enable {
+        text = ''
+          ${cfg.git.identity.email} ${signingKey}
+        '';
+      };
     };
 
     programs = {
@@ -35,18 +38,15 @@ in
           ".claude/"
         ];
 
-        signing = {
-          key = "ssh-ed25519 AAAAC3NzaC1lZDI1NTE5AAAAIPIcI4E3boeSWD5+eb9K6Zotw7dxjjvHP60tBjoM0uYn";
+        signing = lib.mkIf cfg.git.signing.enable {
+          key = signingKey;
           signByDefault = true;
         };
 
         settings = {
-          user = {
-            name = "Wenxuan Shi";
-            email = "whexy@outlook.com";
-          };
+          user = { inherit (cfg.git.identity) name email; };
 
-          gpg = {
+          gpg = lib.mkIf cfg.git.signing.enable {
             format = "ssh";
             ssh = {
               allowedSignersFile = "~/.git_allowed_signers";
@@ -76,10 +76,7 @@ in
       jujutsu = {
         enable = true;
         settings = {
-          user = {
-            name = "Wenxuan Shi";
-            email = "whexy@outlook.com";
-          };
+          user = { inherit (cfg.git.identity) name email; };
         };
       };
     };
