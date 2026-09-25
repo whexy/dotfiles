@@ -13,6 +13,9 @@
 # profile. /usr/local is therefore the home profile itself. Only /home/user
 # and the Nix store belong to the sandbox user.
 #
+# hosts/sandbox/users/user/AGENTS.md describes this environment to the agent
+# and must follow changes to it.
+#
 # Load with `$(nix build .#sandbox-image --print-out-paths) | docker load`.
 let
   inherit (pkgs) lib;
@@ -20,6 +23,30 @@ let
   daemon = perSystem.self.n8n-sandbox-daemon;
   homePath = config.home.path;
   homeDir = config.home.homeDirectory;
+  bash = pkgs.bashInteractive;
+
+  # The daemon replaces the environment of every command with HOME and PATH,
+  # so image ENV never reaches it. /bin/sh fills in what an unattended agent
+  # needs (UTF-8, no pager, no editor, no prompts) unless the caller set it,
+  # then runs bash in POSIX mode.
+  shell = pkgs.runCommand "sandbox-sh" { } ''
+    mkdir -p $out/bin
+    ln -s ${bash}/bin/bash $out/bin/bash
+    cat > $out/bin/sh <<'EOF'
+    #!${bash}/bin/bash
+    export LANG="''${LANG:-C.UTF-8}" TZ="''${TZ:-UTC}" TERM="''${TERM:-dumb}" \
+      PAGER="''${PAGER:-cat}" GIT_PAGER="''${GIT_PAGER:-cat}" \
+      EDITOR="''${EDITOR:-true}" GIT_EDITOR="''${GIT_EDITOR:-true}" \
+      CI="''${CI:-1}" NO_COLOR="''${NO_COLOR:-1}" \
+      NIX_PATH="''${NIX_PATH:-nixpkgs=flake:nixpkgs}"
+    exec -a "$0" ${bash}/bin/bash "$@"
+    EOF
+    chmod +x $out/bin/sh
+  '';
+
+  # The daemon is PID 1 otherwise, and it never reaps orphaned background
+  # processes, which then pile up against the runner's pids limit.
+  init = lib.getExe pkgs.tini;
 
   # The TypeScript workspace n8n builds workflows in. Install scripts stay off
   # to match upstream's `npm ci --ignore-scripts`.
@@ -33,11 +60,11 @@ let
   # The userland a host normally provides beneath a Home Manager profile.
   contents =
     (with pkgs.dockerTools; [
-      binSh
       usrBinEnv
       caCertificates
     ])
     ++ (with pkgs; [
+      shell
       coreutils
       diffutils
       findutils
@@ -58,6 +85,7 @@ let
   storeRoots = [
     config.home.activationPackage
     daemon
+    pkgs.tini
   ]
   ++ contents;
 in
@@ -92,7 +120,7 @@ pkgs.dockerTools.streamLayeredImage {
     chmod 1777 /tmp
     cat > /etc/passwd <<EOF
     root:x:0:0:root:/root:/bin/sh
-    user:x:1000:1000:Sandbox User:${homeDir}:${homePath}/bin/zsh
+    user:x:1000:1000:Sandbox User:${homeDir}:/bin/bash
     nobody:x:65534:65534:nobody:/var/empty:/bin/sh
     EOF
     cat > /etc/group <<EOF
@@ -100,7 +128,7 @@ pkgs.dockerTools.streamLayeredImage {
     user:x:1000:
     nogroup:x:65534:
     EOF
-    printf '%s\n' /bin/sh ${homePath}/bin/zsh > /etc/shells
+    printf '%s\n' /bin/sh /bin/bash > /etc/shells
 
     ln -s ${homePath} /usr/local
 
@@ -109,11 +137,6 @@ pkgs.dockerTools.streamLayeredImage {
     chmod -R u+w ${homeDir}
     ln -s ${homePath} ${homeDir}/.nix-profile
 
-    # Agent settings are writable files seeded by activation, not store links.
-    for sync in ${homePath}/bin/*-settings-sync; do
-      HOME=${homeDir} "$sync"
-    done
-
     # Install roots n8n relies on, owned by the sandbox user because it
     # cannot write /usr/local: pip needs a venv and a global npm install needs
     # its own prefix. The daemon puts both bin directories on PATH.
@@ -121,7 +144,7 @@ pkgs.dockerTools.streamLayeredImage {
     printf 'prefix=${homeDir}/.npm-global\n' > ${homeDir}/.npmrc
     mkdir -p ${homeDir}/.npm-global/bin
 
-    mkdir -p ${homeDir}/workspace/{src,chunks,node-types}
+    mkdir -p ${homeDir}/projects ${homeDir}/workspace/{src,chunks,node-types}
     cp -r ${workspaceSrc}/. ${workspaceModules}/node_modules ${homeDir}/workspace/
     chmod -R u+w ${homeDir}/workspace
 
@@ -131,6 +154,8 @@ pkgs.dockerTools.streamLayeredImage {
 
   config = {
     Cmd = [
+      init
+      "--"
       (lib.getExe daemon)
       "--listen-addr"
       ":8081"

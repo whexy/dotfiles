@@ -4,61 +4,25 @@
 {
   inputs,
   config,
-  lib,
-  pkgs,
   ...
 }:
 {
   imports = [
     inputs.self.homeModules.all
   ]
-  ++ inputs.self.lib.homeCapsModules [
-    "base"
-    "dev-lite"
-  ];
+  ++ inputs.self.lib.homeCapsModules [ "agent" ];
 
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.overlays = [
-    inputs.self.lib.overlays.unstable
-    inputs.self.lib.overlays.llm-tools
-  ];
-
-  # Agents edit files directly, so no editor or its language bundles.
-  dotfiles.editor =
-    lib.genAttrs
-      [
-        "neovim"
-        "config"
-        "markdown"
-        "nix"
-        "python"
-        "shell"
-        "typst"
-      ]
-      (_: {
-        enable = lib.mkForce false;
-      });
-
-  # Both only take effect through activation or a user service manager.
-  dotfiles.nix.ghTokenFlakes.enable = lib.mkForce false;
-  services.gpg-agent.enable = lib.mkForce false;
-  nix.gc.automatic = lib.mkForce false;
+  nixpkgs.overlays = [ inputs.self.lib.overlays.unstable ];
 
   # Agents fetch missing tools with `nix run`, using a single-user store the
   # sandbox user owns. The runner drops every capability, so builds cannot
   # create the namespaces the Nix sandbox needs.
   nix.settings.sandbox = false;
 
-  # What n8n expects from the upstream sandbox image: Node >= 24 for
-  # @n8n/workflow-sdk, tsc, and a compiler with Python headers for source
-  # builds, since the sandbox cannot install one later.
-  home.packages = with pkgs; [
-    config.nix.package
-    nodejs_24
-    unstable.typescript
-    python3
-    gcc
-    gnumake
-    ripgrep
-  ];
+  # The environment card: what an agent cannot discover by running commands.
+  home.file."AGENTS.md".source = ./AGENTS.md;
+
+  # The image has no system Nix, so the CLI comes from the home.
+  home.packages = [ config.nix.package ];
 }
