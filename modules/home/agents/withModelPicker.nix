@@ -8,6 +8,7 @@
   mcpServers ? { },
   maintainedSettings ? { },
   resetEnv ? [ ],
+  managedLinks ? [ ],
 }:
 let
   manifest = pkgs.writeText "${name}-settings-catalog.json" (
@@ -18,9 +19,9 @@ let
         mcpServers
         maintainedSettings
         resetEnv
+        managedLinks
         ;
       real = "${package}/bin/${name}";
-      fzf = "${pkgs.fzf}/bin/fzf";
     }
   );
   runtime = "${pkgs.lib.getExe agentSettings} ${manifest}";

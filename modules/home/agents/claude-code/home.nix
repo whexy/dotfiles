@@ -13,6 +13,10 @@ let
     name = "claude";
     package = pkgs.llm-agents.claude-code;
     mcpServers = mcp.servers;
+    managedLinks = [
+      "CLAUDE.md"
+      "skills"
+    ];
     # Also maintain these rules for standalone Home Manager installations;
     # system-managed hosts additionally enforce them through managed policy.
     maintainedSettings = builtins.fromJSON (builtins.readFile ./settings.json);

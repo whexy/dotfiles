@@ -5,6 +5,7 @@ import json
 import os
 import sys
 from abc import ABC, abstractmethod
+from collections.abc import MutableMapping
 from pathlib import Path
 from typing import ClassVar, NoReturn, TypedDict, cast
 
@@ -13,7 +14,8 @@ from agent_settings.credentials import read_secrets
 from agent_settings.documents import Table, edit_document, read_document, table_or_empty
 from agent_settings.errors import SettingsError
 from agent_settings.ownership import merge_owned
-from agent_settings.picker import pick
+from agent_settings.picker import DELETE, FORK, SWITCH, ask, pick
+from agent_settings.profiles import Profiles
 
 _CMUX_INTEGRATION = "/Applications/cmux.app/Contents/Resources/shell-integration"
 
@@ -56,8 +58,7 @@ class Agent(ABC):
         self.catalog = Catalog.from_choices(manifest["entries"])
         default_root = Path.home() / f".{self.name}"
         self.root = Path(os.environ.get(self.home_env, default_root)).expanduser().absolute()
-        self.config_file = self.root / self.config_name
-        self.state_file = self.root / "dotfiles-settings.json"
+        self.set_root(self.root)
         self.session_env = f"DOTFILES_{self.name.upper()}_SESSION"
         self.managed_env = (
             set(manifest["resetEnv"]) | self.catalog.provided_env() | self.extra_managed_env
@@ -113,17 +114,66 @@ class Agent(ABC):
 
     def choose(self) -> Entry:
         """Ask for an entry, offering the saved selection first."""
-        labels = [entry["label"] for entry in self.catalog.choices]
-        current = read_document(self.state_file).get("selection")
-        if isinstance(current, str) and current in labels:
-            labels.remove(current)
-            labels.insert(0, current)
-        label = self.pick(labels, self.name)
-        entry = copy.deepcopy(next(e for e in self.catalog.choices if e["label"] == label))
-        return self.refine_choice(entry)
+        profiles = Profiles(self.name)
+        while True:
+            labels = [entry["label"] for entry in self.catalog.choices]
+            current = read_document(self.state_file).get("selection")
+            if isinstance(current, str) and current in labels:
+                labels.remove(current)
+                labels.insert(0, current)
+            label = self.pick(labels, f"{self.name} · {profiles.name(self.root)}", manage=True)
+            if label not in (SWITCH, FORK, DELETE):
+                entry = copy.deepcopy(next(e for e in self.catalog.choices if e["label"] == label))
+                return self.refine_choice(entry)
+            try:
+                if label == SWITCH:
+                    configs = profiles.configurations()
+                    selected = pick(list(configs), "Switch config for this launch")
+                    self.set_root(configs[selected])
+                elif label == FORK:
+                    name = ask("Name for the new config (settings copied; fresh login and history)")
+                    self.set_root(
+                        profiles.fork(self.root, name, self.manifest.get("managedLinks", []))
+                    )
+                else:
+                    if self.root == profiles.default or self.root.parent != profiles.directory:
+                        raise SettingsError("the default and external configs cannot be deleted")
+                    name = profiles.name(self.root)
+                    confirmation = ask(
+                        f"Close sessions using {name} first. Delete its settings and history? "
+                        + f"Type {name} to confirm"
+                    )
+                    if confirmation == name:
+                        profiles.delete(self.root)
+                        self.set_root(profiles.default)
+            except KeyboardInterrupt:
+                continue
+            except (SettingsError, OSError, ValueError) as error:
+                pick(["Back"], str(error))
 
-    def pick(self, labels: list[str], prompt: str) -> str:
-        return pick(self.manifest["fzf"], labels, prompt)
+    def set_root(self, root: Path) -> None:
+        self.root = root
+        self.config_file = root / self.config_name
+        self.state_file = root / "dotfiles-settings.json"
+
+    def pick(self, labels: list[str], prompt: str, *, manage: bool = False) -> str:
+        return pick(labels, prompt, manage=manage)
+
+    def sync(self) -> None:
+        """Activation always owns the default, independent of the caller's environment."""
+        previous = self.root
+        try:
+            for root in Profiles(self.name).configurations().values():
+                self.set_root(root)
+                self.reconcile()
+        finally:
+            self.set_root(previous)
+
+    def export_root(self, env: MutableMapping[str, str]) -> None:
+        if self.root == Profiles(self.name).default:
+            env.pop(self.home_env, None)
+        else:
+            env[self.home_env] = str(self.root)
 
     def select(self, launcher: str, args: list[str]) -> NoReturn:
         """Choose and save a selection, then start a fresh session with it."""
@@ -135,6 +185,7 @@ class Agent(ABC):
         # Validate secrets before committing a selection that cannot launch.
         self.load_credentials(entry, {})
         self.reconcile(entry)
+        self.export_root(os.environ)
         os.environ.pop(self.session_env, None)
         for key in self.managed_env:
             os.environ.pop(key, None)
@@ -147,6 +198,7 @@ class Agent(ABC):
     def launch(self, args: list[str]) -> NoReturn:
         """Run the agent with the inherited or saved selection and its credentials."""
         env = os.environ.copy()
+        self.export_root(env)
         session = self._inherited_session(env)
         inherited = session is not None
         if session is None:

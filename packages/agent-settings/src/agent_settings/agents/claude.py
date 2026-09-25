@@ -2,7 +2,6 @@
 
 import copy
 import json
-import os
 from pathlib import Path
 from typing import cast, final, override
 
@@ -113,7 +112,7 @@ class ClaudeAgent(Agent):
         return ["--settings", json.dumps(settings), *forwarded]
 
     def _mcp_registry(self) -> Path:
-        if os.environ.get(self.home_env):
+        if self.root != Path.home() / ".claude":
             return self.root / ".claude.json"
         return Path.home() / ".claude.json"
 

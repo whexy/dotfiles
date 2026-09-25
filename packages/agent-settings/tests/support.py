@@ -42,7 +42,6 @@ def manifest(agent: str, entries: list[Entry]) -> Manifest:
     return {
         "name": agent,
         "real": "/fake/agent",
-        "fzf": "/fake/fzf",
         "entries": [{"label": "default"}, *entries],
         "mcpServers": {"owned": {"command": "/new/server"}},
         "maintainedSettings": {},
