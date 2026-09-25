@@ -16,6 +16,11 @@ or personal data there.
 
 ## 1. Connect (once per sandbox)
 
+The shared-space key is the **one credential you are expected to store in
+the sandbox**. It opens only this bucket, it exists for this purpose, and
+the owner can revoke it at any time. Store it only in the rclone config file
+below. Never put it in a command, in any other file, or in a message.
+
 Check whether the remote already works:
 
 ```sh

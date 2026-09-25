@@ -67,8 +67,9 @@ again, report it rather than retrying in a loop.
 
 - Commits are authored as `Sandbox Agent <agent@sandbox.invalid>` and are not
   signed.
-- There are **no credentials** here: you can clone public repositories, but
-  pushing and pull requests happen through tools outside the sandbox.
+- There are **no GitHub credentials** here: you can clone public
+  repositories, but pushing and pull requests happen through tools outside the
+  sandbox.
   Hand back your change as `git diff` or `git format-patch` output.
 
 ## Shared space
