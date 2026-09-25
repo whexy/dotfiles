@@ -25,6 +25,8 @@ Skills for the n8n agent that drives the sandbox, ready to copy:
   repository into the sandbox, and changes back out through GitHub tools
 - [skills/sandbox-commands](skills/sandbox-commands/SKILL.md): output limits,
   long-running jobs and background servers
+- [skills/shared-space](skills/shared-space/SKILL.md): the R2 bucket every
+  agent reaches as the rclone remote `shared:`
 
 The environment card the image ships to agents is
 [`hosts/sandbox/users/user/AGENTS.md`](../../hosts/sandbox/users/user/AGENTS.md).
