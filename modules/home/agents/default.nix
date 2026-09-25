@@ -102,6 +102,7 @@ in
       };
       proxy = import ./proxy.nix { inherit config; };
       mcp = import ./mcp.nix { inherit pkgs config lib; };
+      models = import ./models.nix { inherit lib apiAccounts proxyAccounts; };
 
       # Standalone homes have no `osConfig`; they get no cmux integration.
       cmux = import ./cmux.nix {
@@ -115,7 +116,7 @@ in
       };
 
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
-      # standard all three harnesses implement.
+      # standard every harness implements.
       skills =
         lib.mapAttrs (name: _: ./skills + "/${name}") (
           lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
@@ -149,6 +150,20 @@ in
             proxy
             defaults
             mcp
+            models
+            ;
+        })
+        (import ./opencode/home.nix {
+          inherit
+            pkgs
+            config
+            lib
+            apiAccounts
+            proxyAccounts
+            proxy
+            defaults
+            mcp
+            models
             ;
         })
         (import ./claude-code/home.nix {
@@ -199,9 +214,10 @@ in
         # pi gets extra tool-specific guidance appended by its own home.nix.
         file = {
           ".codex/AGENTS.md".source = ./AGENTS.md;
+          ".config/opencode/AGENTS.md".source = ./AGENTS.md;
           ".claude/CLAUDE.md".source = ./AGENTS.md;
         }
-        # User-scope skill location for both pi and codex; adding a skill is
+        # User-scope skill location for pi, codex, and opencode; adding a skill is
         # a new directory under ./skills, never a change here.
         // mkSkillLinks ".agents/skills"
         // mkSkillLinks ".claude/skills"
