@@ -64,8 +64,18 @@ in
       };
     })
     (lib.mkIf cfg.pinRegistry.enable {
-      nix.registry.nixpkgs.flake = inputs.nixpkgs;
-      nix.nixPath = lib.mkBefore [ "nixpkgs=${inputs.nixpkgs}" ];
+      nix = {
+        registry.nixpkgs.flake = inputs.nixpkgs;
+        # Deliberately unpinned: `nix shell unstable#pkg` reaches packages
+        # newer than the stable branch.
+        registry.unstable.to = {
+          type = "github";
+          owner = "NixOS";
+          repo = "nixpkgs";
+          ref = "nixpkgs-unstable";
+        };
+        nixPath = lib.mkBefore [ "nixpkgs=${inputs.nixpkgs}" ];
+      };
     })
     (lib.mkIf cfg.ghTokenFlakes.enable {
       nix.extraOptions = ''
