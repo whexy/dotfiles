@@ -20,7 +20,10 @@ let
   '';
 in
 {
-  config = lib.mkIf (cfg.git.enable && (pkgs.stdenv.isDarwin || cfg.git.opSshSigning)) {
-    programs.git.settings.gpg.ssh.program = toString signer;
-  };
+  config =
+    lib.mkIf
+      (cfg.git.enable && cfg.git.signing.enable && (pkgs.stdenv.isDarwin || cfg.git.opSshSigning))
+      {
+        programs.git.settings.gpg.ssh.program = toString signer;
+      };
 }

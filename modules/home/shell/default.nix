@@ -15,9 +15,10 @@ in
       type = lib.types.enum [
         "zsh"
         "nushell"
+        "none"
       ];
       default = defaultShell;
-      description = "Default user shell.";
+      description = "Default user shell. `none` configures no interactive shell, for homes only driven through `/bin/sh -c`.";
     };
     motd = {
       enable = lib.mkEnableOption "system status message of the day (motd)";
