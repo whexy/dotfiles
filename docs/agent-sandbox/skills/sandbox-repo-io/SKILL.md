@@ -40,8 +40,9 @@ network is off, the clone fails fast; fall back to an upload.
    `get_file_contents` and write them into the same paths. Say that you are
    working on a partial checkout.
 
-Never put a token, key or password into a command or a file in the sandbox.
-If a task seems to need one, stop and say so.
+Never put a GitHub token, or any credential other than the shared-space key
+(see the `shared-space` skill), into a command or a file in the sandbox. If
+a task seems to need one, stop and say so.
 
 ## 2. Pin the base before changing anything
 
