@@ -59,9 +59,8 @@ let
           apiKey = "{env:AI_PROXY_API_KEY}";
           headers = lib.mapAttrs (_: env: "{env:${env}}") proxy.cfAccessHeaderEnv;
         };
-        # A custom provider only offers the models it declares; plugins/ai-proxy.js
-        # fills in their metadata.
-        models = lib.genAttrs (modelsOf "ai-proxy") (_: { });
+        # The plugin discovers the proxy's live model list at startup.
+        models = { };
       };
     };
 
