@@ -1,10 +1,11 @@
 { pkgs }:
 
-# Pairs this machine's T3 Code client with the server on a dev host.
+# Mints a T3 Code pairing URL for the server on a dev host, or on this machine
+# when no host is given.
 #
-# The token is minted on the dev host over ssh and handed back as a pairing
-# URL on the host's Tailscale Serve name, which is where the client connects
-# from then on. ssh and tailscale come from PATH on purpose: they must be the
+# The token is minted on the dev host (over ssh unless it is this machine) and
+# handed back as a pairing URL on the host's Tailscale Serve name, which is
+# where the client connects from then on. ssh and tailscale come from PATH on purpose: they must be the
 # user's configured ssh and the CLI matching the running tailscaled.
 pkgs.writeShellApplication {
   name = "t3-pair";
@@ -16,11 +17,12 @@ pkgs.writeShellApplication {
   text = ''
     usage() {
       cat <<'EOF'
-    usage: t3-pair [--label LABEL] [--ttl DURATION] <host>
+    usage: t3-pair [--label LABEL] [--ttl DURATION] [host]
 
-    Mint a one-time T3 Code pairing URL on <host> (a tailnet machine name) and
-    copy it to the clipboard. Paste it into T3 Code under Settings ->
-    Connections -> Add environment.
+    Mint a one-time T3 Code pairing URL on [host] (a tailnet machine name, or
+    this machine when omitted) and copy it to the clipboard when one is
+    available. Paste it into T3 Code under Settings -> Connections -> Add
+    environment.
 
       --label LABEL     name shown in the host's client list (default: this host)
       --ttl DURATION    how long the unused link stays valid (default: 5m)
@@ -56,28 +58,30 @@ pkgs.writeShellApplication {
       esac
     done
 
-    if [ -z "$host" ]; then
-      usage >&2
-      exit 2
-    fi
-
     # Every value is spliced into a command run by two remote shells (the
     # login shell ssh picks, then sh), so restrict them instead of quoting.
-    for value in "$host" "$label" "$ttl"; do
+    for value in ''${host:+"$host"} "$label" "$ttl"; do
       if ! [[ "$value" =~ ^[A-Za-z0-9._-]+$ ]]; then
         echo "t3-pair: '$value' may only contain letters, digits, '.', '_' and '-'" >&2
         exit 2
       fi
     done
 
-    status=$(tailscale status --json)
+    if ! status=$(tailscale status --json 2>/dev/null) ||
+      [ "$(jq -r '.BackendState' <<<"$status")" != Running ]; then
+      echo "t3-pair: this machine is not connected to a tailnet" >&2
+      exit 1
+    fi
     # Match on the MagicDNS label rather than HostName: that is the name the
     # HTTPS certificate is issued for.
     peer=$(
       jq -r --arg host "''${host,,}" '
-        [.Self, (.Peer // {} | .[])]
-        | map(select((.DNSName | split(".")[0]) == $host))
-        | first // empty
+        if $host == "" then .Self
+        else
+          [.Self, (.Peer // {} | .[])]
+          | map(select((.DNSName | split(".")[0]) == $host))
+          | first // empty
+        end
         | "\(.ID) \(.DNSName | rtrimstr("."))"
       ' <<<"$status"
     )
@@ -89,6 +93,10 @@ pkgs.writeShellApplication {
 
     create=(t3 auth pairing create --json --label "$label" --ttl "$ttl" --base-url "https://$dns_name")
     if [ "$peer_id" = "$(jq -r '.Self.ID' <<<"$status")" ]; then
+      if ! command -v t3 >/dev/null; then
+        echo "t3-pair: this machine does not run the T3 Code server" >&2
+        exit 1
+      fi
       pairing=$("''${create[@]}")
     else
       # A login shell is what puts the Nix profiles on PATH for a
