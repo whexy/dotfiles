@@ -151,11 +151,14 @@ in
         ncdu
         nix-output-monitor
         p7zip
-        perSystem.self.doordash-cli
         ripgrep
         tldr
         unrar
         xz
+      ]
+      # Upstream ships prebuilt binaries for only some platforms.
+      ++ lib.optionals (lib.meta.availableOn pkgs.stdenv.hostPlatform perSystem.self.doordash-cli) [
+        perSystem.self.doordash-cli
       ]
       ++ lib.optionals config.targets.genericLinux.enable [
         _1password-cli
