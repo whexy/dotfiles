@@ -98,6 +98,14 @@
       flake = false;
     };
 
+    # Source of the sandbox daemon baked into packages/sandbox-image. The
+    # daemon and the runners speak an unversioned internal contract, so this
+    # pin must match the n8n-sandbox-service release the runners run.
+    n8n-sandbox-service = {
+      url = "github:n8n-io/n8n-sandbox-service";
+      flake = false;
+    };
+
     niri = {
       url = "github:sodiboo/niri-flake";
       inputs.nixpkgs.follows = "nixpkgs-unstable";
