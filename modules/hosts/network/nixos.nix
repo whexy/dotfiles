@@ -28,5 +28,9 @@ in
       };
       networking.firewall.trustedInterfaces = [ "tailscale0" ];
     })
+
+    (lib.mkIf (cfg.tailscale.enable && cfg.tailscale.userOperator) {
+      services.tailscale.extraSetFlags = [ "--operator=${config.dotfiles.host.username}" ];
+    })
   ];
 }

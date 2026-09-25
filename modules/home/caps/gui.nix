@@ -29,6 +29,7 @@ in
         streaming.enable = lib.mkDefault true;
         desktop.wallpaper.enable = lib.mkDefault true;
         vcs.git.opSshSigning = lib.mkDefault true;
+        agents.t3code.desktop.enable = lib.mkDefault true;
       }
       (
         lib.optionalAttrs (!isDarwin) {
