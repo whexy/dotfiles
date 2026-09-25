@@ -1,5 +1,6 @@
 {
   pkgs,
+  inputs,
   flake,
   perSystem,
   system,
@@ -9,8 +10,8 @@
 #
 # The runner starts it as uid 1000 with HOME=/home/user, and the daemon runs
 # every command under `/bin/sh -c` with a fixed PATH that ignores the Nix
-# profile. /usr/local is therefore the home profile itself, and /home/user
-# is the only directory the sandbox can write to.
+# profile. /usr/local is therefore the home profile itself. Only /home/user
+# and the Nix store belong to the sandbox user.
 #
 # Load with `$(nix build .#sandbox-image --print-out-paths) | docker load`.
 let
@@ -19,10 +20,15 @@ let
   daemon = perSystem.self.n8n-sandbox-daemon;
   homePath = config.home.path;
   homeDir = config.home.homeDirectory;
-in
-pkgs.dockerTools.streamLayeredImage {
-  name = "n8n-sandbox";
-  tag = "latest";
+
+  # The TypeScript workspace n8n builds workflows in. Install scripts stay off
+  # to match upstream's `npm ci --ignore-scripts`.
+  workspaceSrc = "${inputs.n8n-sandbox-service}/sandbox-workspace";
+  workspaceModules = pkgs.importNpmLock.buildNodeModules {
+    npmRoot = workspaceSrc;
+    nodejs = pkgs.nodejs_24;
+    derivationArgs.npmFlags = [ "--ignore-scripts" ];
+  };
 
   # The userland a host normally provides beneath a Home Manager profile.
   contents =
@@ -46,6 +52,39 @@ pkgs.dockerTools.streamLayeredImage {
       procps
       which
     ]);
+
+  # Registered as valid and rooted, so the in-sandbox Nix neither refetches
+  # nor garbage-collects what the image ships.
+  storeRoots = [
+    config.home.activationPackage
+    daemon
+  ]
+  ++ contents;
+in
+pkgs.dockerTools.streamLayeredImage {
+  name = "n8n-sandbox";
+  tag = "latest";
+
+  inherit contents;
+
+  # Store layers only; the customisation layer keeps its own ownership.
+  uid = 1000;
+  gid = 1000;
+  uname = "user";
+  gname = "user";
+
+  extraCommands = ''
+    export NIX_REMOTE=local?root=$PWD USER=nobody
+    ${lib.getExe' pkgs.nix "nix-store"} --load-db < ${
+      pkgs.closureInfo { rootPaths = storeRoots; }
+    }/registration
+    ${lib.getExe pkgs.sqlite} nix/var/nix/db/db.sqlite \
+      "UPDATE ValidPaths SET registrationTime = $SOURCE_DATE_EPOCH"
+    mkdir -p nix/var/nix/gcroots/sandbox
+    for root in ${lib.concatStringsSep " " storeRoots}; do
+      ln -s "$root" nix/var/nix/gcroots/sandbox/
+    done
+  '';
 
   enableFakechroot = true;
   fakeRootCommands = ''
@@ -75,7 +114,19 @@ pkgs.dockerTools.streamLayeredImage {
       HOME=${homeDir} "$sync"
     done
 
-    chown -R 1000:1000 ${homeDir}
+    # Install roots n8n relies on, owned by the sandbox user because it
+    # cannot write /usr/local: pip needs a venv and a global npm install needs
+    # its own prefix. The daemon puts both bin directories on PATH.
+    ${homePath}/bin/python3 -m venv ${homeDir}/venv
+    printf 'prefix=${homeDir}/.npm-global\n' > ${homeDir}/.npmrc
+    mkdir -p ${homeDir}/.npm-global/bin
+
+    mkdir -p ${homeDir}/workspace/{src,chunks,node-types}
+    cp -r ${workspaceSrc}/. ${workspaceModules}/node_modules ${homeDir}/workspace/
+    chmod -R u+w ${homeDir}/workspace
+
+    chown -R 1000:1000 ${homeDir} /nix/var
+    chown 1000:1000 /nix
   '';
 
   config = {
