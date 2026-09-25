@@ -8,6 +8,7 @@
       enable = lib.mkDefault true;
       enableApiAccounts = lib.mkDefault false;
       enableProxyAccounts = lib.mkDefault true;
+      t3code.pair.enable = lib.mkDefault true;
     };
     ssh.enable = lib.mkDefault true;
     nix.ghTokenFlakes.enable = lib.mkDefault true;

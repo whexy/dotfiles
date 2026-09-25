@@ -57,10 +57,8 @@ in
 {
   packages =
     lib.optional cfg.server.enable t3code
-    ++ lib.optionals cfg.desktop.enable [
-      t3code.desktop
-      perSystem.self.t3-pair
-    ];
+    ++ lib.optional cfg.desktop.enable t3code.desktop
+    ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
 
   activation = lib.optionalAttrs (cfg.server.enable && cfg.desktop.enable) {
     t3codeDisableDesktopBackend = disableDesktopBackend;

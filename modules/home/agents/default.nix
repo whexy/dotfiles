@@ -55,7 +55,8 @@ in
 
       t3code = {
         server.enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
-        desktop.enable = lib.mkEnableOption "the T3 Code desktop client and the t3-pair helper";
+        desktop.enable = lib.mkEnableOption "the T3 Code desktop client";
+        pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
       };
 
       defaultProvider = mkModelOption "provider serving the default model" {

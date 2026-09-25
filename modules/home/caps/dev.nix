@@ -19,6 +19,7 @@ args@{
       # Clients only reach the server through Tailscale Serve. Standalone
       # homes have no osConfig to say whether this machine is on the tailnet.
       t3code.server.enable = lib.mkDefault (args.osConfig.dotfiles.network.tailscale.enable or false);
+      t3code.pair.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser
     # whether or not it has a display.
