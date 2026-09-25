@@ -2,8 +2,42 @@
 
 Use `claude-select` or `codex-select` to choose a provider/model (or the native
 login default), save it, and launch. Claude's selector also supports per-role
-fusion selection. Cancellation changes nothing. Ordinary `claude` and `codex`
+fusion selection. The searchable terminal UI provides config actions at the bottom. Ordinary `claude` and `codex`
 never open a picker, even with a terminal and no arguments.
+
+## Config manager
+
+`claude-select` and `codex-select` show models for the current config. Type to
+search, use the arrow keys to choose, and press Enter to save and launch.
+The buttons at the bottom also have shortcuts:
+
+- **Ctrl+S — Switch config:** choose the default or a named config for this launch.
+- **Ctrl+N — Fork current config:** name a new config and continue selecting in it.
+- **Ctrl+D — Delete current config:** type its name to confirm deletion, then
+  return to the default. Close sessions using it first. Default and external
+  config directories cannot be deleted.
+
+Switching applies only to the launched process and its descendants. Ordinary
+`claude` / `codex` launches still use the default, unless their native config
+location environment variable is explicitly set. Escape cancels a menu; a fork
+or confirmed deletion already completed remains in effect.
+
+Named configs live under `$XDG_DATA_HOME/agent-settings/<agent>/configs/<name>`
+(default `~/.local/share/agent-settings/...`). Forks copy native settings, selector
+metadata, instructions, skills, agents, commands, hooks, rules, and Codex profile
+TOMLs. Claude's user MCP servers are copied separately. Login files, trust state,
+conversation history, caches, and installed plugins are not copied; sign in or
+install plugins separately when needed. Credentials manually embedded in copied
+settings remain part of those settings.
+
+Nix-managed instructions and Claude's skills directory link through the default
+config's paths, so updates and newly added skills follow Home Manager activation.
+Claude's skills are shared, including user-installed skills in that directory.
+Codex also continues discovering shared user skills in `~/.agents/skills`.
+Forked native settings remain separate writable files. Activation always reconciles
+the default first, then named configs, preserving their provider/model choices and
+user settings. `CODEX_HOME` and `CLAUDE_CONFIG_DIR` cannot redirect activation.
+External config directories are reconciled when selecting a model in them.
 
 ## Ownership
 

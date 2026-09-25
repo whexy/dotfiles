@@ -13,6 +13,7 @@ let
 
   # The interpreter basedpyright resolves imports against, tests included.
   devPython = python3.withPackages (p: [
+    p.textual
     p.tomlkit
     p.pytest
   ]);
@@ -33,7 +34,10 @@ python3.pkgs.buildPythonApplication {
   inherit src;
 
   build-system = [ python3.pkgs.hatchling ];
-  dependencies = [ python3.pkgs.tomlkit ];
+  dependencies = [
+    python3.pkgs.tomlkit
+    python3.pkgs.textual
+  ];
   nativeCheckInputs = [ python3.pkgs.pytestCheckHook ];
 
   passthru = {

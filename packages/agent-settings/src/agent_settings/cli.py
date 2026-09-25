@@ -16,7 +16,7 @@ def run(argv: list[str]) -> None:
     agent = create_agent(cast(Manifest, json.loads(Path(catalog_path).read_text())))
     match command:
         case "sync":
-            agent.reconcile()
+            agent.sync()
         case "select":
             agent.select(args[0], args[1:])
         case "launch":

@@ -36,7 +36,7 @@ class Manifest(TypedDict):
     name: str
     real: str
     """The wrapped agent executable."""
-    fzf: str
+    managedLinks: NotRequired[list[str]]
     entries: list[Entry]
     resetEnv: list[str]
     """Provider variables cleared whenever a selection is active."""

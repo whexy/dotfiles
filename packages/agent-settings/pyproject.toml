@@ -3,7 +3,7 @@ name = "agent-settings"
 version = "1.0.0"
 description = "Writable Claude Code and Codex model selection with Nix-maintained defaults"
 requires-python = ">=3.13"
-dependencies = ["tomlkit"]
+dependencies = ["tomlkit", "textual"]
 
 [project.scripts]
 agent-settings = "agent_settings.cli:main"
@@ -37,3 +37,7 @@ executionEnvironments = [
   { root = "tests", reportAny = false, reportUnknownMemberType = false, reportUnknownArgumentType = false, reportUnknownVariableType = false, reportUnknownLambdaType = false, reportPrivateUsage = false },
   { root = "src" },
 ]
+
+[tool.ruff.lint.isort]
+known-first-party = ["agent_settings"]
+known-third-party = ["support"]

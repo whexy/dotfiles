@@ -13,6 +13,7 @@ let
     name = "codex";
     package = pkgs.llm-agents.codex;
     mcpServers = mcp.servers;
+    managedLinks = [ "AGENTS.md" ];
     resetEnv = [
       "OPENAI_BASE_URL"
       "CODEX_API_KEY"
