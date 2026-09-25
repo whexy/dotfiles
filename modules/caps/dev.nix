@@ -33,8 +33,12 @@ in
     };
     network = {
       tailscale.enable = lib.mkDefault true;
+      # The home T3 Code server publishes itself with `tailscale serve`.
+      tailscale.userOperator = lib.mkDefault true;
       networkmanager.enable = lib.mkDefault true;
     };
+    # Keeps user services such as the T3 Code server up on headless hosts.
+    user.linger = lib.mkDefault true;
     services.openssh.enable = lib.mkDefault true;
     # Agents drive Firefox headlessly. Only has an effect on Darwin, where
     # the browser comes from a Homebrew cask; on NixOS the home browser group

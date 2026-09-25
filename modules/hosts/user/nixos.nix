@@ -13,6 +13,7 @@ in
     users.mutableUsers = false;
     users.users.${username} = {
       isNormalUser = true;
+      inherit (cfg) linger;
       description = username;
       home = "/home/${username}";
       hashedPassword = "$y$j9T$hS1I2iWez3k8r1EH6ZIKG.$rATY9sBbSiudRf7T5MOEWlLraL6WFY5K6uB0MZj3Q.4";

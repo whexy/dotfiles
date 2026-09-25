@@ -1,7 +1,8 @@
 # AI coding agents configuration
 #
 # Tool-specific config lives in each tool's folder, which exports a common
-# contract: packages, homeFiles, shellAliases. This module keeps only shared
+# contract: packages, homeFiles, shellAliases, activation, and the
+# systemdUserServices/launchdAgents it runs. This module keeps only shared
 # concerns: options, the global AGENTS.md, agenix secrets, and merging.
 args@{
   pkgs,
@@ -51,6 +52,11 @@ in
       enableProxyAccounts = lib.mkEnableOption "enable models served by the AI proxy";
 
       firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
+
+      t3code = {
+        server.enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
+        desktop.enable = lib.mkEnableOption "the T3 Code desktop client and the t3-pair helper";
+      };
 
       defaultProvider = mkModelOption "provider serving the default model" {
         proxy = "ai-proxy";
@@ -168,6 +174,14 @@ in
             mcp
             ;
         })
+        (import ./t3code/home.nix {
+          inherit
+            pkgs
+            config
+            lib
+            perSystem
+            ;
+        })
         (import ./gcai/home.nix {
           inherit
             pkgs
@@ -204,6 +218,9 @@ in
             inherit migrateSkillsDir;
           };
       };
+
+      systemd.user.services = lib.mergeAttrsList (map (a: a.systemdUserServices or { }) agents);
+      launchd.agents = lib.mergeAttrsList (map (a: a.launchdAgents or { }) agents);
 
       # Secrets stay at agenix's default runtime location. Every consumer
       # reads `config.age.secrets.*.path` through a shell, which is what
