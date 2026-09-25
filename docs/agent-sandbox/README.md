@@ -19,6 +19,16 @@ autonomous agents.
 | [06-threat-model.md](06-threat-model.md)               | Threat model and residual risks (objective 6)                     |
 | [07-proof-of-concept.md](07-proof-of-concept.md)       | Staged proof of concept with disposable credentials (objective 7) |
 
+Skills for the n8n agent that drives the sandbox, ready to copy:
+
+- [skills/sandbox-repo-io](skills/sandbox-repo-io/SKILL.md): moving a
+  repository into the sandbox, and changes back out through GitHub tools
+- [skills/sandbox-commands](skills/sandbox-commands/SKILL.md): output limits,
+  long-running jobs and background servers
+
+The environment card the image ships to agents is
+[`hosts/sandbox/users/user/AGENTS.md`](../../hosts/sandbox/users/user/AGENTS.md).
+
 ## Evidence labels
 
 - **[V] Verified.** Read in source code or configuration, with a `path:line`
