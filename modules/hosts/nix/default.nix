@@ -36,6 +36,15 @@ in
         # use the same package set as the system closure.
         registry.nixpkgs.flake = systemNixpkgs;
 
+        # Deliberately unpinned: `nix shell unstable#pkg` reaches packages
+        # newer than the stable system branch.
+        registry.unstable.to = {
+          type = "github";
+          owner = "NixOS";
+          repo = "nixpkgs";
+          ref = "nixpkgs-unstable";
+        };
+
         # Takes precedence over the channel entry so `<nixpkgs>` agrees with
         # the registry.
         nixPath = lib.mkBefore [ "nixpkgs=${systemNixpkgs}" ];
