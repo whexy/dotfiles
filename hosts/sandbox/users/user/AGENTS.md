@@ -39,7 +39,7 @@ Preinstalled:
 
 - git, git-lfs, gh (not logged in)
 - rg, fd, ast-grep, sd, jq, yq, tree, file, patch, diff
-- curl, wget, rsync, zip/unzip, 7z, zstd
+- curl, wget, rsync, rclone, zip/unzip, 7z, zstd
 - gcc, make, cmake, pkg-config, just
 - python3, uv, node, npm, pnpm, tsc, sqlite3
 - strace, ltrace, lsof, gdb, dig
@@ -71,6 +71,13 @@ again, report it rather than retrying in a loop.
   pushing and pull requests happen through tools outside the sandbox.
   Hand back your change as `git diff` or `git format-patch` output.
 
+## Shared space
+
+Files that must outlive this sandbox, or that other agents or people need,
+go to the shared space: an object-storage bucket every agent can reach as the
+rclone remote `shared:`. It needs a one-time setup per sandbox. See the
+`shared-space` skill.
+
 ## Output and long commands
 
 - Keep command output small. Redirect big output to a file and read it
@@ -89,4 +96,4 @@ again, report it rather than retrying in a loop.
   processes, including background jobs and servers. Files survive until the
   sandbox is deleted.
 - The sandbox is deleted after the task. Never treat it as storage. Anything
-  worth keeping must leave as a diff, a patch, or a file you hand back.
+  worth keeping must leave as a diff or a patch, or go to the shared space.

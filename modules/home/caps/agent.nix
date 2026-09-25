@@ -52,6 +52,7 @@
       curl
       wget
       rsync
+      rclone
       unzip
       zip
       p7zip
