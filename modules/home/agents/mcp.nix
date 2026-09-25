@@ -45,7 +45,18 @@ let
   ];
 in
 {
-  servers = lib.optionalAttrs cfg.firefoxDevtools.enable {
+  servers = {
+    # n8n workflow that reaches the user away from the desk: phone push,
+    # WeChat, and a Slack note-to-self. It has no authentication.
+    #
+    # `type` is Claude's discriminator for a remote server; codex and
+    # pi-mcp-adapter key on `url` and ignore it.
+    personal = {
+      type = "http";
+      url = "https://n8n.clusters.work/mcp/3e3dc609-1939-47ed-94ef-964a3164dfae";
+    };
+  }
+  // lib.optionalAttrs cfg.firefoxDevtools.enable {
     firefox-devtools = {
       # Not yet in the release branches; nixpkgs-unstable has it.
       command = lib.getExe pkgs.unstable.firefox-devtools-mcp;
