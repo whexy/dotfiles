@@ -30,7 +30,7 @@ Other credential paths in use:
   `modules/home/vcs/git-signing.nix`).
 - The gh keyring token, used for Nix fetches (`packages/nix-gh-token`).
 - A GitHub App token minter used by CI (`packages/github-app-token`,
-  `.woodpecker.yml:21-49`).
+  `.woodpecker.yml:26-82`).
 - A shared Cloudflare Access service token for the AI proxy, NAS and panel
   (`agents/proxy.nix:13-29`, `rclone/default.nix:343-357`).
 

@@ -9,24 +9,28 @@ variables:
         limits:
           memory: 12Gi # <= LimitRange max
           cpu: "16" # <= LimitRange max; let nix use many of k8s-3's 24 cores
+  # GitHub App credentials and the flake features both update lanes need.
+  - &github_app
+    GITHUB_APP_ID:
+      from_secret: github_app_id
+    GITHUB_APP_INSTALLATION_ID:
+      from_secret: github_app_installation_id
+    GITHUB_APP_PRIVATE_KEY:
+      from_secret: github_app_private_key
+    NIX_CONFIG: |
+      experimental-features = nix-command flakes
 when:
   event: [push, pull_request, cron, manual]
-  cron: nightly
+  cron: [nightly, weekly]
 steps:
-  # Update flake inputs (cron only)
+  # Update every flake input (weekly cron, or a manual run)
   update-flake:
     image: nixos/nix:latest
     when:
-      event: [cron, manual]
-    environment:
-      GITHUB_APP_ID:
-        from_secret: github_app_id
-      GITHUB_APP_INSTALLATION_ID:
-        from_secret: github_app_installation_id
-      GITHUB_APP_PRIVATE_KEY:
-        from_secret: github_app_private_key
-      NIX_CONFIG: |
-        experimental-features = nix-command flakes
+      - event: cron
+        cron: weekly
+      - event: manual
+    environment: *github_app
     commands:
       - nix flake update
       # Commit and push flake.lock directly to the repository's primary branch.
@@ -41,6 +45,35 @@ steps:
         git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
         git add flake.lock
         git commit -m "chore: update flake inputs"
+
+        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
+        origin_url="$(git remote get-url origin)"
+        trap 'git remote set-url origin "$origin_url"' EXIT
+        git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
+        git push origin HEAD:master
+  # Update only the llm-agents input (nightly cron). Upstream ships agent
+  # releases often, and a one-input update is cheap, so this lane refreshes
+  # them daily instead of letting them ride along with the weekly full update.
+  update-llm-agents:
+    image: nixos/nix:latest
+    when:
+      event: cron
+      cron: nightly
+    environment: *github_app
+    commands:
+      - nix flake update llm-agents
+      # Commit and push flake.lock directly to the repository's primary branch.
+      # No-op (exit 0) when flake.lock is unchanged.
+      - |
+        if git diff --quiet -- flake.lock; then
+          echo "No changes to flake.lock"
+          exit 0
+        fi
+
+        git config user.name "whexy-bot[bot]"
+        git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
+        git add flake.lock
+        git commit -m "chore: update llm-agents input"
 
         GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
         origin_url="$(git remote get-url origin)"
