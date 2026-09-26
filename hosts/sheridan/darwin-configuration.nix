@@ -1,6 +1,8 @@
 { flake, ... }:
 {
   dotfiles.system.autoUpgrade.enable = true;
+  # The T3 Code server publishes itself with `tailscale serve`.
+  dotfiles.network.tailscale.userOperator = true;
 
   imports = flake.lib.darwinHost {
     system = "aarch64-darwin";
