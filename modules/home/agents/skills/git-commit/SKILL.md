@@ -55,11 +55,21 @@ is down, commit without signing rather than waiting on it.
 
 ## Tagging
 
-`tag.gpgsign=true` is set, so a bare `git tag <name>` blocks the session
-waiting on the signing prompt. Always pass a message and sign explicitly:
+Signing tags is optional, like signing commits.
+
+`tag.gpgsign=true` is set, so a bare `git tag <name>` opens an editor for the
+tag message and blocks the session. Always pass `-m`. Sign when the agent is
+available:
 
 ```bash
 git tag -s v0.1 -m "v0.1"
+```
+
+Without an agent, `git tag -s` fails immediately with `Couldn't get agent
+socket?`. Create an unsigned annotated tag instead:
+
+```bash
+git tag --no-sign -a v0.1 -m "v0.1"
 ```
 
 ## Before you commit
@@ -68,4 +78,5 @@ git tag -s v0.1 -m "v0.1"
 - Body is plain text.
 - An `Assisted-by:` trailer names the tool and the model you are running as.
 - No `Co-authored-by:` trailer.
-- `git tag` invocations pass `-s` and `-m`.
+- `git tag` invocations pass `-m`, plus `-s` with an agent or `--no-sign -a`
+  without one.
