@@ -160,7 +160,7 @@ Teardown: delete the grant, ProxyGroup and test node.
 ## What must be decided before stage 1
 
 1. Rotate and authenticate the `personal` MCP endpoint (a production change;
-   see the [README](README.md#findings-that-need-action-before-anything-else)).
+   see the [README](../README.md#findings-that-need-action-before-anything-else)).
 2. Confirm the cluster facts this repository cannot show:
    - Kubernetes version (Sysbox supports 1.32–1.35)
    - CNI (Cilium or not)
