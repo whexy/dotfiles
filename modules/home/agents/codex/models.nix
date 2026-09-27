@@ -12,13 +12,12 @@ let
   # header onto the env var holding its value, so the picker exports the
   # service token and codex reads it at request time.
   #
-  aiProxy = model: {
-    label = "ai-proxy/${model}";
+  aiProxyDefault = {
+    label = "ai-proxy (default models)";
     secrets = proxy.cfAccessSecrets // {
       OPENAI_API_KEY = proxy.apiKeyPath;
     };
     settings = {
-      inherit model;
       model_provider = "dotfiles-proxy";
       model_providers.dotfiles-proxy = {
         name = "CLIProxyAPI";
@@ -30,6 +29,15 @@ let
       };
     };
   };
+  aiProxy =
+    model:
+    aiProxyDefault
+    // {
+      label = "ai-proxy/${model}";
+      settings = aiProxyDefault.settings // {
+        inherit model;
+      };
+    };
   openai = model: {
     label = "openai/${model}";
     secrets.OPENAI_API_KEY = config.age.secrets.openai-api-key.path;
@@ -48,7 +56,8 @@ let
 in
 [ { label = "default (ChatGPT login)"; } ]
 ++ lib.optionals proxyAccounts (
-  map aiProxy [
+  [ aiProxyDefault ]
+  ++ map aiProxy [
     "claude-opus-5-5"
     "claude-fable-5-1"
     "gpt-6-astra"

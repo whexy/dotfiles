@@ -9,6 +9,10 @@ never open a picker, even with a terminal and no arguments.
 
 `claude-select` and `codex-select` show models for the current config. Type to
 search, use the arrow keys to choose, and press Enter to save and launch.
+Choose **ai-proxy (default models)** to configure the proxy endpoint and authentication
+while clearing previous model and role overrides. The agent then uses its native
+model defaults; this does not discover the proxy’s model catalog.
+
 The buttons at the bottom also have shortcuts:
 
 - **Ctrl+S — Switch config:** choose the default or a named config for this launch.

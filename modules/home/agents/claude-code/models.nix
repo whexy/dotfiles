@@ -48,9 +48,9 @@ let
   #
   # The endpoint sits behind Cloudflare Access, whose service token goes
   # in ANTHROPIC_CUSTOM_HEADERS: `Name: Value` pairs, newline-separated.
-  aiProxy = mapping: model: {
-    label = "ai-proxy/${model}";
-    env = mapping model // {
+  aiProxyDefault = {
+    label = "ai-proxy (default models)";
+    env = {
       ANTHROPIC_BASE_URL = proxy.baseUrl;
     };
     secrets = proxy.cfAccessSecrets // {
@@ -58,6 +58,13 @@ let
     };
     secretHeaders = proxy.cfAccessHeaderEnv;
   };
+  aiProxy =
+    mapping: model:
+    aiProxyDefault
+    // {
+      label = "ai-proxy/${model}";
+      env = aiProxyDefault.env // mapping model;
+    };
   anthropic = model: {
     label = "anthropic/${model}";
     env.ANTHROPIC_MODEL = model;
@@ -101,6 +108,7 @@ let
     );
 in
 [ { label = "default (claude.ai login)"; } ]
+++ lib.optionals proxyAccounts [ aiProxyDefault ]
 ++ modelEntries
 ++ [
   # Fusion mode: the main pick fixes the provider (endpoint + key), and
