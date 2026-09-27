@@ -7,6 +7,8 @@ let
 in
 {
   llm-agents = upstream // {
+    codex = prev.callPackage ./codex-package.nix { inherit (upstream) codex; };
+
     # Build pi as a Node package instead of a Bun-compiled binary.
     #
     # pi-subagents spawns background children as a separate Node process that
