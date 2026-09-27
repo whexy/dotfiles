@@ -1,4 +1,4 @@
-# The home baked into packages/sandbox-image, a workspace for AI agents. Its
+# The home baked into images/sandbox, a workspace for AI agents. Its
 # files are linked into the image at build time and activation never runs:
 # the sandbox has no root and no service manager.
 {

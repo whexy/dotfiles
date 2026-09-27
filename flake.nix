@@ -98,7 +98,7 @@
       flake = false;
     };
 
-    # Source of the sandbox daemon baked into packages/sandbox-image. The
+    # Source of the sandbox daemon baked into images/sandbox. The
     # daemon and the runners speak an unversioned internal contract, so this
     # pin must match the n8n-sandbox-service release the runners run.
     n8n-sandbox-service = {

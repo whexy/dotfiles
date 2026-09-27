@@ -46,7 +46,7 @@ enabled, allows `*` origins [V] `internal/api/middleware_cors.go:12-14`.
   - a successful `true` exec for readiness
   - a user with uid 1000 and home `/home/user`
 
-  The image in `packages/sandbox-image` meets all four.
+  The image in `images/sandbox` meets all four.
 
 - **Firecracker** flattens the image into an ext4 template and boots the daemon
   as `init`, so the image `ENTRYPOINT` and `ENV` are ignored [V]

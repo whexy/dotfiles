@@ -24,7 +24,7 @@ Build:
 Checks (scriptable as a flake `check` against the image):
 
 ```sh
-"$(nix build .#sandbox-image --print-out-paths)" | docker load
+just build-sandbox-image && result/sandbox/n8n-sandbox | docker load
 closure=$(nix path-info -r .#legacyPackages.x86_64-linux.homeConfigurations."user@sandbox".activationPackage)
 echo "$closure" | grep -E '\.age$'                        && echo FAIL: ciphertext in closure
 docker run --rm --entrypoint /bin/sh n8n-sandbox:latest -c '
