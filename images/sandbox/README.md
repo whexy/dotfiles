@@ -9,23 +9,23 @@ research reviews it against the n8n Sandbox Service, the secret system in
 this repository, and the Git, storage, network and isolation options for
 autonomous agents.
 
-| Document                                               | Covers                                                            |
-| ------------------------------------------------------ | ----------------------------------------------------------------- |
-| [01-n8n-sandbox-service.md](01-n8n-sandbox-service.md) | Verified behaviour of the service (objective 1)                   |
-| [02-profiles.md](02-profiles.md)                       | Human/agent profile split and Nix module proposal (objective 2)   |
-| [03-secrets.md](03-secrets.md)                         | Secret system and runtime delivery options (objective 3)          |
-| [04-git-credentials.md](04-git-credentials.md)         | GitHub auth, identity and signing (objective 4)                   |
-| [05-storage-network.md](05-storage-network.md)         | Persistent storage, egress and Tailscale (objective 5)            |
-| [06-threat-model.md](06-threat-model.md)               | Threat model and residual risks (objective 6)                     |
-| [07-proof-of-concept.md](07-proof-of-concept.md)       | Staged proof of concept with disposable credentials (objective 7) |
+| Document                                                    | Covers                                                            |
+| ----------------------------------------------------------- | ----------------------------------------------------------------- |
+| [01-n8n-sandbox-service.md](docs/01-n8n-sandbox-service.md) | Verified behaviour of the service (objective 1)                   |
+| [02-profiles.md](docs/02-profiles.md)                       | Human/agent profile split and Nix module proposal (objective 2)   |
+| [03-secrets.md](docs/03-secrets.md)                         | Secret system and runtime delivery options (objective 3)          |
+| [04-git-credentials.md](docs/04-git-credentials.md)         | GitHub auth, identity and signing (objective 4)                   |
+| [05-storage-network.md](docs/05-storage-network.md)         | Persistent storage, egress and Tailscale (objective 5)            |
+| [06-threat-model.md](docs/06-threat-model.md)               | Threat model and residual risks (objective 6)                     |
+| [07-proof-of-concept.md](docs/07-proof-of-concept.md)       | Staged proof of concept with disposable credentials (objective 7) |
 
 Skills for the n8n agent that drives the sandbox, ready to copy:
 
-- [skills/sandbox-repo-io](skills/sandbox-repo-io/SKILL.md): moving a
+- [skills/sandbox-repo-io](docs/skills/sandbox-repo-io/SKILL.md): moving a
   repository into the sandbox, and changes back out through GitHub tools
-- [skills/sandbox-commands](skills/sandbox-commands/SKILL.md): output limits,
+- [skills/sandbox-commands](docs/skills/sandbox-commands/SKILL.md): output limits,
   long-running jobs and background servers
-- [skills/shared-space](skills/shared-space/SKILL.md): the R2 bucket every
+- [skills/shared-space](docs/skills/shared-space/SKILL.md): the R2 bucket every
   agent reaches as the rclone remote `shared:`
 
 The environment card the image ships to agents is
@@ -55,13 +55,13 @@ The environment card the image ships to agents is
 2. **The current sandbox image assumes a person, not an agent.** It carries the
    owner's Git identity and signing setup, SSH host aliases with
    `ForwardAgent yes`, Atuin sync, agent configs that expect agenix secrets,
-   and `accept-flake-config = true`. See [02-profiles.md](02-profiles.md#leaks-in-the-current-image).
+   and `accept-flake-config = true`. See [02-profiles.md](docs/02-profiles.md#leaks-in-the-current-image).
    Do not push that image to a registry the cluster pulls from until the agent
    profile replaces it.
 3. **One age identity decrypts every secret.** `secrets/secrets.nix` encrypts
    all 15 secrets to one recipient, including backup-encryption and NAS
    credentials. Any design that puts this key near an agent exposes all of
-   them. See [03-secrets.md](03-secrets.md).
+   them. See [03-secrets.md](docs/03-secrets.md).
 
 ## Proposed architecture
 
@@ -118,8 +118,8 @@ Default operating mode (no runner changes needed):
 
 Later stages add an authenticated egress proxy and an in-sandbox Git proxy.
 They need a small runner patch (a "proxy" egress mode) and a proxy on a
-reachable address. [05-storage-network.md](05-storage-network.md) has the
-design and [07-proof-of-concept.md](07-proof-of-concept.md) the stages.
+reachable address. [05-storage-network.md](docs/05-storage-network.md) has the
+design and [07-proof-of-concept.md](docs/07-proof-of-concept.md) the stages.
 
 ## Option comparison at a glance
 
@@ -150,4 +150,4 @@ design and [07-proof-of-concept.md](07-proof-of-concept.md) the stages.
   execution logs. n8n stores execution data, and the daemon logs every command
   string. Secrets must never appear in commands or outputs.
 
-Full list: [06-threat-model.md](06-threat-model.md#residual-risks).
+Full list: [06-threat-model.md](docs/06-threat-model.md#residual-risks).
