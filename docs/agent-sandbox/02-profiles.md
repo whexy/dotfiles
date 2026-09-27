@@ -112,7 +112,7 @@ Nothing in this repository manages the Kubernetes cluster
 (the cluster is referenced only in `.woodpecker.yml:1-11` and host comments).
 The repository's deliverables to the cluster are:
 
-- `packages/sandbox-image`: the image, built from the `agent` profile
+- `images/sandbox`: the image, built from the `agent` profile
 - a pinned `/etc/nix/nix.conf` in the image: `substituters` and
   `trusted-public-keys` fixed, `accept-flake-config = false`, `sandbox = false`
 - optionally `packages/sandbox-broker`, the credential broker as a Nix

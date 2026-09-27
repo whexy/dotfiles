@@ -1,10 +1,4 @@
-{
-  pkgs,
-  inputs,
-  flake,
-  perSystem,
-  system,
-}:
+{ flake, system }:
 
 # Sandbox image for n8n-sandbox-service runners, carrying the user@sandbox home.
 #
@@ -16,11 +10,14 @@
 # hosts/sandbox/users/user/AGENTS.md describes this environment to the agent
 # and must follow changes to it.
 #
-# Load with `$(nix build .#sandbox-image --print-out-paths) | docker load`.
+# Built only by `just build-sandbox-image`. It lives outside packages/ because
+# blueprint evaluates every package when a host uses perSystem.self, and this
+# image must never enter a system switch.
 let
+  inherit (flake) inputs;
+  inherit (flake.legacyPackages.${system}.homeConfigurations."user@sandbox") pkgs config;
   inherit (pkgs) lib;
-  inherit (flake.legacyPackages.${system}.homeConfigurations."user@sandbox") config;
-  daemon = perSystem.self.n8n-sandbox-daemon;
+  daemon = import ./daemon.nix { inherit pkgs inputs; };
   homePath = config.home.path;
   homeDir = config.home.homeDirectory;
   bash = pkgs.bashInteractive;
@@ -168,6 +165,4 @@ pkgs.dockerTools.streamLayeredImage {
     ];
     ExposedPorts."8081/tcp" = { };
   };
-
-  meta.platforms = lib.platforms.linux;
 }

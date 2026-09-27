@@ -3,7 +3,7 @@
 Status: **research for review, 2026-09-25.** Nothing here has been deployed.
 No secret, credential, cluster object or GitHub setting was changed.
 
-The sandbox image in `packages/sandbox-image` and
+The sandbox image in `images/sandbox` and
 `hosts/sandbox/users/user/home-configuration.nix` is the starting point. This
 research reviews it against the n8n Sandbox Service, the secret system in
 this repository, and the Git, storage, network and isolation options for
