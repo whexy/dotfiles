@@ -2,6 +2,7 @@
 {
   dotfiles = {
     system.autoUpgrade.enable = true;
+    power.alwaysOn.enable = true;
     services.openssh.enable = true;
     # The T3 Code server publishes itself with `tailscale serve`.
     network.tailscale.userOperator = true;
