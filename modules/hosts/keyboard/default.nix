@@ -5,5 +5,6 @@
   options.dotfiles.keyboard = {
     kanata.enable = lib.mkEnableOption "kanata keyboard remapper (Linux)";
     fcitx5.enable = lib.mkEnableOption "fcitx5 input method framework (Linux)";
+    karabiner.enable = lib.mkEnableOption "the Karabiner-Elements app (macOS)";
   };
 }
