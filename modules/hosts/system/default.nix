@@ -1,4 +1,5 @@
-# System group: timezone, auto-upgrade, developer documentation.
+# System group: timezone, auto-upgrade, developer documentation, Xcode
+# management.
 { config, lib, ... }:
 let
   cfg = config.dotfiles.system;
@@ -81,6 +82,8 @@ in
     fwupd.enable = lib.mkEnableOption "Linux Vendor firmware service";
 
     docs.enable = lib.mkEnableOption "developer documentation (man pages for syscalls & libc, sections 2 and 3)";
+
+    xcodes.enable = lib.mkEnableOption "the Xcodes app for installing and switching Xcode versions (macOS)";
   };
 
   config = lib.mkIf cfg.timezone.enable { time.timeZone = "America/Chicago"; };

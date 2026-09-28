@@ -17,6 +17,8 @@ in
     system = {
       timezone.enable = lib.mkDefault true;
       docs.enable = lib.mkDefault true;
+      # Xcodes ships as a Homebrew cask, so the option is inert off Darwin.
+      xcodes.enable = lib.mkDefault isDarwin;
     };
     nix = {
       optimise.enable = lib.mkDefault true;
