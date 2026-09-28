@@ -10,7 +10,11 @@ let
 in
 {
   dotfiles = {
-    system.timezone.enable = lib.mkDefault true;
+    system = {
+      timezone.enable = lib.mkDefault true;
+      # Xcodes ships as a Homebrew cask, so the option is inert off Darwin.
+      xcodes.enable = lib.mkDefault isDarwin;
+    };
     nix.optimise.enable = lib.mkDefault true;
     security.agentPolicy.enable = lib.mkDefault true;
     security.onepassword.enable = lib.mkDefault true;

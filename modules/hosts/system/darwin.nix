@@ -1,4 +1,5 @@
-# System Darwin configuration: nix-darwin state version and auto-upgrade.
+# System Darwin configuration: nix-darwin state version, auto-upgrade, and
+# Xcodes.
 {
   config,
   flake,
@@ -35,6 +36,8 @@ in
 {
   config = lib.mkMerge [
     { system.stateVersion = 6; }
+
+    (lib.mkIf cfg.xcodes.enable { homebrew.casks = [ "xcodes-app" ]; })
 
     (lib.mkIf cfg.autoUpgrade.enable {
       environment.systemPackages = [ service ];
