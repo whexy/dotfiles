@@ -57,8 +57,7 @@ in
     pkgs.nodejs
   ];
   homeFiles = {
-    # Shared global rules plus the pi-only `whoami` mechanism. Other agents
-    # consume the plain AGENTS.md.
+    # Shared global rules plus the pi-only `whoami` mechanism.
     ".pi/agent/AGENTS.md".text =
       builtins.readFile ../AGENTS.md + "\n" + builtins.readFile ./SPECIAL_INSTRUCTION.md;
     ".pi/agent/skills/delegation-policy/SKILL.md".source = delegationPolicy;

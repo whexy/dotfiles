@@ -211,11 +211,11 @@ in
     {
       home = {
         # Single source of truth for global agent rules; every agent reads it.
-        # pi gets extra tool-specific guidance appended by its own home.nix.
+        # pi and Claude Code get extra tool-specific guidance appended by
+        # their own home.nix.
         file = {
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".config/opencode/AGENTS.md".source = ./AGENTS.md;
-          ".claude/CLAUDE.md".source = ./AGENTS.md;
         }
         # User-scope skill location for pi, codex, and opencode; adding a skill is
         # a new directory under ./skills, never a change here.
