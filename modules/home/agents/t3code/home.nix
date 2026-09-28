@@ -34,6 +34,12 @@ let
     }
     . ${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh
     cd ${lib.escapeShellArg config.home.homeDirectory}
+    # A new host starts this service before anyone logs in to the tailnet, and
+    # t3 only warns when `tailscale serve` fails, leaving the server
+    # unreachable.
+    until [ "$(tailscale status --json 2>/dev/null | ${lib.getExe pkgs.jq} -r .BackendState)" = Running ]; do
+      sleep 10
+    done
     exec ${lib.getExe' t3code "t3"} serve \
       --host 127.0.0.1 --port ${toString port} \
       --tailscale-serve --no-browser
