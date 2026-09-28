@@ -17,6 +17,10 @@
       '';
     };
 
+    headless = lib.mkEnableOption ''
+      this machine usually runs without a keyboard, pointing device, or
+      display attached'';
+
     keyboards = lib.mkOption {
       type = lib.types.listOf (
         lib.types.submodule {
