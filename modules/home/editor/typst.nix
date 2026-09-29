@@ -1,10 +1,14 @@
 # Typst: compiler, language server, and formatter.
-{
+args@{
   config,
   pkgs,
   lib,
   ...
 }:
+let
+  osConfig = args.osConfig or null;
+  isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
+in
 {
   config = lib.mkIf config.dotfiles.editor.typst.enable {
     home.packages = with pkgs; [
@@ -21,7 +25,12 @@
       plugins = {
         typst-preview = {
           enable = true;
-          settings.dependencies_bin.tinymist = "tinymist";
+          settings = {
+            dependencies_bin.tinymist = "tinymist";
+            # The plugin opens previews with wslview on WSL, which nixpkgs no
+            # longer ships.
+            open_cmd = lib.mkIf isWsl "explorer.exe %s";
+          };
         };
         conform-nvim.settings = {
           formatters_by_ft.typst = [ "typstyle" ];
