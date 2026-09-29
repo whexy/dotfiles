@@ -8,6 +8,11 @@ args@{
 let
   osConfig = args.osConfig or null;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
+  # No screen to open a browser on. WSL has no desktop of its own but opens
+  # previews in Windows.
+  isHeadless =
+    osConfig != null
+    && (osConfig.dotfiles.hardware.headless || !(osConfig.dotfiles.desktop.enable || isWsl));
 in
 {
   config = lib.mkIf config.dotfiles.editor.typst.enable {
@@ -31,6 +36,25 @@ in
             # longer ships.
             open_cmd = lib.mkIf isWsl "explorer.exe %s";
           };
+          # Serve the preview on the tailnet and report its URL for a browser
+          # on another machine. The address is looked up once a Typst buffer
+          # opens rather than on every Neovim startup.
+          luaConfig.post = lib.mkIf isHeadless ''
+            require("typst-preview.utils").visit = function(link)
+              vim.notify("Typst preview: http://" .. link)
+            end
+            vim.api.nvim_create_autocmd("FileType", {
+              pattern = "typst",
+              once = true,
+              callback = function()
+                if vim.fn.executable("tailscale") == 0 then return end
+                local out = vim.system({ "tailscale", "ip", "-4" }, { text = true }):wait()
+                if out.code == 0 then
+                  require("typst-preview.config").opts.host = vim.trim(out.stdout)
+                end
+              end,
+            })
+          '';
         };
         conform-nvim.settings = {
           formatters_by_ft.typst = [ "typstyle" ];
