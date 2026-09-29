@@ -19,12 +19,20 @@ class CodexAgent(Agent):
     config_name = "config.toml"
 
     @override
-    def maintained_settings(self) -> Table:
+    def maintained_settings(self, _selection: Entry | None = None) -> Table:
         # Every provider stays defined so saved selections keep resolving.
-        desired = super().maintained_settings()
+        selection = _selection
+        desired = super().maintained_settings(selection)
         providers = child_table(desired, "model_providers")
         for entry in self.catalog.choices:
             providers.update(table_or_empty(entry.get("settings", {}).get("model_providers")))
+        if selection is None:
+            provider = read_document(self.config_file).get("model_provider", "openai")
+            selection = next((e for e in self.catalog.entries if _provider(e) == provider), None)
+        if selection is not None:
+            features = table_or_empty(selection.get("settings", {}).get("features"))
+            if features:
+                child_table(desired, "features").update(features)
         desired["mcp_servers"] = self.manifest["mcpServers"]
         return desired
 
@@ -33,7 +41,13 @@ class CodexAgent(Agent):
         for key in _SELECTION_KEYS:
             doc.pop(key, None)
         settings = selection.get("settings", {})
-        doc.update({key: value for key, value in settings.items() if key != "model_providers"})
+        doc.update(
+            {
+                key: value
+                for key, value in settings.items()
+                if key not in ("model_providers", "features")
+            }
+        )
 
     @override
     def snapshot(self) -> Session:
@@ -49,6 +63,15 @@ class CodexAgent(Agent):
         elif provider == "openai" and selection:
             # The native ChatGPT login is the entry without provider settings.
             entry = next((e for e in self.catalog.entries if "settings" not in e), None)
+        # Child sessions retain discovery behavior when another selector changes the config.
+        feature_keys = {
+            key
+            for choice in self.catalog.entries
+            for key in table_or_empty(choice.get("settings", {}).get("features"))
+        }
+        if feature_keys:
+            features = table_or_empty(doc.get("features"))
+            settings["features"] = {key: features.get(key, False) for key in feature_keys}
         label = entry["label"] if entry is not None else None
         return Session(root=str(self.root), label=label, env={}, settings=settings)
 

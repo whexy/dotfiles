@@ -2,6 +2,7 @@
 # Separate API providers avoid changing the user's saved ChatGPT login.
 {
   config,
+  codexVersion,
   lib,
   apiAccounts,
   proxyAccounts,
@@ -19,9 +20,11 @@ let
     };
     settings = {
       model_provider = "dotfiles-proxy";
+      features.api_key_model_discovery = true;
       model_providers.dotfiles-proxy = {
         name = "CLIProxyAPI";
         base_url = "${proxy.baseUrl}/v1";
+        model_catalog_url = "${proxy.baseUrl}/v1/models?client_version=${codexVersion}";
         wire_api = "responses";
         requires_openai_auth = false;
         env_key = "OPENAI_API_KEY";

@@ -19,6 +19,7 @@ let
       "CODEX_API_KEY"
     ];
     entries = import ./models.nix {
+      codexVersion = pkgs.llm-agents.codex.version;
       inherit
         config
         lib

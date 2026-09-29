@@ -11,7 +11,7 @@ from support import AGENT_NAMES, SECRET, launch, manifest, model_entry, terminal
 
 from agent_settings.agents import Agent, create_agent
 from agent_settings.catalog import Entry
-from agent_settings.documents import read_document
+from agent_settings.documents import child_table, read_document
 from agent_settings.errors import SettingsError
 
 type MakeAgent = Callable[[str], Agent]
@@ -105,6 +105,39 @@ def test_codex_keeps_comments_and_unrelated_settings(make_agent: MakeAgent) -> N
     doc = read_document(agent.config_file)
     assert doc["model"] == "user-model"
     assert doc["mcp_servers"] == {"user": {"command": "mine"}}
+
+
+@pytest.mark.parametrize("explicit_model", [False, True])
+def test_codex_proxy_discovery_tracks_selection(
+    make_agent: MakeAgent, explicit_model: bool
+) -> None:
+    agent = make_agent("codex")
+    entry = api_model(agent)
+    settings = entry.setdefault("settings", {})
+    settings["features"] = {"api_key_model_discovery": True}
+    child_table(child_table(settings, "model_providers"), "dotfiles-test")["model_catalog_url"] = (
+        "https://test.invalid/v1/models?client_version=0.158.0"
+    )
+    if not explicit_model:
+        settings.pop("model")
+    agent.root.mkdir()
+    agent.config_file.write_text("[features]\nuser_feature = true\n")
+    agent.reconcile(entry)
+    agent.reconcile()
+    doc = read_document(agent.config_file)
+    assert doc["features"] == {"user_feature": True, "api_key_model_discovery": True}
+    provider = child_table(child_table(doc, "model_providers"), "dotfiles-test")
+    assert provider["model_catalog_url"] == (
+        "https://test.invalid/v1/models?client_version=0.158.0"
+    )
+    _, _, parent = launch(agent)
+    agent.reconcile(default(agent))
+    agent.reconcile()
+    assert read_document(agent.config_file)["features"] == {"user_feature": True}
+    with patch.dict(os.environ, parent, clear=True):
+        _, argv, _ = launch(agent)
+    overrides = [tomlkit.parse(argv[i + 1]) for i, arg in enumerate(argv) if arg == "-c"]
+    assert any(d.get("features", {}).get("api_key_model_discovery") is True for d in overrides)
 
 
 def test_claude_keeps_hooks_and_user_permissions(make_agent: MakeAgent) -> None:

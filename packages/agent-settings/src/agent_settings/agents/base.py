@@ -78,7 +78,7 @@ class Agent(ABC):
     def launch_args(self, session: Session, args: list[str], *, inherited: bool) -> list[str]:
         """Arguments that apply `session` ahead of the caller's own."""
 
-    def maintained_settings(self) -> Table:
+    def maintained_settings(self, _selection: Entry | None = None) -> Table:
         return copy.deepcopy(self.manifest["maintainedSettings"])
 
     def extra_owned_documents(self) -> dict[str, tuple[Path, Table]]:
@@ -99,7 +99,7 @@ class Agent(ABC):
         # Our multi-file writers serialize on the state lock. Each native file
         # also gets an optimistic check against non-cooperating writers.
         with edit_document(self.state_file) as state:
-            desired = self.maintained_settings()
+            desired = self.maintained_settings(selection)
             with edit_document(self.config_file) as doc:
                 merge_owned(doc, table_or_empty(state.get("owned")), desired)
                 if selection is not None:
