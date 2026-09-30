@@ -1,0 +1,29 @@
+<?xml version="1.0" encoding="UTF-8"?>
+<!DOCTYPE plist PUBLIC "-//Apple//DTD PLIST 1.0//EN" "http://www.apple.com/DTDs/PropertyList-1.0.dtd">
+<plist version="1.0">
+<dict>
+  <key>CFBundleIdentifier</key>
+  <string>com.whexy.neovide-remote</string>
+  <key>CFBundleName</key>
+  <string>Neovide Remote</string>
+  <key>CFBundleExecutable</key>
+  <string>neovide-remote-handler</string>
+  <key>CFBundlePackageType</key>
+  <string>APPL</string>
+  <key>CFBundleVersion</key>
+  <string>1</string>
+  <key>LSUIElement</key>
+  <true/>
+  <key>CFBundleURLTypes</key>
+  <array>
+    <dict>
+      <key>CFBundleURLName</key>
+      <string>VS Code link</string>
+      <key>CFBundleURLSchemes</key>
+      <array>
+        <string>vscode</string>
+      </array>
+    </dict>
+  </array>
+</dict>
+</plist>
