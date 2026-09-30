@@ -55,6 +55,13 @@ in
       type = "http";
       url = "https://n8n.clusters.work/mcp/3e3dc609-1939-47ed-94ef-964a3164dfae";
     };
+
+    # Figma's hosted server. Authentication is OAuth, completed once per agent
+    # after activation, so no credential lives in this config.
+    figma = {
+      type = "http";
+      url = "https://mcp.figma.com/mcp";
+    };
   }
   // lib.optionalAttrs cfg.firefoxDevtools.enable {
     firefox-devtools = {
