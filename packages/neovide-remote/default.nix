@@ -112,16 +112,19 @@ let
       id=$(printf '%s\n' "$(id -un)@$(uname -n):$host:$path" | sha256sum | cut -c1-16)
       quote() { printf "'%s'" "''${1//\'/\'\\\'\'}"; }
 
-      # Any web page can emit these links. Without a terminal, ssh cannot
-      # accept an unknown host key, so only hosts already in known_hosts are
-      # reachable; none of them is handed the agent.
+      # Any web page can emit these links, so no host is handed the agent. The
+      # remote end only drives the UI, so host keys are learned on first use:
+      # there is no terminal to confirm them. A changed key still fails, and
+      # has to, since ssh would otherwise drop the socket forward.
+      ssh_opts=(-o ForwardAgent=no -o StrictHostKeyChecking=accept-new)
+
       remote_sock=$(
         {
           printf 'target=%s\nid=%s\n' "$(quote "$path")" "$id"
           cat <<'EOF'
       ${remoteScript}
       EOF
-        } | ssh -T -o ForwardAgent=no "$host" sh -s 2>&1
+        } | ssh -T "''${ssh_opts[@]}" "$host" sh -s 2>&1
       ) || fail "could not start nvim on $host: $remote_sock"
       remote_sock=''${remote_sock##*$'\n'}
 
@@ -131,9 +134,8 @@ let
 
       # A dedicated connection, not a multiplexed one: forwards requested
       # through a ControlMaster outlive this process and pin the socket path.
-      ssh -N -T \
+      ssh -N -T "''${ssh_opts[@]}" \
         -o ControlPath=none \
-        -o ForwardAgent=no \
         -o ExitOnForwardFailure=yes \
         -o StreamLocalBindUnlink=yes \
         -L "$local_sock:$remote_sock" \
