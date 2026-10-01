@@ -18,6 +18,7 @@
       lsp.servers = {
         basedpyright = {
           enable = true;
+          config.settings.basedpyright.analysis.typeCheckingMode = "standard";
         };
         ruff = {
           enable = true;
