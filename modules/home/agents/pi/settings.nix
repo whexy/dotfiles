@@ -6,7 +6,6 @@
   models,
   aiProxyExtension,
   defaults,
-  mcp,
 }:
 {
   enableInstallTelemetry = false;
@@ -20,10 +19,7 @@
     "npm:pi-subagents"
     "npm:pi-background-tasks"
     "npm:@monopi/extension-worktree"
-  ]
-  # pi ships no MCP client by design; the adapter adds one that keeps server
-  # tool definitions out of the context window until they are searched.
-  ++ lib.optional (mcp.servers != { }) "npm:pi-mcp-adapter";
+  ];
 
   npmCommand = [ "${pkgs.nodejs}/bin/npm" ];
 
