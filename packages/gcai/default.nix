@@ -58,7 +58,7 @@ pkgs.writeShellApplication {
     else
       status=$?
       echo "gcai: commit failed; generated message saved at $message_file" >&2
-      echo 'Retry: git commit -e -F "$(git rev-parse --git-path GCAI_COMMIT_MSG)" [extra git commit args...]' >&2
+      echo "Retry: git commit -e -F \"\$(git rev-parse --git-path GCAI_COMMIT_MSG)\" [extra git commit args...]" >&2
       exit "$status"
     fi
   '';
