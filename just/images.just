@@ -255,23 +255,3 @@ build-moore-vm:
     @echo "  export NIX_DISK_IMAGE=/tmp/moore-vm-\$USER.qcow2"
     @echo "  ./result/moore/bin/run-moore-vm-vm"
     @echo "Then: ssh -p 2222 whexy@localhost"
-
-# Build the n8n sandbox image (a docker load stream script) for this system.
-build-sandbox-image:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    mkdir -p result/sandbox
-    echo "Building n8n sandbox image..."
-    nix build --impure -o result/sandbox/n8n-sandbox --expr '
-        import ./images/sandbox {
-            flake = builtins.getFlake (toString ./.);
-            system = builtins.currentSystem;
-        }'
-
-    echo ""
-    echo "Build complete!"
-    echo "Stream script: result/sandbox/n8n-sandbox"
-    echo ""
-    echo "Load into Docker:"
-    echo "  result/sandbox/n8n-sandbox | docker load"

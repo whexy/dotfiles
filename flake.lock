@@ -418,22 +418,6 @@
         "type": "github"
       }
     },
-    "n8n-sandbox-service": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1790323064,
-        "narHash": "sha256-G+gjDgQcIPqgAYSuN0T/BLmrxm/fCw/kmNTObsOp4nM=",
-        "owner": "n8n-io",
-        "repo": "n8n-sandbox-service",
-        "rev": "14393cf0c4e886cf5b565f15acf24cf01fe3a7a7",
-        "type": "github"
-      },
-      "original": {
-        "owner": "n8n-io",
-        "repo": "n8n-sandbox-service",
-        "type": "github"
-      }
-    },
     "neovim-nightly": {
       "inputs": {
         "flake-parts": "flake-parts_2",
@@ -822,7 +806,6 @@
         "git-hooks": "git-hooks",
         "home-manager": "home-manager_2",
         "llm-agents": "llm-agents",
-        "n8n-sandbox-service": "n8n-sandbox-service",
         "neovim-nightly": "neovim-nightly",
         "neovim-nightly-nixpkgs": "neovim-nightly-nixpkgs",
         "niri": "niri",
