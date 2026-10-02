@@ -57,6 +57,13 @@ reconstruct those rules from memory.
 If that skill is not available in this session, ask me for the rules instead of
 guessing.
 
+### Explanations
+
+When the user asks for an explanation or help understanding a topic, code, or
+system, read the `explain` skill first and confirm the output format as it
+instructs. Do not load it for implementation, fixes, reviews, status updates, or
+incidental explanations of completed work.
+
 ### Coding
 
 **Comments**
