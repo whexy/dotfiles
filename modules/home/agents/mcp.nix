@@ -49,8 +49,8 @@ in
     # n8n workflow that reaches the user away from the desk: phone push,
     # WeChat, and a Slack note-to-self. It has no authentication.
     #
-    # `type` is Claude's discriminator for a remote server; codex and
-    # pi-mcp-adapter key on `url` and ignore it.
+    # `type` is Claude's discriminator for a remote server; Codex and Pi
+    # select the transport using `url`.
     personal = {
       type = "http";
       url = "https://n8n.clusters.work/mcp/3e3dc609-1939-47ed-94ef-964a3164dfae";

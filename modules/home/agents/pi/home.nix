@@ -19,7 +19,6 @@ let
       proxyAccounts
       aiProxyExtension
       defaults
-      mcp
       models
       ;
   };
@@ -67,14 +66,16 @@ in
     ".pi/web-search.json".text = builtins.toJSON webSearch;
   }
   // lib.optionalAttrs (mcp.servers != { }) {
-    # pi has no built-in MCP client; pi-mcp-adapter (enabled in settings.nix)
-    # reads this file and exposes one proxy tool the agent searches, instead
-    # of loading every server's tool definitions into the context window.
-    ".pi/agent/mcp-adapter.json".text = builtins.toJSON {
-      mcpServers = mcp.servers;
-      # The adapter's persistent footer line costs a screen row for state that
-      # `/mcp status` reports on demand.
-      settings.mcpFooterStatus = "off";
+    ".pi/agent/mcp.json".text = builtins.toJSON {
+      mcpServers =
+        mcp.servers
+        // lib.optionalAttrs (mcp.servers ? figma) {
+          # Figma rejects Pi's default OAuth registration name; this is the
+          # client name documented by Pi for Figma's hosted server.
+          figma = mcp.servers.figma // {
+            oauth.clientName = "Claude Code";
+          };
+        };
     };
   }
   // {
