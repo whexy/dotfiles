@@ -14,6 +14,8 @@ in
 #
 # Usage:
 #   gcai [extra git commit args...]
+# Retry with the saved message:
+#   git commit -e -F "$(git rev-parse --git-path GCAI_COMMIT_MSG)"
 #
 pkgs.writeShellApplication {
   name = "gcai";
@@ -32,6 +34,8 @@ pkgs.writeShellApplication {
       exit 1
     fi
 
+    message_file=$(git rev-parse --git-path GCAI_COMMIT_MSG)
+
     message=$(
       pi -p --no-session \
         --model "$GCAI_MODEL" \
@@ -47,6 +51,15 @@ pkgs.writeShellApplication {
       exit 1
     fi
 
-    git commit -e -m "$message" "$@"
+    printf '%s\n' "$message" > "$message_file"
+
+    if git commit -e -F "$message_file" "$@"; then
+      exit 0
+    else
+      status=$?
+      echo "gcai: commit failed; generated message saved at $message_file" >&2
+      echo 'Retry: git commit -e -F "$(git rev-parse --git-path GCAI_COMMIT_MSG)" [extra git commit args...]' >&2
+      exit "$status"
+    fi
   '';
 }
