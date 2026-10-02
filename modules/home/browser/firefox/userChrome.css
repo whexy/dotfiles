@@ -34,7 +34,58 @@
     order: 1;
     border-bottom: 1px solid #666;
   }
-  #urlbar-results {
+  /* Newer Firefox versions put the suggestion view itself in the top layer. */
+  #urlbar > .urlbarView:popover-open {
+    position-area: block-start center !important;
+  }
+  #urlbar[popover-open] > .urlbar-background {
+    inset-block-start: calc(
+      -1 * var(--urlbar-joint-background-overlap)
+    ) !important;
+    inset-block-end: calc(
+      -1 *
+        (
+          var(--urlbar-background-overhang-open) +
+            var(--urlbar-input-growth-open-block)
+        )
+    ) !important;
+    border-start-start-radius: 0 !important;
+    border-start-end-radius: 0 !important;
+    border-end-start-radius: var(
+      --urlbar-background-border-top-radius-open
+    ) !important;
+    border-end-end-radius: var(
+      --urlbar-background-border-top-radius-open
+    ) !important;
+    clip-path: inset(
+      calc(
+          var(--urlbar-joint-background-overlap) -
+            var(--urlbar-input-growth-open-block)
+        )
+        calc(-1 * var(--urlbar-joint-background-shadow-margin))
+        calc(-1 * var(--urlbar-joint-background-shadow-margin))
+    ) !important;
+  }
+  #urlbar > .urlbarView > .urlbarView-background {
+    inset-block: calc(-1 * var(--urlbarView-joint-background-outset-block))
+      calc(
+        -1 * var(--urlbarView-margin-block) -
+          var(--urlbar-joint-background-overlap)
+      ) !important;
+    border-start-start-radius: var(
+      --urlbar-background-border-radius
+    ) !important;
+    border-start-end-radius: var(--urlbar-background-border-radius) !important;
+    border-end-start-radius: 0 !important;
+    border-end-end-radius: 0 !important;
+    clip-path: inset(
+      calc(-1 * var(--urlbar-joint-background-shadow-margin))
+        calc(-1 * var(--urlbar-joint-background-shadow-margin))
+        var(--urlbar-joint-background-overlap)
+    ) !important;
+  }
+  #urlbar-results,
+  #urlbar .urlbarView-results {
     display: flex;
     flex-direction: column-reverse;
   }
