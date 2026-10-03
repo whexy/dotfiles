@@ -50,11 +50,10 @@ relationship, while a process may benefit from animation or video.
 
 ### Writing
 
-Aim for "80% of the way to ASD-STE100," rather than claiming formal compliance:
-use short sentences, concrete words, consistent terms, and explicit causal
-steps. Introduce technical terms before using them. Preserve qualifications
-needed for accuracy. Each passage should help the reader understand the visual
-or mechanism rather than add decorative prose.
+Follow the wording rules of the `design` skill. On top of them, aim for "80%
+of the way to ASD-STE100," rather than claiming formal compliance: short
+sentences, concrete words, consistent terms, and explicit causal steps.
+Preserve qualifications needed for accuracy.
 
 ### Diagrams and images
 
@@ -69,8 +68,9 @@ Create a complete, locally viewable HTML artifact, not just a code block or a
 proposal. Use controls, step-through sequences, sliders, or animations when
 they teach something specific. Give the page a clear visual hierarchy, readable
 labels, and accessible controls. Prefer a self-contained page when practical.
-Check that it opens and that its teaching interactions work, using the available
-browser tools. Deliver a link to the artifact with a brief orientation.
+Serve, check, and hand it over as the `web-preview` skill describes: confirm
+its teaching interactions work, then give a tailnet link with a brief
+orientation.
 
 ### Explainer videos
 

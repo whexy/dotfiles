@@ -20,12 +20,6 @@ Expect environment can be different than Ubuntu. For example, Filesystem
 Hierarchy Standard are not guaranteed. glibc is not always at
 `/lib/x86_64-linux-gnu/libc.so.6`.
 
-**Blueprint**
-
-Most of my projects have flake configured with `numtide/blueprint`, which
-derives flake outputs from a folder structure. Read the `nix-blueprint` skill
-before adding, moving, or wiring a file in such a flake.
-
 **Dev Environment**
 
 When you find a software not available in your environment:
@@ -45,35 +39,28 @@ If you want to stop or restart some process, never use `pkill`. Always `kill`
 with exact PID. You must not kill process that are not launched by you, unless
 specifically asked.
 
-### VCS
+### Skills
 
-For version control systems like git.
+My skills hold rules you cannot reconstruct from memory. Read the matching
+skill before the task, every time; if it is not available in this session, ask
+me instead of guessing.
 
-Read the `git-commit` skill before running `git commit` or `git tag`, and
-before writing a pull request summary. It is the authority on message format,
-signing, tagging, and the mandatory tooling disclosure trailer. Do not
-reconstruct those rules from memory.
-
-If that skill is not available in this session, ask me for the rules instead of
-guessing.
-
-### Knowledge
-
-Read the `knowledge` skill before studying or investigating a codebase or
-system, including one other than the current repository, and again after an
-investigation that produced findings worth keeping for future agents.
-
-### Explanations
-
-When the user asks for an explanation or help understanding a topic, code, or
-system, read the `explain` skill first and confirm the output format as it
-instructs. Do not load it for implementation, fixes, reviews, status updates, or
-incidental explanations of completed work.
-
-### Design
-
-Read the `design` skill before designing or implementing UI, including screens,
-pages, components, layouts, and interface copy.
+- `git-commit`: before `git commit`, `git tag`, or writing a pull request
+  summary.
+- `knowledge`: before studying or investigating any codebase or system,
+  including one outside the current repository, and after an investigation
+  that produced findings worth keeping.
+- `nix-blueprint`: before adding, moving, or wiring a file in a flake built
+  with `numtide/blueprint`, which most of my projects use.
+- `design`: before designing or implementing UI, or writing or reviewing
+  documentation.
+- `web-preview`: before starting a server or preview, checking a UI,
+  taking a screenshot, or giving me a URL.
+- `explain`: when I ask for an explanation or help understanding something;
+  confirm the output format first. Not for explanations that come with
+  implementation, fixes, reviews, or status updates.
+- `deploy-to-cluster`: before deploying a project to the cluster or changing
+  its repository settings, CI, release flow, image, or cluster manifests.
 
 ### Coding
 
