@@ -1,6 +1,6 @@
 ---
 name: explain
-description: Read first when the user asks for an explanation, conceptual walkthrough, or help understanding a topic, code, or system. Confirm normal text versus Andrej Karpathy style before explaining. Do not load for implementation, fixes, reviews, status updates, or incidental explanations in other work.
+description: Read first when the user asks for an explanation, conceptual walkthrough, or help understanding a topic, code, or system. For explanations likely to need ten or more paragraphs, ask whether they want normal text or Andrej Karpathy style; otherwise answer directly in text unless they request an interactive explanation. Do not load for implementation, fixes, reviews, status updates, or incidental explanations in other work.
 ---
 
 # Explain
@@ -10,29 +10,29 @@ something, or explicitly invokes `explain`. Read it before preparing the
 explanation. A request to build, fix, or review something does not activate this
 skill merely because the response will describe the work.
 
-## Confirm the output format
+## Choose the output format
 
-Before producing the explanation, ask the user to confirm one of two modes:
+Estimate the length needed to explain the topic thoroughly and clearly.
 
-- **Normal (default):** A text reply using the agent's usual response style.
-- **Andrej Karpathy style:** A custom visual or interactive explanation, with
-  clear writing inspired by ASD-STE100. Usually an interactive HTML page;
-  diagrams or an explainer video may fit better.
+- If a thorough explanation fits in a few paragraphs, answer directly in normal text. Do not ask the user to choose a format.
+- If the user specifically requests an interactive explanation or names a mode or medium, follow that request without asking them to confirm it.
+- If the topic is complex enough that a thorough explanation is likely to require ten or more paragraphs, ask which mode they want:
+  - **Normal:** A text reply using the agent's usual response style.
+  - **Andrej Karpathy style:** A custom visual or interactive explanation, with clear writing inspired by ASD-STE100. Usually an interactive HTML page; diagrams or an explainer video may fit better.
 
-Suggested question: "For this explanation, would you like normal text (default)
-or Andrej Karpathy style: a visual or interactive explainer?"
+Suggested question: "This topic needs a detailed explanation. Would you prefer normal text or Andrej Karpathy style: a visual or interactive explainer?"
 
 Use an available user-input tool, or ask in a short reply if none is available.
 This is a format preference, not permission to perform an external action.
-If the request already specifies a mode or medium, reflect that choice in the
-confirmation. Ask once per explanation request; a choice already confirmed for
-this explanation also covers follow-up questions about it. Do not ask again
-unless the user changes the format or starts a separate explanation request.
+Ask once per explanation request; a choice already made for this explanation
+also covers follow-up questions about it. Do not ask again unless the user
+changes the format or starts a separate explanation request.
 
 While waiting, you may inspect relevant code or gather facts. Keep the format
-choice pending before producing the explanation. If the user declines to choose
-or the input tool returns no answer, use normal text. Do not treat elapsed time
-alone as confirmation or switch to a richer format without a choice.
+choice pending before producing a long explanation. If the user declines to
+choose or the input tool returns no answer, use normal text. Do not treat
+elapsed time alone as confirmation or switch to a richer format without a
+choice.
 
 ## Normal mode
 
