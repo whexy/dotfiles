@@ -152,6 +152,19 @@ Lint before pushing:
 woodpecker-cli lint --strict --plugins-privileged woodpeckerci/plugin-docker-buildx .woodpecker.yaml
 ```
 
+### Gotchas
+
+- **Build from `tag`, never `release`.** Woodpecker starts pipelines only for
+  GitHub's `released` action, which a pre-release never sends, so every
+  `0.1.0-alpha.<n>` release would silently skip a `when: event: release`
+  step. The webhook `woodpecker-cli repo add` installs does not subscribe to
+  release events either.
+- **`nixos/nix` has no coreutils extras.** A step on that image has no `sed`
+  or `grep`; use `nix eval`, shell builtins, or a different image.
+- **Reading a failed pipeline:** `woodpecker-cli pipeline ls whexy/<name>`,
+  then `woodpecker-cli pipeline log show whexy/<name> <number> <step>`. Read
+  the log before rerunning anything.
+
 ## 4. release-please
 
 release-please runs inside Woodpecker as `whexy-bot`. The tooling is
