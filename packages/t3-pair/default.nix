@@ -91,7 +91,7 @@ pkgs.writeShellApplication {
     fi
     read -r peer_id dns_name <<<"$peer"
 
-    create=(t3 auth pairing create --json --label "$label" --ttl "$ttl" --base-url "https://$dns_name")
+    create=(t3 auth pairing create --json --label "$label" --ttl "$ttl" --base-url "https://$dns_name:35338")
     if [ "$peer_id" = "$(jq -r '.Self.ID' <<<"$status")" ]; then
       if ! command -v t3 >/dev/null; then
         echo "t3-pair: this machine does not run the T3 Code server" >&2

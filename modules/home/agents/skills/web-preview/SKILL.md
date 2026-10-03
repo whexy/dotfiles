@@ -38,7 +38,7 @@ that it is "open in Firefox". A preview reaches him only as a link he opens.
    The same number can be used for both ports; Serve listens on the tailnet
    address, the server on loopback.
 
-Never use port 443: on dev hosts it serves T3 Code, the session you may be
+Never use port 35338: on dev hosts it serves T3 Code, the session you may be
 running in. Never touch an existing serve route. Serve config persists across
 restarts, so remove yours afterwards with `tailscale serve --https=<port> off`.
 

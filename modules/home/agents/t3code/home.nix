@@ -42,7 +42,7 @@ let
     done
     exec ${lib.getExe' t3code "t3"} serve \
       --host 127.0.0.1 --port ${toString port} \
-      --tailscale-serve --no-browser
+      --tailscale-serve --tailscale-serve-port 35338 --no-browser
   '';
 
   # The desktop app and `t3 serve` share ~/.t3/userdata, and nothing stops
