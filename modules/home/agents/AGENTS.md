@@ -63,6 +63,8 @@ me instead of guessing.
   implementation, fixes, reviews, or status updates.
 - `deploy-to-cluster`: before deploying a project to the cluster or changing
   its repository settings, CI, release flow, image, or cluster manifests.
+- `ship-pr`: when I ask you to ship the work, ship the PR, or ship it. Do the
+  rest of the task first. Never ship unasked.
 
 ### Coding
 
