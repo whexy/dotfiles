@@ -2,9 +2,6 @@
 { lib, pkgs, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
-    # cmux ships as a Homebrew cask, so the option is inert off Darwin; leaving
-    # it true there misleads anything reading it as "cmux runs on this host".
-    terminal.cmux.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isDarwin;
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).

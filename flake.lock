@@ -77,22 +77,6 @@
         "type": "github"
       }
     },
-    "cmux-skills": {
-      "flake": false,
-      "locked": {
-        "lastModified": 1790490688,
-        "narHash": "sha256-1rr+yX8WVQ9r2ccMSvLWeqU5NWPNJnIpuNESwdBe4hk=",
-        "owner": "manaflow-ai",
-        "repo": "cmux",
-        "rev": "b1daa44765bb095f7a05babffe8846442ec3f8bc",
-        "type": "github"
-      },
-      "original": {
-        "owner": "manaflow-ai",
-        "repo": "cmux",
-        "type": "github"
-      }
-    },
     "crane": {
       "locked": {
         "lastModified": 1785541369,
@@ -801,7 +785,6 @@
       "inputs": {
         "agenix": "agenix",
         "blueprint": "blueprint",
-        "cmux-skills": "cmux-skills",
         "disko": "disko",
         "git-hooks": "git-hooks",
         "home-manager": "home-manager_2",

@@ -105,7 +105,7 @@ class ClaudeAgent(Agent):
         env = dict.fromkeys(self.routing_env, "") | session["env"]
         settings: Table = {"env": env, "model": session["env"].get(_MODEL, "")}
         # One --settings document is required: duplicate flags can discard
-        # cmux's injected hooks entirely.
+        # the caller's settings entirely.
         caller_settings, forwarded = _split_settings_args(args)
         for source in caller_settings:
             _overlay(settings, source)

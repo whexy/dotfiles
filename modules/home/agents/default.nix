@@ -4,11 +4,10 @@
 # contract: packages, homeFiles, shellAliases, activation, and the
 # systemdUserServices/launchdAgents it runs. This module keeps only shared
 # concerns: options, the global AGENTS.md, agenix secrets, and merging.
-args@{
+{
   pkgs,
   config,
   lib,
-  inputs,
   perSystem,
   ...
 }:
@@ -104,24 +103,11 @@ in
       mcp = import ./mcp.nix { inherit pkgs config lib; };
       models = import ./models.nix { inherit lib apiAccounts proxyAccounts; };
 
-      # Standalone homes have no `osConfig`; they get no cmux integration.
-      cmux = import ./cmux.nix {
-        inherit
-          pkgs
-          config
-          lib
-          inputs
-          ;
-        osConfig = args.osConfig or { };
-      };
-
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard every harness implements.
-      skills =
-        lib.mapAttrs (name: _: ./skills + "/${name}") (
-          lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
-        )
-        // cmux.skills;
+      skills = lib.mapAttrs (name: _: ./skills + "/${name}") (
+        lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
+      );
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
@@ -137,6 +123,15 @@ in
       migrateSkillsDir = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         if [ -L "$HOME/.agents/skills" ]; then
           run rm $VERBOSE_ARG "$HOME/.agents/skills"
+        fi
+      '';
+      # cmux wrote this pi extension outside Home Manager, so nothing else
+      # removes it now that cmux is gone; the marker keeps a hand-written file
+      # of the same name safe. Remove once every macOS host has activated this.
+      removeCmuxPiExtension = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        extension="$HOME/.pi/agent/extensions/cmux-session.ts"
+        if [ -f "$extension" ] && grep -q cmux-pi-session-extension-marker "$extension"; then
+          run rm $VERBOSE_ARG "$extension"
         fi
       '';
       agents = [
@@ -228,12 +223,9 @@ in
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
 
-        activation =
-          cmux.activation
-          // lib.mergeAttrsList (map (a: a.activation or { }) agents)
-          // {
-            inherit migrateSkillsDir;
-          };
+        activation = lib.mergeAttrsList (map (a: a.activation or { }) agents) // {
+          inherit migrateSkillsDir removeCmuxPiExtension;
+        };
       };
 
       systemd.user.services = lib.mergeAttrsList (map (a: a.systemdUserServices or { }) agents);

@@ -58,9 +58,6 @@ External config directories are reconciled when selecting a model in them.
   the same user rules but cannot enforce system policy. No new Codex sandbox or
   approval restrictions are imposed: add supported requirements through a system
   module when an actual policy is needed, not by making `config.toml` read-only.
-- cmux owns per-launch instrumentation. Its injected arguments pass through and
-  are never saved as preferences. Selectors inside cmux invoke its bundled wrapper
-  with the Nix noninteractive launcher as the target.
 
 `dotfiles-settings.json` beside each agent config records reconciliation ownership
 and the credential-selection label. It contains no credential values. API keys
@@ -74,7 +71,7 @@ Fresh launches read the current native config. Descendants inherit a
 selection. Codex descendants receive config defaults before their own arguments;
 explicit `--model` and later config overrides remain available. Claude launches
 receive one settings override combining their saved launch defaults with the caller's
-settings (including cmux hooks); caller values take precedence. This is necessary
+settings; caller values take precedence. This is necessary
 because Claude hot-reloads saved `env` values, which also override shell exports:
 a concurrent selector must not redirect a running session's existing API key.
 An explicit selector resets its
