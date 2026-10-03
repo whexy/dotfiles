@@ -32,6 +32,5 @@ in
     ++ lib.optionals isDarwin [
       flake.lib.overlays.container-darwin
       flake.lib.overlays.direnv-darwin
-      flake.lib.overlays.t3code-spawn-helper
     ];
 }
