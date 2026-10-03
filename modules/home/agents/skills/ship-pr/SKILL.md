@@ -16,9 +16,10 @@ Run this after the requested work is done, as the last step of the task.
    the summary by the `git-commit` skill's rules. If the harness can link pull
    requests to the thread, link this one.
 4. Watch the pull request's CI until it finishes. When every required check
-   passes, merge it with the repository's preferred merge method, and delete
-   the branch if that is the repository's habit. When a check fails, read its
-   log, fix the cause, push, and keep watching. Stop and report when the
+   passes, rebase-merge it (`gh pr merge --rebase`). Never squash it or
+   create a merge commit; if the repository does not allow rebase merges,
+   stop and report instead of using another method. When a check fails, read
+   its log, fix the cause, push, and keep watching. Stop and report when the
    failure is unrelated to your changes, the fix is unclear, or merging needs
    a review or permission you do not have.
 
