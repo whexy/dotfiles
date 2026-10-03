@@ -1,6 +1,6 @@
 ---
 name: knowledge
-description: Wenxuan's private, cross-machine knowledge base of what earlier agents learned about codebases and systems, at ~/.knowledge. Read before studying, investigating, or answering "how does X work" about any codebase or system (including one other than the current repo, e.g. a service you deploy to or write a plugin for). Read again after an investigation that produced durable findings, to save them for future agents.
+description: Wenxuan's private, cross-machine knowledge base of what earlier agents learned about codebases and systems, at ~/.knowledge. Read before learning how an unfamiliar codebase or system works, or answering "how does X work" about one, especially one other than the current repo (e.g. a service you deploy to or write a plugin for). Not for diagnosing, debugging, or fixing a bug in the current repo. Read again after an investigation that produced durable findings, to save them for future agents.
 ---
 
 # Knowledge Base

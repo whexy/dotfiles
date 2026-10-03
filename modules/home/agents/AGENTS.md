@@ -47,9 +47,11 @@ me instead of guessing.
 
 - `git-commit`: before `git commit`, `git tag`, or writing a pull request
   summary.
-- `knowledge`: before studying or investigating any codebase or system,
-  including one outside the current repository, and after an investigation
-  that produced findings worth keeping.
+- `knowledge`: before learning how an unfamiliar codebase or system works,
+  especially one outside the current repository (a service you deploy to, a
+  host you write a plugin for), and after an investigation that produced
+  durable findings about how it works. Not for diagnosing, debugging, or
+  fixing a bug in the current repository.
 - `nix-blueprint`: before adding, moving, or wiring a file in a flake built
   with `numtide/blueprint`, which most of my projects use.
 - `design`: before designing or implementing UI, or writing or reviewing
