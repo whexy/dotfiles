@@ -20,7 +20,6 @@ let
     tailscale-security = import ../overlays/tailscale-security.nix;
     firefox-devtools-mcp-profile = import ../overlays/firefox-devtools-mcp-profile.nix;
     llm-tools = import ../overlays/llm-tools.nix { inherit (inputs) llm-agents; };
-    t3code-spawn-helper = import ../overlays/t3code-spawn-helper.nix;
   };
 
   # Caps are preset modules, not options. They assign feature options at
