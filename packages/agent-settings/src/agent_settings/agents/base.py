@@ -17,8 +17,6 @@ from agent_settings.ownership import merge_owned
 from agent_settings.picker import DELETE, FORK, SWITCH, ask, pick
 from agent_settings.profiles import Profiles
 
-_CMUX_INTEGRATION = "/Applications/cmux.app/Contents/Resources/shell-integration"
-
 
 class Session(TypedDict):
     """Nonsecret launch defaults a running session hands to its descendants."""
@@ -189,10 +187,6 @@ class Agent(ABC):
         os.environ.pop(self.session_env, None)
         for key in self.managed_env:
             os.environ.pop(key, None)
-        wrapper = self._cmux_wrapper()
-        if wrapper is not None:
-            os.environ[f"CMUX_CUSTOM_{self.name.upper()}_PATH"] = launcher
-            os.execv(str(wrapper), [str(wrapper), *args])
         os.execv(launcher, [launcher, *args])
 
     def launch(self, args: list[str]) -> NoReturn:
@@ -228,13 +222,3 @@ class Agent(ABC):
         # Only a parent launch writes this variable.
         session = cast(Session, json.loads(encoded))
         return session if session.get("root") == str(self.root) else None
-
-    def _cmux_wrapper(self) -> Path | None:
-        """cmux's bundled wrapper for this agent, when selecting inside cmux."""
-        if sys.platform != "darwin" or not os.environ.get("CMUX_SURFACE_ID"):
-            return None
-        integration = Path(os.environ.get("CMUX_SHELL_INTEGRATION_DIR", _CMUX_INTEGRATION))
-        wrapper = integration.parent / "bin" / f"cmux-{self.name}-wrapper"
-        if not os.access(wrapper, os.X_OK):
-            raise SettingsError(f"settings saved, but cmux wrapper not found: {wrapper}")
-        return wrapper

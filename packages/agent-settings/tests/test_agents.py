@@ -66,11 +66,11 @@ def test_child_session_survives_other_selection(make_agent: MakeAgent, name: str
     _, _, parent = launch(agent)
     agent.reconcile(default(agent))
     if name == "claude":
-        cmux = ["--settings", '{"hooks":{}}']
+        caller = ["--settings", '{"hooks":{}}']
     else:
-        cmux = ["-c", "hooks.example=true", "exec", "-m", "child-model", "hello"]
+        caller = ["-c", "hooks.example=true", "exec", "-m", "child-model", "hello"]
     with patch.dict(os.environ, parent, clear=True):
-        _, argv, env = launch(agent, cmux)
+        _, argv, env = launch(agent, caller)
     assert SECRET in env.values()
     if name == "claude":
         assert argv.count("--settings") == 1
@@ -79,7 +79,7 @@ def test_child_session_survives_other_selection(make_agent: MakeAgent, name: str
         assert injected["env"]["ANTHROPIC_BASE_URL"] == "https://test.invalid"
         assert env["ANTHROPIC_MODEL"] == "model"
     else:
-        assert argv[-len(cmux) :] == cmux
+        assert argv[-len(caller) :] == caller
         assert 'model="model"' in argv
         overrides = [argv[index + 1] for index, arg in enumerate(argv) if arg == "-c"]
         for override in overrides:
@@ -153,14 +153,14 @@ def test_claude_keeps_hooks_and_user_permissions(make_agent: MakeAgent) -> None:
     assert doc["permissions"] == {"allow": ["user-rule", "Read(/nix/store/**)"]}
 
 
-def test_claude_merges_caller_and_cmux_settings(make_agent: MakeAgent, home: Path) -> None:
+def test_claude_merges_caller_settings(make_agent: MakeAgent, home: Path) -> None:
     agent = make_agent("claude")
     agent.reconcile(api_model(agent))
-    hooks = home / "cmux.json"
+    hooks = home / "caller.json"
     hooks.write_text(
         json.dumps(
             {
-                "hooks": {"Stop": [{"hooks": [{"command": "cmux hook"}]}]},
+                "hooks": {"Stop": [{"hooks": [{"command": "caller hook"}]}]},
                 "env": {"CALLER_VAR": "keep"},
             }
         )
@@ -179,7 +179,7 @@ def test_claude_merges_caller_and_cmux_settings(make_agent: MakeAgent, home: Pat
     settings = json.loads(argv[2])
     assert settings["model"] == "explicit"
     assert settings["env"]["CALLER_VAR"] == "keep"
-    assert settings["hooks"]["Stop"][0]["hooks"][0]["command"] == "cmux hook"
+    assert settings["hooks"]["Stop"][0]["hooks"][0]["command"] == "caller hook"
     assert argv[-3:] == ["--", "--settings", "literal"]
     assert "hooks" not in read_document(agent.config_file)
 
@@ -255,25 +255,3 @@ def test_invalid_secret_does_not_save(make_agent: MakeAgent, secret: Path) -> No
     ):
         agent.select("/fake/launcher", [])
     assert not agent.state_file.exists()
-
-
-def test_selector_routes_through_cmux_after_save(make_agent: MakeAgent, home: Path) -> None:
-    agent = make_agent("codex")
-    integration = home / "cmux" / "shell-integration"
-    wrapper = integration.parent / "bin" / "cmux-codex-wrapper"
-    wrapper.parent.mkdir(parents=True)
-    wrapper.write_text("#!/bin/sh\n")
-    wrapper.chmod(0o755)
-    cmux_env = {"CMUX_SURFACE_ID": "fixture", "CMUX_SHELL_INTEGRATION_DIR": str(integration)}
-    with (
-        patch.dict(os.environ, cmux_env),
-        patch.object(sys, "platform", "darwin"),
-        terminal(),
-        patch.object(agent, "choose", return_value=api_model(agent)),
-        patch.object(os, "execv", side_effect=SystemExit) as execute,
-    ):
-        with pytest.raises(SystemExit):
-            agent.select("/fake/launcher", ["resume", "--last"])
-        assert os.environ["CMUX_CUSTOM_CODEX_PATH"] == "/fake/launcher"
-    assert execute.call_args.args == (str(wrapper), [str(wrapper), "resume", "--last"])
-    assert read_document(agent.config_file)["model"] == "model"

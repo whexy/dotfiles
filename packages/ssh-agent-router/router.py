@@ -175,11 +175,8 @@ def serve(state, proxy, lock_fd):
             ).start()
 
 
-def in_persistent_pane():
-    # cmux remote panes are spawned by a detached cmuxd-remote that outlives
-    # the SSH connection whose SSH_AUTH_SOCK the pane inherits.
-    names = ("TMUX", "ZELLIJ", "CMUX_SURFACE_ID")
-    return any(os.environ.get(name) for name in names)
+def in_multiplexer():
+    return bool(os.environ.get("TMUX") or os.environ.get("ZELLIJ"))
 
 
 def shell_socket():
@@ -187,7 +184,7 @@ def shell_socket():
     current = os.environ.get("SSH_AUTH_SOCK", "")
     if not os.environ.get("SSH_CONNECTION"):
         return current
-    if in_persistent_pane():
+    if in_multiplexer():
         register(state, proxy)
         return str(proxy)
     if current and Path(current) != proxy:

@@ -80,7 +80,7 @@ class CodexAgent(Agent):
         if not inherited:
             return args
         # Saved defaults come first, so a dedicated --model and later -c
-        # arguments from cmux or the caller still win and are never persisted.
+        # arguments from the caller still win and are never persisted.
         overrides = [
             arg
             for key, value in session["settings"].items()
