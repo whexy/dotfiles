@@ -64,6 +64,11 @@ system, read the `explain` skill first and confirm the output format as it
 instructs. Do not load it for implementation, fixes, reviews, status updates, or
 incidental explanations of completed work.
 
+### Design
+
+Read the `design` skill before designing or implementing UI, including screens,
+pages, components, layouts, and interface copy.
+
 ### Coding
 
 **Comments**
