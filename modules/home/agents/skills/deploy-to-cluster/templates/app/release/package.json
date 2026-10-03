@@ -1,0 +1,9 @@
+{
+  "name": "release-tooling",
+  "private": true,
+  "type": "module",
+  "description": "Release tooling run by Woodpecker CI",
+  "dependencies": {
+    "release-please": "17.11.2"
+  }
+}

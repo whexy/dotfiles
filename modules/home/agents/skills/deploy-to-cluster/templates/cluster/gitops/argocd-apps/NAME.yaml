@@ -1,0 +1,37 @@
+apiVersion: argoproj.io/v1alpha1
+kind: Application
+metadata:
+  name: <name>
+  namespace: argocd
+  annotations:
+    argocd-image-updater.argoproj.io/image-list: <name>=ghcr.io/whexy/<name>:>=0.1.0-alpha.1 <0.2.0-0
+    argocd-image-updater.argoproj.io/<name>.update-strategy: semver
+    argocd-image-updater.argoproj.io/<name>.allow-tags: regexp:^0\.1\.[0-9]+-alpha\.[0-9]+$
+    argocd-image-updater.argoproj.io/write-back-method: git
+    argocd-image-updater.argoproj.io/write-back-target: kustomization
+    argocd-image-updater.argoproj.io/git-branch: master
+  finalizers:
+    - resources-finalizer.argocd.argoproj.io
+spec:
+  project: default
+  source:
+    repoURL: https://github.com/whexy/clusters-work.git
+    targetRevision: HEAD
+    path: gitops/apps/<name>
+  destination:
+    server: https://kubernetes.default.svc
+    namespace: <name>
+  syncPolicy:
+    automated:
+      prune: true
+      selfHeal: true
+    syncOptions:
+      - CreateNamespace=true
+      - RespectIgnoreDifferences=true
+  ignoreDifferences:
+    # The init node creates this namespace's Secrets out of band.
+    - group: ""
+      kind: Secret
+      namespace: <name>
+      jsonPointers:
+        - /data

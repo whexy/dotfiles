@@ -1,0 +1,132 @@
+variables:
+  - &github_app
+    GITHUB_APP_ID:
+      from_secret: github_app_id
+    GITHUB_APP_INSTALLATION_ID:
+      from_secret: github_app_installation_id
+    GITHUB_APP_PRIVATE_KEY:
+      from_secret: github_app_private_key
+  # The first Pod binds the local-path workspace; later steps follow its node.
+  - &amd64
+    kubernetes:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+
+# Pull requests are the only validation gate. Default-branch pushes and release
+# tags skip it because the branch ruleset requires ci/woodpecker/pr/woodpecker
+# on an up-to-date branch, so their exact tree already passed; restore
+# validation for those events if that ruleset is relaxed.
+when:
+  - event: pull_request
+  - event: push
+    branch: ${CI_REPO_DEFAULT_BRANCH}
+  - event: tag
+    ref: refs/tags/v*
+  - event: manual
+
+labels:
+  platform: linux/amd64
+
+clone:
+  - name: git
+    image: woodpeckerci/plugin-git
+    backend_options: *amd64
+
+steps:
+  - name: validate
+    image: <toolchain image>
+    when:
+      event: [pull_request, manual]
+    backend_options: *amd64
+    commands:
+      - <install from the lockfile>
+      - <lint and typecheck>
+      - <test>
+      - <build>
+
+  - name: test-release
+    image: node:24-bookworm-slim
+    when:
+      event: [pull_request, manual]
+    backend_options: *amd64
+    commands:
+      - npm ci --prefix release --no-audit --no-fund
+      - node --test release/release.test.mjs
+
+  - name: prepare-release
+    image: node:24-bookworm-slim
+    when:
+      event: [push, manual]
+      branch: ${CI_REPO_DEFAULT_BRANCH}
+    backend_options: *amd64
+    environment: *github_app
+    commands:
+      - npm ci --prefix release --no-audit --no-fund
+      - node release/release-please.mjs
+
+  - name: verify-tag
+    image: node:24-bookworm-slim
+    when:
+      event: tag
+    backend_options: *amd64
+    commands:
+      - |
+        expected="v$(node -p 'require("./.release-please-manifest.json")["."]')"
+        test "$${CI_COMMIT_TAG}" = "$${expected}" || {
+          printf 'Tag must match the release manifest: expected %s\n' "$${expected}" >&2
+          exit 1
+        }
+
+  - name: publish
+    image: woodpeckerci/plugin-docker-buildx:6.1.2
+    when:
+      event: tag
+    backend_options:
+      kubernetes:
+        nodeSelector:
+          kubernetes.io/arch: amd64
+        resources:
+          requests:
+            cpu: "2"
+            memory: 4Gi
+          limits:
+            cpu: "4"
+            memory: 6Gi
+    settings:
+      repo: ghcr.io/${CI_REPO}
+      registry: ghcr.io
+      username: whexy
+      password:
+        from_secret: ghcr_token
+      dockerfile: Dockerfile
+      context: .
+      platforms: linux/amd64
+      tags:
+        - ${CI_COMMIT_TAG##v}
+      build_args:
+        VERSION: ${CI_COMMIT_TAG##v}
+        SOURCE_REVISION: ${CI_COMMIT_SHA}
+      default_labels: false
+      labels:
+        # Links the GHCR package to the repository, which routes its package
+        # events to the repository's image-update webhook.
+        - org.opencontainers.image.source=${CI_REPO_URL}
+        - org.opencontainers.image.revision=${CI_COMMIT_SHA}
+        - org.opencontainers.image.version=${CI_COMMIT_TAG##v}
+      provenance: false
+      # The cluster's pod network uses a Tailscale MTU of 1230.
+      mtu: 1230
+      # Keep Docker layers on the workspace PVC rather than stacked overlayfs.
+      storage_path: /woodpecker/docker
+
+  - name: publish-release
+    image: node:24-bookworm-slim
+    when:
+      event: tag
+    backend_options: *amd64
+    environment:
+      <<: *github_app
+      GHCR_TOKEN:
+        from_secret: ghcr_token
+    commands:
+      - node release/publish-release.mjs

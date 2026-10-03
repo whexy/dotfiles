@@ -1,0 +1,20 @@
+{
+  "$schema": "https://raw.githubusercontent.com/googleapis/release-please/main/schemas/config.json",
+  "bootstrap-sha": "<full 40-character SHA of the default-branch HEAD when release-please is added>",
+  "packages": {
+    ".": {
+      "release-type": "<node | python | rust | go | simple>",
+      "initial-version": "0.1.0-alpha.1",
+      "include-component-in-tag": false,
+      "versioning": "prerelease",
+      "prerelease-type": "alpha",
+      "prerelease": true,
+      "bump-minor-pre-major": true,
+      "bump-patch-for-minor-pre-major": true,
+      "draft": true,
+      "force-tag-creation": true,
+      "changelog-type": "github",
+      "extra-files": ["Dockerfile"]
+    }
+  }
+}
