@@ -57,6 +57,12 @@ reconstruct those rules from memory.
 If that skill is not available in this session, ask me for the rules instead of
 guessing.
 
+### Knowledge
+
+Read the `knowledge` skill before studying or investigating a codebase or
+system, including one other than the current repository, and again after an
+investigation that produced findings worth keeping for future agents.
+
 ### Explanations
 
 When the user asks for an explanation or help understanding a topic, code, or
