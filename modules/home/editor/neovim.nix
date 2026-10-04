@@ -67,6 +67,7 @@ in
       };
 
       opts = {
+        background = "dark";
         number = true;
         relativenumber = true;
         confirm = true;

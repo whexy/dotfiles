@@ -647,7 +647,6 @@ in
           end
         end
         if vim.g.neovide then
-          vim.opt.background = "dark"
           local paste = vim.fn.has("mac") == 1 and "<D-v>" or "<C-S-v>"
           vim.keymap.set("n", paste, '"+p', { desc = "Paste from system clipboard" })
           vim.keymap.set("v", paste, '"+p', { desc = "Paste from system clipboard" })
