@@ -66,17 +66,7 @@ in
     ".pi/web-search.json".text = builtins.toJSON webSearch;
   }
   // lib.optionalAttrs (mcp.servers != { }) {
-    ".pi/agent/mcp.json".text = builtins.toJSON {
-      mcpServers =
-        mcp.servers
-        // lib.optionalAttrs (mcp.servers ? figma) {
-          # Figma rejects Pi's default OAuth registration name; this is the
-          # client name documented by Pi for Figma's hosted server.
-          figma = mcp.servers.figma // {
-            oauth.clientName = "Claude Code";
-          };
-        };
-    };
+    ".pi/agent/mcp.json".text = builtins.toJSON { mcpServers = mcp.servers; };
   }
   // {
     # Desktop notification on agent settle (see extensions/notify.ts).
