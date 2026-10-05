@@ -30,8 +30,10 @@ steps:
       - event: cron
         cron: weekly
       - event: manual
+    backend_options: *k8s_heavy
     environment: *github_app
     commands:
+      - cp flake.lock /tmp/flake.lock.old
       - nix flake update
       # Commit and push flake.lock directly to the repository's primary branch.
       # No-op (exit 0) when flake.lock is unchanged.
@@ -44,7 +46,10 @@ steps:
         git config user.name "whexy-bot[bot]"
         git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
         git add flake.lock
-        git commit -m "chore: update flake inputs"
+        # The package report is informational; a failure must not block the update.
+        report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
+          report="Package report unavailable; see the CI log."
+        git commit -m "chore: update flake inputs" -m "$report"
 
         GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
         origin_url="$(git remote get-url origin)"
@@ -59,8 +64,10 @@ steps:
     when:
       event: cron
       cron: nightly
+    backend_options: *k8s_heavy
     environment: *github_app
     commands:
+      - cp flake.lock /tmp/flake.lock.old
       - nix flake update llm-agents
       # Commit and push flake.lock directly to the repository's primary branch.
       # No-op (exit 0) when flake.lock is unchanged.
@@ -73,7 +80,10 @@ steps:
         git config user.name "whexy-bot[bot]"
         git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
         git add flake.lock
-        git commit -m "chore: update llm-agents input"
+        # The package report is informational; a failure must not block the update.
+        report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
+          report="Package report unavailable; see the CI log."
+        git commit -m "chore: update llm-agents input" -m "$report"
 
         GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
         origin_url="$(git remote get-url origin)"
