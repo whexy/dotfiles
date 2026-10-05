@@ -51,6 +51,10 @@ A `403` or `429` backs off using `Retry-After` or `X-RateLimit-Reset` when
 present. An `X-Poll-Interval` header raises the interval floor. Ticks are
 jittered per host so the fleet does not poll in lockstep.
 
+Waits between ticks are measured in wall-clock time. A host that sleeps through
+a deadline polls within a minute of waking, rather than resuming a timer that
+stopped counting while it was suspended.
+
 ## State directory
 
 `--state-dir` holds three files:
