@@ -47,13 +47,10 @@ check-nvim-cache:
     fi
     echo "SUCCESS - nightly Neovim is cached for all systems"
 
-# Verify primary configurations evaluate correctly (ellison, mudd)
+# Verify primary configurations evaluate correctly (ellison)
 verify:
     @echo "=== Verifying primary configurations ==="
     @echo "Evaluating ellison..."
     nix eval .#nixosConfigurations.ellison.config.system.build.toplevel.drvPath --show-trace
     @echo "OK - ellison"
-    @echo "Evaluating mudd..."
-    nix eval .#nixosConfigurations.mudd.config.system.build.toplevel.drvPath --show-trace
-    @echo "OK - mudd"
     @echo "SUCCESS - All primary configurations evaluate correctly"

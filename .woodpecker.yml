@@ -96,7 +96,6 @@ steps:
       - echo "=== Evaluating representative NixOS configurations ==="
       - |
         for config in \
-          mudd \
           ellison \
           wsl
         do
@@ -115,8 +114,6 @@ steps:
       - echo "=== Evaluating darwin configurations ==="
       - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.golf.system.drvPath --show-trace
       - echo "OK - golf"
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.sheridan.system.drvPath --show-trace
-      - echo "OK - sheridan"
       - echo "=== Evaluating home-manager configurations ==="
       - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.wenxuan@mars.activationPackage.drvPath --impure --show-trace
       - echo "OK - mars (x86_64)"
