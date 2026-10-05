@@ -109,7 +109,7 @@ in
       # uBlacklist
       "@ublacklist" = forceInstall "ublacklist";
       # AdGuard AdBlocker
-      "adguardadblocker@adguard.com" = forceInstall "adguard-adblocker";
+      # "adguardadblocker@adguard.com" = forceInstall "adguard-adblocker";
       # AdGuard VPN
       "adguard-vpn@adguard.com" = forceInstall "adguard-vpn";
       # Firenvim (also needs `:call firenvim#install(0)` on the Neovim side)
