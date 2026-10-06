@@ -9,6 +9,17 @@
     network.enable = lib.mkEnableOption "network diagnostic tools";
     extras.enable = lib.mkEnableOption "extra dev utilities";
     debug.enable = lib.mkEnableOption "Linux tracing, profiling, and fuzzing tools";
+    kube = {
+      enable = lib.mkEnableOption "kubeconfigs for my clusters, merged for kubectx";
+      clusters = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ "clusters-work" ];
+        description = ''
+          Clusters to install, each read from `secrets/kube-<name>.age`. The
+          kubeconfig must name its cluster, user, and context `<name>`.
+        '';
+      };
+    };
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
       server = lib.mkOption {
@@ -23,6 +34,7 @@
     ./cli.nix
     ./debug.nix
     ./extras.nix
+    ./kube.nix
     ./network.nix
     ./woodpecker.nix
   ];

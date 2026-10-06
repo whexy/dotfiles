@@ -6,6 +6,7 @@
       cli.enable = lib.mkDefault true;
       network.enable = lib.mkDefault true;
       debug.enable = lib.mkDefault true;
+      kube.enable = lib.mkDefault true;
     };
     agents = {
       enable = lib.mkDefault true;

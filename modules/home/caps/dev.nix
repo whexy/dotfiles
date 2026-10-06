@@ -66,6 +66,7 @@ args@{
       extras.enable = lib.mkDefault true;
       debug.enable = lib.mkDefault true;
       woodpecker.enable = lib.mkDefault true;
+      kube.enable = lib.mkDefault true;
     };
   };
 
