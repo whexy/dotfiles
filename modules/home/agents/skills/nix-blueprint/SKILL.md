@@ -1,6 +1,6 @@
 ---
 name: nix-blueprint
-description: How Wenxuan's flakes are laid out when they use numtide/blueprint - the folder-to-output mapping for hosts, modules, packages, devshells, checks, lib, and templates, plus the arguments each file receives. Read before adding, moving, or wiring a file in a blueprint flake, or when looking for where an output comes from.
+description: Folder-to-output mapping and file arguments for flakes built with numtide/blueprint. Use when adding, moving, or wiring a file in such a flake, or tracing where an output comes from.
 ---
 
 # Blueprint Flakes

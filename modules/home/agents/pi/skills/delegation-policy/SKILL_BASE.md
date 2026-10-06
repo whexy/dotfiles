@@ -1,6 +1,6 @@
 ---
 name: delegation-policy
-description: Which provider and model to choose for each pi subagent role in Wenxuan's setup, and how to resolve a model nickname against the live registry. Read before launching any subagent. Complements the pi-subagents skill, which documents the subagent API but deliberately omits model names.
+description: Which provider and model each pi subagent role runs on, and how to resolve a model nickname. Read before launching any subagent.
 ---
 
 # Delegation Policy

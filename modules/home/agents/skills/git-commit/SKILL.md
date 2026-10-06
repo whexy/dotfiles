@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Rules for recording work in git in Wenxuan's repositories - commit message format, signing behaviour, the mandatory Assisted-by tooling disclosure trailer, and how to tag without hanging the session. Read before running git commit, git tag, or writing a pull request summary.
+description: Commit, tag, and pull request summary rules for Wenxuan's repositories, including the required Assisted-by trailer and the signing check. Use before git commit, git tag, or writing a pull request summary.
 ---
 
 # Committing In My Repositories
