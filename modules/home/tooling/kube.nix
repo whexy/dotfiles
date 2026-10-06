@@ -24,8 +24,6 @@ in
     home = {
       packages = [ pkgs.kubectx ];
 
-      sessionVariables.KUBECONFIG = kubeconfig;
-
       # kubectl falls back to the last KUBECONFIG file when none exist, and
       # kubectx cannot parse an empty one, so seed a minimal valid config.
       activation.kubeStateConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -37,8 +35,15 @@ in
       '';
     };
 
-    # Home Manager's nushell does not read home.sessionVariables.
-    programs.nushell.environmentVariables.KUBECONFIG = kubeconfig;
+    # Not home.sessionVariables: its script is skipped in any shell that
+    # inherits __HM_SESS_VARS_SOURCED, such as one under a tmux or zellij
+    # server started before this module was activated.
+    programs = {
+      zsh.envExtra = lib.mkIf config.dotfiles.shell.zsh.enable ''
+        export KUBECONFIG=${lib.escapeShellArg kubeconfig}
+      '';
+      nushell.environmentVariables.KUBECONFIG = kubeconfig;
+    };
 
     age.secrets = lib.listToAttrs (
       map (name: {
