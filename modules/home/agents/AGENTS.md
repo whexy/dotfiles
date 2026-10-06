@@ -41,30 +41,11 @@ specifically asked.
 
 ### Skills
 
-My skills hold rules you cannot reconstruct from memory. Read the matching
-skill before the task, every time; if it is not available in this session, ask
-me instead of guessing.
-
-- `git-commit`: before `git commit`, `git tag`, or writing a pull request
-  summary.
-- `knowledge`: before learning how an unfamiliar codebase or system works,
-  especially one outside the current repository (a service you deploy to, a
-  host you write a plugin for), and after an investigation that produced
-  durable findings about how it works. Not for diagnosing, debugging, or
-  fixing a bug in the current repository.
-- `nix-blueprint`: before adding, moving, or wiring a file in a flake built
-  with `numtide/blueprint`, which most of my projects use.
-- `design`: before designing or implementing UI, or writing or reviewing
-  documentation.
-- `web-preview`: before starting a server or preview, checking a UI,
-  taking a screenshot, or giving me a URL.
-- `explain`: when I ask for an explanation or help understanding something;
-  confirm the output format first. Not for explanations that come with
-  implementation, fixes, reviews, or status updates.
-- `deploy-to-cluster`: before deploying a project to the cluster or changing
-  its repository settings, CI, release flow, image, or cluster manifests.
-- `ship-pr`: when I ask you to ship the work, ship the PR, or ship it. Do the
-  rest of the task first. Never ship unasked.
+My skills hold rules you cannot reconstruct from memory: `git-commit`,
+`knowledge`, `nix-blueprint`, `design`, `web-preview`, `explain`,
+`deploy-to-cluster`, `ship-pr`, and `wechat`. Each description says when it
+applies; when one matches the task, read it before you start. If a skill you
+need is not available in this session, ask me instead of guessing.
 
 ### Coding
 

@@ -1,6 +1,6 @@
 ---
 name: wechat
-description: Message Wenxuan on WeChat with the `wechat` CLI - notify them when long work finishes or fails, send files or screenshots, or ask a question and wait for the reply from their phone. Use when they ask to be pinged, messaged, or reached on WeChat (微信).
+description: Message Wenxuan on WeChat (微信) with the wechat CLI - notify, send files, or ask and wait for a reply. Use only when asked to ping or reach them on WeChat.
 ---
 
 # WeChat

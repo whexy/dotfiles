@@ -1,6 +1,6 @@
 ---
 name: darwin-updater-onboarding
-description: How to bring a new macOS host under the dotfiles-upgraded auto-update daemon - installing and signing the root-owned Dotfiles Updater.app, granting Full Disk Access, ordering the upstream commit against the bootstrap switch, and verifying a real daemon-driven activation. Read before adding a Darwin host with dotfiles.system.autoUpgrade.enable, replacing the launcher, or debugging an auto-update daemon that never switches.
+description: Onboard a macOS host to the dotfiles auto-updater daemon. Use when adding a Darwin host with dotfiles.system.autoUpgrade.enable, replacing Dotfiles Updater.app, or debugging a daemon that never switches.
 ---
 
 # Onboarding a macOS host to the auto-updater

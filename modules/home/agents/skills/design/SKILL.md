@@ -1,6 +1,6 @@
 ---
 name: design
-description: Wenxuan's personal design rules for anything he reads - user interfaces (screens, pages, components, layouts, interface copy) and documentation (READMEs, docs sites, guides, design documents, runbooks). Read before designing, implementing, writing, restructuring, or reviewing either, including when briefing a subagent to do it. An existing project's established conventions take precedence unless he says otherwise. Not for commit messages (git-commit skill), code comments, or chat replies.
+description: Wenxuan's rules for user interfaces and documentation. Use when designing or building a UI, or writing, restructuring, or reviewing docs such as a README, guide, or runbook.
 ---
 
 # Personal Design
@@ -11,6 +11,8 @@ design or write something.
 If you are modifying an existing project with an established design language
 or documentation structure, follow that project's conventions instead unless I
 explicitly ask otherwise. Still apply the wording rules below.
+
+When you brief a subagent to do this work, pass these rules on.
 
 ## The shared rule: everything earns its place
 
@@ -110,11 +112,3 @@ Persistent text should normally communicate actual:
   anchor.
 - Don't write these rules into the project. They are for writing the
   documentation, not part of it.
-
-### Before you finish a document
-
-- Could any page, section or paragraph be cut or replaced by a link?
-- Does each page serve exactly one reader goal, with the main path first?
-- Is every term defined before its first use?
-- Did you run every documented command?
-- Are all links and anchors you touched still valid?

@@ -1,6 +1,6 @@
 ---
 name: ship-pr
-description: Finish the task by committing, rebasing onto the latest default branch, opening a pull request, watching CI, and merging once it passes. Read when the user explicitly asks to ship the work, ship the PR, or ship it. Never run it unprompted, and not merely because a task is done or a PR is mentioned.
+description: Commit, rebase, open a pull request, watch CI, and rebase-merge. Use only when the user explicitly asks to ship the work, ship the PR, or ship it.
 ---
 
 # Ship The Work As A Pull Request

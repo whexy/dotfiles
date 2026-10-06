@@ -1,6 +1,6 @@
 ---
 name: web-preview
-description: Running, checking, and showing web UIs and live previews on Wenxuan's machines - serving on the tailnet, driving a browser, taking and polishing screenshots, and handing him a URL he can open. Read before starting a server or preview (dev server, web UI, Typst/tinymist, an HTML artifact), verifying a UI change, capturing a screenshot, or giving him a link.
+description: Serve, check, and hand over web UIs from Wenxuan's headless hosts over the tailnet. Use before starting a dev server or preview, checking a UI, taking a screenshot, or giving a URL.
 ---
 
 # Web Previews
@@ -119,12 +119,6 @@ often matches several elements and fails strict mode.
 - **Blank is not success.** Check console errors (`list_console_messages`
   with `level: "error"`) and failed requests (`list_network_requests`),
   especially WebSockets.
-- **Measure, don't eyeball.** For layout bugs, read sizes with
-  `evaluate_script` (`getBoundingClientRect`, computed
-  `grid-template-columns`) at the viewport where the bug shows.
-- **Try the fix in the page first.** Inject a `<style>` with the candidate
-  rule through `evaluate_script`, confirm it fixes the measurement, then edit
-  the source.
 - **Cover the states the change touches:** narrow and wide viewports, light
   and dark if the app has both, empty and long content.
 - **Look at your own screenshot** (Read the PNG) before reporting. Report
@@ -132,20 +126,8 @@ often matches several elements and fails strict mode.
 
 ## 3. Publishable screenshots
 
-For images that go into a README, docs, or anywhere public:
-
-- Use real data from a real run, not mock data, unless he says otherwise.
-- Capture at `deviceScaleFactor: 2`.
-- No scrollbars or cut-off content in the frame. Size the viewport to the
-  content, scroll inner panels to the meaningful part with `evaluate_script`,
-  and hide scrollbars for the capture only
-  (`* { scrollbar-width: none } ::-webkit-scrollbar { display: none }`).
-- Crop to the subject; keep the app's own design.
-- Compress losslessly with `oxipng`; `pngquant` leaves artifacts on
-  transparent edges.
-- Edit images with `nix run nixpkgs#imagemagick -- …` when Python imaging is
-  not installed.
-- Read every final image yourself before committing it.
+For images that go into a README, docs, or anywhere public, read
+[screenshots.md](screenshots.md).
 
 ## 4. Hand it over
 
