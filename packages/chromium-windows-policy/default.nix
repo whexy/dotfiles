@@ -10,7 +10,12 @@ let
     New-Item -Path $root -Force | Out-Null
     $policies = Get-Content -Raw -LiteralPath (Join-Path $PSScriptRoot "chromium-policies.json") | ConvertFrom-Json
     foreach ($property in $policies.PSObject.Properties) {
-      New-ItemProperty -Path $root -Name $property.Name -Value $property.Value -PropertyType String -Force | Out-Null
+      $value = $property.Value
+      if ($value -is [bool] -or $value -is [int] -or $value -is [long] -or $value -is [double]) {
+        New-ItemProperty -Path $root -Name $property.Name -Value ([int]$value) -PropertyType DWord -Force | Out-Null
+      } else {
+        New-ItemProperty -Path $root -Name $property.Name -Value $value -PropertyType String -Force | Out-Null
+      }
     }
     Write-Host "Chromium policies installed for the current Windows user. Restart Chrome to apply them."
   '';
