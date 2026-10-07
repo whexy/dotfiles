@@ -15,9 +15,5 @@ in
   "nas-webdav-pass.age".publicKeys = [ key ];
   "cf-access-dotfiles-id.age".publicKeys = [ key ];
   "cf-access-dotfiles-secret.age".publicKeys = [ key ];
-  "anthropic-api-key.age".publicKeys = [ key ];
-  "openai-api-key.age".publicKeys = [ key ];
-  "deepseek-api-key.age".publicKeys = [ key ];
   "ai-proxy-api-key.age".publicKeys = [ key ];
-  "openrouter-api-key.age".publicKeys = [ key ];
 }

@@ -1,9 +1,6 @@
 {
   pkgs,
-  config,
   lib,
-  apiAccounts,
-  proxyAccounts,
   proxy,
   withModelPicker,
   mcp,
@@ -21,10 +18,6 @@ let
     entries = import ./models.nix {
       codexVersion = pkgs.llm-agents.codex.version;
       inherit
-        config
-        lib
-        apiAccounts
-        proxyAccounts
         proxy
         ;
     };

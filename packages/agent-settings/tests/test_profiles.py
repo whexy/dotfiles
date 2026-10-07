@@ -8,6 +8,7 @@ import pytest
 from support import AGENT_NAMES, launch, terminal
 
 from agent_settings.agents import Agent
+from agent_settings.catalog import Catalog
 from agent_settings.documents import read_document
 from agent_settings.errors import SettingsError
 from agent_settings.picker import SWITCH
@@ -83,6 +84,20 @@ def test_sync_ignores_override_and_updates_forks(
         key = "mcp_servers" if name == "codex" else "mcpServers"
         assert doc[key] == {"owned": {"command": "/updated/server"}}
         assert read_document(root / agent.config_name)["model"] == "model"
+
+
+@pytest.mark.parametrize("name", AGENT_NAMES)
+def test_sync_migrates_removed_selection_to_default(make_agent: MakeAgent, name: str) -> None:
+    agent = make_agent(name)
+    agent.reconcile(agent.catalog.choices[1])
+    default = agent.catalog.choices[0]
+    agent.catalog = Catalog.from_choices([default])
+
+    agent.sync()
+
+    assert read_document(agent.state_file)["selection"] == default["label"]
+    doc = read_document(agent.config_file)
+    assert doc.get("model") != "model"
 
 
 @pytest.mark.parametrize("name", AGENT_NAMES)

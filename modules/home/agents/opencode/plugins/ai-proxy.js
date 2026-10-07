@@ -1,6 +1,6 @@
-// OpenCode plugin: discover the AI proxy's models and enrich their metadata.
+// OpenCode plugin: discover CLIProxyAPI's models and enrich their metadata.
 //
-// ai-proxy is a custom provider, so OpenCode knows nothing about its models
+// cliproxyapi is a custom provider, so OpenCode knows nothing about its models
 // beyond what config declares. Discovery must register even models absent from
 // models.dev so experimental proxy IDs can be tried without editing dotfiles.
 // Known canonical IDs inherit metadata, including auto-compaction limits.
@@ -11,7 +11,7 @@ import { readFile } from "node:fs/promises";
 import { homedir } from "node:os";
 import { join } from "node:path";
 
-const PROVIDER = "ai-proxy";
+const PROVIDER = "cliproxyapi";
 const SOURCE = "https://models.opencode.ai/api.json";
 const PREFERRED = ["anthropic", "openai", "google", "xai"];
 const FIELDS = [
@@ -65,7 +65,7 @@ export const AiProxyPlugin = async () => ({
       signal: AbortSignal.timeout(10_000),
     });
     if (!response.ok) {
-      throw new Error(`AI Proxy model discovery failed: ${response.status}`);
+      throw new Error(`CLIProxyAPI model discovery failed: ${response.status}`);
     }
     const payload = await response.json();
     if (
@@ -75,7 +75,7 @@ export const AiProxyPlugin = async () => ({
       )
     ) {
       throw new Error(
-        "AI Proxy model discovery returned an invalid model list",
+        "CLIProxyAPI model discovery returned an invalid model list",
       );
     }
     const models = (provider.models ??= {});

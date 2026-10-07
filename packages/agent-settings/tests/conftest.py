@@ -25,7 +25,7 @@ def secret(home: Path) -> Path:
 
 @pytest.fixture
 def make_agent(secret: Path) -> Callable[[str], Agent]:
-    """Build an agent offering the native login and one API model."""
+    """Build an agent offering the default configuration and one model."""
 
     def make(name: str) -> Agent:
         return create_agent(manifest(name, [model_entry(name, secret)]))

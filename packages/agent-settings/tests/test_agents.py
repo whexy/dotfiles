@@ -43,7 +43,9 @@ def test_selection_persists_without_secrets(make_agent: MakeAgent, name: str) ->
 
 
 @pytest.mark.parametrize("name", AGENT_NAMES)
-def test_default_login_removes_overrides_and_keeps_auth(make_agent: MakeAgent, name: str) -> None:
+def test_default_selection_removes_overrides_and_keeps_auth(
+    make_agent: MakeAgent, name: str
+) -> None:
     agent = make_agent(name)
     agent.reconcile(api_model(agent))
     auth = agent.root / "auth.json"

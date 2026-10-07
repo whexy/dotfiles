@@ -1,8 +1,6 @@
 {
   pkgs,
-  lib,
   config,
-  proxyAccounts,
   aiProxyExtension,
   defaults,
 }:
@@ -28,15 +26,15 @@
       # pi-subagents 0.65.0 stopped loading ambient extensions in foreground
       # children, and the background runner that still loads them needs pi from
       # npm rather than this standalone binary. Naming extensions here is the
-      # only way children keep web access, background tasks, and the ai-proxy
-      # provider that `ai-proxy/*` model overrides resolve against.
+      # only way children keep web access, background tasks, and the
+      # cliproxyapi provider that `cliproxyapi/*` model overrides resolve against.
       defaultExtensions = [
         (npmExtension "pi-web-access/index.ts")
         (npmExtension "pi-background-tasks/extensions/background-tasks.ts")
       ]
       # The generated extension, not the bare source: the source alone reads a
       # config that only the generator injects.
-      ++ lib.optional proxyAccounts "${aiProxyExtension}";
+      ++ [ "${aiProxyExtension}" ];
 
       # Loading an extension only registers its tools; an agent with an explicit
       # allowlist still drops anything it does not name, so each grant below

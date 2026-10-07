@@ -1,9 +1,6 @@
 ## Providers
 
-Every delegated model on this host is served by `openrouter`. The AI proxy is
-not configured here, so `ai-proxy/*` ids do not resolve — do not reach for them.
-
-Never use `openai` or `anthropic` directly unless I explicitly ask for it.
+Every delegated model on this host is served by `cliproxyapi`.
 
 ## Subagents
 

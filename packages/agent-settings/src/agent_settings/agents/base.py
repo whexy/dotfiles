@@ -158,12 +158,16 @@ class Agent(ABC):
         return pick(labels, prompt, manage=manage)
 
     def sync(self) -> None:
-        """Activation always owns the default, independent of the caller's environment."""
+        """Reconcile every profile and migrate removed selections to the default."""
         previous = self.root
         try:
             for root in Profiles(self.name).configurations().values():
                 self.set_root(root)
-                self.reconcile()
+                saved = read_document(self.state_file).get("selection")
+                selection = self.catalog.find(saved)
+                if selection is None and self.catalog.choices:
+                    selection = self.catalog.choices[0]
+                self.reconcile(selection)
         finally:
             self.set_root(previous)
 

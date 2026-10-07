@@ -1,29 +1,13 @@
 {
   lib,
-  proxyAccounts,
-  apiAccounts,
   proxy,
   defaults,
   mcp,
 }:
 let
-  # The launcher exports every key; agenix paths are shell fragments that
-  # `{file:...}` cannot expand.
-  keyed = env: {
-    options.apiKey = "{env:${env}}";
-  };
-
   providers = {
-    # The OpenRouter key is present on every host.
-    openrouter = keyed "OPENROUTER_API_KEY";
-  }
-  // lib.optionalAttrs apiAccounts {
-    openai = keyed "OPENAI_API_KEY";
-    anthropic = keyed "ANTHROPIC_API_KEY";
-  }
-  // lib.optionalAttrs proxyAccounts {
-    ai-proxy = {
-      name = "AI Proxy";
+    cliproxyapi = {
+      name = "CLIProxyAPI";
       npm = "@ai-sdk/openai-compatible";
       options = {
         baseURL = "${proxy.baseUrl}/v1";

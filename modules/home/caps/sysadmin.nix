@@ -10,8 +10,6 @@
     };
     agents = {
       enable = lib.mkDefault true;
-      enableApiAccounts = lib.mkDefault false;
-      enableProxyAccounts = lib.mkDefault true;
     };
   };
 

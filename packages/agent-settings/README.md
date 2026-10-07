@@ -1,17 +1,18 @@
 # Agent settings
 
-Use `claude-select` or `codex-select` to choose a provider/model (or the native
-login default), save it, and launch. Claude's selector also supports per-role
-fusion selection. The searchable terminal UI provides config actions at the bottom. Ordinary `claude` and `codex`
-never open a picker, even with a terminal and no arguments.
+Use `claude-select` or `codex-select` to choose a CLIProxyAPI model, save it,
+and launch. Claude's selector also supports per-role fusion selection. The
+searchable terminal UI provides config actions at the bottom. Ordinary `claude`
+and `codex` never open a picker, even with a terminal and no arguments.
 
 ## Config manager
 
 `claude-select` and `codex-select` show models for the current config. Type to
 search, use the arrow keys to choose, and press Enter to save and launch.
-Choose **ai-proxy (default models)** to configure the proxy endpoint and authentication
-while clearing previous model and role overrides. The agent then uses its native
-model defaults; this does not discover the proxy’s model catalog.
+Choose **cliproxyapi (default models)** to configure the proxy endpoint and
+authentication while clearing previous model and role overrides. The agent then
+uses the proxy's default model behavior; model availability comes from the
+proxy's live catalog.
 
 The buttons at the bottom also have shortcuts:
 
@@ -39,8 +40,9 @@ config's paths, so updates and newly added skills follow Home Manager activation
 Claude's skills are shared, including user-installed skills in that directory.
 Codex also continues discovering shared user skills in `~/.agents/skills`.
 Forked native settings remain separate writable files. Activation always reconciles
-the default first, then named configs, preserving their provider/model choices and
-user settings. `CODEX_HOME` and `CLAUDE_CONFIG_DIR` cannot redirect activation.
+the default first, then named configs, preserving valid model choices and user
+settings while migrating removed choices to the CLIProxyAPI default.
+`CODEX_HOME` and `CLAUDE_CONFIG_DIR` cannot redirect activation.
 External config directories are reconciled when selecting a model in them.
 
 ## Ownership

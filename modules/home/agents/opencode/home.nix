@@ -1,29 +1,15 @@
 {
   pkgs,
-  config,
   lib,
-  apiAccounts,
-  proxyAccounts,
   proxy,
   defaults,
   mcp,
 }:
 let
   upstream = pkgs.llm-agents.opencode;
-  secretPath = name: config.age.secrets.${name}.path;
-  secrets = {
-    OPENROUTER_API_KEY = secretPath "openrouter-api-key";
-  }
-  // lib.optionalAttrs apiAccounts {
-    OPENAI_API_KEY = secretPath "openai-api-key";
-    ANTHROPIC_API_KEY = secretPath "anthropic-api-key";
-  }
-  // lib.optionalAttrs proxyAccounts (
-    proxy.cfAccessSecrets
-    // {
-      AI_PROXY_API_KEY = proxy.apiKeyPath;
-    }
-  );
+  secrets = proxy.cfAccessSecrets // {
+    AI_PROXY_API_KEY = proxy.apiKeyPath;
+  };
   # Double quotes, not escapeShellArg: the agenix path is a shell fragment
   # that has to expand.
   exportSecret = name: path: ''
@@ -55,8 +41,6 @@ let
   settings = import ./config.nix {
     inherit
       lib
-      apiAccounts
-      proxyAccounts
       proxy
       defaults
       mcp
@@ -75,7 +59,7 @@ in
     # Plugins in this directory are auto-loaded.
     ".config/opencode/plugins/notify.js".source = ./plugins/notify.js;
   }
-  // lib.optionalAttrs proxyAccounts {
+  // {
     ".config/opencode/plugins/ai-proxy.js".source = ./plugins/ai-proxy.js;
   };
 }
