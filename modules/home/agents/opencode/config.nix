@@ -8,9 +8,12 @@ let
   providers = {
     cliproxyapi = {
       name = "CLIProxyAPI";
+      # The fallback for models absent from models.dev. The URL is `api`
+      # rather than `options.baseURL`, which would override the per-model
+      # URL the plugin sets for SDKs with other path conventions.
       npm = "@ai-sdk/openai-compatible";
+      api = "${proxy.baseUrl}/v1";
       options = {
-        baseURL = "${proxy.baseUrl}/v1";
         apiKey = "{env:AI_PROXY_API_KEY}";
         headers = lib.mapAttrs (_: env: "{env:${env}}") proxy.cfAccessHeaderEnv;
       };
