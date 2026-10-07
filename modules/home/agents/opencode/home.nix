@@ -6,40 +6,15 @@
   mcp,
 }:
 let
-  upstream = pkgs.llm-agents.opencode;
-  secrets = proxy.cfAccessSecrets // {
-    AI_PROXY_API_KEY = proxy.apiKeyPath;
-  };
-  # Double quotes, not escapeShellArg: the agenix path is a shell fragment
-  # that has to expand.
-  exportSecret = name: path: ''
-    if [ ! -r "${path}" ]; then
-      echo "opencode: missing secret: ${path}" >&2
-      exit 1
-    fi
-    export ${name}="$(< "${path}")"
-  '';
-  launcher = pkgs.writeShellScript "opencode" ''
-    set -euo pipefail
-    ${lib.concatStringsSep "\n" (lib.mapAttrsToList exportSecret secrets)}
-    exec ${lib.getExe upstream} "$@"
-  '';
-  package = pkgs.runCommand "opencode-with-credentials" { meta.mainProgram = "opencode"; } ''
+  upstream = pkgs.llm-agents.opencode2;
+  # The package installs its binary as `opencode2` to coexist with v1.
+  package = pkgs.runCommand "opencode" { meta.mainProgram = "opencode"; } ''
     mkdir -p $out/bin
-    for p in ${upstream}/*; do
-      if [ "$(basename "$p")" != bin ]; then
-        ln -s "$p" $out/
-      fi
-    done
-    for p in ${upstream}/bin/*; do
-      if [ "$(basename "$p")" != opencode ]; then
-        ln -s "$p" $out/bin/
-      fi
-    done
-    ln -s ${launcher} $out/bin/opencode
+    ln -s ${lib.getExe' upstream "opencode2"} $out/bin/opencode
   '';
   settings = import ./config.nix {
     inherit
+      pkgs
       lib
       proxy
       defaults
@@ -50,16 +25,5 @@ in
 {
   packages = [ package ];
   shellAliases.oc = "opencode";
-  homeFiles = {
-    ".config/opencode/opencode.json".text = builtins.toJSON settings;
-    ".config/opencode/tui.json".text = builtins.toJSON {
-      "$schema" = "https://opencode.ai/tui.json";
-      theme = "system";
-    };
-    # Plugins in this directory are auto-loaded.
-    ".config/opencode/plugins/notify.js".source = ./plugins/notify.js;
-  }
-  // {
-    ".config/opencode/plugins/ai-proxy.js".source = ./plugins/ai-proxy.js;
-  };
+  homeFiles.".config/opencode/opencode.json".text = builtins.toJSON settings;
 }
