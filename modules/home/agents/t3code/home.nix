@@ -12,6 +12,12 @@ let
   # CLIs remain on the Home Manager profile PATH with their existing wrappers.
   t3code = if cfg.server.package == null then perSystem.self.t3code-nightly else cfg.server.package;
 
+  # T3 treats an executable at this path as its installed preview browser; the
+  # package's patched copy replaces the download that cannot run on NixOS.
+  browser = t3code.browser or null;
+  browserDir = ".t3/tools/chrome-headless-shell/${browser.platform}/${browser.version}";
+  linkBrowser = cfg.server.enable && browser != null;
+
   # Every client reaches the server through Tailscale Serve, which proxies to
   # this loopback port.
   port = 3773;
@@ -48,6 +54,21 @@ in
 {
   packages =
     lib.optional cfg.server.enable t3code ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
+
+  homeFiles = lib.optionalAttrs linkBrowser {
+    ${browserDir}.source = browser;
+  };
+
+  # A server that ran before this link existed left its own download here,
+  # which Home Manager would otherwise refuse to replace.
+  activation = lib.optionalAttrs linkBrowser {
+    t3codeBrowser = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+      browser="$HOME/${browserDir}"
+      if [ -d "$browser" ] && [ ! -L "$browser" ]; then
+        run rm -rf $VERBOSE_ARG "$browser"
+      fi
+    '';
+  };
 
   systemdUserServices = lib.optionalAttrs (cfg.server.enable && !isDarwin) {
     t3code = {
