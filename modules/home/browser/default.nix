@@ -1,4 +1,4 @@
-# Browser group: Firefox.
+# Browser group: desktop browsers.
 { lib, ... }:
 {
   options.dotfiles.browser = {
@@ -17,10 +17,12 @@
         };
       };
     };
+    chromium.enable = lib.mkEnableOption "Chromium";
   };
 
   imports = [
     ./automation.nix
     ./firefox.nix
+    ./chromium.nix
   ];
 }

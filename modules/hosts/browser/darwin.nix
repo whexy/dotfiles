@@ -5,8 +5,12 @@
 # Firefox build for aarch64-darwin.
 { config, lib, ... }:
 let
-  cfg = config.dotfiles.browser.firefox;
+  cfg = config.dotfiles.browser;
 in
 {
-  config = lib.mkIf (cfg.enable || cfg.automation.enable) { homebrew.casks = [ "firefox" ]; };
+  config = {
+    homebrew.casks =
+      lib.optionals (cfg.firefox.enable || cfg.firefox.automation.enable) [ "firefox" ]
+      ++ lib.optional cfg.chromium.enable "google-chrome";
+  };
 }
