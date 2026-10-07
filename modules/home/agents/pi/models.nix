@@ -15,7 +15,13 @@ in
   }
   # Providers billed per API key; only wired when API accounts are enabled.
   // lib.optionalAttrs apiAccounts {
-    openai.apiKey = secretKey config.age.secrets.openai-api-key.path;
+    openai = {
+      apiKey = secretKey config.age.secrets.openai-api-key.path;
+
+      # OpenAI's endpoint rejects pi's OpenAI-compatible grammar-tool wire
+      # format (`type: "custom"`), so use regular function tools instead.
+      compat.supportsOpenAIGrammarTools = false;
+    };
     anthropic.apiKey = secretKey config.age.secrets.anthropic-api-key.path;
     deepseek.apiKey = secretKey config.age.secrets.deepseek-api-key.path;
   };

@@ -7,7 +7,6 @@
   proxy,
   defaults,
   mcp,
-  models,
 }:
 let
   aiProxyExtension = import ./ai-proxy.nix { inherit pkgs proxy; };
@@ -19,7 +18,6 @@ let
       proxyAccounts
       aiProxyExtension
       defaults
-      models
       ;
   };
   providers = import ./models.nix {

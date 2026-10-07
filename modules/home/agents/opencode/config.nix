@@ -5,64 +5,35 @@
   proxy,
   defaults,
   mcp,
-  models,
 }:
 let
-  # "provider/model" -> { provider, model }; model ids may contain slashes.
-  split =
-    id:
-    let
-      parts = lib.splitString "/" id;
-    in
-    {
-      provider = lib.head parts;
-      model = lib.concatStringsSep "/" (lib.tail parts);
-    };
-  # The shared roster plus the default models, which the fallback tier picks
-  # from outside the roster.
-  roster = map split (
-    map (model: model.id) models
-    ++ [
-      defaults.default
-      defaults.cheap
-    ]
-  );
-  modelsOf =
-    provider:
-    lib.unique (map (entry: entry.model) (lib.filter (entry: entry.provider == provider) roster));
-
   # The launcher exports every key; agenix paths are shell fragments that
   # `{file:...}` cannot expand.
-  keyed = provider: env: {
+  keyed = env: {
     options.apiKey = "{env:${env}}";
-    whitelist = modelsOf provider;
   };
 
-  # Providers the roster does not use stay out of enabled_providers.
-  providers =
-    lib.filterAttrs (_: provider: provider.whitelist != [ ]) (
-      {
-        # The OpenRouter key is present on every host.
-        openrouter = keyed "openrouter" "OPENROUTER_API_KEY";
-      }
-      // lib.optionalAttrs apiAccounts {
-        openai = keyed "openai" "OPENAI_API_KEY";
-        anthropic = keyed "anthropic" "ANTHROPIC_API_KEY";
-      }
-    )
-    // lib.optionalAttrs proxyAccounts {
-      ai-proxy = {
-        name = "AI Proxy";
-        npm = "@ai-sdk/openai-compatible";
-        options = {
-          baseURL = "${proxy.baseUrl}/v1";
-          apiKey = "{env:AI_PROXY_API_KEY}";
-          headers = lib.mapAttrs (_: env: "{env:${env}}") proxy.cfAccessHeaderEnv;
-        };
-        # The plugin discovers the proxy's live model list at startup.
-        models = { };
+  providers = {
+    # The OpenRouter key is present on every host.
+    openrouter = keyed "OPENROUTER_API_KEY";
+  }
+  // lib.optionalAttrs apiAccounts {
+    openai = keyed "OPENAI_API_KEY";
+    anthropic = keyed "ANTHROPIC_API_KEY";
+  }
+  // lib.optionalAttrs proxyAccounts {
+    ai-proxy = {
+      name = "AI Proxy";
+      npm = "@ai-sdk/openai-compatible";
+      options = {
+        baseURL = "${proxy.baseUrl}/v1";
+        apiKey = "{env:AI_PROXY_API_KEY}";
+        headers = lib.mapAttrs (_: env: "{env:${env}}") proxy.cfAccessHeaderEnv;
       };
+      # The plugin discovers the proxy's live model list at startup.
+      models = { };
     };
+  };
 
   # Shared servers are written in Claude's shape: `url` for remote, `command`
   # plus `args` for local.
@@ -88,8 +59,8 @@ in
   autoupdate = false;
   default_agent = "plan";
   share = "disabled";
-  # Keeps providers auto-detected from ambient credentials (and OpenCode Zen)
-  # out of the model list, so it matches pi's.
+  # Keep providers auto-detected from ambient credentials (and OpenCode Zen)
+  # out of the configured provider set.
   enabled_providers = lib.attrNames providers;
   provider = providers;
   mcp = lib.mapAttrs (_: toMcp) mcp.servers;

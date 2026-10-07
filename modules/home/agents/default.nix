@@ -101,8 +101,6 @@ in
       };
       proxy = import ./proxy.nix { inherit config; };
       mcp = import ./mcp.nix { inherit pkgs config lib; };
-      models = import ./models.nix { inherit lib apiAccounts proxyAccounts; };
-
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard every harness implements.
       skills = lib.mapAttrs (name: _: ./skills + "/${name}") (
@@ -145,7 +143,6 @@ in
             proxy
             defaults
             mcp
-            models
             ;
         })
         (import ./opencode/home.nix {
@@ -158,7 +155,6 @@ in
             proxy
             defaults
             mcp
-            models
             ;
         })
         (import ./claude-code/home.nix {

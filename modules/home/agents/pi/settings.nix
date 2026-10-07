@@ -3,7 +3,6 @@
   lib,
   config,
   proxyAccounts,
-  models,
   aiProxyExtension,
   defaults,
 }:
@@ -138,11 +137,4 @@
       };
     };
 
-  # Scoped models for Ctrl+P cycling (`/scoped-models`).
-  enabledModels = map (model: model.id) models;
-  modelThinkingLevels = builtins.listToAttrs (
-    map (model: lib.nameValuePair model.id model.thinkingLevel) (
-      lib.filter (model: model.thinkingLevel != null) models
-    )
-  );
 }
