@@ -61,7 +61,7 @@ class ClaudeAgent(Agent):
 
     def _resolve_fusion(self, fusion: Fusion) -> Entry:
         """Pick the main model, then one model per role from the same provider."""
-        candidates = fusion["candidates"]
+        candidates = self.live_entries(fusion["candidates"])
         main = self.pick([c["label"] for c in candidates], "main model")
         entry = copy.deepcopy(next(c for c in candidates if c["label"] == main))
         provider, model = main.split("/", 1)

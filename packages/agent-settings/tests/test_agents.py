@@ -225,6 +225,65 @@ def test_claude_fusion_picks_role_models(secret: Path) -> None:
     assert env["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "small"
 
 
+def discovered(secret: Path) -> Entry:
+    return {
+        "label": "proxy",
+        "secrets": {"ANTHROPIC_API_KEY": str(secret)},
+        "env": {"ANTHROPIC_BASE_URL": "https://test.invalid"},
+        "discover": {
+            "url": "https://test.invalid/v1/models",
+            "keyEnv": "ANTHROPIC_API_KEY",
+            "modelEnv": ["ANTHROPIC_MODEL", "ANTHROPIC_DEFAULT_OPUS_MODEL"],
+        },
+    }
+
+
+def test_claude_discovered_model_fills_roles_and_survives_sync(secret: Path) -> None:
+    agent = create_agent(manifest("claude", [discovered(secret)]))
+    with (
+        patch.object(agent, "served_models", return_value=["vendor/a", "b"]),
+        patch.object(agent, "pick", return_value="proxy/vendor/a") as pick,
+    ):
+        entry = agent.choose()
+    assert pick.call_args.args[0] == ["default", "proxy/vendor/a", "proxy/b"]
+    assert entry.get("env", {}) == {
+        "ANTHROPIC_BASE_URL": "https://test.invalid",
+        "ANTHROPIC_MODEL": "vendor/a",
+        "ANTHROPIC_DEFAULT_OPUS_MODEL": "vendor/a",
+    }
+    agent.reconcile(entry)
+    # Activation rebuilds the saved model offline instead of resetting it.
+    with patch.object(agent, "served_models", side_effect=AssertionError):
+        agent.sync()
+    doc = read_document(agent.config_file)
+    assert doc["model"] == "vendor/a"
+    assert child_table(doc, "env")["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "vendor/a"
+    _, _, env = launch(agent)
+    assert env["ANTHROPIC_API_KEY"] == SECRET
+
+
+def test_claude_fusion_picks_discovered_role_models(secret: Path) -> None:
+    fusion: Entry = {
+        "label": "fusion",
+        "fusion": {
+            "roles": [
+                {"name": "opus", "prompt": "OPUS model", "export": "ANTHROPIC_DEFAULT_OPUS_MODEL"}
+            ],
+            "candidates": [discovered(secret)],
+        },
+    }
+    agent = create_agent(manifest("claude", [fusion]))
+    with (
+        patch.object(agent, "served_models", return_value=["large", "small"]),
+        patch.object(agent, "pick", side_effect=["fusion", "proxy/large", "proxy/small"]),
+    ):
+        entry = agent.choose()
+    env = entry.get("env", {})
+    assert env["ANTHROPIC_MODEL"] == "large"
+    assert env["CLAUDE_CODE_SUBAGENT_MODEL"] == "large"
+    assert env["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "small"
+
+
 def test_malformed_config_is_not_overwritten(make_agent: MakeAgent) -> None:
     agent = make_agent("claude")
     agent.root.mkdir()

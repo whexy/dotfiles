@@ -9,8 +9,9 @@ from collections.abc import MutableMapping
 from pathlib import Path
 from typing import ClassVar, NoReturn, TypedDict, cast
 
-from agent_settings.catalog import Catalog, Entry, Manifest
+from agent_settings.catalog import Catalog, Discover, Entry, Manifest, expand
 from agent_settings.credentials import read_secrets
+from agent_settings.discovery import served_models
 from agent_settings.documents import Table, edit_document, read_document, table_or_empty
 from agent_settings.errors import SettingsError
 from agent_settings.ownership import merge_owned
@@ -90,6 +91,13 @@ class Agent(ABC):
     def load_credentials(self, entry: Entry, env: dict[str, str]) -> None:
         env.update(read_secrets(entry.get("secrets", {})))
 
+    def served_models(self, template: Entry, discover: Discover) -> list[str]:
+        return served_models(template, discover)
+
+    def live_entries(self, entries: list[Entry]) -> list[Entry]:
+        """`entries` with discovery templates replaced by their live models."""
+        return expand(entries, self.served_models)
+
     # Shared flows.
 
     def reconcile(self, selection: Entry | None = None) -> None:
@@ -113,15 +121,16 @@ class Agent(ABC):
     def choose(self) -> Entry:
         """Ask for an entry, offering the saved selection first."""
         profiles = Profiles(self.name)
+        choices = self.live_entries(self.catalog.choices)
         while True:
-            labels = [entry["label"] for entry in self.catalog.choices]
+            labels = [entry["label"] for entry in choices]
             current = read_document(self.state_file).get("selection")
             if isinstance(current, str) and current in labels:
                 labels.remove(current)
                 labels.insert(0, current)
             label = self.pick(labels, f"{self.name} · {profiles.name(self.root)}", manage=True)
             if label not in (SWITCH, FORK, DELETE):
-                entry = copy.deepcopy(next(e for e in self.catalog.choices if e["label"] == label))
+                entry = copy.deepcopy(next(e for e in choices if e["label"] == label))
                 return self.refine_choice(entry)
             try:
                 if label == SWITCH:
