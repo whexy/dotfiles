@@ -157,7 +157,7 @@ function findModel(
 // Catalog entries are already pi Models carrying the wire-compat metadata the
 // proxy's upstreams need; strip only the fields the registration overrides.
 function normalizeModel(source: Model): Model {
-  const { provider: _p, baseUrl: _b, api: _a, ...model } = source;
+  const { provider: _p, baseUrl: _b, ...model } = source;
   return model;
 }
 
@@ -254,7 +254,9 @@ async function resolveModels(served: ServedModel[]): Promise<Model[]> {
         id,
         provider: "ai-proxy",
         baseUrl: BASE_URL,
-        api: "openai-completions" as const,
+        // Keep the catalog's wire format. Responses-capable models must not
+        // be downgraded to Chat Completions just because they use this proxy.
+        api: source.api,
       },
     ];
   });
@@ -325,7 +327,6 @@ export default async function (pi: ExtensionAPI) {
     // the agenix path expands and a re-decrypted token is picked up without
     // restarting the session. The double quotes are what make it expand.
     apiKey: `!${CAT} "${API_KEY_PATH}"`,
-    api: "openai-completions",
     headers: {
       "CF-Access-Client-Id": `!${CAT} "${CF_ACCESS_ID_PATH}"`,
       "CF-Access-Client-Secret": `!${CAT} "${CF_ACCESS_SECRET_PATH}"`,

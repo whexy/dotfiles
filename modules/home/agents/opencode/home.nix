@@ -7,7 +7,6 @@
   proxy,
   defaults,
   mcp,
-  models,
 }:
 let
   upstream = pkgs.llm-agents.opencode;
@@ -61,7 +60,6 @@ let
       proxy
       defaults
       mcp
-      models
       ;
   };
 in
