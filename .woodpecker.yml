@@ -56,10 +56,10 @@ steps:
         trap 'git remote set-url origin "$origin_url"' EXIT
         git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
         git push origin HEAD:master
-  # Update only the llm-agents input (nightly cron). Upstream ships agent
-  # releases often, and a one-input update is cheap, so this lane refreshes
-  # them daily instead of letting them ride along with the weekly full update.
-  update-llm-agents:
+  # Update the fast-moving agent packages (nightly cron). The T3 pin lives in
+  # package metadata rather than flake.lock, so this lane updates both pins in
+  # one serialized commit.
+  update-nightly-agents:
     image: nixos/nix:latest
     when:
       event: cron
@@ -69,21 +69,26 @@ steps:
     commands:
       - cp flake.lock /tmp/flake.lock.old
       - nix flake update llm-agents
-      # Commit and push flake.lock directly to the repository's primary branch.
-      # No-op (exit 0) when flake.lock is unchanged.
+      - ./packages/t3code-nightly/update.sh
       - |
-        if git diff --quiet -- flake.lock; then
-          echo "No changes to flake.lock"
+        system=$(nix eval --raw --impure --expr 'builtins.currentSystem')
+        t3code=$(nix build ".#packages.$system.t3code-nightly" --no-link --print-out-paths)
+        "$t3code/bin/t3" --version
+      # Commit and push the nightly pins directly to the repository's primary
+      # branch. No-op (exit 0) when neither nightly pin changed.
+      - |
+        if git diff --quiet -- flake.lock packages/t3code-nightly/metadata.nix; then
+          echo "No nightly package changes"
           exit 0
         fi
 
         git config user.name "whexy-bot[bot]"
         git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
-        git add flake.lock
+        git add flake.lock packages/t3code-nightly/metadata.nix
         # The package report is informational; a failure must not block the update.
         report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
           report="Package report unavailable; see the CI log."
-        git commit -m "chore: update llm-agents input" -m "$report"
+        git commit -m "chore: update nightly agent packages" -m "$report"
 
         GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
         origin_url="$(git remote get-url origin)"

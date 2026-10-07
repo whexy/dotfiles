@@ -53,8 +53,14 @@ in
       firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
       t3code = {
-        server.enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
-        desktop.enable = lib.mkEnableOption "the T3 Code desktop client";
+        server = {
+          enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
+          package = lib.mkOption {
+            type = lib.types.nullOr lib.types.package;
+            default = null;
+            description = "T3 Code server package; null selects the pinned nightly package.";
+          };
+        };
         pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
       };
 

@@ -8,10 +8,9 @@ let
   cfg = config.dotfiles.agents.t3code;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
-  # t3 spawns whichever agent CLIs it finds on PATH. Dropping the bundled
-  # providers makes it find the profile's wrapped claude/codex, which carry
-  # the model pickers and account credentials the other agent modules set up.
-  t3code = pkgs.llm-agents.t3code.override { providerPackages = [ ]; };
+  # The nightly server package contains only T3's server runtime. Provider
+  # CLIs remain on the Home Manager profile PATH with their existing wrappers.
+  t3code = if cfg.server.package == null then perSystem.self.t3code-nightly else cfg.server.package;
 
   # Every client reaches the server through Tailscale Serve, which proxies to
   # this loopback port.
@@ -45,30 +44,10 @@ let
       --tailscale-serve --tailscale-serve-port 35338 --no-browser
   '';
 
-  # The desktop app and `t3 serve` share ~/.t3/userdata, and nothing stops
-  # two servers from running on one state directory. Where the service runs,
-  # the desktop app starts no backend and is paired with the service like any
-  # other host.
-  settingsPath = "${config.home.homeDirectory}/.t3/userdata/desktop-settings.json";
-  disableDesktopBackend = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-    settings=${lib.escapeShellArg settingsPath}
-    run mkdir -p "$(dirname "$settings")"
-    current=$(cat "$settings" 2>/dev/null || echo '{}')
-    next=$(${lib.getExe pkgs.jq} '.localEnvironmentEnabled = false' <<<"$current")
-    if [ "$next" != "$(${lib.getExe pkgs.jq} . <<<"$current")" ]; then
-      run ${pkgs.coreutils}/bin/tee "$settings" >/dev/null <<<"$next"
-    fi
-  '';
 in
 {
   packages =
-    lib.optional cfg.server.enable t3code
-    ++ lib.optional cfg.desktop.enable t3code.desktop
-    ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
-
-  activation = lib.optionalAttrs (cfg.server.enable && cfg.desktop.enable) {
-    t3codeDisableDesktopBackend = disableDesktopBackend;
-  };
+    lib.optional cfg.server.enable t3code ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
 
   systemdUserServices = lib.optionalAttrs (cfg.server.enable && !isDarwin) {
     t3code = {
