@@ -17,8 +17,8 @@ in
     chromium.enable = lib.mkEnableOption "Chromium-based browser policies";
   };
 
-  config = lib.mkIf (options ? programs.chromium && config.dotfiles.browser.chromium.enable) {
-    programs.chromium = {
+  config = lib.optionalAttrs (options ? programs.chromium) {
+    programs.chromium = lib.mkIf config.dotfiles.browser.chromium.enable {
       enable = true;
       extraOpts = chromiumPolicies;
     };
