@@ -1,18 +1,23 @@
 # Agent settings
 
-Use `claude-select` or `codex-select` to choose a CLIProxyAPI model, save it,
-and launch. Claude's selector also supports per-role fusion selection. The
-searchable terminal UI provides config actions at the bottom. Ordinary `claude`
-and `codex` never open a picker, even with a terminal and no arguments.
+Use `claude-select` or `codex-select` to choose a CLIProxyAPI configuration,
+save it, and launch. The searchable terminal UI provides config actions at the
+bottom. Ordinary `claude` and `codex` never open a picker, even with a terminal
+and no arguments.
 
 ## Config manager
 
-`claude-select` and `codex-select` show models for the current config. Type to
-search, use the arrow keys to choose, and press Enter to save and launch.
-Choose **cliproxyapi (default models)** to configure the proxy endpoint and
-authentication while clearing previous model and role overrides. The agent then
-uses the proxy's default model behavior; model availability comes from the
-proxy's live catalog.
+Type to search, use the arrow keys to choose, and press Enter to save and
+launch. Choose **cliproxyapi (default models)** to configure the proxy endpoint
+and authentication while clearing previous model and role overrides.
+
+`claude-select` also lists every model the proxy's `/v1/models` serves when the
+picker opens. The chosen model fills every Claude Code role; choose **fusion**
+to pick a model per role instead. A saved model stays selected after it leaves
+the proxy's list, and requests to it fail until you choose another.
+
+Codex lists the proxy's models in its own `/model` picker, so `codex-select`
+offers only the default configuration.
 
 The buttons at the bottom also have shortcuts:
 

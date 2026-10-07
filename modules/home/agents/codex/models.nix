@@ -2,13 +2,14 @@
   codexVersion,
   proxy,
 }:
-let
-  # CLIProxyAPI sits behind Cloudflare Access. `env_http_headers` maps a
-  # header onto the env var holding its value, so the picker exports the
-  # service token and codex reads it at request time.
-  #
-  aiProxyDefault = {
+# Codex discovers the proxy's models itself through `model_catalog_url`, so
+# its own model picker lists them; this entry only configures the provider.
+[
+  {
     label = "cliproxyapi (default models)";
+    # CLIProxyAPI sits behind Cloudflare Access. `env_http_headers` maps a
+    # header onto the env var holding its value, so the picker exports the
+    # service token and codex reads it at request time.
     secrets = proxy.cfAccessSecrets // {
       OPENAI_API_KEY = proxy.apiKeyPath;
     };
@@ -25,23 +26,5 @@ let
         env_http_headers = proxy.cfAccessHeaderEnv;
       };
     };
-  };
-  aiProxy =
-    model:
-    aiProxyDefault
-    // {
-      label = "cliproxyapi/${model}";
-      settings = aiProxyDefault.settings // {
-        inherit model;
-      };
-    };
-in
-[ aiProxyDefault ]
-++ map aiProxy [
-  "claude-opus-5-5"
-  "claude-fable-5-1"
-  "gpt-6-astra"
-  "gpt-6-sol"
-  "gemini-3.8-flash"
-  "grok-4.7"
+  }
 ]
