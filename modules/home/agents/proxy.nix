@@ -1,4 +1,4 @@
-# Shared connection facts for the AI proxy.
+# Shared connection facts for CLIProxyAPI.
 #
 # The proxy is published on the public internet and gated by Cloudflare
 # Access, so every request needs the service-token headers in addition to

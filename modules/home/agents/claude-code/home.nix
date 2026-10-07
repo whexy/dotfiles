@@ -1,9 +1,6 @@
 {
   pkgs,
-  config,
   lib,
-  apiAccounts,
-  proxyAccounts,
   proxy,
   withModelPicker,
   mcp,
@@ -29,10 +26,6 @@ let
     ];
     entries = import ./models.nix {
       inherit
-        config
-        lib
-        apiAccounts
-        proxyAccounts
         proxy
         ;
     };

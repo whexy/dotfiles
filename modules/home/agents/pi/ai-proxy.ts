@@ -25,7 +25,7 @@ function loadConfig(): AiProxyConfig {
     .__AI_PROXY_CONFIG__;
   if (!config) {
     throw new Error(
-      "ai-proxy: __AI_PROXY_CONFIG__ is unset; load the extension built by " +
+      "cliproxyapi: __AI_PROXY_CONFIG__ is unset; load the extension built by " +
         "pi/ai-proxy.nix rather than this source file.",
     );
   }
@@ -45,7 +45,7 @@ const {
 const BASE_URL = `${PROXY_BASE_URL}/v1`;
 const AGENT_DIR =
   process.env.PI_CODING_AGENT_DIR ?? join(process.env.HOME!, ".pi", "agent");
-const CACHE_PATH = join(AGENT_DIR, "cache", "ai-proxy-models.json");
+const CACHE_PATH = join(AGENT_DIR, "cache", "cliproxyapi-models.json");
 
 const OWNER_TO_PROVIDER: Record<string, string> = {
   anthropic: "anthropic",
@@ -252,7 +252,7 @@ async function resolveModels(served: ServedModel[]): Promise<Model[]> {
         ...source,
         ...alias?.overrides,
         id,
-        provider: "ai-proxy",
+        provider: "cliproxyapi",
         baseUrl: BASE_URL,
         // Keep the catalog's wire format. Responses-capable models must not
         // be downgraded to Chat Completions just because they use this proxy.
@@ -277,7 +277,7 @@ async function readSecret(path: string): Promise<string> {
   );
   const secret = stdout.trim();
   if (!secret) {
-    throw new Error(`ai-proxy: secret is empty or unreadable: ${path}`);
+    throw new Error(`cliproxyapi: secret is empty or unreadable: ${path}`);
   }
   return secret;
 }
@@ -296,7 +296,7 @@ async function fetchServedModels(
   });
   if (!response.ok) {
     throw new Error(
-      `AI Proxy model discovery failed: ${response.status} ${response.statusText}`,
+      `CLIProxyAPI model discovery failed: ${response.status} ${response.statusText}`,
     );
   }
 
@@ -320,8 +320,8 @@ export default async function (pi: ExtensionAPI) {
   });
   const models = await resolveModels(served);
 
-  pi.registerProvider("ai-proxy", {
-    name: "AI Proxy",
+  pi.registerProvider("cliproxyapi", {
+    name: "CLIProxyAPI",
     baseUrl: BASE_URL,
     // pi runs `!` values through a shell and resolves them per request, so
     // the agenix path expands and a re-decrypted token is picked up without

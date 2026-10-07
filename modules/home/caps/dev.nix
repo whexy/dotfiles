@@ -13,8 +13,6 @@ args@{
   dotfiles = {
     agents = {
       enable = lib.mkDefault true;
-      enableApiAccounts = lib.mkDefault false;
-      enableProxyAccounts = lib.mkDefault true;
       firefoxDevtools.enable = lib.mkDefault true;
       # Clients only reach the server through Tailscale Serve. Standalone
       # homes have no osConfig to say whether this machine is on the tailnet.

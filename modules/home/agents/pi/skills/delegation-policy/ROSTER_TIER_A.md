@@ -1,14 +1,6 @@
 ## Providers
 
-Prefer providers in this order:
-
-1. `ai-proxy`
-2. `openrouter`
-
-When a preferred model is unavailable from the current provider, first try the
-same model from the next provider before substituting a different model.
-
-Never use `openai` or `anthropic` directly unless I explicitly ask for it.
+Every delegated model on this host is served by `cliproxyapi`.
 
 ## Subagents
 

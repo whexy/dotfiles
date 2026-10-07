@@ -15,82 +15,48 @@ let
   cfg = config.dotfiles.agents;
 in
 {
-  options.dotfiles.agents =
-    let
-      # Every agent picks the best account tier available on the host:
-      # the AI proxy first, then lab-billed API keys, then the
-      # always-present OpenRouter key.
-      byTier =
-        {
-          proxy,
-          api,
-          fallback,
-        }:
-        if cfg.enableProxyAccounts then
-          proxy
-        else if cfg.enableApiAccounts then
-          api
-        else
-          fallback;
-      mkModelOption =
-        description: tiers:
-        lib.mkOption {
-          type = lib.types.str;
-          default = byTier tiers;
-          defaultText = lib.literalExpression ''
-            if config.dotfiles.agents.enableProxyAccounts then "${tiers.proxy}"
-            else if config.dotfiles.agents.enableApiAccounts then "${tiers.api}"
-            else "${tiers.fallback}"
-          '';
-          inherit description;
+  options.dotfiles.agents = {
+    enable = lib.mkEnableOption "agents";
+
+    firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
+
+    t3code = {
+      server = {
+        enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
+        package = lib.mkOption {
+          type = lib.types.nullOr lib.types.package;
+          default = null;
+          description = "T3 Code server package; null selects the pinned nightly package.";
         };
-    in
-    {
-      enable = lib.mkEnableOption "agents";
-      enableApiAccounts = lib.mkEnableOption "enable models billed by API";
-      enableProxyAccounts = lib.mkEnableOption "enable models served by the AI proxy";
-
-      firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
-
-      t3code = {
-        server = {
-          enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
-          package = lib.mkOption {
-            type = lib.types.nullOr lib.types.package;
-            default = null;
-            description = "T3 Code server package; null selects the pinned nightly package.";
-          };
-        };
-        pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
       };
-
-      defaultProvider = mkModelOption "provider serving the default model" {
-        proxy = "ai-proxy";
-        api = "openai";
-        fallback = "openrouter";
-      };
-      defaultModel = mkModelOption "model agents use unless told otherwise" {
-        proxy = "claude-opus-5-5";
-        api = "gpt-6-sol";
-        fallback = "z-ai/glm-5.3-flash";
-      };
-
-      defaultCheapProvider = mkModelOption "provider serving the cheap model" {
-        proxy = "ai-proxy";
-        api = "openai";
-        fallback = "openrouter";
-      };
-      defaultCheapModel = mkModelOption "model for bulk or low-stakes work" {
-        proxy = "claude-sonnet-5";
-        api = "gpt-6-luna";
-        fallback = "meta/muse-spark-1.3-contributor";
-      };
+      pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
     };
+
+    defaultProvider = lib.mkOption {
+      type = lib.types.enum [ "cliproxyapi" ];
+      default = "cliproxyapi";
+      description = "Provider serving the default model.";
+    };
+    defaultModel = lib.mkOption {
+      type = lib.types.str;
+      default = "claude-opus-5-5";
+      description = "Model agents use unless told otherwise.";
+    };
+
+    defaultCheapProvider = lib.mkOption {
+      type = lib.types.enum [ "cliproxyapi" ];
+      default = "cliproxyapi";
+      description = "Provider serving the cheap model.";
+    };
+    defaultCheapModel = lib.mkOption {
+      type = lib.types.str;
+      default = "claude-sonnet-5";
+      description = "Model for bulk or low-stakes work.";
+    };
+  };
 
   config = lib.mkIf cfg.enable (
     let
-      apiAccounts = cfg.enableApiAccounts;
-      proxyAccounts = cfg.enableProxyAccounts;
       defaults = {
         inherit (cfg)
           defaultProvider
@@ -144,8 +110,6 @@ in
             pkgs
             config
             lib
-            apiAccounts
-            proxyAccounts
             proxy
             defaults
             mcp
@@ -154,10 +118,7 @@ in
         (import ./opencode/home.nix {
           inherit
             pkgs
-            config
             lib
-            apiAccounts
-            proxyAccounts
             proxy
             defaults
             mcp
@@ -166,10 +127,7 @@ in
         (import ./claude-code/home.nix {
           inherit
             pkgs
-            config
             lib
-            apiAccounts
-            proxyAccounts
             proxy
             withModelPicker
             mcp
@@ -178,10 +136,7 @@ in
         (import ./codex/home.nix {
           inherit
             pkgs
-            config
             lib
-            apiAccounts
-            proxyAccounts
             proxy
             withModelPicker
             mcp
@@ -238,14 +193,6 @@ in
       # expands the `${XDG_RUNTIME_DIR}` / `$(getconf ...)` fragment agenix
       # generates, so no agent needs a hardcoded path.
       age.secrets = {
-        openrouter-api-key.file = ../../../secrets/openrouter-api-key.age;
-      }
-      // lib.optionalAttrs cfg.enableApiAccounts {
-        openai-api-key.file = ../../../secrets/openai-api-key.age;
-        anthropic-api-key.file = ../../../secrets/anthropic-api-key.age;
-        deepseek-api-key.file = ../../../secrets/deepseek-api-key.age;
-      }
-      // lib.optionalAttrs cfg.enableProxyAccounts {
         ai-proxy-api-key.file = ../../../secrets/ai-proxy-api-key.age;
         # The proxy is reachable from the public internet through
         # Cloudflare Access; every agent must present the service token.
