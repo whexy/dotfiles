@@ -2,7 +2,8 @@
 { lib, pkgs, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
-    # VNC is served on the Tailscale interface by the NixOS desktop group.
+    # VNC is served on the Tailscale interface by NixOS desktops; macOS gets
+    # the TigerVNC viewer cask.
     network.tailscale.enable = lib.mkDefault true;
     desktop.vnc.enable = lib.mkDefault true;
     fonts.enable = lib.mkDefault true;
