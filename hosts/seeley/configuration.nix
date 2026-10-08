@@ -23,9 +23,17 @@
     };
   };
 
-  dotfiles.system = {
-    autoUpgrade.enable = true;
-    fwupd.enable = true;
+  dotfiles = {
+    system = {
+      autoUpgrade.enable = true;
+      fwupd.enable = true;
+    };
+    # A lab desktop that mostly serves as a headless server, on someone
+    # else's power bill.
+    power = {
+      alwaysOn.enable = true;
+      performance.enable = true;
+    };
   };
 
   system.stateVersion = "26.05";
