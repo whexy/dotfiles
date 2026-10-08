@@ -2,6 +2,9 @@
 { lib, pkgs, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
+    # VNC is served on the Tailscale interface by the NixOS desktop group.
+    network.tailscale.enable = lib.mkDefault true;
+    desktop.vnc.enable = lib.mkDefault true;
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).

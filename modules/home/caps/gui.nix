@@ -61,6 +61,7 @@ in
       obsidian
       pavucontrol # PipeWire/Pulse per-stream routing GUI (eww audio pill right-click)
       playerctl
+      tigervnc # VNC client
       vlc
     ]
     ++ lib.optionals (!isDarwin && pkgs.stdenv.hostPlatform.system != "aarch64-linux") [
