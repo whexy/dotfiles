@@ -35,6 +35,17 @@
         '';
       };
     };
+    macAddresses = lib.mkOption {
+      type = lib.types.attrsOf (lib.types.strMatching "([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}");
+      default = { };
+      example = {
+        en0 = "90:09:d0:27:f6:fa";
+      };
+      description = ''
+        MAC addresses assigned to interfaces at boot, for networks that lease
+        only to a registered address (macOS only).
+      '';
+    };
     tailscaleOnly.interfaces = lib.mkOption {
       type = lib.types.listOf lib.types.str;
       default = [ ];

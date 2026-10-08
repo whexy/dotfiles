@@ -49,6 +49,34 @@ in
       ]
     ))
 
+    {
+      launchd.daemons = lib.mapAttrs' (
+        iface: mac:
+        lib.nameValuePair "mac-address-${iface}" {
+          # Cycling the network service restarts DHCP within that service, so
+          # the lease uses the new address and System Settings and route
+          # selection treat the interface as connected.
+          script = ''
+            set -e
+            /sbin/ifconfig ${iface} ether ${mac}
+            service=$(/usr/sbin/networksetup -listnetworkserviceorder | /usr/bin/awk -v dev=${iface} '
+              /^\([0-9*]+\) / { sub(/^\([0-9*]+\) /, ""); name = $0 }
+              index($0, "Device: " dev ")") { print name; exit }')
+            [ -n "$service" ]
+            /usr/sbin/networksetup -setnetworkserviceenabled "$service" off
+            /usr/sbin/networksetup -setnetworkserviceenabled "$service" on
+          '';
+          serviceConfig = {
+            RunAtLoad = true;
+            # Retry until the interface and its network service exist.
+            KeepAlive.SuccessfulExit = false;
+            StandardOutPath = "/var/log/mac-address-${iface}.log";
+            StandardErrorPath = "/var/log/mac-address-${iface}.log";
+          };
+        }
+      ) cfg.macAddresses;
+    }
+
     # tailscaled picks its own UDP port here, so unsolicited packets to it are
     # dropped too: peers this host dials first still connect directly, others
     # fall back to DERP.
