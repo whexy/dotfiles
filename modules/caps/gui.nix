@@ -2,9 +2,10 @@
 { lib, pkgs, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
-    # VNC is served on the Tailscale interface by NixOS desktops; macOS gets
-    # the TigerVNC viewer cask.
+    # NixOS desktops serve VNC on the Tailscale interface and publish the
+    # noVNC web client with `tailscale serve`.
     network.tailscale.enable = lib.mkDefault true;
+    network.tailscale.userOperator = lib.mkDefault true;
     desktop.vnc.enable = lib.mkDefault true;
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
