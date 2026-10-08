@@ -10,6 +10,8 @@
 }:
 let
   cfg = config.dotfiles.desktop;
+  makoctl = lib.getExe' config.services.mako.package "makoctl";
+  vicinae = lib.getExe config.programs.vicinae.package;
 in
 {
   config = lib.mkIf cfg.mako.enable {
@@ -49,6 +51,14 @@ in
           text-color = "#fb4934";
           # Critical notifications never auto-dismiss.
           default-timeout = 0;
+        };
+
+        # Blueman asks for pairing confirmation through Confirm/Deny actions
+        # without a default action, so mako's plain click would only dismiss
+        # the request. Keep it on screen and pick the action from a menu.
+        "app-name=blueman actionable" = {
+          default-timeout = 0;
+          on-button-left = lib.mkIf config.programs.vicinae.enable ''exec ${makoctl} menu -n "$id" -- ${vicinae} dmenu -p "Pairing request"'';
         };
       };
     };
