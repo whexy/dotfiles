@@ -35,5 +35,19 @@
         '';
       };
     };
+    tailscaleOnly.interfaces = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      example = [
+        "en0"
+        "en1"
+      ];
+      description = ''
+        Interfaces that drop inbound traffic unless it answers a connection
+        this host opened, so services are reachable only over Tailscale (macOS
+        only; NixOS hosts use the firewall). DHCP and IPv6 neighbor discovery
+        still pass.
+      '';
+    };
   };
 }
