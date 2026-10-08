@@ -203,8 +203,9 @@ in
             "${meh}+Right".action.move-column-to-monitor-right = [ ];
 
             # ── Layout & Resize (Meh +) ──────────────────────────────
-            # Fullscreen (matches Meh+F from AeroSpace)
-            "${meh}+F".action.fullscreen-window = [ ];
+            # Fill the screen edge to edge while staying windowed, so apps
+            # never enter their own fullscreen mode (matches Meh+F from AeroSpace)
+            "${meh}+F".action.maximize-window-to-edges = [ ];
 
             # Resize column width (matches Meh+minus/equal from AeroSpace)
             "${meh}+Minus".action.set-column-width = "-10%";
