@@ -47,6 +47,9 @@ in
     homebrew.casks = [
       "alfred"
       "snipaste"
-    ];
+    ]
+    # Screen Sharing.app negotiates RFB 3.3 with wayvnc, so the NixOS desktops'
+    # VNC servers are reached with TigerVNC instead.
+    ++ lib.optional cfg.vnc.enable "tigervnc";
   };
 }
