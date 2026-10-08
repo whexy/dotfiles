@@ -10,18 +10,14 @@ because the reply will describe the work.
 
 ## Choose the format
 
-- If a thorough explanation fits in a few paragraphs, answer in normal text
-  without asking.
-- If the user names a mode or medium, use it without asking.
-- If it likely needs ten or more paragraphs, ask once whether they want
-  **normal** text or **Andrej Karpathy style**: a visual or interactive
-  explainer. You may gather facts while you wait. With no answer, use normal
-  text. The choice covers follow-up questions about the same topic.
+Decide from the depth the answer needs; do not ask.
 
-## Normal
+- **Short answer:** if a thorough explanation fits in a few paragraphs, answer
+  in normal text at the depth the user asked for.
+- **Detailed answer:** if it needs more, such as a mechanism, a process, or
+  several related parts, build a visual explainer as a T3 Code page. Read
+  [visual.md](visual.md) first.
+- If the user names a mode or medium, use it instead.
 
-Answer in your usual style at the depth the user asked for.
-
-## Andrej Karpathy style
-
-Read [karpathy.md](karpathy.md) before you build the explainer.
+Follow-up questions on the same topic keep the format unless their own depth
+calls for the other one.
