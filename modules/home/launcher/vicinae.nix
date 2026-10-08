@@ -48,6 +48,10 @@ in
       ];
     };
 
+    # The system volume commands shell out to pactl, which PipeWire's pulse
+    # shim serves.
+    home.packages = [ pkgs.pulseaudio ];
+
     # The daemon otherwise looks for the helper next to its own binary, where
     # it has no capabilities. Point it at the setcap wrapper that the system
     # launcher group installs.
