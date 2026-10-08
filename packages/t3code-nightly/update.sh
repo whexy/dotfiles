@@ -1,7 +1,19 @@
 #!/usr/bin/env bash
 set -euo pipefail
 
-repo_root=$(cd "$(dirname "${BASH_SOURCE[0]}")/../.." && pwd)
+script_dir=${BASH_SOURCE[0]%/*}
+[ "$script_dir" != "${BASH_SOURCE[0]}" ] || script_dir=.
+repo_root=$(cd "$script_dir/../.." && pwd)
+
+# The nixos/nix CI image ships without most text tools, so take them from the
+# flake's pinned nixpkgs instead of the caller's PATH.
+if [ -z "${T3CODE_UPDATE_TOOLS:-}" ]; then
+  T3CODE_UPDATE_TOOLS=1 exec nix shell --inputs-from "$repo_root" \
+    nixpkgs#bash nixpkgs#coreutils nixpkgs#curl nixpkgs#diffutils \
+    nixpkgs#gawk nixpkgs#gnused nixpkgs#gnutar nixpkgs#gzip \
+    -c bash "${BASH_SOURCE[0]}" "$@"
+fi
+
 metadata="$repo_root/packages/t3code-nightly/metadata.nix"
 registry=$(curl -fsSL https://registry.npmjs.org/t3)
 version=$(sed -n 's/.*"nightly":"\([^"]*\)".*/\1/p' <<<"$registry")
