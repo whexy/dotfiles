@@ -18,8 +18,13 @@ let
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   enabled = cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
+  audioEnabled = osConfig.dotfiles.audio.enable or false;
 
   eww = lib.getExe pkgs.eww;
+  jq = lib.getExe pkgs.jq;
+  pactl = lib.getExe' pkgs.pulseaudio "pactl";
+  wpctl = lib.getExe' pkgs.wireplumber "wpctl";
+  pavucontrol = lib.getExe pkgs.pavucontrol;
   ip = lib.getExe' pkgs.iproute2 "ip";
   iwgetid = lib.getExe' pkgs.wirelesstools "iwgetid";
   bluetoothctl = lib.getExe' pkgs.bluez "bluetoothctl";
@@ -68,6 +73,38 @@ let
     fi
   '';
 
+  # pactl subscribe pushes sink changes, so the slider follows media keys and
+  # other mixers without polling.
+  audioScript = pkgs.writeShellScript "eww-audio" ''
+    emit() {
+      sink="$(${pactl} get-default-sink 2>/dev/null)"
+      sinks="$(${pactl} --format=json list sinks 2>/dev/null)"
+      ${jq} -cn --arg sink "$sink" --argjson sinks "''${sinks:-[]}" '
+        ($sinks | map(select(.name == $sink)) | first) as $s
+        | if $s == null then {device: "", volume: 0, muted: false}
+          else {
+            device: $s.description,
+            volume: ([$s.volume[].value_percent | rtrimstr("%") | tonumber] | max),
+            muted: $s.mute
+          } end'
+    }
+
+    while :; do
+      emit
+      ${pactl} subscribe 2>/dev/null | while read -r event; do
+        case "$event" in
+          *"on sink #"* | *"on server"*) ;;
+          *) continue ;;
+        esac
+        # Dragging the slider fires one event per step; settle the burst
+        # before re-reading the sink.
+        while read -r -t 0.05 _; do :; done
+        emit
+      done
+      ${sleep} 1
+    done
+  '';
+
   startScript = pkgs.writeShellScript "eww-bar-open" ''
     # The daemon unit starts concurrently. Probe its IPC endpoint instead of
     # guessing the socket name, which includes a config-path hash in Eww 0.6.
@@ -90,6 +127,9 @@ let
     (defpoll BATTERY :interval "30s" "${batteryScript}")
     (defpoll NETWORK :interval "5s" "${networkScript}")
     (defpoll BLUETOOTH :interval "5s" "${bluetoothScript}")
+    ${lib.optionalString audioEnabled ''
+      (deflisten AUDIO :initial '{"device":"","volume":0,"muted":false}' "${audioScript}")
+    ''}
 
     (defwidget core-tray []
       (box :class "pill tray"
@@ -109,6 +149,21 @@ let
     (defwidget core-bluetooth []
       (eventbox :onclick "${blueman-manager} &" :visible {BLUETOOTH != ""}
         (box :class "pill bluetooth" (label :text BLUETOOTH))))
+    ${lib.optionalString audioEnabled ''
+      (defwidget core-audio []
+        (box :class {"pill audio" + (AUDIO.muted ? " muted" : "")}
+          :space-evenly false
+          :visible {AUDIO.device != ""}
+          :tooltip {AUDIO.device + " · " + AUDIO.volume + "%"}
+          (button :class "audio-icon"
+            :onclick "${wpctl} set-mute @DEFAULT_AUDIO_SINK@ toggle"
+            :onrightclick "${pavucontrol} &"
+            (label :text {AUDIO.muted ? "󰝟" : (AUDIO.volume < 34 ? "󰕿" : (AUDIO.volume < 67 ? "󰖀" : "󰕾"))}))
+          ; Eww gives the scale a page size of 1, so the reachable maximum
+          ; is max - 1.
+          (scale :class "audio-slider" :min 0 :max 101 :value {AUDIO.volume}
+            :onchange "${wpctl} set-volume @DEFAULT_AUDIO_SINK@ {}%")))
+    ''}
     (defwidget clock [] (box :class "pill clock" (label :text CLOCK)))
 
     (defwidget bar-layout []
@@ -195,6 +250,40 @@ let
 
     .battery {
       color: #b1d18b;
+    }
+
+    .audio {
+      color: #ffb59a;
+    }
+
+    .audio.muted {
+      color: $on-surface-dim;
+    }
+
+    .audio-icon {
+      margin-right: 8px;
+    }
+
+    // The global reset strips GtkScale's theme sizes. The highlight and knob
+    // take the pill's text color, so muting dims the whole slider.
+    .audio-slider trough {
+      min-width: 72px;
+      min-height: 4px;
+      border-radius: 2px;
+      background-color: rgba(202, 196, 208, 0.18);
+    }
+
+    .audio-slider highlight {
+      border-radius: 2px;
+      background-color: currentColor;
+    }
+
+    .audio-slider slider {
+      min-width: 10px;
+      min-height: 10px;
+      margin: -3px 0;
+      border-radius: 5px;
+      background-color: currentColor;
     }
 
     // Filled tonal button: the bar's one saturated element.
@@ -287,15 +376,20 @@ in
       left = lib.mkDefault [ ];
       center = lib.mkDefault [ "clock" ];
       # Core widgets must remain when feature modules append their pills.
-      right = lib.mkBefore [
-        "core-tray"
-        "core-battery"
-        "core-bluetooth"
-        "core-network"
-        "core-cpu"
-        "core-memory"
-        "core-disk"
-      ];
+      right = lib.mkBefore (
+        [
+          "core-tray"
+          "core-battery"
+        ]
+        ++ lib.optional audioEnabled "core-audio"
+        ++ [
+          "core-bluetooth"
+          "core-network"
+          "core-cpu"
+          "core-memory"
+          "core-disk"
+        ]
+      );
     };
 
     systemd.user.services = {

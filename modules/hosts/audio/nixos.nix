@@ -1,6 +1,6 @@
 # Audio NixOS configuration: PipeWire with PulseAudio + ALSA compatibility
-# shims and WirePlumber as the session manager. Required by the waybar audio
-# module (wpctl) and by any desktop app that produces sound.
+# shims and WirePlumber as the session manager. Required by the eww audio
+# pill (pactl/wpctl) and by any desktop app that produces sound.
 # Host-specific extensions (e.g. RAOP/AirPlay discovery on ord) live in
 # the corresponding host configuration.
 { config, lib, ... }:
