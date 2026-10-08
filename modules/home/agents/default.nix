@@ -108,7 +108,6 @@ in
         (import ./pi/home.nix {
           inherit
             pkgs
-            config
             lib
             proxy
             defaults
