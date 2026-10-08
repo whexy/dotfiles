@@ -39,6 +39,18 @@
 
   networking.interfaces.enp0s31f6.wakeOnLan.enable = true;
 
+  # The lab port only leases to MACs registered with CS IT. This one is
+  # registered as xiaoqiang and holds a fixed reservation; the DHCP hostname
+  # does not matter.
+  networking.networkmanager.ensureProfiles.profiles.campus = {
+    connection = {
+      id = "campus";
+      type = "ethernet";
+      interface-name = "enp0s31f6";
+    };
+    ethernet.cloned-mac-address = "5C:02:14:45:67:32";
+  };
+
   boot = {
     initrd.availableKernelModules = [
       "xhci_pci"
