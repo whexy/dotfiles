@@ -59,7 +59,7 @@ in
       brightnessctl
       nautilus # required by xdg-desktop-portal-gnome for FileChooser
       obsidian
-      pavucontrol # PipeWire/Pulse per-stream routing GUI (waybar audio module)
+      pavucontrol # PipeWire/Pulse per-stream routing GUI (eww audio pill right-click)
       playerctl
       vlc
     ]
