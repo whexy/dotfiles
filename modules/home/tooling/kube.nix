@@ -37,12 +37,13 @@ in
 
     # Not home.sessionVariables: its script is skipped in any shell that
     # inherits __HM_SESS_VARS_SOURCED, such as one under a tmux or zellij
-    # server started before this module was activated.
+    # server started before this module was activated. Only a fallback: zshenv
+    # runs in every zsh, including scripts started with a cluster chosen.
     programs = {
       zsh.envExtra = lib.mkIf config.dotfiles.shell.zsh.enable ''
-        export KUBECONFIG=${lib.escapeShellArg kubeconfig}
+        export KUBECONFIG=''${KUBECONFIG:-${lib.escapeShellArg kubeconfig}}
       '';
-      nushell.environmentVariables.KUBECONFIG = kubeconfig;
+      nushell.environmentVariables.KUBECONFIG = lib.hm.nushell.mkNushellInline "$env.KUBECONFIG? | default --empty ${builtins.toJSON kubeconfig}";
     };
 
     age.secrets = lib.listToAttrs (
