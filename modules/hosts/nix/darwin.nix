@@ -38,6 +38,13 @@ in
         # Native Apple Silicon support only (fastest)
         systems = [ "aarch64-linux" ];
       };
+
+      # The VM holds its cores and memory for as long as it runs, so it starts
+      # on demand (see the option description) rather than at boot.
+      launchd.daemons.linux-builder.serviceConfig = {
+        KeepAlive = lib.mkForce false;
+        RunAtLoad = lib.mkForce false;
+      };
     })
 
     # launchd has no randomized delay, so the job draws the same 2h window
