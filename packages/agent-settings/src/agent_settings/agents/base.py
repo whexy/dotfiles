@@ -11,12 +11,14 @@ from typing import ClassVar, NoReturn, TypedDict, cast
 
 from agent_settings.catalog import Catalog, Discover, Entry, Manifest, expand
 from agent_settings.credentials import read_secrets
-from agent_settings.discovery import served_models
 from agent_settings.documents import Table, edit_document, read_document, table_or_empty
 from agent_settings.errors import SettingsError
 from agent_settings.ownership import merge_owned
-from agent_settings.picker import DELETE, FORK, SWITCH, ask, pick
 from agent_settings.profiles import Profiles
+
+# Every agent launch imports this module, so the picker (Textual) and model
+# discovery (urllib) are imported only inside the select flow that uses them;
+# Textual alone would otherwise dominate each launch's start-up time.
 
 
 class Session(TypedDict):
@@ -92,7 +94,9 @@ class Agent(ABC):
         env.update(read_secrets(entry.get("secrets", {})))
 
     def served_models(self, template: Entry, discover: Discover) -> list[str]:
-        return served_models(template, discover)
+        from agent_settings import discovery
+
+        return discovery.served_models(template, discover)
 
     def live_entries(self, entries: list[Entry]) -> tuple[list[Entry], str]:
         """`entries` with discovery templates replaced by their live models.
@@ -143,6 +147,8 @@ class Agent(ABC):
 
     def choose(self) -> Entry:
         """Ask for an entry, offering the saved selection first."""
+        from agent_settings.picker import DELETE, FORK, SWITCH, ask, pick
+
         profiles = Profiles(self.name)
         choices, notice = self.live_entries(self.catalog.choices)
         while True:
@@ -188,6 +194,8 @@ class Agent(ABC):
         self.state_file = root / "dotfiles-settings.json"
 
     def pick(self, labels: list[str], prompt: str, *, manage: bool = False) -> str:
+        from agent_settings.picker import pick
+
         return pick(labels, prompt, manage=manage)
 
     def sync(self) -> None:
