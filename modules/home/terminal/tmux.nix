@@ -45,7 +45,6 @@ in
       plugins = with pkgs.tmuxPlugins; [
         sensible
         resurrect
-        continuum
         copycat
         {
           plugin = yank;
@@ -69,6 +68,9 @@ in
             set -g status-right ""
           '';
         }
+        # Autosave runs from a `#()` hook continuum adds to status-right, so it
+        # loads after the reset above; later status-right writes must append.
+        continuum
       ];
     };
   };
