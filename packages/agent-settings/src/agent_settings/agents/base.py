@@ -94,9 +94,26 @@ class Agent(ABC):
     def served_models(self, template: Entry, discover: Discover) -> list[str]:
         return served_models(template, discover)
 
-    def live_entries(self, entries: list[Entry]) -> list[Entry]:
-        """`entries` with discovery templates replaced by their live models."""
-        return expand(entries, self.served_models)
+    def live_entries(self, entries: list[Entry]) -> tuple[list[Entry], str]:
+        """`entries` with discovery templates replaced by their live models.
+
+        An unreachable model list falls back to the saved model, so the picker
+        and its config actions stay usable; the returned notice explains it.
+        """
+        saved = read_document(self.state_file).get("selection")
+        failures: list[str] = []
+
+        def served(template: Entry, discover: Discover) -> list[str]:
+            try:
+                return self.served_models(template, discover)
+            except SettingsError as error:
+                failures.append(f"\n{error}; showing only the saved model")
+                prefix = f"{template['label']}/"
+                if isinstance(saved, str) and saved.startswith(prefix):
+                    return [saved.removeprefix(prefix)]
+                return []
+
+        return expand(entries, served), "".join(failures)
 
     # Shared flows.
 
@@ -127,14 +144,15 @@ class Agent(ABC):
     def choose(self) -> Entry:
         """Ask for an entry, offering the saved selection first."""
         profiles = Profiles(self.name)
-        choices = self.live_entries(self.catalog.choices)
+        choices, notice = self.live_entries(self.catalog.choices)
         while True:
             labels = [entry["label"] for entry in choices]
             current = read_document(self.state_file).get("selection")
             if isinstance(current, str) and current in labels:
                 labels.remove(current)
                 labels.insert(0, current)
-            label = self.pick(labels, f"{self.name} · {profiles.name(self.root)}", manage=True)
+            prompt = f"{self.name} · {profiles.name(self.root)}{notice}"
+            label = self.pick(labels, prompt, manage=True)
             if label not in (SWITCH, FORK, DELETE):
                 entry = copy.deepcopy(next(e for e in choices if e["label"] == label))
                 return self.refine_choice(entry)

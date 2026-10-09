@@ -14,7 +14,8 @@ and authentication while clearing previous model and role overrides.
 `claude-select` also lists every model the proxy's `/v1/models` serves when the
 picker opens. The chosen model fills every Claude Code role; choose **fusion**
 to pick a model per role instead. A saved model stays selected after it leaves
-the proxy's list, and requests to it fail until you choose another.
+the proxy's list, and requests to it fail until you choose another. When the
+list cannot be fetched, the picker shows why and offers only the saved model.
 
 Codex lists the proxy's models in its own `/model` picker, so `codex-select`
 offers only the default configuration.

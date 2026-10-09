@@ -263,6 +263,23 @@ def test_claude_discovered_model_fills_roles_and_survives_sync(secret: Path) -> 
     assert env["ANTHROPIC_API_KEY"] == SECRET
 
 
+def test_unreachable_model_list_offers_the_saved_model(secret: Path) -> None:
+    agent = create_agent(manifest("claude", [discovered(secret)]))
+    saved = agent.catalog.find("proxy/vendor/a")
+    assert saved is not None
+    agent.reconcile(saved)
+    down = SettingsError("proxy: model discovery failed: connection refused")
+    with (
+        patch.object(agent, "served_models", side_effect=down),
+        patch.object(agent, "pick", return_value="proxy/vendor/a") as pick,
+    ):
+        entry = agent.choose()
+    labels, prompt = pick.call_args.args
+    assert labels == ["proxy/vendor/a", "default"]
+    assert "connection refused" in prompt
+    assert entry.get("env", {})["ANTHROPIC_MODEL"] == "vendor/a"
+
+
 def test_claude_fusion_picks_discovered_role_models_and_survives_sync(secret: Path) -> None:
     fusion: Entry = {
         "label": "fusion",
