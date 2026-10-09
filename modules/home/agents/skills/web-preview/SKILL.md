@@ -1,6 +1,6 @@
 ---
 name: web-preview
-description: Serve, check, and hand over web UIs from Wenxuan's headless hosts over the tailnet. Use before starting a dev server or preview, checking a UI, taking a screenshot, or giving a URL.
+description: Serve a web UI to Wenxuan over the tailnet and hand him the URL. Use only when Wenxuan asks for a preview, a link, or a URL to open; not for checking your own UI work.
 ---
 
 # Web Previews
