@@ -23,7 +23,19 @@ let
       file=$target
     fi
     cd "$dir"
-    sock="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/neovide-remote-$id.sock"
+    # Not XDG_RUNTIME_DIR: logind may wipe it while nvim keeps running, and the
+    # next link would start a second nvim on the same files. The directory must
+    # be private, since whoever can plant a socket in it gets their server
+    # trusted by the reuse check below.
+    uid=$(id -u)
+    rundir=''${TMPDIR:-/tmp}
+    rundir=''${rundir%/}/neovide-remote-$uid
+    mkdir -m 700 "$rundir" 2>/dev/null || :
+    if [ -z "$(find "$rundir" -prune -type d -user "$uid" -perm 700)" ]; then
+      echo "$rundir is not a private directory of uid $uid" >&2
+      exit 1
+    fi
+    sock=$rundir/$id.sock
     if ! nvim --server "$sock" --remote-expr 1 >/dev/null 2>&1; then
       rm -f "$sock"
       umask 077
