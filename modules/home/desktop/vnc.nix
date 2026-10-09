@@ -51,7 +51,12 @@ in
       novnc = {
         Unit = {
           Description = "noVNC web client for wayvnc";
-          After = [ "wayvnc.service" ];
+          # Without an explicit order against the target, systemd orders the
+          # target after this unit, which closes a cycle through wayvnc.
+          After = [
+            "graphical-session.target"
+            "wayvnc.service"
+          ];
           PartOf = [ "graphical-session.target" ];
         };
         Service = {
