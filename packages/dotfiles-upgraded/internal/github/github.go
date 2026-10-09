@@ -6,7 +6,6 @@ package github
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"io"
 	"net/http"
@@ -16,8 +15,9 @@ import (
 )
 
 const (
-	apiVersion = "2022-11-28"
-	userAgent  = "dotfiles-upgraded"
+	apiVersion   = "2022-11-28"
+	userAgent    = "dotfiles-upgraded"
+	shaMediaType = "application/vnd.github.sha"
 	// maxBody caps what is read from an unexpected response body so a
 	// misrouted request cannot exhaust memory.
 	maxBody = 1 << 20
@@ -95,6 +95,10 @@ func (c *Client) Head(ctx context.Context, ref, etag string) (RefResult, error) 
 		return RefResult{}, err
 	}
 	c.setHeaders(req)
+	// The full commit JSON carries every file's patch, so a large commit would
+	// overflow maxBody. The sha media type returns only the hash, and its ETag
+	// still answers If-None-Match.
+	req.Header.Set("Accept", shaMediaType)
 	if etag != "" {
 		req.Header.Set("If-None-Match", etag)
 	}
@@ -119,18 +123,33 @@ func (c *Client) Head(ctx context.Context, ref, etag string) (RefResult, error) 
 		return result, unexpected(resp)
 	}
 
-	var body struct {
-		SHA string `json:"sha"`
+	raw, err := io.ReadAll(io.LimitReader(resp.Body, maxBody))
+	if err != nil {
+		return result, fmt.Errorf("read commit: %w", err)
 	}
-	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBody)).Decode(&body); err != nil {
-		return result, fmt.Errorf("decode commit: %w", err)
+	sha := strings.TrimSpace(string(raw))
+	if !isObjectID(sha) {
+		return result, fmt.Errorf("commit response is not a sha: %.64q", sha)
 	}
-	if body.SHA == "" {
-		return result, errors.New("commit response has no sha")
-	}
-	result.SHA = body.SHA
+	result.SHA = sha
 	result.ETag = resp.Header.Get("ETag")
 	return result, nil
+}
+
+// isObjectID reports whether s is a full SHA-1 or SHA-256 hex object name. A
+// plain-text body has no structure to reject, and the SHA ends up in the
+// flake ref and API paths, so a stray 200 from anything but the API must not
+// pass as a commit.
+func isObjectID(s string) bool {
+	if len(s) != 40 && len(s) != 64 {
+		return false
+	}
+	for _, r := range s {
+		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
+			return false
+		}
+	}
+	return true
 }
 
 // CombinedStatus returns the push pipeline's CI state for sha, which passes
