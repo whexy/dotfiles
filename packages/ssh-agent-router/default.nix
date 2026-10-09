@@ -18,6 +18,7 @@ pkgs.stdenvNoCC.mkDerivation {
   installPhase = ''
     runHook preInstall
     install -Dm644 router.py $out/lib/ssh-agent-router/router.py
+    install -Dm755 has-agent.sh $out/libexec/ssh-agent-router/has-agent
     makeWrapper ${pkgs.python3}/bin/python3 $out/bin/ssh-agent-router \
       --add-flags "$out/lib/ssh-agent-router/router.py"
     runHook postInstall
