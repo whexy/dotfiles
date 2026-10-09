@@ -9,13 +9,16 @@
 args@{
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  niri = lib.getExe config.programs.niri.package;
   sshWindow = lib.getExe config.programs.ssh-window.package;
+  niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
 
   enabled = cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 in
@@ -43,10 +46,11 @@ in
         };
       }
       (lib.mkIf config.dotfiles.ssh.windowMultiplexing.enable {
+        # Without an interval Waybar keeps the listener running and shows
+        # each line it prints.
         "custom/ssh-context" = {
-          exec = "${sshWindow} current 2>/dev/null || true";
+          exec = "${niriEvents.sshContext sshWindow}";
           format = "󰣀 {text}";
-          interval = 1;
           hide-empty-text = true;
           escape = true;
           max-length = 40;
