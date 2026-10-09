@@ -95,7 +95,9 @@ jq . "${XDG_STATE_HOME:-$HOME/.local/state}/dotfiles-upgraded/status.json"
 ```
 
 A rising `consecutiveFailures` with a non-null `lastError` is the condition
-worth alerting on.
+worth alerting on. Both are kept in memory and cleared only when the host
+reaches the tip, so a host stranded behind an ignored commit keeps reporting
+the failure that stranded it.
 
 ## Flags
 
