@@ -211,7 +211,7 @@ let
     settings = {
       drawing = "off";
       updates = "on";
-      update_freq = 1;
+      update_freq = 5;
       script = sshContextPlugin;
       icon = "󰣀";
       "icon.color" = colors.green;
