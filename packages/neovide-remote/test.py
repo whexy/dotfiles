@@ -1,6 +1,7 @@
 import base64
 import os
 import select
+import shutil
 import signal
 import subprocess
 import sys
@@ -10,10 +11,14 @@ from urllib.parse import quote
 import msgpack
 
 
+def command(url):
+    return [sys.argv[1], '--stdio-url-base64', base64.b64encode(url.encode()).decode(), '--embed']
+
+
 class Connection:
     def __init__(self, url):
         self.process = subprocess.Popen(
-            [sys.argv[1], '--stdio-url-base64', base64.b64encode(url.encode()).decode(), '--embed'],
+            command(url),
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         self.messages = msgpack.Unpacker(raw=False)
@@ -38,7 +43,12 @@ class Connection:
 
 
 with tempfile.TemporaryDirectory() as root:
-    os.environ['XDG_RUNTIME_DIR'] = root
+    runtime = os.path.join(root, 'runtime')
+    sockets = os.path.join(root, 'tmp')
+    os.mkdir(runtime)
+    os.mkdir(sockets)
+    os.environ['XDG_RUNTIME_DIR'] = runtime
+    os.environ['TMPDIR'] = sockets
     folder = os.path.join(root, "folder with ' quotes \\ and 日本語")
     os.mkdir(folder)
     url = 'vscode://vscode-remote/ssh-remote+test-host' + quote(folder)
@@ -58,6 +68,9 @@ with tempfile.TemporaryDirectory() as root:
         assert second.call('nvim_get_var', 'relay_test') == 'survives disconnect'
         second.close()
         connections.remove(second)
+        # Logind wipes the runtime dir at logout, while nvim keeps running.
+        shutil.rmtree(runtime)
+        os.mkdir(runtime)
         third = Connection(url)
         connections.append(third)
         assert third.call('nvim_eval', 'getpid()') == pid
@@ -71,14 +84,28 @@ with tempfile.TemporaryDirectory() as root:
         if pid:
             os.kill(pid, signal.SIGTERM)
 
+    # Whoever owns the socket directory can serve the session to its user.
+    for unsafe in ['world-writable', 'symlink']:
+        tmp = os.path.join(root, unsafe)
+        os.mkdir(tmp)
+        planted = os.path.join(tmp, f'neovide-remote-{os.getuid()}')
+        if unsafe == 'symlink':
+            os.mkdir(planted + '.target', 0o700)
+            os.symlink(planted + '.target', planted)
+        else:
+            os.mkdir(planted)
+            os.chmod(planted, 0o777)
+        result = subprocess.run(command(url), capture_output=True, timeout=10,
+                                env=dict(os.environ, TMPDIR=tmp))
+        assert result.returncode != 0, unsafe
+        assert result.stdout == b'', result.stdout
+        assert os.listdir(planted) == [], os.listdir(planted)
+
     for bad in ['--help', 'vscode://vscode-remote/ssh-remote+host',
                 'vscode://vscode-remote/ssh-remote+-oProxyCommand=bad/tmp',
                 'vscode://vscode-remote/ssh-remote+host/tmp%00bad',
                 'vscode://vscode-remote/ssh-remote+host/tmp%ZZ']:
-        result = subprocess.run(
-            [sys.argv[1], '--stdio-url-base64', base64.b64encode(bad.encode()).decode(), '--embed'],
-            capture_output=True, timeout=10,
-        )
+        result = subprocess.run(command(bad), capture_output=True, timeout=10)
         assert result.returncode != 0
         assert result.stdout == b'', result.stdout
-print('RPC relay, concurrent tunnels, session reuse, cleanup, and URL validation passed')
+print('RPC relay, concurrent tunnels, session reuse, private sockets, cleanup, and URL validation passed')
