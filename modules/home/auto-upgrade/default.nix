@@ -155,9 +155,10 @@ in
             )
           }:${config.home.homeDirectory}/.nix-profile/bin:/nix/var/nix/profiles/default/bin:/usr/local/bin:/usr/bin:/bin"
 
-          # Throttles only this daemon's builds; the settings reach the
-          # nix-daemon over the socket, which is what actually schedules
-          # them. Home Manager renders this list into the unit verbatim, so
+          # Caps only the rebuilds this daemon runs, wherever they build: an
+          # unprivileged user's Nix hands the settings to nix-daemon over the
+          # socket, while root's opens the store and builds in this unit.
+          # Home Manager renders this list into the unit verbatim, so
           # the quotes and the literal two-character escape are both ours:
           # unquoted, systemd splits the value on the spaces around `=`; a
           # real newline would split the Environment= line instead.
@@ -182,6 +183,13 @@ in
         ];
         Restart = "always";
         RestartSec = 30;
+
+        # Evaluation always runs here, and for a root home the builds do too.
+        # IOWeight takes effect only where the user manager is delegated the
+        # io controller. A rebuild the OOM killer takes is retried later.
+        CPUWeight = 20;
+        IOWeight = 20;
+        OOMScoreAdjust = 500;
       };
 
       Install.WantedBy = [ "default.target" ];

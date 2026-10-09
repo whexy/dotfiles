@@ -56,10 +56,8 @@ in
             inherit (config.environment.sessionVariables) NIX_PATH;
             HOME = "/root";
 
-            # Throttles only this daemon's builds; the settings reach the
-            # nix-daemon over the socket, which is what actually schedules
-            # them (a cgroup limit on this unit would bound the supervisor
-            # instead). systemd turns the \n into a real newline.
+            # Caps only the rebuilds this daemon runs; a manual rebuild keeps
+            # the system default. systemd turns the \n into a real newline.
             NIX_CONFIG = "max-jobs = ${toString cfg.autoUpgrade.maxJobs}\ncores = ${toString cfg.autoUpgrade.cores}";
           }
           // config.networking.proxy.envVars;
@@ -79,6 +77,14 @@ in
           Restart = "always";
           RestartSec = 30;
           StateDirectory = "dotfiles-upgraded";
+
+          # As root, nixos-rebuild's Nix opens the store directly instead of
+          # going through nix-daemon, so evaluation, substitution and every
+          # build run in this unit's cgroup; only switch-to-configuration
+          # leaves it. A rebuild the OOM killer takes is retried later.
+          CPUWeight = 20;
+          IOWeight = 20;
+          OOMScoreAdjust = 500;
         };
       };
     })
