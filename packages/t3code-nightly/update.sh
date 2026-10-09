@@ -15,28 +15,31 @@ if [ -z "${T3CODE_UPDATE_TOOLS:-}" ]; then
 fi
 
 metadata="$repo_root/packages/t3code-nightly/metadata.nix"
-registry=$(curl -fsSL https://registry.npmjs.org/t3)
-version=$(sed -n 's/.*"nightly":"\([^"]*\)".*/\1/p' <<<"$registry")
+dist_tags=$(curl -fsSL https://registry.npmjs.org/-/package/t3/dist-tags)
+version=$(sed -n 's/.*"nightly":"\([^"]*\)".*/\1/p' <<<"$dist_tags")
 
 if [ -z "$version" ]; then
   echo "t3code-nightly: could not resolve the npm nightly dist-tag" >&2
   exit 1
 fi
 
+# npm publishes each tarball's SRI hash, so only the linux-x64 tarball, which
+# carries the browser pin below, has to be downloaded.
 hashes=()
 for platform in linux-x64 linux-arm64 darwin-arm64; do
-  url="https://registry.npmjs.org/@t3code/t3-${platform}/-/t3-${platform}-${version}.tgz"
-  prefetch=$(nix store prefetch-file --json --hash-type sha256 "$url")
-  hash=$(sed -n 's/.*"hash": *"\([^"]*\)".*/\1/p' <<<"$prefetch")
+  manifest_url="https://registry.npmjs.org/@t3code/t3-${platform}/${version}"
+  manifest=$(curl -fsSL "$manifest_url" || true)
+  hash=$(sed -n 's/.*"integrity":"\(sha512-[^"]*\)".*/\1/p' <<<"$manifest")
   if [ -z "$hash" ]; then
-    echo "t3code-nightly: could not hash $url" >&2
+    echo "t3code-nightly: could not read the tarball integrity from $manifest_url" >&2
     exit 1
   fi
   hashes+=("$hash")
-  if [ "$platform" = linux-x64 ]; then
-    tarball=$(sed -n 's/.*"storePath": *"\([^"]*\)".*/\1/p' <<<"$prefetch")
-  fi
 done
+
+url="https://registry.npmjs.org/@t3code/t3-linux-x64/-/t3-linux-x64-${version}.tgz"
+prefetch=$(nix store prefetch-file --json --hash-type sha512 --expected-hash "${hashes[0]}" "$url")
+tarball=$(sed -n 's/.*"storePath": *"\([^"]*\)".*/\1/p' <<<"$prefetch")
 
 # T3 downloads a pinned Chrome for Testing headless shell at runtime, which
 # cannot load its libraries on NixOS. The server source embedded in the
