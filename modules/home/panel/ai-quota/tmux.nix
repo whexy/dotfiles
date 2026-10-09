@@ -122,9 +122,10 @@ let
 in
 {
   config = lib.mkIf enabled {
-    # Appended after the plugin block so catppuccin's theme options exist.
+    # Appended after the plugin block so catppuccin's theme options exist, and
+    # to status-right so continuum's autosave hook stays in it.
     programs.tmux.extraConfig = lib.mkAfter ''
-      set -g status-right "#(${script})"
+      set -ga status-right "#(${script})"
     '';
   };
 }
