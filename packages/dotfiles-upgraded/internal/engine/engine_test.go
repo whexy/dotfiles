@@ -298,6 +298,74 @@ func TestSwitchRetriesThenIgnores(t *testing.T) {
 	}
 }
 
+func TestIgnoredTipKeepsTheFailureState(t *testing.T) {
+	refs := &fakeRefs{
+		heads:    []refReply{ok("sha1", `W/"e1"`), notModified()},
+		statuses: []statusReply{{state: github.StateSuccess}},
+	}
+	sw := &fakeSwitcher{results: []error{errors.New("build failed")}}
+	store := &memStore{st: state.State{LastSuccessSha: "sha0"}}
+	e := newEngine(t, refs, sw, store, nil)
+
+	e.RunOnce(context.Background())
+	e.RunOnce(context.Background())
+
+	if !store.st.Ignored("sha1") {
+		t.Fatalf("sha1 not ignored: %v", store.st.IgnoredShas)
+	}
+	if store.status.ConsecutiveFailures != 3 || store.status.LastError == nil {
+		t.Errorf("host stuck on sha0 behind an ignored tip reports healthy: %+v", store.status)
+	}
+}
+
+func TestFailureStateClearsOnlyWhenTheHostReachesTheTip(t *testing.T) {
+	refs := &fakeRefs{
+		heads: []refReply{ok("sha1", `W/"e1"`), ok("sha2", `W/"e2"`), notModified(), ok("sha3", `W/"e3"`)},
+		statuses: []statusReply{
+			{state: github.StateSuccess},
+			{state: github.StatePending},
+			{state: github.StateFailure},
+			{state: github.StateSuccess},
+		},
+	}
+	errBuild := errors.New("build failed")
+	sw := &fakeSwitcher{results: []error{errBuild, errBuild, errBuild, nil}}
+	store := &memStore{st: state.State{LastSuccessSha: "sha0"}}
+	e := newEngine(t, refs, sw, store, nil)
+
+	e.RunOnce(context.Background()) // sha1 exhausts its switch attempts
+	for _, step := range []string{"sha2 pending", "sha2 failed CI"} {
+		e.RunOnce(context.Background())
+		if store.status.ConsecutiveFailures != 3 || store.status.LastError == nil {
+			t.Fatalf("%s: failure state cleared while the host is still on sha0: %+v", step, store.status)
+		}
+	}
+
+	e.RunOnce(context.Background()) // sha3 switches
+	if store.st.LastSuccessSha != "sha3" {
+		t.Fatalf("LastSuccessSha = %q, want sha3", store.st.LastSuccessSha)
+	}
+	if store.status.ConsecutiveFailures != 0 || store.status.LastError != nil {
+		t.Errorf("failure state survived reaching the tip: %+v", store.status)
+	}
+}
+
+func TestTipBackAtTheAppliedShaClearsFailureState(t *testing.T) {
+	refs := &fakeRefs{heads: []refReply{{err: errors.New("dns failure")}, ok("sha1", `W/"e1"`)}}
+	store := &memStore{st: state.State{LastSuccessSha: "sha1"}}
+	e := newEngine(t, refs, &fakeSwitcher{}, store, nil)
+
+	e.RunOnce(context.Background())
+	if store.status.ConsecutiveFailures != 1 {
+		t.Fatalf("ConsecutiveFailures = %d, want 1", store.status.ConsecutiveFailures)
+	}
+	e.RunOnce(context.Background())
+
+	if store.status.ConsecutiveFailures != 0 || store.status.LastError != nil {
+		t.Errorf("host at the tip still reports a failure: %+v", store.status)
+	}
+}
+
 func TestSwitchSucceedsOnRetry(t *testing.T) {
 	refs := &fakeRefs{
 		heads:    []refReply{ok("sha1", `W/"e1"`)},

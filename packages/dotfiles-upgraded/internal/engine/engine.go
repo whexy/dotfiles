@@ -156,7 +156,7 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 	if head.NotModified {
 		e.Log.Debug("ref unchanged", "sha", sha)
 		if sha == "" {
-			e.recordSuccessfulCheck()
+			e.clearFailures()
 			return e.nextInterval()
 		}
 	} else {
@@ -175,12 +175,14 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 	}
 
 	if sha == e.st.LastSuccessSha {
-		e.recordSuccessfulCheck()
+		e.clearFailures()
 		return e.nextInterval()
 	}
+	// From here the host is short of the tip, so the failure state stands
+	// until a switch lands: clearing it on a quiet check would let a host stuck
+	// behind an ignored commit look healthy.
 	if e.st.Ignored(sha) {
 		e.Log.Debug("sha ignored", "sha", sha)
-		e.recordSuccessfulCheck()
 		return e.nextInterval()
 	}
 
@@ -207,7 +209,6 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 		case github.StateFailure:
 			e.Log.Info("ci failed, ignoring sha", "sha", sha)
 			e.ignore(sha)
-			e.recordSuccessfulCheck()
 			return e.nextInterval()
 		default:
 			if e.pendingTooLong(sha) {
@@ -216,7 +217,6 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 			} else {
 				e.Log.Info("ci pending", "sha", sha)
 			}
-			e.recordSuccessfulCheck()
 			return e.nextInterval()
 		}
 	}
@@ -307,7 +307,7 @@ func (e *Engine) persist() {
 	}
 }
 
-func (e *Engine) recordSuccessfulCheck() {
+func (e *Engine) clearFailures() {
 	e.consecutiveFail = 0
 	e.lastError = nil
 }
