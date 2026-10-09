@@ -25,4 +25,11 @@
   # cache: anything worth fetching unlocked is worth fetching fresh.
   # Locked flake inputs are content-addressed and unaffected.
   tarball-ttl = 0;
+
+  # Nix loads the global registry for every indirect reference, even one the
+  # user or system registry resolves, so under tarball-ttl = 0 a URL here
+  # costs a download per call and a multi-second stall offline. A store copy
+  # is never fetched; refresh it from
+  # https://channels.nixos.org/flake-registry.json.
+  flake-registry = "${./flake-registry.json}";
 }
