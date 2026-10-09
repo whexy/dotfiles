@@ -138,6 +138,10 @@ let
             if [[ $path =~ ^/[A-Za-z]:/ ]]; then
               path=$(wslpath -u "''${path#/}")
             fi
+            # `wsl.exe --exec` skips the login shell that puts the Nix profiles
+            # first on PATH. Restore them in NixOS login order, so the user's
+            # configured nvim wins over a distro one, with a plain nvim last.
+            PATH=$HOME/.nix-profile/bin:''${XDG_STATE_HOME:-$HOME/.local/state}/nix/profile/bin:/etc/profiles/per-user/$(id -un)/bin:/nix/var/nix/profiles/default/bin:/run/current-system/sw/bin:$PATH:${lib.getBin pkgs.neovim-unwrapped}/bin
             exec nvim --embed -- "$path"
           fi
           exec neovide --no-fork "$path"

@@ -16,9 +16,9 @@ def command(url):
 
 
 class Connection:
-    def __init__(self, url):
+    def __init__(self, url, env=None):
         self.process = subprocess.Popen(
-            command(url),
+            command(url), env=env,
             stdin=subprocess.PIPE, stdout=subprocess.PIPE, stderr=subprocess.PIPE,
         )
         self.messages = msgpack.Unpacker(raw=False)
@@ -108,4 +108,32 @@ with tempfile.TemporaryDirectory() as root:
         result = subprocess.run(command(bad), capture_output=True, timeout=10)
         assert result.returncode != 0
         assert result.stdout == b'', result.stdout
-print('RPC relay, concurrent tunnels, session reuse, private sockets, cleanup, and URL validation passed')
+
+    # `wsl.exe --exec` gives no login PATH: a plain nvim must still start, and
+    # the profile's nvim must beat a distro one.
+    def fake_nvim(directory):
+        os.makedirs(directory)
+        with open(os.path.join(directory, 'nvim'), 'w') as wrapper:
+            wrapper.write(f'#!{shutil.which("sh")}\nexport NVIM_FROM={directory}\n'
+                          f'exec {shutil.which("nvim")} "$@"\n')
+        os.chmod(os.path.join(directory, 'nvim'), 0o755)
+
+    document = os.path.join(root, 'document.txt')
+    open(document, 'w').close()
+    home = os.path.join(root, 'home')
+    distro = os.path.join(root, 'distro')
+    profile = os.path.join(home, '.nix-profile', 'bin')
+    env = dict(os.environ, HOME=home, PATH=distro)
+    env.pop('XDG_STATE_HOME', None)
+    for expected in ['', profile]:
+        if expected:
+            fake_nvim(distro)
+            fake_nvim(profile)
+        embedded = Connection('vscode://file' + quote(document), env)
+        try:
+            assert embedded.call('nvim_buf_get_name', 0) == document
+            assert embedded.call('nvim_eval', '$NVIM_FROM') == expected
+        finally:
+            embedded.process.kill()
+            embedded.process.wait()
+print('RPC relay, concurrent tunnels, session reuse, private sockets, cleanup, URL validation, and local files passed')
