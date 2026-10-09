@@ -19,11 +19,11 @@ let
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 
+  # Headers go through stdin: argv is readable by every local user.
   pillScript = pkgs.writeShellScript "waybar-renpho" ''
-    weight="$(${curl} -fsS --max-time 15 \
-      -H "CF-Access-Client-Id: $(<"${cfIdFile}")" \
-      -H "CF-Access-Client-Secret: $(<"${cfSecretFile}")" \
-      "${dataUrl}" 2>/dev/null \
+    weight="$(printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
+        "$(<"${cfIdFile}")" "$(<"${cfSecretFile}")" \
+      | ${curl} -fsS --max-time 15 -H @- "${dataUrl}" 2>/dev/null \
       | ${jq} -r '(.measurements | sort_by(.date) | last | .weight_kg) // empty' 2>/dev/null)"
     if [ -z "$weight" ]; then
       exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), class: "stale"}'
