@@ -4,11 +4,6 @@
   system,
 }:
 
-let
-  # Blueprint's flake-level pkgs carries no overlays, so match the llm-tools
-  # overlay's Node build of pi here instead of inheriting it.
-  pi = inputs.llm-agents.packages.${system}.pi.override { useBun = false; };
-in
 # Generate a commit message with pi and open it in $EDITOR for review
 # before committing (git commit -e).
 #
@@ -23,7 +18,7 @@ pkgs.writeShellApplication {
   runtimeInputs = [
     pkgs.git
     pkgs.gnused
-    pi
+    inputs.llm-agents.packages.${system}.pi
   ];
 
   text = ''
