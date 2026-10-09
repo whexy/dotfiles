@@ -8,7 +8,6 @@ let
   cfg = config.dotfiles.shell;
   inherit (pkgs) atuin;
   provision = pkgs.writeText "atuin-provision.py" ''
-    import fcntl
     import os
     import pathlib
     import sqlite3
@@ -16,16 +15,29 @@ let
     import sys
 
     root = pathlib.Path(sys.argv[1])
-    key = pathlib.Path(sys.argv[2]).read_bytes()
-    token = pathlib.Path(sys.argv[3]).read_text().strip()
+    identities = [path for path in ${builtins.toJSON (map toString config.age.identityPaths)} if os.access(path, os.R_OK)]
+    if not identities:
+        raise SystemExit("No readable agenix identity for the Atuin credentials")
+
+    def decrypt(secret):
+        flags = [flag for path in identities for flag in ("-i", path)]
+        result = subprocess.run(
+            ["${lib.getExe config.age.package}", "--decrypt", *flags, secret],
+            stdout=subprocess.PIPE,
+        )
+        if result.returncode:
+            raise SystemExit("Could not decrypt " + secret)
+        return result.stdout
+
+    key = decrypt("${../../../secrets/atuin-key.age}")
+    token = decrypt("${../../../secrets/atuin-session.age}").decode().strip()
     if not key or not token:
-        raise SystemExit("Atuin credentials are empty; check agenix decryption")
-    root.mkdir(parents=True, exist_ok=True, mode=0o700)
-    # Every shell hook invokes the wrapper, so concurrent shells must not
-    # rekey the store twice.
-    lock = open(root / ".provision.lock", "w")
-    fcntl.flock(lock, fcntl.LOCK_EX)
+        raise SystemExit("Atuin credentials are empty")
     key_path = root / "key"
+    session_path = root / "session"
+    if key_path.exists() and key_path.read_bytes() == key and session_path.exists() and session_path.read_bytes() == token.encode():
+        sys.exit()
+    root.mkdir(parents=True, exist_ok=True, mode=0o700)
     if key_path.exists() and key_path.read_bytes() != key:
         # A host that used Atuin before the shared key has records encrypted
         # with its own key; rekey them so they stay readable and syncable.
@@ -65,34 +77,15 @@ let
                 )
     replace("session", token.encode())
   '';
-  wrapped = pkgs.symlinkJoin {
-    name = "atuin-provisioned-${atuin.version}";
-    paths = [ atuin ];
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-    postBuild = ''
-      rm "$out/bin/atuin"
-      makeWrapper ${lib.getExe atuin} "$out/bin/atuin" \
-        --run ${lib.escapeShellArg ''
-          _atuin_root="''${XDG_DATA_HOME:-$HOME/.local/share}/atuin"
-          _atuin_key="${config.age.secrets.atuin-key.path}"
-          _atuin_session="${config.age.secrets.atuin-session.path}"
-          if [ -s "$_atuin_key" ] && [ -s "$_atuin_session" ]; then
-            if ! ${pkgs.diffutils}/bin/cmp -s "$_atuin_key" "$_atuin_root/key" || ! ${pkgs.diffutils}/bin/cmp -s "$_atuin_session" "$_atuin_root/session"; then
-              ${pkgs.python3}/bin/python3 ${provision} "$_atuin_root" "$_atuin_key" "$_atuin_session" || exit 1
-            fi
-          fi
-          unset _atuin_root _atuin_key _atuin_session
-        ''}
-    '';
-    meta.mainProgram = "atuin";
-  };
 in
 {
   config = lib.mkIf (cfg.zsh.devExtras || cfg.nushell.devExtras) {
-    age.secrets = {
-      atuin-key.file = ../../../secrets/atuin-key.age;
-      atuin-session.file = ../../../secrets/atuin-session.age;
-    };
-    programs.atuin.package = wrapped;
+    # agenix decrypts from a systemd user service or launchd agent that may
+    # run after activation, so read the encrypted credentials directly. The
+    # store persists, so this only rewrites it when the credentials change.
+    home.activation.provisionAtuin = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+      run ${pkgs.python3}/bin/python3 ${provision} "''${XDG_DATA_HOME:-$HOME/.local/share}/atuin" \
+        || warnEcho "Atuin sync credentials were not provisioned"
+    '';
   };
 }
