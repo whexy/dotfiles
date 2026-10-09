@@ -1,7 +1,11 @@
 # Shared client settings; daemon trust determines whether cache overrides apply.
 {
   extra-substituters = [
-    "https://cache.numtide.com"
+    # numtide advertises priority 30, ahead of cache.nixos.org, but answers
+    # nixpkgs paths slower and misses some. Tying at 40 asks cache.nixos.org
+    # first and still beats the cachix caches (41). Trust compares this URL
+    # as a string, so flake.nix's nixConfig must spell it the same way.
+    "https://cache.numtide.com?priority=40"
     "https://nix-community.cachix.org"
     "https://niri.cachix.org"
     "https://vicinae.cachix.org"

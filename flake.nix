@@ -3,7 +3,7 @@
 
   nixConfig = {
     extra-substituters = [
-      "https://cache.numtide.com"
+      "https://cache.numtide.com?priority=40"
       "https://nix-community.cachix.org"
       "https://niri.cachix.org"
       "https://vicinae.cachix.org"
