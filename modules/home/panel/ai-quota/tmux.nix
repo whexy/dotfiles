@@ -37,7 +37,8 @@ let
   ) providers;
 
   script = pkgs.writeShellScript "tmux-ai-quota" ''
-    cache="''${XDG_RUNTIME_DIR:-/tmp}/tmux-ai-quota-''${UID:-$(id -u)}.json"
+    # macOS has no XDG_RUNTIME_DIR but a per-user TMPDIR; /tmp is shared.
+    cache="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/tmux-ai-quota-''${UID:-$(id -u)}.json"
 
     # Theme options may themselves be formats, so expand them through tmux.
     IFS='|' read -r bg name_bg pct_bg fg dim warn crit err \
@@ -53,9 +54,11 @@ let
       now=$(date +%s); mtime=$(stat -c %Y "$cache" 2>/dev/null || stat -f %m "$cache")
       [ $((now - mtime)) -lt ${toString updateInterval} ] && fresh=1
     fi
-    if [ "$fresh" = 0 ]; then
-      ${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} -o "$cache.tmp" 2>/dev/null &&
-        mv "$cache.tmp" "$cache" || rm -f "$cache.tmp"
+    # curl -o follows a symlink planted at a predictable name; download into
+    # a fresh file and rename it over the cache instead.
+    if [ "$fresh" = 0 ] && tmp="$(mktemp "$cache.XXXXXX")"; then
+      ${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} -o "$tmp" 2>/dev/null &&
+        mv "$tmp" "$cache" || rm -f "$tmp"
     fi
     [ -s "$cache" ] || exit 0
 
