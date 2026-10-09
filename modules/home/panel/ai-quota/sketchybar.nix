@@ -22,7 +22,7 @@ let
   osConfig = args.osConfig or null;
   barOnTop = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
   shared = import ./shared.nix;
-  inherit (shared) apiUrl updateInterval;
+  inherit (shared) apiUrl logos updateInterval;
 
   curl = lib.getExe pkgs.curl;
   sketchybar = lib.getExe pkgs.sketchybar;
@@ -261,31 +261,31 @@ let
   providers = [
     {
       name = "claude";
-      logo = ./logos/claude.png;
+      logo = "${logos}/claude.png";
       logoScale = 0.026;
       accent = colors.orange;
     }
     {
       name = "codex";
-      logo = ./logos/codex.png;
+      logo = "${logos}/codex.png";
       logoScale = 0.027;
       accent = colors.green;
     }
     {
       name = "kimi";
-      logo = ./logos/kimi.png;
+      logo = "${logos}/kimi.png";
       logoScale = 0.025;
       accent = colors.blue;
     }
     {
       name = "antigravity";
-      logo = ./logos/antigravity.png;
+      logo = "${logos}/antigravity.png";
       logoScale = 0.026;
       accent = colors.gray;
     }
     {
       name = "grok";
-      logo = ./logos/grok.png;
+      logo = "${logos}/grok.png";
       logoScale = 0.026;
       accent = colors.white;
     }
