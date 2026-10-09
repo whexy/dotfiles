@@ -123,7 +123,6 @@ let
     ${cfg.eww.defs}
 
     ; --- Core widgets ---
-    (defpoll CLOCK :interval "1s" "date +%H:%M:%S")
     (defpoll BATTERY :interval "30s" "${batteryScript}")
     (defpoll NETWORK :interval "5s" "${networkScript}")
     (defpoll BLUETOOTH :interval "5s" "${bluetoothScript}")
@@ -165,7 +164,7 @@ let
           (scale :class "audio-slider" :min 0 :max 101 :value {min(AUDIO.volume, 100)}
             :onchange "${wpctl} set-volume @DEFAULT_AUDIO_SINK@ {}%")))
     ''}
-    (defwidget clock [] (box :class "pill clock" (label :text CLOCK)))
+    (defwidget clock [] (box :class "pill clock" (label :text {formattime(EWW_TIME, "%H:%M:%S")})))
 
     (defwidget bar-layout []
       (centerbox :orientation "h" :hexpand true
