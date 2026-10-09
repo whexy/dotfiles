@@ -59,9 +59,14 @@ in
       docker = {
         enable = lib.mkDefault true;
         gvisor = lib.mkDefault true;
+        onDemand = lib.mkDefault true;
+        autoPrune = lib.mkDefault true;
       };
       podman.enable = lib.mkDefault true;
-      incus.enable = lib.mkDefault true;
+      incus = {
+        enable = lib.mkDefault true;
+        onDemand = lib.mkDefault true;
+      };
     };
   };
 
