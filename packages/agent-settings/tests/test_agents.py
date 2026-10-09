@@ -1,6 +1,7 @@
 import json
 import os
 import re
+import subprocess
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -340,6 +341,19 @@ def test_failed_first_selection_never_routes_without_credentials(
     _, _, env = launch(agent)
     if "ANTHROPIC_BASE_URL" in child_table(read_document(agent.config_file), "env"):
         assert env["ANTHROPIC_API_KEY"] == SECRET
+
+
+def test_launch_entry_point_skips_picker_and_discovery() -> None:
+    heavy = ["textual", "http.client", "urllib.request"]
+    code = f"import sys, agent_settings.cli; print(sorted(set({heavy!r}) & sys.modules.keys()))"
+    result = subprocess.run(
+        [sys.executable, "-c", code],
+        env={**os.environ, "PYTHONPATH": os.pathsep.join(sys.path)},
+        capture_output=True,
+        text=True,
+        check=True,
+    )
+    assert result.stdout.strip() == "[]"
 
 
 def test_cancel_and_non_terminal_do_not_write(make_agent: MakeAgent) -> None:

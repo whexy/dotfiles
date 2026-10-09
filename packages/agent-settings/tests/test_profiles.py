@@ -126,7 +126,7 @@ def test_switch_is_per_launch_and_children_keep_root(make_agent: MakeAgent, name
     with (
         terminal(),
         patch.object(agent, "pick", side_effect=[SWITCH, "api/model"]),
-        patch("agent_settings.agents.base.pick", return_value="second"),
+        patch("agent_settings.picker.pick", return_value="second"),
         patch.object(os, "execv", side_effect=SystemExit),
         patch.dict(os.environ),
     ):
