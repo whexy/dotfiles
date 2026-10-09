@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.dotfiles.monitoring;
+  nodeExporter = config.services.prometheus.exporters.node;
 in
 {
   config = lib.mkMerge [
@@ -13,13 +14,23 @@ in
     (lib.mkIf cfg.nodeExporter.enable {
       services.prometheus.exporters.node = {
         enable = true;
-        listenAddress = "0.0.0.0";
+        listenAddress = "127.0.0.1";
         port = 9100;
       };
 
       # Work around nix-darwin string comparison: the existing system user has
       # /private/var/… but the module defaults to /var/… (a symlink on macOS).
       users.users._prometheus-node-exporter.home = lib.mkForce "/private/var/lib/prometheus-node-exporter";
+    })
+
+    # The cluster scrapes the exporter over the tailnet, so it listens on the
+    # Tailscale address instead of every network the Mac joins. tailscaled may
+    # have no address yet at boot; the script then fails and KeepAlive retries.
+    (lib.mkIf (cfg.nodeExporter.enable && config.dotfiles.network.tailscale.enable) {
+      launchd.daemons.prometheus-node-exporter.script = lib.mkForce ''
+        address=$(${lib.getExe' config.services.tailscale.package "tailscale"} ip -4) || exit 1
+        exec ${lib.getExe nodeExporter.package} --web.listen-address="$address:${toString nodeExporter.port}"
+      '';
     })
 
     (lib.mkIf cfg.beszel.enable {
