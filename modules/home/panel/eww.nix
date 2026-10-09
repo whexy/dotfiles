@@ -160,8 +160,9 @@ let
             :onrightclick "${pavucontrol} &"
             (label :text {AUDIO.muted ? "󰝟" : (AUDIO.volume < 34 ? "󰕿" : (AUDIO.volume < 67 ? "󰖀" : "󰕾"))}))
           ; Eww gives the scale a page size of 1, so the reachable maximum
-          ; is max - 1.
-          (scale :class "audio-slider" :min 0 :max 101 :value {AUDIO.volume}
+          ; is max - 1. GTK clamps a larger value and Eww then runs onchange
+          ; with the clamped one, which would undo a boost above 100%.
+          (scale :class "audio-slider" :min 0 :max 101 :value {min(AUDIO.volume, 100)}
             :onchange "${wpctl} set-volume @DEFAULT_AUDIO_SINK@ {}%")))
     ''}
     (defwidget clock [] (box :class "pill clock" (label :text CLOCK)))
