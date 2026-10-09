@@ -65,10 +65,12 @@ ssh-agent-router register "$SSH_AUTH_SOCK"
 ```
 
 The daemon runs without systemd/launchd so it also works in standalone Home
-Manager accounts. A lock prevents duplicate daemons; a later shell startup
-restarts a dead daemon. State, the PID-bearing daemon lock, and diagnostics live
-under `~/.ssh/agent-router/`. The proxy is user-only and does not cross the
-existing same-Unix-user trust boundary. It routes live sockets, not agent keys.
+Manager accounts. A lock prevents duplicate daemons; a later SSH login or new
+multiplexer pane restarts a dead daemon. Nested shells that inherit an
+already-routed socket skip the router. State, the PID-bearing daemon lock, and
+diagnostics live under `~/.ssh/agent-router/`. The proxy is user-only and does
+not cross the existing same-Unix-user trust boundary. It routes live sockets,
+not agent keys.
 
 ## Verification
 

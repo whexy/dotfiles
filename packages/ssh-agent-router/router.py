@@ -194,21 +194,13 @@ def shell_socket():
 
 def main():
     parser = argparse.ArgumentParser(description=__doc__)
-    parser.add_argument("command", choices=["shell", "has-agent", "register", "serve"])
+    parser.add_argument("command", choices=["shell", "register", "serve"])
     parser.add_argument("argument", nargs="?")
     args = parser.parse_args()
     state, proxy = locations()
     try:
         if args.command == "shell":
             print(shell_socket())
-        elif args.command == "has-agent":
-            # Only an inbound SSH session carries a forwarded or proxied agent.
-            # A local desktop's SSH_AUTH_SOCK belongs to another agent (gcr,
-            # gpg-agent) and must not displace the 1Password IdentityAgent.
-            forwarded = os.environ.get("SSH_CONNECTION") and os.environ.get(
-                "SSH_AUTH_SOCK"
-            )
-            return 0 if forwarded else 1
         elif args.command == "register":
             if not args.argument:
                 parser.error("register requires a socket path")
