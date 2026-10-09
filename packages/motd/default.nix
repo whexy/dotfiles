@@ -10,6 +10,7 @@ pkgs.writers.writePython3Bin "motd"
   ''
     """Render a compact, responsive system dashboard for interactive shells."""
 
+    import fcntl
     import os
     import platform
     import re
@@ -17,6 +18,7 @@ pkgs.writers.writePython3Bin "motd"
     import socket
     import subprocess
     import sys
+    import threading
     from datetime import datetime
 
     RESET = "\033[0m"
@@ -119,6 +121,18 @@ pkgs.writers.writePython3Bin "motd"
         return ""
 
 
+    def background(function, *args):
+        result = []
+        thread = threading.Thread(target=lambda: result.append(function(*args)))
+        thread.start()
+
+        def wait():
+            thread.join()
+            return result[0]
+
+        return wait
+
+
     def get_system():
         system = platform.system()
         os_name = system
@@ -193,8 +207,9 @@ pkgs.writers.writePython3Bin "motd"
         if platform.system() != "Darwin":
             return None
         try:
-            total = int(command(["sysctl", "-n", "hw.memsize"]))
+            memsize = background(command, ["sysctl", "-n", "hw.memsize"])
             output = command(["vm_stat"], timeout=0.4)
+            total = int(memsize())
             page_match = re.search(r"page size of (\d+) bytes", output)
             page_size = int(page_match.group(1)) if page_match else 4096
             pages = {}
@@ -271,23 +286,43 @@ pkgs.writers.writePython3Bin "motd"
         return "unavailable"
 
 
+    def nix_store_cache_fresh(cache_path: str) -> bool:
+        return datetime.now().timestamp() - os.path.getmtime(cache_path) <= 86400
+
+
     def refresh_nix_store(cache_path: str):
         if not os.path.exists("/nix/store"):
             return
         try:
             os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-            command_text = 'du -sh /nix/store 2>/dev/null | cut -f1 > "%s.tmp" && mv "%s.tmp" "%s"' % (
-                cache_path,
-                cache_path,
-                cache_path,
-            )
-            subprocess.Popen(
-                ["sh", "-c", command_text],
-                stdout=subprocess.DEVNULL,
-                stderr=subprocess.DEVNULL,
-                stdin=subprocess.DEVNULL,
-                start_new_session=True,
-            )
+            lock = os.open(cache_path + ".lock", os.O_WRONLY | os.O_CREAT, 0o600)
+            try:
+                # The scan inherits the lock and holds it until it exits, so
+                # shells started meanwhile skip the refresh and a crashed scan
+                # releases it. A scan may have finished since the caller looked.
+                fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
+                if os.path.exists(cache_path) and nix_store_cache_fresh(cache_path):
+                    return
+                scan = ["du", "-sh", "/nix/store"]
+                if shutil.which("ionice"):
+                    scan = ["ionice", "-c3", "nice"] + scan
+                subprocess.Popen(
+                    [
+                        "sh",
+                        "-c",
+                        'cache=$1; shift; tmp=$(mktemp "$cache.XXXXXX") || exit; "$@" 2>/dev/null | cut -f1 > "$tmp" && mv "$tmp" "$cache" || rm -f "$tmp"',
+                        "sh",
+                        cache_path,
+                    ]
+                    + scan,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    stdin=subprocess.DEVNULL,
+                    start_new_session=True,
+                    pass_fds=(lock,),
+                )
+            finally:
+                os.close(lock)
         except Exception:
             pass
 
@@ -304,7 +339,7 @@ pkgs.writers.writePython3Bin "motd"
 
             cache_path = os.path.expanduser("~/.cache/nix-store-size")
             if os.path.exists(cache_path):
-                if datetime.now().timestamp() - os.path.getmtime(cache_path) > 86400:
+                if not nix_store_cache_fresh(cache_path):
                     refresh_nix_store(cache_path)
                 with open(cache_path, encoding="utf-8") as file:
                     size = file.read().strip()
@@ -423,9 +458,18 @@ pkgs.writers.writePython3Bin "motd"
 
 
     def main():
+        # Probes can each wait out a subprocess timeout; run them together so
+        # the slowest one, not their sum, delays the shell.
+        uptime = background(get_uptime)
+        memory_usage = background(get_memory)
+        sessions = background(get_sessions)
+        tailscale = background(get_tailscale_ipv4)
+        tmux = background(get_tmux_info)
+        zellij = background(get_zellij_info)
+
         hostname, os_name, kernel = get_system()
         load, load_pct = get_load()
-        memory, memory_pct = get_memory()
+        memory, memory_pct = memory_usage()
         root_disk, root_pct = get_root_disk()
 
         try:
@@ -438,9 +482,9 @@ pkgs.writers.writePython3Bin "motd"
         wide = width >= 88
 
         overview = [
-            ("Uptime", get_uptime()),
+            ("Uptime", uptime()),
             ("Load", load),
-            ("Logins", get_sessions()),
+            ("Logins", sessions()),
             ("Cores", str(os.cpu_count() or "unknown")),
         ]
         resources = [
@@ -451,11 +495,11 @@ pkgs.writers.writePython3Bin "motd"
         ]
         connectivity = [
             ("Local IPv4", get_ipv4()),
-            ("Tailscale", get_tailscale_ipv4()),
+            ("Tailscale", tailscale()),
         ]
         workspaces = [
-            ("tmux", get_tmux_info()),
-            ("zellij", get_zellij_info()),
+            ("tmux", tmux()),
+            ("zellij", zellij()),
         ]
 
         print()
