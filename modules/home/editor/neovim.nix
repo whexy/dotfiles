@@ -20,15 +20,8 @@ let
       hash = "sha256-ybSdRHuNOTLGo39B5Q4oJLjqYlwa3pm85eVfrFcrOL8=";
     };
   };
-  # Nightly Neovim tracks master, so plugins pinned by the stable channel can
-  # be older than the core changes they depend on (flash.nvim's FFI hooks, for
-  # example, break until the plugin adapts to a Neovim refactor). Build the
-  # whole plugin set from nixpkgs-unstable whenever the editor follows
-  # nightly; the stable channel stays authoritative for release Neovim.
-  nixvimNixpkgs = if cfg.neovim.nightly then inputs.nixpkgs-unstable else inputs.nixpkgs;
-
   # Only the package comes from the nightly flake; nixvim still builds plugins
-  # and the wrapper from the nixpkgs selected above.
+  # and the wrapper from vimPkgs.
   #
   # The neovim wrapper derives its Lua environment from `neovim-unwrapped.lua`,
   # but the Lua rocks it collects propagate that nixpkgs' LuaJIT, so the two
@@ -50,7 +43,7 @@ in
     programs.nixvim = {
       enable = true;
       package = neovimPackage;
-      nixpkgs.source = nixvimNixpkgs.outPath;
+      nixpkgs.pkgs = vimPkgs;
       # Nixvim tracks the stable release while the nightly plugin set comes from
       # nixpkgs-unstable, so its release check always reports a mismatch here.
       version.enableNixpkgsReleaseCheck = !cfg.neovim.nightly;
