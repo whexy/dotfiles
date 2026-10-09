@@ -12,9 +12,6 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    programs.wayvnc.enable = cfg.vnc.enable;
-    networking.firewall.interfaces.tailscale0.allowedTCPPorts = lib.optional cfg.vnc.enable 5900;
-
     services = {
       # Blueman provides the Bluetooth manager and D-Bus backend; Home Manager
       # starts its tray applet after the session tray target is available.
