@@ -88,6 +88,7 @@ in
       nix.gc = {
         automatic = true;
         dates = "weekly";
+        randomizedDelaySec = "2h";
         options = lib.escapeShellArgs gcArgs;
       };
 
