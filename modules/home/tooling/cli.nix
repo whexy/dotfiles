@@ -111,7 +111,9 @@ let
       ${pkgs.wlinhibit}/bin/wlinhibit &
       wlinhibit_pid=$!
 
-      "$@" &
+      # Without job control a background job reads /dev/null; keep the
+      # caller's stdin for the utility.
+      "$@" <&0 &
       inhibit_pid=$!
       trap 'kill "$inhibit_pid" 2>/dev/null || true' INT TERM HUP
 
