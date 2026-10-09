@@ -24,6 +24,7 @@ in
       nh.enable = lib.mkDefault true;
       caches.enable = lib.mkDefault (osConfig == null);
       pinRegistry.enable = lib.mkDefault (osConfig == null);
+      gc.enable = lib.mkDefault true;
     };
     monitors.htop.enable = lib.mkDefault true;
     monitors.btop.enable = lib.mkDefault true;
@@ -65,11 +66,5 @@ in
       ++ lib.optionals (!isDarwin) [
         git # macOS: use native git to avoid keychain prompt
       ];
-  };
-
-  nix.gc = {
-    automatic = lib.mkDefault true;
-    dates = "weekly";
-    options = "--delete-older-than 30d";
   };
 }

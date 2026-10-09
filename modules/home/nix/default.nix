@@ -10,6 +10,10 @@
 let
   cfg = config.dotfiles.nix;
   tokenFile = "${config.xdg.configHome}/nix/gh-token.conf";
+  gcArgs = [
+    "--delete-older-than"
+    "30d"
+  ];
 in
 {
   imports = [ ./nh.nix ];
@@ -31,6 +35,7 @@ in
       };
     };
     pinRegistry.enable = lib.mkEnableOption "pinning the user nixpkgs registry and search path";
+    gc.enable = lib.mkEnableOption "weekly garbage collection of this user's profile generations older than 30 days";
 
     ghTokenFlakes = {
       enable = lib.mkEnableOption "using the gh CLI token for private `github:` flake fetches";
@@ -76,6 +81,21 @@ in
         };
         nixPath = lib.mkBefore [ "nixpkgs=${inputs.nixpkgs}" ];
       };
+    })
+    # The system collector runs as root and never reaches profiles under this
+    # user's XDG state directory, so integrated homes need this one too.
+    (lib.mkIf cfg.gc.enable {
+      nix.gc = {
+        automatic = true;
+        dates = "weekly";
+        options = lib.escapeShellArgs gcArgs;
+      };
+
+      # Home Manager's agent passes `options` as a single argument, which
+      # nix-collect-garbage rejects as an unrecognised flag.
+      launchd.agents.nix-gc.config.ProgramArguments = lib.mkForce (
+        [ (lib.getExe' (lib.defaultTo pkgs.nix config.nix.package) "nix-collect-garbage") ] ++ gcArgs
+      );
     })
     (lib.mkIf cfg.ghTokenFlakes.enable {
       nix.extraOptions = ''
