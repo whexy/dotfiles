@@ -11,7 +11,6 @@
   imports = [
     ./mako.nix
     ./udiskie.nix
-    ./vnc.nix
     ./wallpaper.nix
     ./macbook-screen-density.nix
   ];

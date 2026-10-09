@@ -2,11 +2,8 @@
 { lib, pkgs, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
-    # NixOS desktops serve VNC on the Tailscale interface and publish the
-    # noVNC web client with `tailscale serve`.
+    # The home t3-pair client finds T3 Code servers on the tailnet.
     network.tailscale.enable = lib.mkDefault true;
-    network.tailscale.userOperator = lib.mkDefault true;
-    desktop.vnc.enable = lib.mkDefault true;
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).
