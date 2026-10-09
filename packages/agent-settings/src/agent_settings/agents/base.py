@@ -102,6 +102,12 @@ class Agent(ABC):
 
     def reconcile(self, selection: Entry | None = None) -> None:
         """Maintain Nix-owned settings and optionally save a new selection."""
+        if selection is not None:
+            # Claude loads credentials only for the recorded selection, so it is
+            # recorded before its routing is written and again with it, in case
+            # another selector recorded its own in between.
+            with edit_document(self.state_file) as state:
+                state["selection"] = selection["label"]
         # Our multi-file writers serialize on the state lock. Each native file
         # also gets an optimistic check against non-cooperating writers.
         with edit_document(self.state_file) as state:
@@ -170,16 +176,25 @@ class Agent(ABC):
         """Reconcile every profile and migrate removed selections to the default."""
         previous = self.root
         try:
-            for root in Profiles(self.name).configurations().values():
+            for name, root in Profiles(self.name).configurations().items():
                 self.set_root(root)
-                saved = read_document(self.state_file).get("selection")
-                # The label alone cannot rebuild fusion role picks or in-app choices
-                # such as Codex's /model, so only a label that no longer resolves
-                # is replaced.
-                if self.catalog.find(saved) is None and self.catalog.choices:
-                    self.reconcile(self.catalog.choices[0])
-                else:
-                    self.reconcile()
+                try:
+                    saved = read_document(self.state_file).get("selection")
+                    # The label alone cannot rebuild fusion role picks or in-app
+                    # choices such as Codex's /model, so only a label that no
+                    # longer resolves is replaced.
+                    if self.catalog.find(saved) is None and self.catalog.choices:
+                        self.reconcile(self.catalog.choices[0])
+                    else:
+                        self.reconcile()
+                except (SettingsError, OSError, ValueError) as error:
+                    # Home Manager activation runs this; a file the user broke
+                    # must not block the switch, and the next activation retries.
+                    print(
+                        f"agent-settings: warning: {self.name} config {name} "
+                        + f"was not reconciled: {error}",
+                        file=sys.stderr,
+                    )
         finally:
             self.set_root(previous)
 
