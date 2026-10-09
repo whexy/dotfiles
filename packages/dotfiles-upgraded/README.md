@@ -130,10 +130,13 @@ the process exits non-zero only on a bad configuration.
 
 Build parallelism is not a flag: the daemon runs whatever rebuild it is given,
 and the modules throttle it by exporting `NIX_CONFIG` (`max-jobs`, `cores`) in
-the service environment. These settings reach the `nix-daemon` over the socket,
-which is what actually schedules the builds, so an unattended rebuild is capped
-while a manual one still uses the machine default. Limiting the daemon's own
-cgroup would bound this supervisor rather than the builds it triggers.
+the service environment, so an unattended rebuild is capped while a manual one
+still uses the machine default. Where those builds run depends on the caller.
+As root, Nix opens the store directly, so in `nixos` mode and for a root Home
+Manager the builds run inside the daemon's own unit, which the modules give a
+low CPU and I/O weight. `darwin-rebuild` and an unprivileged user go through
+`nix-daemon` instead, which receives the settings over the socket and runs the
+builds itself; only evaluation stays with the daemon.
 
 ## Verification
 
