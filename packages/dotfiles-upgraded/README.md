@@ -14,13 +14,16 @@ to convergence drops from about a day to about ten minutes.
 
 Each tick asks GitHub for the tip of the tracked branch, sending the stored
 `ETag` as `If-None-Match`. A `304` or an unchanged SHA ends the cycle without
-further requests. A new SHA is gated on its combined commit status:
+further requests. A new SHA is gated on the commit statuses of its push
+pipeline (`ci/woodpecker/push/*`). The cron and manual pipelines report on the
+same commit but run only the update jobs, so their verdict neither rejects nor
+approves it:
 
-- `success` switches the host.
+- `success` from every push workflow switches the host.
 - `failure` gives up on that SHA immediately.
 - `pending` waits. CI not having finished is not a verdict, so the SHA is
   retried on later ticks until it resolves, is superseded, or exceeds
-  `--pending-timeout`. A commit with no reported status yet counts as pending.
+  `--pending-timeout`. A commit with no push status yet counts as pending.
 
 A failing switch retries with exponential backoff up to `--max-attempts`, then
 the SHA joins a small ignore set. A transient fault and a genuinely broken

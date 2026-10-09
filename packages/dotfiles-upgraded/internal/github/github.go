@@ -11,6 +11,7 @@ import (
 	"io"
 	"net/http"
 	"strconv"
+	"strings"
 	"time"
 )
 
@@ -22,9 +23,9 @@ const (
 	maxBody = 1 << 20
 )
 
-// CIState is the combined commit status. Check runs are deliberately not
-// consulted: Woodpecker reports through the commit status API, so the combined
-// state is the whole verdict.
+// CIState is the CI verdict on a commit. Check runs are deliberately not
+// consulted: Woodpecker reports through the commit status API, so commit
+// statuses are the whole verdict.
 type CIState string
 
 const (
@@ -32,6 +33,13 @@ const (
 	StatePending CIState = "pending"
 	StateFailure CIState = "failure"
 )
+
+// pushContextPrefix selects the statuses Woodpecker reports for push
+// pipelines, one context per workflow. Only the push pipeline checks the
+// commit; cron and manual pipelines run the update jobs against whatever the
+// tip is, so their verdict says nothing about that commit and must neither
+// reject nor approve it.
+const pushContextPrefix = "ci/woodpecker/push/"
 
 // RateLimitError reports a 403/429 and how long the API asked us to wait.
 // RetryAfter is zero when the response carried no usable hint.
@@ -125,11 +133,15 @@ func (c *Client) Head(ctx context.Context, ref, etag string) (RefResult, error) 
 	return result, nil
 }
 
-// CombinedStatus returns the combined CI state for sha. An unknown or absent
-// state is reported as pending: no reported status yet is indistinguishable
+// CombinedStatus returns the push pipeline's CI state for sha, which passes
+// only when every push workflow does. GitHub's own combined state folds in
+// every lane, so it is rebuilt from the push statuses alone. An unknown or
+// absent state is reported as pending: no push status yet is indistinguishable
 // from CI not having started, and treating it as failure would strand commits.
 func (c *Client) CombinedStatus(ctx context.Context, sha string) (CIState, error) {
-	url := fmt.Sprintf("%s/repos/%s/commits/%s/status", c.BaseURL, c.Repo, sha)
+	// The statuses list is paginated, and a push context cut off by the
+	// default page size would hold the commit pending until it is ignored.
+	url := fmt.Sprintf("%s/repos/%s/commits/%s/status?per_page=100", c.BaseURL, c.Repo, sha)
 	req, err := http.NewRequestWithContext(ctx, http.MethodGet, url, nil)
 	if err != nil {
 		return "", err
@@ -151,28 +163,33 @@ func (c *Client) CombinedStatus(ctx context.Context, sha string) (CIState, error
 	}
 
 	var body struct {
-		State    string `json:"state"`
 		Statuses []struct {
-			State string `json:"state"`
+			Context string `json:"context"`
+			State   string `json:"state"`
 		} `json:"statuses"`
 	}
 	if err := json.NewDecoder(io.LimitReader(resp.Body, maxBody)).Decode(&body); err != nil {
 		return "", fmt.Errorf("decode status: %w", err)
 	}
 
-	switch body.State {
-	case "success":
-		// GitHub reports "success" for a commit with no statuses at all, so
-		// an empty list means CI has not reported yet, not that it passed.
-		if len(body.Statuses) == 0 {
-			return StatePending, nil
+	reported, pending := false, false
+	for _, status := range body.Statuses {
+		if !strings.HasPrefix(status.Context, pushContextPrefix) {
+			continue
 		}
-		return StateSuccess, nil
-	case "failure", "error":
-		return StateFailure, nil
-	default:
+		reported = true
+		switch status.State {
+		case "success":
+		case "failure", "error":
+			return StateFailure, nil
+		default:
+			pending = true
+		}
+	}
+	if !reported || pending {
 		return StatePending, nil
 	}
+	return StateSuccess, nil
 }
 
 func (c *Client) setHeaders(req *http.Request) {
