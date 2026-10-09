@@ -116,13 +116,30 @@
 
   outputs =
     inputs:
-    inputs.blueprint {
-      inherit inputs;
-      systems = [
-        "x86_64-linux"
-        "aarch64-linux"
-        "aarch64-darwin"
-      ];
-      nixpkgs.config.allowUnfree = true;
+    let
+      inherit (inputs.nixpkgs) lib;
+
+      blueprint = inputs.blueprint {
+        inherit inputs;
+        systems = [
+          "x86_64-linux"
+          "aarch64-linux"
+          "aarch64-darwin"
+        ];
+        nixpkgs.config.allowUnfree = true;
+      };
+
+      # Blueprint publishes every hosts/<host>/users entry as a standalone
+      # home, but users of a NixOS or Darwin host only evaluate inside that
+      # system, which supplies their caps and osConfig.
+      systemHosts = lib.attrNames (blueprint.nixosConfigurations // blueprint.darwinConfigurations);
+      isStandalone = name: _: !lib.elem (lib.last (lib.splitString "@" name)) systemHosts;
+    in
+    blueprint
+    // {
+      legacyPackages = lib.mapAttrs (
+        _: legacy:
+        legacy // { homeConfigurations = lib.filterAttrs isStandalone legacy.homeConfigurations; }
+      ) blueprint.legacyPackages;
     };
 }
