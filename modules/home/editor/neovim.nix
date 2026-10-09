@@ -51,6 +51,7 @@ in
       # evaluation against nixvim's own nixpkgs, which every host evaluation
       # would otherwise pay for.
       enableMan = false;
+      luaLoader.enable = true;
       wrapRc = true;
       impureRtp = true;
       extraPlugins = [ modernBorland ];
