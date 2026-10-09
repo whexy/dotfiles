@@ -19,7 +19,7 @@ class Picker(App[str]):
     Screen { align: center middle; }
     Input { margin: 1 2; width: 90%; }
     OptionList { margin: 0 2; width: 90%; height: 1fr; }
-    Label { margin: 1 2; }
+    Label { margin: 1 2; width: 90%; }
     Button { margin: 0 2; width: 90%; }
     """
     BINDINGS: ClassVar[list[BindingType]] = [
