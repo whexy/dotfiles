@@ -16,4 +16,5 @@ in
   "cf-access-dotfiles-id.age".publicKeys = [ key ];
   "cf-access-dotfiles-secret.age".publicKeys = [ key ];
   "ai-proxy-api-key.age".publicKeys = [ key ];
+  "n8n-mcp-token.age".publicKeys = [ key ];
 }

@@ -197,6 +197,8 @@ in
         # Cloudflare Access; every agent must present the service token.
         cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
         cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
+        # Bearer token for the `personal` MCP server (see mcp.nix).
+        n8n-mcp-token.file = ../../../secrets/n8n-mcp-token.age;
       };
     }
   );

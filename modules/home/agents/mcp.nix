@@ -43,17 +43,36 @@ let
     "--firefoxArg=-ExtensionSettings"
     "--firefoxArg={}"
   ];
+
+  # Variable -> agenix secret holding its value. Servers reference the
+  # variable, never the value, so no token reaches the store or a config file.
+  secrets = {
+    N8N_MCP_TOKEN = config.age.secrets.n8n-mcp-token.path;
+  };
 in
 {
+  # Shell lines every agent launcher runs before starting its agent, which
+  # cannot read agenix files itself. The paths are shell fragments that only
+  # a shell resolves. An unreadable secret leaves its variable unset, so the
+  # agent still starts and reports the one server it cannot authenticate to.
+  exportSecrets = lib.concatStrings (
+    lib.mapAttrsToList (name: path: ''
+      if secret=$(${pkgs.coreutils}/bin/cat "${path}" 2>/dev/null); then export ${name}="$secret"; fi
+    '') secrets
+  );
+
   servers = {
     # n8n workflow that reaches the user away from the desk: phone push,
-    # WeChat, and a Slack note-to-self. It has no authentication.
+    # WeChat, and a Slack note-to-self. Its MCP Server Trigger authenticates
+    # callers by bearer token.
     #
     # `type` is Claude's discriminator for a remote server; Codex and Pi
-    # select the transport using `url`.
+    # select the transport using `url`. Claude Code and Pi expand `${VAR}` in
+    # header values; the Codex and OpenCode renderers translate it.
     personal = {
       type = "http";
       url = "https://n8n.clusters.work/mcp/3e3dc609-1939-47ed-94ef-964a3164dfae";
+      headers.Authorization = "Bearer \${N8N_MCP_TOKEN}";
     };
   }
   // lib.optionalAttrs cfg.firefoxDevtools.enable {

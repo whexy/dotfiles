@@ -11,12 +11,16 @@ let
     inherit pkgs defaults;
   };
   webSearch = import ./web-search.nix { inherit defaults; };
+  pi = pkgs.writeShellScriptBin "pi" ''
+    ${mcp.exportSecrets}
+    exec ${lib.getExe' pkgs.llm-agents.pi "pi"} "$@"
+  '';
 
 in
 {
   # Extension install scripts invoke node through PATH, even with an absolute npmCommand.
   packages = [
-    pkgs.llm-agents.pi
+    pi
     pkgs.nodejs
   ];
   homeFiles = {

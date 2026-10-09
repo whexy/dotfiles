@@ -10,6 +10,7 @@ let
     name = "claude";
     package = pkgs.llm-agents.claude-code;
     mcpServers = mcp.servers;
+    prelude = mcp.exportSecrets;
     managedLinks = [
       "CLAUDE.md"
       "skills"
