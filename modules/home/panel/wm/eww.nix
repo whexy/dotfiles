@@ -14,46 +14,39 @@ let
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   niri = lib.getExe config.programs.niri.package;
-  jq = lib.getExe pkgs.jq;
   sshWindow = lib.getExe config.programs.ssh-window.package;
+  niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
 
   enabled = cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
 
   # One JSON record per workspace so the widget can render per-workspace
   # buttons with focused/occupied/empty states (niri's fields are
   # is_focused/active_window_id).
-  workspacesScript = pkgs.writeShellScript "eww-niri-workspaces" ''
-    state="$(${niri} msg --json workspaces 2>/dev/null)" || exit 0
-    exec ${jq} -c '[sort_by(.idx)[]
+  workspacesScript = niriEvents.listen "eww-niri-workspaces" "-c" ''
+    .workspaces | [sort_by(.idx)[]
       | {
           idx: (.idx | tostring),
           focused: .is_focused,
           occupied: (.active_window_id != null)
-        }]' <<<"$state"
+        }]
   '';
 
   # Same title rewrites as the Waybar module.
-  windowTitleScript = pkgs.writeShellScript "eww-niri-window-title" ''
-    title="$(${niri} msg --json focused-window 2>/dev/null | ${jq} -r '.title // empty')" || exit 0
-    case "$title" in
-      *" — Mozilla Firefox") title="󰈹 ''${title%" — Mozilla Firefox"}" ;;
-      *" - fish") title=" ''${title%" - fish"}" ;;
-    esac
-    printf '%s' "$title"
-  '';
-
-  sshContextScript = pkgs.writeShellScript "eww-ssh-context" ''
-    ${sshWindow} current 2>/dev/null || true
+  windowTitleScript = niriEvents.listen "eww-niri-window-title" "-r" ''
+    focused_window | .title // ""
+    | if endswith(" — Mozilla Firefox") then "󰈹 " + rtrimstr(" — Mozilla Firefox")
+      elif endswith(" - fish") then " " + rtrimstr(" - fish")
+      else . end
   '';
 in
 {
   config = lib.mkIf enabled {
     dotfiles.panel.eww = {
       defs = ''
-        (defpoll WORKSPACES :interval "1s" :initial "[]" "${workspacesScript}")
-        (defpoll WINDOW_TITLE :interval "1s" "${windowTitleScript}")
+        (deflisten WORKSPACES :initial "[]" "${workspacesScript}")
+        (deflisten WINDOW_TITLE "${windowTitleScript}")
         ${lib.optionalString config.dotfiles.ssh.windowMultiplexing.enable ''
-          (defpoll SSH_CONTEXT :interval "1s" :initial "" "${sshContextScript}")
+          (deflisten SSH_CONTEXT :initial "" "${niriEvents.sshContext sshWindow}")
         ''}
 
         ; One button per workspace so the focused one can be highlighted and
