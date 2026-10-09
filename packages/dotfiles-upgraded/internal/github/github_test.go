@@ -7,9 +7,12 @@ import (
 	"net/http"
 	"net/http/httptest"
 	"strconv"
+	"strings"
 	"testing"
 	"time"
 )
+
+const tipSHA = "4d79fa781db28881eedfdf07baad62e8c32a00c5"
 
 func newTestClient(t *testing.T, handler http.HandlerFunc) *Client {
 	t.Helper()
@@ -26,13 +29,13 @@ func TestHeadSendsRequiredHeaders(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		got = r.Header.Clone()
 		w.Header().Set("ETag", `W/"v1"`)
-		w.Write([]byte(`{"sha":"abc123"}`))
+		w.Write([]byte(tipSHA))
 	})
 
 	if _, err := c.Head(context.Background(), "master", ""); err != nil {
 		t.Fatalf("Head: %v", err)
 	}
-	if got.Get("Accept") != "application/vnd.github+json" {
+	if got.Get("Accept") != "application/vnd.github.sha" {
 		t.Errorf("Accept = %q", got.Get("Accept"))
 	}
 	if got.Get("X-GitHub-Api-Version") != apiVersion {
@@ -50,7 +53,7 @@ func TestHeadSendsBearerTokenWhenPresent(t *testing.T) {
 	var auth string
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		auth = r.Header.Get("Authorization")
-		w.Write([]byte(`{"sha":"abc123"}`))
+		w.Write([]byte(tipSHA))
 	})
 	c.Token = "secret"
 
@@ -72,7 +75,7 @@ func TestHeadConditionalGet(t *testing.T) {
 			return
 		}
 		w.Header().Set("ETag", etag)
-		w.Write([]byte(`{"sha":"abc123"}`))
+		w.Write([]byte(tipSHA))
 	})
 
 	first, err := c.Head(context.Background(), "master", "")
@@ -82,7 +85,7 @@ func TestHeadConditionalGet(t *testing.T) {
 	if first.NotModified {
 		t.Fatal("first request should not be a 304")
 	}
-	if first.SHA != "abc123" {
+	if first.SHA != tipSHA {
 		t.Errorf("SHA = %q", first.SHA)
 	}
 	if first.ETag != etag {
@@ -105,10 +108,81 @@ func TestHeadConditionalGet(t *testing.T) {
 	}
 }
 
+// GitHub's full commit JSON carries every file's patch, so it grows with the
+// diff; only the sha media type keeps the response a fixed size.
+func TestHeadReadsTheTipOfAHugeCommit(t *testing.T) {
+	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		if r.Header.Get("Accept") == "application/vnd.github.sha" {
+			w.Header().Set("ETag", `"`+tipSHA+`"`)
+			w.Write([]byte(tipSHA))
+			return
+		}
+		type file struct {
+			Patch string `json:"patch"`
+		}
+		w.Header().Set("ETag", `W/"full"`)
+		json.NewEncoder(w).Encode(struct {
+			SHA   string `json:"sha"`
+			Files []file `json:"files"`
+		}{tipSHA, []file{{Patch: strings.Repeat("+", 2*maxBody)}}})
+	})
+
+	res, err := c.Head(context.Background(), "master", "")
+	if err != nil {
+		t.Fatalf("Head: %v", err)
+	}
+	if res.SHA != tipSHA {
+		t.Errorf("SHA = %q, want %q", res.SHA, tipSHA)
+	}
+	if res.ETag != `"`+tipSHA+`"` {
+		t.Errorf("ETag = %q, want the sha representation's", res.ETag)
+	}
+}
+
+func TestHeadAcceptsSHA256AndTrailingWhitespace(t *testing.T) {
+	sha256 := strings.Repeat("0123456789abcdef", 4)
+	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+		w.Write([]byte(sha256 + "\n"))
+	})
+
+	res, err := c.Head(context.Background(), "master", "")
+	if err != nil {
+		t.Fatalf("Head: %v", err)
+	}
+	if res.SHA != sha256 {
+		t.Errorf("SHA = %q, want %q", res.SHA, sha256)
+	}
+}
+
+// The SHA is interpolated into the flake ref and API paths, so a 200 that is
+// not a bare object name must fail rather than become a switch target.
+func TestHeadRejectsABodyThatIsNotASHA(t *testing.T) {
+	for name, body := range map[string]string{
+		"empty":            "",
+		"html":             "<html><body>captive portal</body></html>",
+		"json":             `{"sha":"` + tipSHA + `"}`,
+		"abbreviated":      "4d79fa7",
+		"uppercase":        strings.ToUpper(tipSHA),
+		"non-hex":          strings.Repeat("g", 40),
+		"path traversal":   "../../../../etc/passwd/aaaaaaaaaaaaaaaaa",
+		"sha with garbage": tipSHA + "#evil",
+	} {
+		t.Run(name, func(t *testing.T) {
+			c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
+				w.Write([]byte(body))
+			})
+
+			if res, err := c.Head(context.Background(), "master", ""); err == nil {
+				t.Fatalf("accepted %q as SHA %q", body, res.SHA)
+			}
+		})
+	}
+}
+
 func TestHeadHonoursPollInterval(t *testing.T) {
 	c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("X-Poll-Interval", "120")
-		w.Write([]byte(`{"sha":"abc123"}`))
+		w.Write([]byte(tipSHA))
 	})
 
 	res, err := c.Head(context.Background(), "master", "")
