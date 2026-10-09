@@ -21,11 +21,11 @@ let
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
 
+  # Headers go through stdin: argv is readable by every local user.
   weightScript = pkgs.writeShellScript "eww-renpho" ''
-    ${curl} -fsS --max-time 15 \
-      -H "CF-Access-Client-Id: $(<"${cfIdFile}")" \
-      -H "CF-Access-Client-Secret: $(<"${cfSecretFile}")" \
-      "${dataUrl}" 2>/dev/null \
+    printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
+      "$(<"${cfIdFile}")" "$(<"${cfSecretFile}")" \
+      | ${curl} -fsS --max-time 15 -H @- "${dataUrl}" 2>/dev/null \
       | ${jq} -r '(.measurements | sort_by(.date) | last | .weight_kg) // empty' 2>/dev/null
   '';
 in
