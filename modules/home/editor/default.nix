@@ -52,10 +52,11 @@
     ./zig.nix
   ];
 
-  # Plugins built outside nixvim's own option set must come from the same
-  # channel nixvim builds with, or a nightly Neovim gets stable-pinned plugins
-  # that predate the core changes they depend on. nixvim follows
-  # `nixpkgs.source` for its own plugin set; this arg keeps everything else
-  # aligned with it.
+  # Nightly Neovim tracks master, so plugins pinned by the stable channel can
+  # be older than the core changes they depend on (flash.nvim's FFI hooks, for
+  # example, break until the plugin adapts to a Neovim refactor). Nixvim and
+  # the plugins built outside its option set all come from this package set,
+  # so the whole plugin set follows nixpkgs-unstable whenever the editor
+  # follows nightly; the stable channel stays authoritative for release Neovim.
   config._module.args.vimPkgs = if config.dotfiles.editor.neovim.nightly then pkgs.unstable else pkgs;
 }
