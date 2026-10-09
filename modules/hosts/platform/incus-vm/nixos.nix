@@ -1,9 +1,4 @@
-{
-  config,
-  lib,
-  modulesPath,
-  ...
-}:
+{ config, lib, ... }:
 let
   cfg = config.dotfiles.platform.incusVm;
 
@@ -21,8 +16,6 @@ let
   // cfg.agent.features;
 in
 {
-  imports = [ (modulesPath + "/virtualisation/lxc-image-metadata.nix") ];
-
   config = lib.mkIf cfg.enable {
     disko.imageBuilder.imageFormat = "qcow2";
 
