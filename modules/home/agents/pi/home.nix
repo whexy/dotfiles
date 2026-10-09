@@ -6,7 +6,7 @@
   mcp,
 }:
 let
-  aiProxyExtension = import ./ai-proxy.nix { inherit pkgs proxy; };
+  aiProxyExtension = import ./ai-proxy.nix { inherit pkgs proxy defaults; };
   settings = import ./settings.nix {
     inherit pkgs defaults;
   };

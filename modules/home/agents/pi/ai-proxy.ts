@@ -1,6 +1,7 @@
-import type {
-  ExtensionAPI,
-  ProviderModelConfig,
+import {
+  getAgentDir,
+  type ExtensionAPI,
+  type ProviderModelConfig,
 } from "@earendil-works/pi-coding-agent";
 import type { Api, Model } from "@earendil-works/pi-ai";
 import {
@@ -8,6 +9,8 @@ import {
   getBuiltinProviders,
 } from "@earendil-works/pi-ai/providers/all";
 import { execFile } from "node:child_process";
+import { mkdir, readFile, rename, writeFile } from "node:fs/promises";
+import { dirname, join } from "node:path";
 import { promisify } from "node:util";
 
 // Injected by Home Manager (see proxy.nix). The secret paths are agenix
@@ -19,6 +22,7 @@ type AiProxyConfig = {
   cfAccessIdPath: string;
   cfAccessSecretPath: string;
   cat: string;
+  fallbackModels: string[];
 };
 
 // Loading this source directly instead of the generated file leaves the config
@@ -43,9 +47,14 @@ const {
   cfAccessIdPath: CF_ACCESS_ID_PATH,
   cfAccessSecretPath: CF_ACCESS_SECRET_PATH,
   cat: CAT,
+  // Without any cliproxyapi model, pi starts on another provider's model
+  // instead, so an outage before the first successful discovery registers
+  // the models pi is configured to use.
+  fallbackModels: FALLBACK_MODELS,
 } = loadConfig();
 
 const BASE_URL = `${PROXY_BASE_URL}/v1`;
+const CACHE_PATH = join(getAgentDir(), "cache", "cliproxyapi-model-ids.json");
 
 // CLIProxyAPI accepts every one of these formats for every model it serves,
 // so a catalog entry only decides which one fits the model best. Each value is
@@ -125,25 +134,65 @@ async function fetchServedIds(
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    throw new Error(
-      `CLIProxyAPI model discovery failed: ${response.status} ${response.statusText}`,
-    );
+    throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
 
   const payload = (await response.json()) as { data?: Array<{ id?: string }> };
   return (payload.data ?? []).flatMap(({ id }) => (id ? [id] : []));
 }
 
-export default async function (pi: ExtensionAPI) {
+async function discoverServedIds(): Promise<string[]> {
   const [apiKey, cfAccessId, cfAccessSecret] = await Promise.all([
     readSecret(API_KEY_PATH),
     readSecret(CF_ACCESS_ID_PATH),
     readSecret(CF_ACCESS_SECRET_PATH),
   ]);
-  const ids = await fetchServedIds(apiKey, {
+  return fetchServedIds(apiKey, {
     "CF-Access-Client-Id": cfAccessId,
     "CF-Access-Client-Secret": cfAccessSecret,
   });
+}
+
+async function readCachedIds(): Promise<string[] | undefined> {
+  try {
+    const ids = JSON.parse(await readFile(CACHE_PATH, "utf8")) as unknown;
+    if (Array.isArray(ids) && ids.every((id) => typeof id === "string")) {
+      return ids;
+    }
+  } catch {
+    // An absent or unreadable cache is the same as none.
+  }
+  return undefined;
+}
+
+// Concurrent pi processes each rename a complete file into place.
+async function writeCachedIds(ids: string[]): Promise<void> {
+  await mkdir(dirname(CACHE_PATH), { recursive: true });
+  const temporaryPath = `${CACHE_PATH}.${process.pid}.tmp`;
+  await writeFile(temporaryPath, `${JSON.stringify(ids)}\n`, "utf8");
+  await rename(temporaryPath, CACHE_PATH);
+}
+
+export default async function (pi: ExtensionAPI) {
+  let ids: string[];
+  try {
+    ids = await discoverServedIds();
+    // A cache that cannot be written only costs the next outage its list.
+    await writeCachedIds(ids).catch(() => {});
+  } catch (error) {
+    // Pi exits when an extension fails to load, so a brief proxy outage
+    // must fall back instead of throwing.
+    const cached = await readCachedIds();
+    ids = cached ?? FALLBACK_MODELS;
+    const reason = error instanceof Error ? error.message : String(error);
+    const notice =
+      `CLIProxyAPI model list unavailable (${reason}); using ` +
+      (cached ? "the last list it served" : "the configured default models");
+    const unsubscribe = pi.on("session_start", (_event, ctx) => {
+      unsubscribe();
+      if (ctx.hasUI) ctx.ui.notify(notice, "warning");
+    });
+  }
 
   pi.registerProvider("cliproxyapi", {
     name: "CLIProxyAPI",
