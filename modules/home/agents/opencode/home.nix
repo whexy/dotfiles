@@ -8,9 +8,13 @@
 let
   upstream = pkgs.llm-agents.opencode2;
   # The package installs its binary as `opencode2` to coexist with v1.
-  package = pkgs.runCommand "opencode" { meta.mainProgram = "opencode"; } ''
-    mkdir -p $out/bin
-    ln -s ${lib.getExe' upstream "opencode2"} $out/bin/opencode
+  #
+  # The shared background server inherits the environment of the launch that
+  # starts it and resolves `{env:...}` from there, so it keeps the MCP secrets
+  # it started with until `opencode service restart`.
+  package = pkgs.writeShellScriptBin "opencode" ''
+    ${mcp.exportSecrets}
+    exec ${lib.getExe' upstream "opencode2"} "$@"
   '';
   settings = import ./config.nix {
     inherit

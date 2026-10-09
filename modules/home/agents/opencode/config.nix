@@ -6,6 +6,12 @@
   mcp,
 }:
 let
+  # OpenCode spells Claude's `${VAR}` environment reference `{env:VAR}`.
+  envRefs =
+    value:
+    lib.concatMapStrings (part: if lib.isList part then "{env:${lib.head part}}" else part) (
+      builtins.split "[$][{]([A-Za-z_][A-Za-z0-9_]*)[}]" value
+    );
   # Shared servers are written in Claude's shape: `url` for remote, `command`
   # plus `args` for local.
   toMcp =
@@ -15,7 +21,7 @@ let
         type = "remote";
         inherit (server) url;
       }
-      // lib.optionalAttrs (server ? headers) { inherit (server) headers; }
+      // lib.optionalAttrs (server ? headers) { headers = lib.mapAttrs (_: envRefs) server.headers; }
     else
       {
         type = "local";

@@ -9,6 +9,8 @@
   maintainedSettings ? { },
   resetEnv ? [ ],
   managedLinks ? [ ],
+  # Shell lines the launcher runs before agent-settings starts the agent.
+  prelude ? "",
 }:
 let
   manifest = pkgs.writeText "${name}-settings-catalog.json" (
@@ -26,6 +28,7 @@ let
   );
   runtime = "${pkgs.lib.getExe agentSettings} ${manifest}";
   launcher = pkgs.writeShellScriptBin name ''
+    ${prelude}
     exec ${runtime} launch "$@"
   '';
   selector = pkgs.writeShellScriptBin "${name}-select" ''
