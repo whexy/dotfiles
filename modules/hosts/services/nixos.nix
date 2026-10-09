@@ -25,6 +25,14 @@ in
       services.openssh = {
         enable = true;
         settings = lib.mkMerge [
+          # Drop a session whose client stopped answering, such as a suspended
+          # laptop, after about 90 s rather than whenever TCP gives up. Its
+          # forwarded agent socket goes with it, so the agent router falls back
+          # to a live agent and requests relayed to it end.
+          {
+            ClientAliveInterval = 30;
+            ClientAliveCountMax = 3;
+          }
           (lib.mkIf cfg.openssh.hardened {
             PermitRootLogin = "no";
             PasswordAuthentication = false;
