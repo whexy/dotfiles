@@ -20,7 +20,22 @@ in
     pinRegistry.enable = lib.mkEnableOption "pinning the `nixpkgs` flake reference to this system's nixpkgs";
     gc.enable = lib.mkEnableOption "weekly garbage collection of system profile generations older than 14 days";
     optimise.enable = lib.mkEnableOption "automatic nix store optimisation";
-    linuxBuilder.enable = lib.mkEnableOption "the nix-darwin Linux builder VM (build NixOS configurations on macOS)";
+    linuxBuilder.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = false;
+      example = true;
+      description = ''
+        Whether to enable the nix-darwin Linux builder VM (build NixOS
+        configurations on macOS). It does not start at boot; start and stop
+        it with:
+
+            sudo launchctl kickstart system/org.nixos.linux-builder
+            sudo launchctl kill SIGTERM system/org.nixos.linux-builder
+
+        While it is stopped or still booting, Nix cannot reach it and fails
+        any Linux derivation that no binary cache provides.
+      '';
+    };
   };
 
   config = lib.mkMerge [
