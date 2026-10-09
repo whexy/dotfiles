@@ -57,4 +57,8 @@ in
       };
     };
   };
+
+  # The system agenix identity lives under /home, and agenix decrypts during
+  # activation, before systemd mounts filesystems the initrd left alone.
+  fileSystems."/home".neededForBoot = true;
 }
