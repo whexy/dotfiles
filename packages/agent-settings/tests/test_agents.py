@@ -11,7 +11,7 @@ from support import AGENT_NAMES, SECRET, launch, manifest, model_entry, terminal
 
 from agent_settings.agents import Agent, create_agent
 from agent_settings.catalog import Entry
-from agent_settings.documents import child_table, read_document
+from agent_settings.documents import child_table, edit_document, read_document
 from agent_settings.errors import SettingsError
 
 type MakeAgent = Callable[[str], Agent]
@@ -262,7 +262,7 @@ def test_claude_discovered_model_fills_roles_and_survives_sync(secret: Path) -> 
     assert env["ANTHROPIC_API_KEY"] == SECRET
 
 
-def test_claude_fusion_picks_discovered_role_models(secret: Path) -> None:
+def test_claude_fusion_picks_discovered_role_models_and_survives_sync(secret: Path) -> None:
     fusion: Entry = {
         "label": "fusion",
         "fusion": {
@@ -282,6 +282,24 @@ def test_claude_fusion_picks_discovered_role_models(secret: Path) -> None:
     assert env["ANTHROPIC_MODEL"] == "large"
     assert env["CLAUDE_CODE_SUBAGENT_MODEL"] == "large"
     assert env["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "small"
+    agent.reconcile(entry)
+    agent.sync()
+    saved = child_table(read_document(agent.config_file), "env")
+    assert saved["ANTHROPIC_DEFAULT_OPUS_MODEL"] == "small"
+    assert saved["CLAUDE_CODE_SUBAGENT_MODEL"] == "large"
+
+
+def test_codex_in_app_model_and_profile_survive_sync(make_agent: MakeAgent) -> None:
+    agent = make_agent("codex")
+    agent.reconcile(default(agent))
+    # Codex's /model picker and the user edit the saved config directly.
+    with edit_document(agent.config_file) as doc:
+        doc["model"] = "picked"
+        doc["profile"] = "work"
+    agent.sync()
+    doc = read_document(agent.config_file)
+    assert doc["model"] == "picked"
+    assert doc["profile"] == "work"
 
 
 def test_malformed_config_is_not_overwritten(make_agent: MakeAgent) -> None:
