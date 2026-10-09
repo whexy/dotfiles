@@ -54,6 +54,10 @@ in
       # Nixvim tracks the stable release while the nightly plugin set comes from
       # nixpkgs-unstable, so its release check always reports a mismatch here.
       version.enableNixpkgsReleaseCheck = !cfg.neovim.nightly;
+      # The nixvim option man page comes from a second, complete nixvim
+      # evaluation against nixvim's own nixpkgs, which every host evaluation
+      # would otherwise pay for.
+      enableMan = false;
       wrapRc = true;
       impureRtp = true;
       extraPlugins = [ modernBorland ];
