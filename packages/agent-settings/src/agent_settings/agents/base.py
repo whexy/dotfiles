@@ -173,10 +173,13 @@ class Agent(ABC):
             for root in Profiles(self.name).configurations().values():
                 self.set_root(root)
                 saved = read_document(self.state_file).get("selection")
-                selection = self.catalog.find(saved)
-                if selection is None and self.catalog.choices:
-                    selection = self.catalog.choices[0]
-                self.reconcile(selection)
+                # The label alone cannot rebuild fusion role picks or in-app choices
+                # such as Codex's /model, so only a label that no longer resolves
+                # is replaced.
+                if self.catalog.find(saved) is None and self.catalog.choices:
+                    self.reconcile(self.catalog.choices[0])
+                else:
+                    self.reconcile()
         finally:
             self.set_root(previous)
 
