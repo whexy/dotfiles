@@ -113,8 +113,12 @@ Tokens are bound to owner scopes (`github.com/whexy`), never bare
 than every _public_ flake fetch. A rejected token still fails those fetches
 with HTTP 401 (Nix does not fall back to anonymous access), which is why
 `nix-gh-token` probes the token against the API and drops the fragment when
-GitHub rejects it. Keep the fragment out of `nix.settings`/git, and refresh it
-by re-running activation after `gh auth login`.
+GitHub rejects it. The Home Manager auto-upgrade daemon also fetches under
+`github.com/whexy`, so it clears `access-tokens` for its own Nix calls: a stale
+fragment must not block the activation that would refresh it, which only works
+while the upgrade source and all its inputs stay public. Keep the fragment out
+of `nix.settings`/git, and refresh it by re-running activation after
+`gh auth login`.
 
 ## Verification
 

@@ -159,7 +159,13 @@ in
           # the quotes and the literal two-character escape are both ours:
           # unquoted, systemd splits the value on the spaces around `=`; a
           # real newline would split the Environment= line instead.
-          ''"NIX_CONFIG=max-jobs = ${toString cfg.maxJobs}\ncores = ${toString cfg.cores}"''
+          #
+          # The empty access-tokens drops the gh token nix.conf includes
+          # (dotfiles.nix.ghTokenFlakes). Everything this daemon fetches is
+          # public, and a revoked token would fail those fetches with HTTP 401
+          # before the activation that refreshes it could run. A private
+          # input would need a token here.
+          ''"NIX_CONFIG=max-jobs = ${toString cfg.maxJobs}\ncores = ${toString cfg.cores}\naccess-tokens ="''
         ];
         ExecStart = lib.escapeShellArgs [
           (lib.getExe perSystem.self.dotfiles-upgraded)
