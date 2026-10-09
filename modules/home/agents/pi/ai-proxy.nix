@@ -4,7 +4,11 @@
 # guess them. Assigning through `globalThis` satisfies the `declare const`
 # in ai-proxy.ts, which keeps that file a plain TypeScript file that still
 # type-checks on its own instead of a template with substitution holes.
-{ pkgs, proxy }:
+{
+  pkgs,
+  proxy,
+  defaults,
+}:
 let
   config = {
     inherit (proxy)
@@ -16,6 +20,11 @@ let
     # /bin/cat does not exist on NixOS, so the reader cannot rely on an
     # inherited PATH.
     cat = "${pkgs.coreutils}/bin/cat";
+    # pi's default model and web-search's summary model.
+    fallbackModels = pkgs.lib.unique [
+      defaults.defaultModel
+      defaults.defaultCheapModel
+    ];
   };
 in
 pkgs.runCommand "pi-ai-proxy.ts"
