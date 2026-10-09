@@ -37,7 +37,7 @@ build-phobos:
     sudo chown "$(id -u):$(id -g)" result/phobos/phobos.qcow2
 
     METADATA=$(nix build \
-        .#nixosConfigurations.phobos.config.system.build.metadata \
+        .#nixosConfigurations.phobos.config.system.build.images.lxc-metadata \
         --no-link \
         --print-out-paths)
     METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
@@ -89,7 +89,7 @@ build-zoozve:
     sudo chown "$(id -u):$(id -g)" result/zoozve/zoozve.qcow2
 
     METADATA=$(nix build \
-        .#nixosConfigurations.zoozve.config.system.build.metadata \
+        .#nixosConfigurations.zoozve.config.system.build.images.lxc-metadata \
         --no-link \
         --print-out-paths)
     METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
