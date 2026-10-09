@@ -11,6 +11,12 @@ let
 in
 {
   config = lib.mkMerge [
+    # Inert without systemd-boot. Each listed generation keeps its kernel and
+    # initrd on the ESP, so under auto-upgrades an uncapped menu fills a
+    # 512 MiB ESP, after which switch-to-configuration fails and the host
+    # stops converging.
+    { boot.loader.systemd-boot.configurationLimit = lib.mkDefault 15; }
+
     # Auto-upgrade of this host from the upstream repo, via the dotfiles-upgraded
     # daemon (packages/dotfiles-upgraded).
     # It replaces the stock nixos-upgrade.timer rather than joining it: two

@@ -1,5 +1,5 @@
-# System group: timezone, auto-upgrade, developer documentation, Xcode
-# management.
+# System group: timezone, auto-upgrade, boot menu size, developer
+# documentation, Xcode management.
 { config, lib, ... }:
 let
   cfg = config.dotfiles.system;

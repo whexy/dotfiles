@@ -1,4 +1,5 @@
-# Nix group: package manager settings (caches, optimisation, builder VM).
+# Nix group: package manager settings (caches, garbage collection,
+# optimisation, builder VM).
 {
   config,
   lib,
@@ -17,6 +18,7 @@ in
   options.dotfiles.nix = {
     caches.enable = lib.mkEnableOption "dotfiles binary caches and flake settings";
     pinRegistry.enable = lib.mkEnableOption "pinning the `nixpkgs` flake reference to this system's nixpkgs";
+    gc.enable = lib.mkEnableOption "weekly garbage collection of system profile generations older than 14 days";
     optimise.enable = lib.mkEnableOption "automatic nix store optimisation";
     linuxBuilder.enable = lib.mkEnableOption "the nix-darwin Linux builder VM (build NixOS configurations on macOS)";
   };
@@ -48,6 +50,13 @@ in
         # Takes precedence over the channel entry so `<nixpkgs>` agrees with
         # the registry.
         nixPath = lib.mkBefore [ "nixpkgs=${systemNixpkgs}" ];
+      };
+    })
+
+    (lib.mkIf cfg.gc.enable {
+      nix.gc = {
+        automatic = true;
+        options = "--delete-older-than 14d";
       };
     })
 
