@@ -21,6 +21,9 @@
       enable = true;
       fileSystems = [ "/" ];
     };
+    # The wired port has a public campus address. SSH stays reachable over
+    # tailscale0, which the firewall trusts.
+    openssh.openFirewall = false;
   };
 
   dotfiles = {
