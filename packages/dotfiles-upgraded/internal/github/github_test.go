@@ -2,6 +2,7 @@ package github
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"net/http"
 	"net/http/httptest"
@@ -184,18 +185,64 @@ func TestHeadUnexpectedStatus(t *testing.T) {
 	}
 }
 
+// combined renders a combined-status body. The top-level state folds in every
+// lane, as GitHub computes it, so a test passing only on that field would not
+// exercise the per-lane gate.
+func combined(statuses ...[2]string) string {
+	type status struct {
+		Context string `json:"context"`
+		State   string `json:"state"`
+	}
+	body := struct {
+		State    string   `json:"state"`
+		Statuses []status `json:"statuses"`
+	}{State: "success", Statuses: []status{}}
+	for _, s := range statuses {
+		body.Statuses = append(body.Statuses, status{Context: s[0], State: s[1]})
+		switch s[1] {
+		case "success":
+		case "failure", "error":
+			body.State = "failure"
+		default:
+			if body.State != "failure" {
+				body.State = "pending"
+			}
+		}
+	}
+	raw, err := json.Marshal(body)
+	if err != nil {
+		panic(err)
+	}
+	return string(raw)
+}
+
 func TestCombinedStatus(t *testing.T) {
+	const (
+		push     = "ci/woodpecker/push/woodpecker"
+		pushDocs = "ci/woodpecker/push/docs"
+		cron     = "ci/woodpecker/cron/woodpecker"
+		manual   = "ci/woodpecker/manual/woodpecker"
+		pr       = "ci/woodpecker/pr/woodpecker"
+	)
 	tests := []struct {
 		name string
 		body string
 		want CIState
 	}{
-		{"success", `{"state":"success","statuses":[{"state":"success"}]}`, StateSuccess},
-		{"pending", `{"state":"pending","statuses":[{"state":"pending"}]}`, StatePending},
-		{"failure", `{"state":"failure","statuses":[{"state":"failure"}]}`, StateFailure},
-		{"error is a failure", `{"state":"error","statuses":[{"state":"error"}]}`, StateFailure},
-		{"no statuses yet is pending", `{"state":"success","statuses":[]}`, StatePending},
-		{"unknown state is pending", `{"state":"weird","statuses":[{"state":"weird"}]}`, StatePending},
+		{"success", combined([2]string{push, "success"}), StateSuccess},
+		{"pending", combined([2]string{push, "pending"}), StatePending},
+		{"failure", combined([2]string{push, "failure"}), StateFailure},
+		{"error is a failure", combined([2]string{push, "error"}), StateFailure},
+		{"no statuses yet is pending", combined(), StatePending},
+		{"unknown state is pending", combined([2]string{push, "weird"}), StatePending},
+		{"cron failure does not reject a passing push", combined([2]string{push, "success"}, [2]string{cron, "failure"}), StateSuccess},
+		{"cron success alone does not approve", combined([2]string{cron, "success"}), StatePending},
+		{"manual and pr success do not approve", combined([2]string{manual, "success"}, [2]string{pr, "success"}), StatePending},
+		{"cron success does not approve a pending push", combined([2]string{push, "pending"}, [2]string{cron, "success"}), StatePending},
+		{"push failure rejects despite cron success", combined([2]string{push, "failure"}, [2]string{cron, "success"}), StateFailure},
+		{"every push workflow must pass", combined([2]string{push, "success"}, [2]string{pushDocs, "failure"}), StateFailure},
+		{"a pending push workflow holds the gate", combined([2]string{push, "success"}, [2]string{pushDocs, "pending"}), StatePending},
+		{"all push workflows passing approves", combined([2]string{push, "success"}, [2]string{pushDocs, "success"}), StateSuccess},
 	}
 
 	for _, tc := range tests {
@@ -203,6 +250,9 @@ func TestCombinedStatus(t *testing.T) {
 			c := newTestClient(t, func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path != "/repos/whexy/dotfiles/commits/abc123/status" {
 					t.Errorf("unexpected path %q", r.URL.Path)
+				}
+				if got := r.URL.Query().Get("per_page"); got != "100" {
+					t.Errorf("per_page = %q, want the 100 maximum so no push context is paged out", got)
 				}
 				w.Write([]byte(tc.body))
 			})
