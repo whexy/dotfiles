@@ -80,8 +80,32 @@ let
       }
 
       urldecode() {
-        printf '%b' "''${1//%/\\x}"
+        local rest=$1 decoded="" hex char
+        while [[ -n $rest ]]; do
+          if [[ $rest == %* ]]; then
+            hex=''${rest:1:2}
+            [[ $hex =~ ^[[:xdigit:]]{2}$ && $hex != 00 ]] || fail "invalid URL escape"
+            printf -v char '%b' "\\x$hex"
+            decoded+=$char
+            rest=''${rest:3}
+          else
+            decoded+=''${rest:0:1}
+            rest=''${rest:1}
+          fi
+        done
+        printf '%s' "$decoded"
       }
+
+      stdio=false
+      if [[ "''${1:-}" == --stdio-url-base64 ]]; then
+        [ $# -ge 2 ] || fail "missing encoded URL"
+        url=$(printf '%s' "$2" | base64 --decode) || fail "invalid encoded URL"
+        [[ $url == vscode://vscode-remote/* || $url == vscode://file/* ]] || fail "unsupported RPC URL"
+        shift 2
+        [[ $# -eq 0 || ( $# -eq 1 && $1 == --embed ) ]] || fail "unexpected RPC arguments"
+        set -- "$url"
+        stdio=true
+      fi
 
       case "''${1:-}" in
         -h | --help)
@@ -89,14 +113,22 @@ let
           exit 0
           ;;
         vscode://vscode-remote/*)
-          rest=$(urldecode "''${1#vscode://vscode-remote/}")
+          rest=$(urldecode "''${1#vscode://vscode-remote/}") || exit 1
+          [[ $rest == */* ]] || fail "no path in $1"
           authority=''${rest%%/*}
           path=/''${rest#*/}
           [[ $authority == ssh-remote+* ]] || fail "unsupported remote: $authority"
           host=''${authority#ssh-remote+}
           ;;
         vscode://file/*)
-          exec neovide --no-fork "$(urldecode "''${1#vscode://file}")"
+          path=$(urldecode "''${1#vscode://file}") || exit 1
+          if $stdio; then
+            if [[ $path =~ ^/[A-Za-z]:/ ]]; then
+              path=$(wslpath -u "''${path#/}")
+            fi
+            exec nvim --embed -- "$path"
+          fi
+          exec neovide --no-fork "$path"
           ;;
         *)
           [ $# -eq 2 ] || {
@@ -108,6 +140,8 @@ let
           ;;
       esac
       [ -n "$host" ] || fail "no host in $1"
+      [[ $host != -* && $host != *[[:space:]]* ]] || fail "invalid SSH host"
+      [[ $path != *$'\n'* && $path != *$'\r'* ]] || fail "invalid remote path"
 
       id=$(printf '%s\n' "$(id -un)@$(uname -n):$host:$path" | sha256sum | cut -c1-16)
       quote() { printf "'%s'" "''${1//\'/\'\\\'\'}"; }
@@ -118,30 +152,42 @@ let
       # has to, since ssh would otherwise drop the socket forward.
       ssh_opts=(-o ForwardAgent=no -o StrictHostKeyChecking=accept-new)
 
+      # On WSL the keys live in the Windows agent (1Password), reachable only
+      # through Windows ssh.exe.
+      ssh=ssh
+      [[ -z ''${WSL_DISTRO_NAME:-} ]] || ssh=ssh.exe
+
       remote_sock=$(
         {
           printf 'target=%s\nid=%s\n' "$(quote "$path")" "$id"
           cat <<'EOF'
       ${remoteScript}
       EOF
-        } | ssh -T "''${ssh_opts[@]}" "$host" sh -s 2>&1
+        } | "$ssh" -T "''${ssh_opts[@]}" "$host" sh -s 2>&1
       ) || fail "could not start nvim on $host: $remote_sock"
       remote_sock=''${remote_sock##*$'\n'}
 
+      if $stdio; then
+        # The Windows relay carries binary RPC; stdout must contain no text.
+        # Windows ssh.exe cannot bind a WSL socket, so stream it over stdio.
+        exec "$ssh" -T "''${ssh_opts[@]}" -W "$remote_sock" "$host"
+      fi
+
       rundir="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/neovide-remote"
       [ -d "$rundir" ] || mkdir -m 700 "$rundir"
-      local_sock="$rundir/$id.sock"
+      session_dir=$(mktemp -d "$rundir/session.XXXXXXXX")
+      local_sock="$session_dir/rpc.sock"
 
       # A dedicated connection, not a multiplexed one: forwards requested
       # through a ControlMaster outlive this process and pin the socket path.
-      ssh -N -T "''${ssh_opts[@]}" \
+      "$ssh" -N -T "''${ssh_opts[@]}" \
         -o ControlPath=none \
         -o ExitOnForwardFailure=yes \
         -o StreamLocalBindUnlink=yes \
         -L "$local_sock:$remote_sock" \
         "$host" &
       tunnel=$!
-      trap 'kill "$tunnel" 2>/dev/null || true; rm -f "$local_sock"' EXIT
+      trap 'kill "$tunnel" 2>/dev/null || true; rm -f "$local_sock"; rmdir "$session_dir"' EXIT
 
       tries=0
       until [ -S "$local_sock" ]; do
@@ -192,6 +238,13 @@ pkgs.symlinkJoin {
   name = "neovide-remote";
   paths = [
     script
+    (pkgs.runCommand "neovide-remote-windows" { } ''
+      mkdir -p $out/share/neovide-remote/windows
+      cp ${./windows/Install.ps1} $out/share/neovide-remote/windows/Install.ps1
+      cp ${./windows/Relay.cs} $out/share/neovide-remote/windows/Relay.cs
+      cp ${./windows/TestRelay.cs} $out/share/neovide-remote/windows/TestRelay.cs
+      cp ${./windows/Test.ps1} $out/share/neovide-remote/windows/Test.ps1
+    '')
   ]
   ++ (if pkgs.stdenv.hostPlatform.isDarwin then [ darwinApp ] else [ desktopItem ]);
   meta = {
