@@ -133,8 +133,10 @@ in
         Description = "Auto-upgrade Home Manager from ${upstreamRef}";
         # A switch performed by this daemon would otherwise restart the daemon
         # mid-`nh`, killing the switch it is running. Unlike nixos-rebuild,
-        # nothing here insulates activation from the calling unit, so the new
-        # version is only picked up on the next manual restart or login.
+        # nothing here insulates activation from the calling unit. The new
+        # version takes over through --exit-after-switch instead: the daemon
+        # exits once the switch is recorded, and Restart= starts it from the
+        # unit file sd-switch reloaded.
         X-SwitchMethod = "keep-old";
       };
       Service = {
@@ -170,6 +172,7 @@ in
         ExecStart = lib.escapeShellArgs [
           (lib.getExe perSystem.self.dotfiles-upgraded)
           "--mode=home-manager"
+          "--exit-after-switch"
           "--configuration=${configuration}"
           "--flake=${upstreamRef}"
           "--state-dir=${config.xdg.stateHome}/dotfiles-upgraded"

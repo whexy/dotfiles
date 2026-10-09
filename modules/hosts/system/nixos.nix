@@ -26,7 +26,9 @@ in
         # the rebuild that is switching this very unit. nixos-rebuild insulates
         # switch-to-configuration with `systemd-run --collect`, so activation
         # itself survives; the daemon still records its own result only if it
-        # outlives the switch.
+        # outlives the switch. The new binary takes over through
+        # --exit-after-switch: the daemon exits once the switch is recorded,
+        # and Restart= starts it from the unit file activation reloaded.
         restartIfChanged = false;
 
         # Mirrors the path nixos-upgrade.service gets: nixos-rebuild shells out
@@ -60,6 +62,7 @@ in
           ExecStart = lib.escapeShellArgs [
             (lib.getExe perSystem.self.dotfiles-upgraded)
             "--mode=nixos"
+            "--exit-after-switch"
             "--configuration=${cfg.autoUpgrade.configuration}"
             "--flake=${flake.lib.upstreamRef}"
             "--state-dir=/var/lib/dotfiles-upgraded"
