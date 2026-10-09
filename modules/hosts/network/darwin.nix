@@ -56,13 +56,21 @@ in
           # Cycling the network service restarts DHCP within that service, so
           # the lease uses the new address and System Settings and route
           # selection treat the interface as connected.
+          #
+          # The plist names a store path, so a nixpkgs update reloads the
+          # daemon and reruns this mid-switch; an interface that already has
+          # the address is left alone. The service is resolved before the
+          # address changes so a retry never finds the address set but the
+          # service not yet cycled.
           script = ''
             set -e
-            /sbin/ifconfig ${iface} ether ${mac}
             service=$(/usr/sbin/networksetup -listnetworkserviceorder | /usr/bin/awk -v dev=${iface} '
               /^\([0-9*]+\) / { sub(/^\([0-9*]+\) /, ""); name = $0 }
               index($0, "Device: " dev ")") { print name; exit }')
             [ -n "$service" ]
+            current=$(/sbin/ifconfig ${iface} | /usr/bin/awk '$1 == "ether" { print $2 }')
+            [ "$current" != ${lib.toLower mac} ] || exit 0
+            /sbin/ifconfig ${iface} ether ${mac}
             /usr/sbin/networksetup -setnetworkserviceenabled "$service" off
             /usr/sbin/networksetup -setnetworkserviceenabled "$service" on
           '';
