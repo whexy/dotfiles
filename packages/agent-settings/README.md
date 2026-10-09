@@ -95,6 +95,8 @@ Activation removes Home Manager's ownership of the old Claude settings symlink
 and reconciles into a regular mode-0600 file. Existing Nix symlinks encountered by
 the editor can be materialized; other symlinks are refused. Login files are not
 rewritten. Malformed configuration is an error, never an excuse to replace it.
+Activation warns with the file's path, leaves that config unreconciled, and
+continues; the next activation retries it.
 
 Our writers use advisory locks, same-directory temporary files, fsync, and atomic
 replacement. A changed native file is detected before replacement. Upstream agents

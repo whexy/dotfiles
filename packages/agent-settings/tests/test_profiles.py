@@ -100,6 +100,24 @@ def test_sync_migrates_removed_selection_to_default(make_agent: MakeAgent, name:
     assert doc.get("model") != "model"
 
 
+def test_sync_warns_and_continues_past_malformed_files(
+    make_agent: MakeAgent, home: Path, capsys: pytest.CaptureFixture[str]
+) -> None:
+    agent = make_agent("claude")
+    agent.reconcile(agent.catalog.choices[1])
+    fork = Profiles("claude").fork(agent.root, "second", [])
+    (home / ".claude.json").write_text("not json")
+    agent.manifest["mcpServers"] = {"owned": {"command": "/updated/server"}}
+
+    agent.sync()
+
+    assert str(home / ".claude.json") in capsys.readouterr().err
+    assert (home / ".claude.json").read_text() == "not json"
+    assert read_document(fork / ".claude.json")["mcpServers"] == {
+        "owned": {"command": "/updated/server"}
+    }
+
+
 @pytest.mark.parametrize("name", AGENT_NAMES)
 def test_switch_is_per_launch_and_children_keep_root(make_agent: MakeAgent, name: str) -> None:
     agent = make_agent(name)

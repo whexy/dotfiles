@@ -49,8 +49,11 @@ def read_document(path: Path) -> Table:
     """Parse `path`, or return an empty document when it does not exist."""
     if not path.exists() and not path.is_symlink():
         return tomlkit.document() if _is_toml(path) else {}
-    text = path.read_text()
-    doc = cast(object, tomlkit.parse(text) if _is_toml(path) else json.loads(text))
+    try:
+        text = path.read_text()
+        doc = cast(object, tomlkit.parse(text) if _is_toml(path) else json.loads(text))
+    except ValueError as error:
+        raise SettingsError(f"{path}: {error}") from error
     if not is_table(doc):
         raise SettingsError(f"expected an object in {path}")
     return doc

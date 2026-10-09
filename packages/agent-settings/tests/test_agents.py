@@ -1,5 +1,6 @@
 import json
 import os
+import re
 import sys
 from collections.abc import Callable
 from pathlib import Path
@@ -302,13 +303,26 @@ def test_codex_in_app_model_and_profile_survive_sync(make_agent: MakeAgent) -> N
     assert doc["profile"] == "work"
 
 
-def test_malformed_config_is_not_overwritten(make_agent: MakeAgent) -> None:
-    agent = make_agent("claude")
+@pytest.mark.parametrize("name", AGENT_NAMES)
+def test_malformed_config_is_named_and_not_overwritten(make_agent: MakeAgent, name: str) -> None:
+    agent = make_agent(name)
     agent.root.mkdir()
-    agent.config_file.write_text("not json")
-    with pytest.raises(ValueError):
+    agent.config_file.write_text("not = [valid")
+    with pytest.raises(SettingsError, match=re.escape(str(agent.config_file))):
         agent.reconcile()
-    assert agent.config_file.read_text() == "not json"
+    assert agent.config_file.read_text() == "not = [valid"
+
+
+def test_failed_first_selection_never_routes_without_credentials(
+    make_agent: MakeAgent, home: Path
+) -> None:
+    agent = make_agent("claude")
+    (home / ".claude.json").write_text("not json")
+    with pytest.raises(SettingsError, match=re.escape(str(home / ".claude.json"))):
+        agent.reconcile(api_model(agent))
+    _, _, env = launch(agent)
+    if "ANTHROPIC_BASE_URL" in child_table(read_document(agent.config_file), "env"):
+        assert env["ANTHROPIC_API_KEY"] == SECRET
 
 
 def test_cancel_and_non_terminal_do_not_write(make_agent: MakeAgent) -> None:
