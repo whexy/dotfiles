@@ -1,7 +1,10 @@
 # tmux status-bar quota pills (servers without a desktop bar).
 #
-# tmux re-runs `#()` on every status-interval, so the script caches the API
-# response for updateInterval seconds and renders all providers in one call.
+# tmux re-runs `#()` on every status redraw, up to once a second per client,
+# so the script caches the API response for updateInterval seconds and reuses
+# its rendered pills until that response or the theme changes. The pills are a
+# function of those two alone: even the countdown comes from the response's
+# reset_in, not the clock.
 # Colors come from the catppuccin theme options at render time because `#()`
 # output is not format-expanded again.
 {
@@ -19,7 +22,6 @@ let
 
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
-  summaryFilter = ./summary.jq;
 
   enabled = config.dotfiles.terminal.tmux.enable && config.dotfiles.agents.enable;
 
@@ -36,40 +38,62 @@ let
     p: lib.escapeShellArg "${p.name}:${p.title}:${accent.${p.name} or "fg"}"
   ) providers;
 
+  # summary.jq is a whole program over $provider, so it nests as a function
+  # body and one jq run summarizes every pill. A record it cannot summarize
+  # drops only its own pill.
+  pillFilter = pkgs.writeText "tmux-ai-quota.jq" ''
+    def summary($provider):
+    ${builtins.readFile ./summary.jq}
+    ;
+    . as $quota
+    | $ARGS.positional[]
+    | split(":") as [$provider, $title, $color]
+    | $quota
+    | (try summary($provider) catch {present: false})
+    | select(.present == true)
+    | [$title, $color, .state, ((.remaining // 0) | round | tostring),
+       (.display_meter.countdown // "—")]
+    | join("|")
+  '';
+
   script = pkgs.writeShellScript "tmux-ai-quota" ''
     # macOS has no XDG_RUNTIME_DIR but a per-user TMPDIR; /tmp is shared.
     cache="''${XDG_RUNTIME_DIR:-''${TMPDIR:-/tmp}}/tmux-ai-quota-''${UID:-$(id -u)}.json"
+    rendered="''${cache%.json}.status"
 
     # Theme options may themselves be formats, so expand them through tmux.
+    theme="$(tmux display -p '#{E:@catppuccin_status_background}|#{E:@thm_surface_1}|#{E:@thm_surface_0}|#{E:@thm_fg}|#{E:@thm_overlay_1}|#{E:@thm_yellow}|#{E:@thm_red}|#{E:@thm_overlay_0}|#{E:@thm_peach}|#{E:@thm_blue}|#{E:@thm_green}|#{E:@thm_mauve}|#{E:@thm_fg}|#{E:@thm_mantle}')"
     IFS='|' read -r bg name_bg pct_bg fg dim warn crit err \
-      c_peach c_blue c_green c_mauve c_fg < <(
-      tmux display -p '#{E:@catppuccin_status_background}|#{E:@thm_surface_1}|#{E:@thm_surface_0}|#{E:@thm_fg}|#{E:@thm_overlay_1}|#{E:@thm_yellow}|#{E:@thm_red}|#{E:@thm_overlay_0}|#{E:@thm_peach}|#{E:@thm_blue}|#{E:@thm_green}|#{E:@thm_mauve}|#{E:@thm_fg}'
-    )
-    [ "$bg" = default ] || [ -z "$bg" ] && bg="$(tmux display -p '#{E:@thm_mantle}')"
+      c_peach c_blue c_green c_mauve c_fg mantle <<< "$theme"
+    [ "$bg" = default ] || [ -z "$bg" ] && bg="$mantle"
     # Powerline half-circles; catppuccin's own right separator is a plain space.
     lcap=$'\ue0b6'; rcap=$'\ue0b4'
 
+    # The cache is only ever replaced, so inode and mtime identify a response.
+    identify() { stat -c '%i %Y' "$cache" 2>/dev/null || stat -f '%i %m' "$cache" 2>/dev/null; }
     fresh=0
     if [ -s "$cache" ]; then
-      now=$(date +%s); mtime=$(stat -c %Y "$cache" 2>/dev/null || stat -f %m "$cache")
-      [ $((now - mtime)) -lt ${toString updateInterval} ] && fresh=1
+      read -r ino mtime < <(identify)
+      [ $(($(date +%s) - mtime)) -lt ${toString updateInterval} ] && fresh=1
     fi
     # curl -o follows a symlink planted at a predictable name; download into
     # a fresh file and rename it over the cache instead.
     if [ "$fresh" = 0 ] && tmp="$(mktemp "$cache.XXXXXX")"; then
       ${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} -o "$tmp" 2>/dev/null &&
         mv "$tmp" "$cache" || rm -f "$tmp"
+      read -r ino mtime < <(identify)
     fi
     [ -s "$cache" ] || exit 0
 
-    first=1
-    for spec in ${providerArgs}; do
-      IFS=: read -r provider title color <<< "$spec"
+    key="$ino $mtime $theme"
+    if { IFS= read -r seen && IFS= read -r pills; } 2>/dev/null < "$rendered" && [ "$seen" = "$key" ]; then
+      printf '%s' "$pills"
+      exit 0
+    fi
+
+    pills=
+    while IFS='|' read -r title color state remaining countdown; do
       eval "name_fg=\$c_$color"
-      summary="$(${jq} -c -f ${summaryFilter} --arg provider "$provider" "$cache" 2>/dev/null)" || continue
-      [ "$(printf '%s' "$summary" | ${jq} -r .present)" = true ] || continue
-      IFS='|' read -r state remaining countdown < <(printf '%s' "$summary" | ${jq} -r '
-        [.state, ((.remaining // 0) | round | tostring), (.display_meter.countdown // "—")] | join("|")')
 
       case "$state" in
         ok) pct_fg="$fg" ;;
@@ -85,11 +109,15 @@ let
         ${lib.optionalString showCountdown ''body="$body #[fg=$dim]$countdown"''}
       fi
 
-      [ "$first" = 1 ] || printf ' '
-      first=0
-      printf '#[fg=%s,bg=%s]%s#[fg=%s,bg=%s,bold]%s#[nobold] #[bg=%s] %s#[fg=%s,bg=%s]%s' \
+      printf -v pill '#[fg=%s,bg=%s]%s#[fg=%s,bg=%s,bold]%s#[nobold] #[bg=%s] %s#[fg=%s,bg=%s]%s' \
         "$name_bg" "$bg" "$lcap" "$name_fg" "$name_bg" "$title" "$pct_bg" "$body" "$pct_bg" "$bg" "$rcap"
-    done
+      pills="''${pills:+$pills }$pill"
+    done < <(${jq} -r -f ${pillFilter} --args ${providerArgs} < "$cache" 2>/dev/null)
+
+    printf '%s' "$pills"
+    if tmp="$(mktemp "$rendered.XXXXXX")"; then
+      printf '%s\n%s\n' "$key" "$pills" > "$tmp" && mv "$tmp" "$rendered" || rm -f "$tmp"
+    fi
   '';
 in
 {
