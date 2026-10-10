@@ -211,34 +211,6 @@ build-proxmox CONFIG DISK_GB="auto":
     echo ""
     echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
 
-# Build VMware desktop VM image (skokie, aarch64)
-build-desktop:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    mkdir -p result/desktop
-
-    echo "Building VMware VMDK image for desktop (skokie)..."
-    nix build \
-        ".#nixosConfigurations.skokie.config.system.build.images.vmware" \
-        -o result/desktop/vmware
-
-    VMDK_FILE=$(find -L result/desktop/vmware -name '*.vmdk' -type f 2>/dev/null | head -1)
-
-    echo ""
-    echo "Build complete!"
-    echo "Architecture: aarch64"
-    echo "Created: $VMDK_FILE"
-    echo ""
-    echo "Create a new VM in VMware and use this VMDK as the disk."
-    echo "Recommended settings:"
-    echo "  - Guest OS: Other Linux 6.x kernel 64-bit"
-    echo "  - Enable 3D acceleration in Display settings"
-    echo "  - Set clipboard/drag-drop to Bidirectional"
-
-# Backward compatibility alias
-alias build-vmware := build-desktop
-
 # Build the moore server dev VM launcher (run on moore via nix-portable)
 # After building, run on moore:
 #   export NIX_DISK_IMAGE=/tmp/moore-vm-$USER.qcow2

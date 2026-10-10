@@ -67,14 +67,6 @@ export const categories: Category[] = [
         note: "Incus system container for development. Auto-upgrading.",
       },
       {
-        label: "skokie",
-        hardware: "Apple silicon desktop VM",
-        caps: ["base", "dev", "gui"],
-        cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#skokie",
-        nhCmd: "nh os switch --hostname skokie github:whexy/dotfiles",
-        note: "VMware desktop VM running on a MacBook. Image: just build-desktop.",
-      },
-      {
         label: "wsl",
         hardware: "NixOS-WSL",
         caps: ["base", "dev"],
@@ -158,13 +150,6 @@ export const categories: Category[] = [
         caps: ["base", "dev"],
         cmd: "just build-wsl",
         note: "Import with: wsl --import NixOS <path> result/wsl/nixos.wsl",
-      },
-      {
-        label: "desktop VM",
-        hardware: "VMDK desktop image",
-        caps: ["base", "dev", "gui"],
-        cmd: "just build-desktop",
-        note: "Attach the VMDK as the disk of a new VMware VM.",
       },
       {
         label: "moore VM",
@@ -252,5 +237,4 @@ export const heroCommands: string[] = [
   "sudo nixos-rebuild switch --flake github:whexy/dotfiles#ellison",
   "sudo darwin-rebuild switch --flake github:whexy/dotfiles#golf",
   "home-manager switch --flake github:whexy/dotfiles#wenxuan@mars",
-  "just build-desktop",
 ];
