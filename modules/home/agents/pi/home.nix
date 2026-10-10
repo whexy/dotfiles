@@ -38,6 +38,8 @@ in
   // {
     # Desktop notification on agent settle (see extensions/notify.ts).
     ".pi/agent/extensions/notify.ts".source = ./extensions/notify.ts;
+    # Opt-in footer with live token speed (see extensions/token-speed.ts).
+    ".pi/agent/extensions/token-speed.ts".source = ./extensions/token-speed.ts;
   }
   // {
     # Discover the CLIProxyAPI catalog and clone matching model metadata from pi.
