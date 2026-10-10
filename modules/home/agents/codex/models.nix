@@ -21,6 +21,7 @@
         base_url = "${proxy.baseUrl}/v1";
         model_catalog_url = "${proxy.baseUrl}/v1/models?client_version=${codexVersion}";
         wire_api = "responses";
+        supports_websockets = true;
         requires_openai_auth = false;
         env_key = "OPENAI_API_KEY";
         env_http_headers = proxy.cfAccessHeaderEnv;

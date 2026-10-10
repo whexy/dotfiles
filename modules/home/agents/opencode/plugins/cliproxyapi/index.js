@@ -4,7 +4,8 @@
 // runs, so models the proxy drops disappear without a restart. A model takes
 // its package (wire format), limits, and capabilities from the entry with the
 // same ID in OpenCode's own catalog, vendors first. Models the catalog does
-// not know use the OpenAI-compatible package with OpenCode's model defaults.
+// not know use OpenCode's model defaults. GPT IDs always use Responses over
+// WebSocket; other unknown IDs use the OpenAI-compatible HTTP package.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -17,6 +18,7 @@ const VENDORS = ["anthropic", "openai", "google", "xai"];
 // Each value is the API path in the convention that package appends to.
 const PATHS = {
   "@opencode/ai/providers/openai": "/v1",
+  "@opencode/ai/providers/openai/responses": "/v1",
   "@opencode/ai/providers/anthropic": "/v1",
   "@opencode/ai/providers/xai": "/v1",
   "@opencode/ai/providers/google": "/v1beta",
@@ -83,9 +85,12 @@ function catalogEntry(editor, id) {
   }
 }
 
-function proxyModel(editor, baseUrl, id) {
+export function proxyModel(editor, baseUrl, id) {
   const match = catalogEntry(editor, id);
-  const pkg = match?.pkg ?? FALLBACK;
+  const chatgpt = id.startsWith("gpt-");
+  const pkg = chatgpt
+    ? "@opencode/ai/providers/openai/responses"
+    : (match?.pkg ?? FALLBACK);
   const {
     baseURL: _url,
     provider: _provider,
@@ -110,7 +115,10 @@ function proxyModel(editor, baseUrl, id) {
     modelID: id,
     providerID: PROVIDER,
     package: pkg,
-    settings: { ...settings, baseURL: `${baseUrl}${PATHS[pkg]}` },
+    settings: {
+      ...settings,
+      baseURL: `${baseUrl}${PATHS[pkg]}`,
+    },
   };
 }
 
@@ -147,6 +155,10 @@ export default {
           settings: {
             baseURL: `${baseUrl}/v1`,
             apiKey: state.credentials.apiKey,
+            // OpenCode selects session transport from the provider, not the
+            // model. Only WebSocket-capable Responses adapters consume it;
+            // Messages and Chat Completions adapters keep using HTTP.
+            transport: "websocket",
           },
           headers: state.credentials.headers,
         },
