@@ -10,7 +10,7 @@ let
 
   # The nightly server package contains only T3's server runtime. Provider
   # CLIs remain on the Home Manager profile PATH with their existing wrappers.
-  t3code = if cfg.server.package == null then perSystem.self.t3code-nightly else cfg.server.package;
+  t3code = if cfg.package == null then perSystem.self.t3code-nightly else cfg.package;
 
   # T3 treats an executable at this path as its installed preview browser; the
   # package's patched copy replaces the download that cannot run on NixOS.
@@ -52,8 +52,7 @@ let
 
 in
 {
-  packages =
-    lib.optional cfg.server.enable t3code ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
+  packages = [ t3code ] ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
 
   homeFiles = lib.optionalAttrs linkBrowser {
     ${browserDir}.source = browser;

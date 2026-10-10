@@ -4,7 +4,7 @@
 # contract: packages, homeFiles, shellAliases, activation, and the
 # systemdUserServices/launchdAgents it runs. This module keeps only shared
 # concerns: options, the global AGENTS.md, agenix secrets, and merging.
-{
+args@{
   pkgs,
   config,
   lib,
@@ -21,13 +21,18 @@ in
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
     t3code = {
-      server = {
-        enable = lib.mkEnableOption "the T3 Code server, published on the tailnet through Tailscale Serve";
-        package = lib.mkOption {
-          type = lib.types.nullOr lib.types.package;
-          default = null;
-          description = "T3 Code server package; null selects the pinned nightly package.";
-        };
+      package = lib.mkOption {
+        type = lib.types.nullOr lib.types.package;
+        default = null;
+        description = "T3 Code package; null selects the pinned nightly package.";
+      };
+      server.enable = lib.mkOption {
+        type = lib.types.bool;
+        # Clients only reach the server through Tailscale Serve. Standalone
+        # homes have no osConfig to say whether this machine is on the tailnet.
+        default = args.osConfig.dotfiles.network.tailscale.enable or false;
+        defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
+        description = "Whether to run the T3 Code server, published on the tailnet through Tailscale Serve.";
       };
       pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
     };
