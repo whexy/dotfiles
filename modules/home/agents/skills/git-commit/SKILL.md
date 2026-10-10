@@ -1,6 +1,6 @@
 ---
 name: git-commit
-description: Commit, tag, and pull request summary rules for Wenxuan's repositories, including the required Assisted-by trailer and the signing check. Use before git commit, git tag, or writing a pull request summary.
+description: Commit, tag, and pull request summary rules for Wenxuan's repositories, including the required Assisted-by trailer. Use before git commit, git tag, or writing a pull request summary.
 ---
 
 # Committing In My Repositories
@@ -60,50 +60,13 @@ Pull request summaries and review comments are separate contributions and must
 carry their own disclosure. Any adequate form of disclosure is permitted for
 non-LLM tooling.
 
-## Signing
-
-Sign whenever a signing agent is available; commit unsigned only when it is
-not.
-
-git signs by default with an SSH key held by 1Password: through the local
-1Password app on a physical machine (`golf`, `sheridan`, `ellison`), or
-through an agent forwarded over SSH on a remote one (`mudd`, `neith`,
-`phobos`, `zoozve`). Agents usually run headless with no agent forwarded, so
-check once per session, before the first commit or tag, with the same
-program and key git uses:
-
-```bash
-key=$(mktemp); git config user.signingkey > "$key"
-prog=$(git config gpg.ssh.program || echo ssh-keygen)
-if echo probe | "$prog" -Y sign -n git -f "$key" >/dev/null 2>&1; then
-  echo sign
-else
-  echo no-sign
-fi
-rm -f "$key"
-```
-
-- `sign`: commit and tag normally; git signs.
-- `no-sign`: pass `--no-gpg-sign` to every `git commit` and `--no-sign` to
-  every `git tag` for the rest of the session. Do not first try a signed
-  commit and fall back on failure, and do not change git config.
-
 ## Tagging
 
-Signing tags is optional, like signing commits.
-
-`tag.gpgsign=true` is set, so a bare `git tag <name>` opens an editor for the
-tag message and blocks the session. Always pass `-m`. When the signing check
-said `sign`:
+Create annotated tags, and always pass `-m`; without it git opens an editor
+for the tag message and blocks the session:
 
 ```bash
-git tag -s v0.1 -m "v0.1"
-```
-
-When it said `no-sign`, create an unsigned annotated tag:
-
-```bash
-git tag --no-sign -a v0.1 -m "v0.1"
+git tag -a v0.1 -m "v0.1"
 ```
 
 ## Before you commit
@@ -113,7 +76,4 @@ git tag --no-sign -a v0.1 -m "v0.1"
 - One `Assisted-by: <Tool Name>, <model ID>` trailer, with the official tool
   name, the exact model ID you are running as, and no reasoning effort.
 - No `Co-authored-by:`, `Claude-Session:` or other harness trailers.
-- The signing check ran once this session, and every commit and tag follows
-  its result.
-- `git tag` invocations pass `-m`, plus `-s` after `sign` or `--no-sign -a`
-  after `no-sign`.
+- `git tag` invocations pass `-a` and `-m`.

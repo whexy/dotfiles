@@ -3,6 +3,7 @@
   config,
   lib,
   perSystem,
+  gitConfig,
 }:
 let
   cfg = config.dotfiles.agents.t3code;
@@ -38,6 +39,9 @@ let
       ]
     }
     . ${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh
+    # T3 sessions arrive without SSH, so no forwarded signing agent ever
+    # reaches its git actions or terminal panel; commit unsigned as agents do.
+    export GIT_CONFIG_GLOBAL=${gitConfig}
     cd ${lib.escapeShellArg config.home.homeDirectory}
     # A new host starts this service before anyone logs in to the tailnet, and
     # t3 only warns when `tailscale serve` fails, leaving the server

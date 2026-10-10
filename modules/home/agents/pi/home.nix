@@ -4,6 +4,7 @@
   proxy,
   defaults,
   mcp,
+  prelude,
 }:
 let
   aiProxyExtension = import ./ai-proxy.nix { inherit pkgs proxy defaults; };
@@ -12,7 +13,7 @@ let
   };
   webSearch = import ./web-search.nix { inherit defaults; };
   pi = pkgs.writeShellScriptBin "pi" ''
-    ${mcp.exportSecrets}
+    ${prelude}
     exec ${lib.getExe' pkgs.llm-agents.pi "pi"} "$@"
   '';
 

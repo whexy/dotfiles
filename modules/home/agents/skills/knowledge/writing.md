@@ -67,8 +67,8 @@ git commit -m "docs(<repo-or-topic>): <what was learned>"
 git pull --rebase --quiet && git push --quiet
 ```
 
-Follow the git-commit skill for the message and trailer. Signing is optional
-here. If the push is rejected, pull with rebase and push again; resolve a
-conflict by merging both sides' facts, never by dropping the other side.
+Follow the git-commit skill for the message and trailer. If the push is
+rejected, pull with rebase and push again; resolve a conflict by merging both
+sides' facts, never by dropping the other side.
 
 Tell the user in one line which entries you added or updated.

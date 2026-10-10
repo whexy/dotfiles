@@ -4,6 +4,7 @@
   proxy,
   defaults,
   mcp,
+  prelude,
 }:
 let
   upstream = pkgs.llm-agents.opencode2;
@@ -13,7 +14,7 @@ let
   # starts it and resolves `{env:...}` from there, so it keeps the MCP secrets
   # it started with until `opencode service restart`.
   package = pkgs.writeShellScriptBin "opencode" ''
-    ${mcp.exportSecrets}
+    ${prelude}
     exec ${lib.getExe' upstream "opencode2"} "$@"
   '';
   settings = import ./config.nix {

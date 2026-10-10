@@ -78,6 +78,22 @@ in
       };
       proxy = import ./proxy.nix { inherit config; };
       mcp = import ./mcp.nix { inherit pkgs config lib; };
+      # Agents commit as the user but did not write the code, so they leave
+      # commits and tags unsigned while the user's own git keeps signing. The
+      # include must come first: a later value wins.
+      gitConfig = pkgs.writeText "agent-gitconfig" ''
+        [include]
+          path = ${config.xdg.configHome}/git/config
+        [commit]
+          gpgSign = false
+        [tag]
+          gpgSign = false
+      '';
+      # Shell lines every agent launcher runs before starting its agent; the
+      # agent's tool shells inherit what they export.
+      prelude = mcp.exportSecrets + ''
+        export GIT_CONFIG_GLOBAL=${gitConfig}
+      '';
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard every harness implements.
       skills = lib.mapAttrs (name: _: ./skills + "/${name}") (
@@ -117,6 +133,7 @@ in
             proxy
             defaults
             mcp
+            prelude
             ;
         })
         (import ./opencode/home.nix {
@@ -126,6 +143,7 @@ in
             proxy
             defaults
             mcp
+            prelude
             ;
         })
         (import ./claude-code/home.nix {
@@ -135,6 +153,7 @@ in
             proxy
             withModelPicker
             mcp
+            prelude
             ;
         })
         (import ./codex/home.nix {
@@ -144,6 +163,7 @@ in
             proxy
             withModelPicker
             mcp
+            prelude
             ;
         })
         (import ./t3code/home.nix {
@@ -152,6 +172,7 @@ in
             config
             lib
             perSystem
+            gitConfig
             ;
         })
         (import ./gcai/home.nix {

@@ -4,13 +4,14 @@
   proxy,
   withModelPicker,
   mcp,
+  prelude,
 }:
 let
   agent = withModelPicker {
     name = "claude";
     package = pkgs.llm-agents.claude-code;
     mcpServers = mcp.servers;
-    prelude = mcp.exportSecrets;
+    inherit prelude;
     managedLinks = [
       "CLAUDE.md"
       "skills"
