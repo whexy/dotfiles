@@ -8,8 +8,6 @@
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).
     browser.firefox.enable = lib.mkDefault true;
-    # Chromium managed policies; Google Chrome Homebrew cask on Darwin.
-    browser.chromium.enable = lib.mkDefault true;
     # PipeWire audio stack; only has an effect on NixOS.
     audio.enable = lib.mkDefault true;
     # OBS Studio with virtual camera; only has an effect on NixOS.
