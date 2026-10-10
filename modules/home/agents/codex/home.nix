@@ -4,6 +4,7 @@
   proxy,
   withModelPicker,
   mcp,
+  prelude,
 }:
 let
   # Codex expands no `${VAR}` in header values; it reads a bearer token from
@@ -25,7 +26,7 @@ let
     name = "codex";
     package = pkgs.llm-agents.codex;
     mcpServers = lib.mapAttrs (_: toCodex) mcp.servers;
-    prelude = mcp.exportSecrets;
+    inherit prelude;
     managedLinks = [ "AGENTS.md" ];
     resetEnv = [
       "OPENAI_BASE_URL"
