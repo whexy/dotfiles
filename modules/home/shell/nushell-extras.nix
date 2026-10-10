@@ -28,6 +28,17 @@ in
         enableBashIntegration = false;
         settings = {
           add_newline = false;
+          # Grey user@host on every prompt, matching the zsh p10k context segment.
+          username = {
+            show_always = true;
+            style_user = "242";
+            format = "[$user]($style)";
+          };
+          hostname = {
+            ssh_only = false;
+            style = "242";
+            format = "[@$hostname]($style) ";
+          };
         };
       };
 
