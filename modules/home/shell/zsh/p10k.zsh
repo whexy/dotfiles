@@ -5,6 +5,7 @@
 #   - Instant prompt set to 'quiet' (compatible with direnv, nix, etc.)
 #   - Added nix_shell segment to show when inside a nix shell/devShell
 #   - Transient prompt enabled (cleans up past prompts)
+#   - user@host always shown, not only as root or over SSH
 
 # Temporarily change options.
 'builtin' 'local' '-a' 'p10k_config_opts'
@@ -92,8 +93,6 @@
   typeset -g POWERLEVEL9K_CONTEXT_ROOT_TEMPLATE="%F{$white}%n%f%F{$grey}@%m%f"
   # Context format when not root: user@host. The whole thing grey.
   typeset -g POWERLEVEL9K_CONTEXT_TEMPLATE="%F{$grey}%n@%m%f"
-  # Don't show context unless root or in SSH.
-  typeset -g POWERLEVEL9K_CONTEXT_{DEFAULT,SUDO}_CONTENT_EXPANSION=
 
   # Show previous command duration only if it's >= 5s.
   typeset -g POWERLEVEL9K_COMMAND_EXECUTION_TIME_THRESHOLD=5
