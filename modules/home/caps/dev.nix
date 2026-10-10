@@ -1,7 +1,7 @@
 # dev home cap preset: full development environment.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with lib.mkForce.
-args@{
+{
   config,
   lib,
   pkgs,
@@ -14,9 +14,6 @@ args@{
     agents = {
       enable = lib.mkDefault true;
       firefoxDevtools.enable = lib.mkDefault true;
-      # Clients only reach the server through Tailscale Serve. Standalone
-      # homes have no osConfig to say whether this machine is on the tailnet.
-      t3code.server.enable = lib.mkDefault (args.osConfig.dotfiles.network.tailscale.enable or false);
       t3code.pair.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser

@@ -11,6 +11,7 @@ pkgs.writeShellApplication {
   name = "t3-pair";
   runtimeInputs = [
     pkgs.coreutils
+    pkgs.curl
     pkgs.jq
   ]
   ++ pkgs.lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.wl-clipboard;
@@ -91,12 +92,16 @@ pkgs.writeShellApplication {
     fi
     read -r peer_id dns_name <<<"$peer"
 
-    create=(t3 auth pairing create --json --label "$label" --ttl "$ttl" --base-url "https://$dns_name:35338")
+    base_url="https://$dns_name:35338"
+    # Every agent host has the t3 CLI, which mints tokens whether or not a
+    # server is running, so only a live server proves the URL will work.
+    if ! curl -fs --max-time 10 -o /dev/null "$base_url/"; then
+      echo "t3-pair: no T3 Code server answers at $base_url" >&2
+      exit 1
+    fi
+
+    create=(t3 auth pairing create --json --label "$label" --ttl "$ttl" --base-url "$base_url")
     if [ "$peer_id" = "$(jq -r '.Self.ID' <<<"$status")" ]; then
-      if ! command -v t3 >/dev/null; then
-        echo "t3-pair: this machine does not run the T3 Code server" >&2
-        exit 1
-      fi
       pairing=$("''${create[@]}")
     else
       # A login shell is what puts the Nix profiles on PATH for a
