@@ -41,6 +41,34 @@ in
           runHook postInstall
         '';
       };
+
+      # A tool's zsh hook only changes with its package, so render it at build
+      # time instead of running the tool on every shell start.
+      zshHook =
+        name:
+        {
+          command,
+          setup ? "",
+        }:
+        pkgs.runCommand "${name}-zsh-hook" { } ''
+          export HOME=$TMPDIR
+          ${setup}
+          ${command} > $out
+        '';
+      zoxideHook = zshHook "zoxide" {
+        command = "${lib.getExe config.programs.zoxide.package} init zsh ${lib.concatStringsSep " " config.programs.zoxide.options}";
+      };
+      fzfHook = zshHook "fzf" { command = "${lib.getExe config.programs.fzf.package} --zsh"; };
+      direnvHook = zshHook "direnv" {
+        command = "${lib.getExe config.programs.direnv.package} hook zsh";
+      };
+      atuinHook = zshHook "atuin" {
+        setup = ''
+          mkdir -p $HOME/.config/atuin
+          ln -s ${config.xdg.configFile."atuin/config.toml".source} $HOME/.config/atuin/config.toml
+        '';
+        command = "${lib.getExe config.programs.atuin.package} init zsh ${lib.escapeShellArgs config.programs.atuin.flags}";
+      };
     in
     {
       # Prompt: Powerlevel10k with Pure style, configured declaratively via Nix.
@@ -53,8 +81,16 @@ in
       };
 
       programs = {
-        fzf.enable = true;
-        zoxide.enable = true;
+        # The zsh hooks of fzf, zoxide, atuin and direnv are sourced from
+        # build-time renders in initContent below, at Home Manager's positions.
+        fzf = {
+          enable = true;
+          enableZshIntegration = false;
+        };
+        zoxide = {
+          enable = true;
+          enableZshIntegration = false;
+        };
 
         bat = {
           enable = true;
@@ -77,6 +113,7 @@ in
 
         atuin = {
           enable = true;
+          enableZshIntegration = false;
           settings = {
             auto_sync = true;
             sync_address = "https://atuin.at-basking.ts.net";
@@ -95,6 +132,7 @@ in
 
         direnv = {
           enable = true;
+          enableZshIntegration = false;
           silent = true;
           nix-direnv.enable = true;
         };
@@ -153,6 +191,27 @@ in
             (lib.mkOrder 550 ''
               ZSH_COMPDUMP="''${XDG_CACHE_HOME:-$HOME/.cache}/zsh/zcompdump-''${HOST%%.*}-$ZSH_VERSION"
               [[ -d ''${ZSH_COMPDUMP:h} ]] || mkdir -p ''${ZSH_COMPDUMP:h}
+            '')
+
+            (lib.mkOrder 851 ''
+              source ${zoxideHook}
+            '')
+
+            # Home Manager's history settings are also at 910 and come first.
+            (lib.mkOrder 911 ''
+              if [[ $options[zle] = on ]]; then
+                source ${fzfHook}
+              fi
+            '')
+
+            # After the other order-1000 hooks, and before syntax highlighting
+            # (1200), which must wrap atuin's widgets.
+            (lib.mkOrder 1001 ''
+              source ${direnvHook}
+
+              if [[ $options[zle] = on ]]; then
+                source ${atuinHook}
+              fi
             '')
 
             # Main shell configuration (default order 1000).
