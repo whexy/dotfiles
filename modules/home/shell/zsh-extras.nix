@@ -113,6 +113,9 @@ in
 
           oh-my-zsh = {
             enable = true;
+            package = pkgs.oh-my-zsh.overrideAttrs (old: {
+              patches = (old.patches or [ ]) ++ [ ./zsh/oh-my-zsh-compdump.patch ];
+            });
             theme = "";
             plugins = [
               "command-not-found"
