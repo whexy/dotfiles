@@ -42,6 +42,19 @@ in
         '';
       };
 
+      # p10k compiles these files next to itself whenever its directory is
+      # writable, which the store is not.
+      powerlevel10k = pkgs.zsh-powerlevel10k.overrideAttrs (old: {
+        postFixup = (old.postFixup or "") + ''
+          root=$out/share/zsh/themes/powerlevel10k
+          for f in powerlevel9k.zsh-theme powerlevel10k.zsh-theme \
+            internal/{p10k,icons,configure,worker,parser}.zsh \
+            gitstatus/gitstatus.plugin.zsh gitstatus/install; do
+            ${lib.getExe config.programs.zsh.package} -fc 'zcompile -R -- "$1.zwc" "$1"' zsh "$root/$f"
+          done
+        '';
+      });
+
       # A tool's zsh hook only changes with its package, so render it at build
       # time instead of running the tool on every shell start.
       zshHook =
@@ -309,7 +322,7 @@ in
           plugins = [
             {
               name = "powerlevel10k";
-              src = pkgs.zsh-powerlevel10k;
+              src = powerlevel10k;
               file = "share/zsh-powerlevel10k/powerlevel10k.zsh-theme";
             }
             {
