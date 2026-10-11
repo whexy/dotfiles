@@ -1,0 +1,77 @@
+--- a/oh-my-zsh.sh
++++ b/oh-my-zsh.sh
+@@ -64,7 +64,7 @@
+ fi
+ 
+ # Create cache and completions dir and add to $fpath
+-mkdir -p "$ZSH_CACHE_DIR/completions"
++[[ -d "$ZSH_CACHE_DIR/completions" ]] || mkdir -p "$ZSH_CACHE_DIR/completions"
+ (( ${fpath[(Ie)$ZSH_CACHE_DIR/completions]} )) || fpath=("$ZSH_CACHE_DIR/completions" $fpath)
+ 
+ # Check for updates on initial load...
+@@ -111,20 +111,36 @@
+ fi
+ 
+ # Construct zcompdump OMZ metadata
+-zcompdump_revision="#omz revision: $(builtin cd -q "$ZSH"; git rev-parse HEAD 2>/dev/null)"
+-zcompdump_fpath="#omz fpath: $fpath"
++# A store path is never a git checkout, so the revision is always empty.
++zcompdump_revision="#omz revision: "
++# Resolved paths change whenever a profile generation changes the completions
++# on fpath, which is what lets compinit -C below trust an unchanged dump.
++zcompdump_fpath="#omz fpath: ${fpath:A}"
+ 
+ # Delete the zcompdump file if OMZ zcompdump metadata changed
+-if ! command grep -q -Fx "$zcompdump_revision" "$ZSH_COMPDUMP" 2>/dev/null \
+-   || ! command grep -q -Fx "$zcompdump_fpath" "$ZSH_COMPDUMP" 2>/dev/null; then
++zcompdump_lines=()
++[[ -r "$ZSH_COMPDUMP" ]] && zcompdump_lines=("${(@f)$(<$ZSH_COMPDUMP)}")
++if (( ! ${zcompdump_lines[(Ie)$zcompdump_revision]} || ! ${zcompdump_lines[(Ie)$zcompdump_fpath]} )); then
+   command rm -f "$ZSH_COMPDUMP"
+   zcompdump_refresh=1
+ fi
+ 
+ if [[ "$ZSH_DISABLE_COMPFIX" != true ]]; then
+   source "$ZSH/lib/compfix.zsh"
+-  # Load only from secure directories
+-  compinit -i -d "$ZSH_COMPDUMP"
++  # Load only from secure directories. The dump was validated against fpath
++  # above, so -C skips the rescan and audit; a missing dump is still audited.
++  compinit -C -i -d "$ZSH_COMPDUMP"
++  # Without -C, compaudit defines this fallback where getent(1) is missing
++  # (macOS); keep it so interactive shells still have the function.
++  [[ -n $commands[getent] ]] || (( $+functions[getent] )) || getent() {
++    if [[ $1 = hosts ]]; then
++      sed 's/#.*//' /etc/$1 | grep -w $2
++    elif [[ $2 = <-> ]]; then
++      grep ":$2:[^:]*$" /etc/$1
++    else
++      grep "^$2:" /etc/$1
++    fi
++  }
+   # If completion insecurities exist, warn the user
+   handle_completion_insecurities &|
+ else
+@@ -134,7 +150,7 @@
+ 
+ # Append zcompdump metadata if missing
+ if (( $zcompdump_refresh )) \
+-  || ! command grep -q -Fx "$zcompdump_revision" "$ZSH_COMPDUMP" 2>/dev/null; then
++  || (( ! ${zcompdump_lines[(Ie)$zcompdump_revision]} )); then
+   # Use `tee` in case the $ZSH_COMPDUMP filename is invalid, to silence the error
+   # See https://github.com/ohmyzsh/ohmyzsh/commit/dd1a7269#commitcomment-39003489
+   tee -a "$ZSH_COMPDUMP" &>/dev/null <<EOF
+@@ -143,10 +159,11 @@
+ $zcompdump_fpath
+ EOF
+ fi
+-unset zcompdump_revision zcompdump_fpath zcompdump_refresh
++unset zcompdump_revision zcompdump_fpath zcompdump_refresh zcompdump_lines
+ 
+ # zcompile the completion dump file if the .zwc is older or missing.
+-if command mkdir "${ZSH_COMPDUMP}.lock" 2>/dev/null; then
++if [[ ! "${ZSH_COMPDUMP}.zwc" -nt "$ZSH_COMPDUMP" ]] \
++  && command mkdir "${ZSH_COMPDUMP}.lock" 2>/dev/null; then
+   zrecompile -q -p "$ZSH_COMPDUMP"
+   command rm -rf "$ZSH_COMPDUMP.zwc.old" "${ZSH_COMPDUMP}.lock"
+ fi
