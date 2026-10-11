@@ -10,10 +10,15 @@ in
 {
   config = lib.mkMerge [
     (lib.mkIf cfg.zsh.enable {
-      programs.zsh.enable = true;
-      # /etc/zshrc's compinit dumps to $HOME and runs before ~/.zshrc; Home Manager
-      # runs its own compinit against an XDG cache path instead.
-      programs.zsh.enableGlobalCompInit = false;
+      programs.zsh = {
+        enable = true;
+        # /etc/zshrc's compinit dumps to $HOME and runs before ~/.zshrc; Home Manager
+        # runs its own compinit against an XDG cache path instead.
+        enableGlobalCompInit = false;
+        # Home Manager's p10k sets the prompt; skip loading the stock `suse` theme
+        # that it would immediately replace.
+        promptInit = "";
+      };
     })
     (lib.mkIf (cfg.zsh.enable || cfg.nushell.enable) {
       environment.shells =
