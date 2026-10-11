@@ -11,6 +11,7 @@ pkgs.writers.writePython3Bin "motd"
     """Render a compact, responsive system dashboard for interactive shells."""
 
     import fcntl
+    import json
     import os
     import platform
     import re
@@ -363,9 +364,45 @@ pkgs.writers.writePython3Bin "motd"
             sock.close()
 
 
+    def tailscale_ips():
+        # `tailscale ip` prints this LocalAPI status field; asking tailscaled
+        # directly skips ~40 ms of CLI startup. None defers to the CLI, which
+        # also knows non-default sockets and the macOS app's transport.
+        for path in ("/var/run/tailscaled.socket", "/var/run/tailscale/tailscaled.sock"):
+            if not os.path.exists(path):
+                continue
+            sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
+            try:
+                sock.settimeout(0.25)
+                sock.connect(path)
+                sock.sendall(
+                    b"GET /localapi/v0/status?peers=false HTTP/1.0\r\n"
+                    b"Host: local-tailscaled.sock\r\nSec-Tailscale: localapi\r\n\r\n"
+                )
+                chunks = []
+                while True:
+                    chunk = sock.recv(65536)
+                    if not chunk:
+                        break
+                    chunks.append(chunk)
+                head, _, body = b"".join(chunks).partition(b"\r\n\r\n")
+                if head.split(b" ", 2)[1:2] != [b"200"]:
+                    return None
+                return json.loads(body).get("TailscaleIPs") or []
+            except Exception:
+                return None
+            finally:
+                sock.close()
+        return None
+
+
     def get_tailscale_ipv4():
-        output = command(["tailscale", "ip", "-4"], timeout=0.25)
-        return output.split()[0] if output else paint("disconnected", DIM)
+        ips = tailscale_ips()
+        if ips is None:
+            output = command(["tailscale", "ip", "-4"], timeout=0.25)
+            return output.split()[0] if output else paint("disconnected", DIM)
+        ipv4 = next((ip for ip in ips if "." in ip), None)
+        return ipv4 if ipv4 else paint("disconnected", DIM)
 
 
     def get_sessions():
