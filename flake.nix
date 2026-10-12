@@ -7,6 +7,7 @@
       "https://nix-community.cachix.org"
       "https://niri.cachix.org"
       "https://vicinae.cachix.org"
+      "https://pwndbg.cachix.org"
       "https://whexy.cachix.org"
     ];
     extra-trusted-public-keys = [
@@ -14,6 +15,7 @@
       "nix-community.cachix.org-1:mB9FSh9qf2dCimDSUo8Zy7bkq5CX+/rkCWyvRCYg3Fs="
       "niri.cachix.org-1:Wv0OmO7PsuocRKzfDoJ3mulSl7Z6oezYhGhR+3W2964="
       "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
+      "pwndbg.cachix.org-1:HhtIpP7j73SnuzLgobqqa8LVTng5Qi36sQtNt79cD3k="
       "whexy.cachix.org-1:XzmCWs+qh3vMtB4p1joLM+ajn5z/UYgZOyxykzEDV2o="
     ];
   };
@@ -100,6 +102,12 @@
     # on this flake's own nixpkgs, so overriding it guarantees a local npm
     # build; matching upstream at least makes vicinae.cachix.org reachable.
     vicinae-extensions.url = "github:vicinaehq/extensions";
+
+    # Pinned to the release REA's recorded-crash adapter is verified against,
+    # which also reads this input's venv. Not following our nixpkgs, for the
+    # same reason as vicinae-extensions: its uv2nix environment then comes
+    # prebuilt from pwndbg.cachix.org.
+    pwndbg.url = "github:pwndbg/pwndbg/2026.09.15";
 
     paneru = {
       # Paneru's Lua layout API is newer than v0.4.4; flake.lock pins the

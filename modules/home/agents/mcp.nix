@@ -7,7 +7,7 @@
   pkgs,
   config,
   lib,
-  perSystem,
+  rea,
 }:
 let
   cfg = config.dotfiles.agents;
@@ -122,7 +122,7 @@ in
     # Registered here rather than by `rea setup`, which would write an
     # npx-pinned entry into every agent's own config.
     rea = {
-      command = lib.getExe perSystem.self.rea-agents;
+      command = lib.getExe rea.package;
       args = [ "mcp" ];
     };
   };

@@ -49,14 +49,26 @@ pkgs.buildNpmPackage (finalAttrs: {
   ++ lib.optional stdenv.hostPlatform.isLinux pkgs.autoPatchelfHook;
   buildInputs = lib.optional stdenv.hostPlatform.isLinux stdenv.cc.cc.lib;
 
-  # A caller's own GHIDRA_INSTALL_DIR or JAVA_HOME still wins.
-  postFixup = ''
-    for program in rea rea-agents; do
-      wrapProgram $out/bin/$program \
-        --set-default GHIDRA_INSTALL_DIR ${ghidra}/lib/ghidra \
-        --set-default JAVA_HOME ${jdk}
-    done
-  '';
+  # A caller's own settings still win. Sandboxed Linux tools fall back to
+  # /usr/bin/prlimit, which NixOS does not have.
+  postFixup =
+    let
+      prlimit = lib.getExe' pkgs.util-linux "prlimit";
+      prlimitFlags = lib.optionalString stdenv.hostPlatform.isLinux (
+        lib.concatMapStrings (tool: " --set-default REA_${tool}_PRLIMIT_COMMAND ${prlimit}") [
+          "EVM"
+          "FIRMWARE"
+          "JAVASCRIPT"
+        ]
+      );
+    in
+    ''
+      for program in rea rea-agents; do
+        wrapProgram $out/bin/$program \
+          --set-default GHIDRA_INSTALL_DIR ${ghidra}/lib/ghidra \
+          --set-default JAVA_HOME ${jdk}${prlimitFlags}
+      done
+    '';
 
   meta = {
     description = "Reverse engineer anything with agents, from app behavior down to native binaries";
