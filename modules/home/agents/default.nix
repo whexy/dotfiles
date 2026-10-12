@@ -20,6 +20,8 @@ in
 
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
+    rea.enable = lib.mkEnableOption "the REA reverse-engineering MCP server and CLI, with Ghidra";
+
     t3code = {
       package = lib.mkOption {
         type = lib.types.nullOr lib.types.package;
@@ -77,7 +79,14 @@ in
         agentSettings = perSystem.self.agent-settings;
       };
       proxy = import ./proxy.nix { inherit config; };
-      mcp = import ./mcp.nix { inherit pkgs config lib; };
+      mcp = import ./mcp.nix {
+        inherit
+          pkgs
+          config
+          lib
+          perSystem
+          ;
+      };
       # Agents commit as the user but did not write the code, so they leave
       # commits and tags unsigned while the user's own git keeps signing. The
       # include must come first: a later value wins.
@@ -96,9 +105,14 @@ in
       '';
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard every harness implements.
-      skills = lib.mapAttrs (name: _: ./skills + "/${name}") (
-        lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
-      );
+      skills =
+        lib.mapAttrs (name: _: ./skills + "/${name}") (
+          lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
+        )
+        # Taken from the package so the instructions match the server's tools.
+        // lib.optionalAttrs cfg.rea.enable {
+          reverse-engineer-anything = "${perSystem.self.rea-agents}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
+        };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
@@ -201,7 +215,11 @@ in
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
         # CLIs that shared skills drive; every harness reaches them through PATH.
-        packages = [ perSystem.self.wechat-cli ] ++ lib.concatMap (a: a.packages or [ ]) agents;
+        packages = [
+          perSystem.self.wechat-cli
+        ]
+        ++ lib.optional cfg.rea.enable perSystem.self.rea-agents
+        ++ lib.concatMap (a: a.packages or [ ]) agents;
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
 

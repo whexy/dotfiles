@@ -7,6 +7,7 @@
   pkgs,
   config,
   lib,
+  perSystem,
 }:
 let
   cfg = config.dotfiles.agents;
@@ -115,6 +116,14 @@ in
         firefox.binaryPath
       ]
       ++ unpolicedExtensions;
+    };
+  }
+  // lib.optionalAttrs cfg.rea.enable {
+    # Registered here rather than by `rea setup`, which would write an
+    # npx-pinned entry into every agent's own config.
+    rea = {
+      command = lib.getExe perSystem.self.rea-agents;
+      args = [ "mcp" ];
     };
   };
 }
