@@ -20,7 +20,27 @@ in
 
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
-    rea.enable = lib.mkEnableOption "the REA reverse-engineering MCP server and CLI, with Ghidra";
+    rea = {
+      enable = lib.mkEnableOption "the REA reverse-engineering MCP server and CLI, with Ghidra";
+      browser.enable = lib.mkEnableOption "website analysis and module-import tracing through Chromium";
+      android.enable = lib.mkEnableOption "APK decompilation (JADX), resource decoding (Apktool), and adb device tools";
+      binary.enable = lib.mkEnableOption "offline ELF layout and recorded-crash tools (pwntools, pwndbg; Linux x64)";
+      firmware.enable = lib.mkEnableOption "firmware scanning and extraction (Binwalk, Unblob; Linux)";
+      javascript.enable = lib.mkEnableOption "JavaScript source recovery from bundles (Wakaru; Linux)";
+      networkCapture.enable = lib.mkEnableOption "native mitmproxy capture decoding (mitmdump; Linux)";
+      dotnet.enable = lib.mkEnableOption "ILSpy decompilation of .NET assemblies";
+      environment = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        example = {
+          REA_JEB_MCP_URL = "http://127.0.0.1:8425/mcp";
+        };
+        description = ''
+          Further `REA_*` settings for engines that cannot come from nixpkgs,
+          such as a licensed JEB or IDA install.
+        '';
+      };
+    };
 
     t3code = {
       package = lib.mkOption {
@@ -79,12 +99,16 @@ in
         agentSettings = perSystem.self.agent-settings;
       };
       proxy = import ./proxy.nix { inherit config; };
+      rea = import ./rea.nix {
+        inherit pkgs lib perSystem;
+        cfg = cfg.rea;
+      };
       mcp = import ./mcp.nix {
         inherit
           pkgs
           config
           lib
-          perSystem
+          rea
           ;
       };
       # Agents commit as the user but did not write the code, so they leave
@@ -111,7 +135,7 @@ in
         )
         # Taken from the package so the instructions match the server's tools.
         // lib.optionalAttrs cfg.rea.enable {
-          reverse-engineer-anything = "${perSystem.self.rea-agents}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
+          reverse-engineer-anything = "${rea.base}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
         };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
@@ -218,10 +242,12 @@ in
         packages = [
           perSystem.self.wechat-cli
         ]
-        ++ lib.optional cfg.rea.enable perSystem.self.rea-agents
+        ++ lib.optional cfg.rea.enable rea.package
         ++ lib.concatMap (a: a.packages or [ ]) agents;
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
+
+        sessionVariables = lib.optionalAttrs cfg.rea.enable rea.sessionVariables;
 
         activation = lib.mergeAttrsList (map (a: a.activation or { }) agents) // {
           inherit migrateSkillsDir removeCmuxPiExtension;
