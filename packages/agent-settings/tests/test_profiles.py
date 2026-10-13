@@ -72,15 +72,19 @@ def test_sync_ignores_override_and_updates_forks(
     with patch.dict(os.environ, {agent.home_env: str(external)}):
         agent.set_root(external)
         agent.sync()
+    if name == "muse":
+        # XDG_CONFIG_HOME is Muse's config location, not a per-agent
+        # override, so the relocated root is the default config sync keeps.
+        assert (external / "muse" / agent.config_name).exists()
+        return
     assert not external.exists()
     for root in (profiles.default, fork):
-        doc = (
-            read_document(root / "config.toml")
-            if name == "codex"
-            else read_document(
+        if name == "claude":
+            doc = read_document(
                 home / ".claude.json" if root == profiles.default else root / ".claude.json"
             )
-        )
+        else:
+            doc = read_document(root / agent.config_name)
         key = "mcp_servers" if name == "codex" else "mcpServers"
         assert doc[key] == {"owned": {"command": "/updated/server"}}
         assert read_document(root / agent.config_name)["model"] == "model"
@@ -132,11 +136,13 @@ def test_switch_is_per_launch_and_children_keep_root(make_agent: MakeAgent, name
     ):
         with pytest.raises(SystemExit):
             agent.select("/fake/launcher", [])
-        assert os.environ[agent.home_env] == str(root)
+        # Muse exports the named config as an XDG config home of its own.
+        exported = str(root.parent) if name == "muse" else str(root)
+        assert os.environ[agent.home_env] == exported
         child = make_agent(name)
         _, _, env = launch(child)
         assert child.root == root
-        assert env[agent.home_env] == str(root)
+        assert env[agent.home_env] == exported
     assert make_agent(name).root == Profiles(name).default
 
 

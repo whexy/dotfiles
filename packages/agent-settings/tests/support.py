@@ -10,11 +10,20 @@ import pytest
 from agent_settings.agents import Agent
 from agent_settings.catalog import Entry, Manifest
 
-AGENT_NAMES = ("claude", "codex")
+AGENT_NAMES = ("claude", "codex", "muse")
 SECRET = "test-key"
 
 
 def model_entry(agent: str, secret: Path, label: str = "api/model", model: str = "model") -> Entry:
+    if agent == "muse":
+        return {
+            "label": label,
+            "secrets": {"META_API_KEY": str(secret)},
+            "env": {"MUSE_MODEL": model},
+            "settings": {
+                "endpoint_transport": {"base_url": "https://test.invalid", "auth": "bearer"}
+            },
+        }
     if agent == "codex":
         return {
             "label": label,

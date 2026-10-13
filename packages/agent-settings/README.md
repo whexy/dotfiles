@@ -1,9 +1,9 @@
 # Agent settings
 
-Use `claude-select` or `codex-select` to choose a CLIProxyAPI configuration,
-save it, and launch. The searchable terminal UI provides config actions at the
-bottom. Ordinary `claude` and `codex` never open a picker, even with a terminal
-and no arguments.
+Use `claude-select`, `codex-select`, or `muse-select` to choose a CLIProxyAPI
+configuration, save it, and launch. The searchable terminal UI provides config
+actions at the bottom. Ordinary `claude`, `codex`, and `muse` never open a
+picker, even with a terminal and no arguments.
 
 ## Config manager
 
@@ -19,6 +19,15 @@ list cannot be fetched, the picker shows why and offers only the saved model.
 
 Codex lists the proxy's models in its own `/model` picker, so `codex-select`
 offers only the default configuration.
+
+`muse-select` also lists every model the proxy's `/v1/models` serves. Muse
+Code itself only speaks to its Meta provider, so its saved settings point at
+the loopback `muse-shim` service: Muse requires a model catalog at
+`{origin}/muse-code/models` before it will start, and the shim serves that
+path from the proxy's model list while forwarding its Responses traffic and
+adding the Cloudflare Access headers. The chosen model is saved as the
+settings `model`; Muse's own `/models` drawer still only lists the models
+its fetched catalog marks visible, which for the proxy's models it does not.
 
 The buttons at the bottom also have shortcuts:
 
@@ -39,7 +48,9 @@ metadata, instructions, skills, agents, commands, hooks, rules, and Codex profil
 TOMLs. Claude's user MCP servers are copied separately. Login files, trust state,
 conversation history, caches, and installed plugins are not copied; sign in or
 install plugins separately when needed. Credentials manually embedded in copied
-settings remain part of those settings.
+settings remain part of those settings. Muse's named configs are exported as
+an `XDG_CONFIG_HOME` of their own, since that is the only relocation Muse
+honours; its sessions stay shared under the data home.
 
 Nix-managed instructions and Claude's skills directory link through the default
 config's paths, so updates and newly added skills follow Home Manager activation.
@@ -53,7 +64,8 @@ External config directories are reconciled when selecting a model in them.
 
 ## Ownership
 
-- `~/.claude/settings.json` and `~/.codex/config.toml` are writable preferences.
+- `~/.claude/settings.json`, `~/.codex/config.toml`, and
+  `~/.config/muse/settings.json` are writable preferences.
   The selector changes only its model/provider fields and owned environment keys.
   Default login removes those overrides without touching stored login credentials.
 - Home Manager activation reconciles named MCP servers and Codex provider
@@ -89,6 +101,8 @@ snapshot; it represents the launch defaults, not every subsequent session edit.
 Environments that strip the snapshot variables fall back to the saved default.
 Custom `CODEX_HOME` and `CLAUDE_CONFIG_DIR` directories have independent settings.
 Running an upstream binary directly bypasses runtime credential loading.
+Muse sessions snapshot their model and endpoint the same way, reapplied to
+descendant launches as `-c` overrides.
 
 ## Migration and concurrency
 

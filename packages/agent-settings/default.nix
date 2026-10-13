@@ -54,7 +54,7 @@ python3.pkgs.buildPythonApplication {
   };
 
   meta = {
-    description = "Writable Claude Code and Codex model selection with Nix-maintained defaults";
+    description = "Writable Claude Code, Codex, and Muse Code model selection with Nix-maintained defaults";
     mainProgram = "agent-settings";
     platforms = lib.platforms.unix;
   };
