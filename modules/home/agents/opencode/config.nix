@@ -34,7 +34,8 @@ in
   model = defaults.default;
   # Session titles are OpenCode's small-model task.
   agents.title.model = defaults.cheap;
-  default_agent = "plan";
+  agents.plan.disabled = true;
+  default_agent = "build";
   update = "disable";
   share = "disabled";
   # The plugin registers the provider and the proxy's live model list. It
