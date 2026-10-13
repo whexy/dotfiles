@@ -2,17 +2,25 @@
 
 import json
 import os
+import sys
 from collections.abc import MutableMapping
 from pathlib import Path
 from typing import cast, final, override
 
 from agent_settings.agents.base import Agent, Session
 from agent_settings.catalog import Entry
-from agent_settings.documents import Table, read_document, table_or_empty
+from agent_settings.documents import Table, is_list, is_table, read_document, table_or_empty
+from agent_settings.errors import SettingsError
 from agent_settings.profiles import muse_config_home
 
 _MODEL_ENV = "MUSE_MODEL"
 _ENDPOINT = "endpoint_transport"
+# Muse's own provider rows always arrive hidden, so only rows declared in
+# settings ever appear in /models; the catalog is rebuilt from the proxy's
+# model list on every reconcile. Provider/profile must match the session's.
+_PROVIDER_ID = "meta"
+_PROFILE_ID = "tbh"
+_CATALOG = "model_catalog"
 
 
 @final
@@ -44,10 +52,97 @@ class MuseAgent(Agent):
             env[self.home_env] = str(self.root.parent)
 
     @override
-    def maintained_settings(self, _selection: Entry | None = None) -> Table:
-        desired = super().maintained_settings(_selection)
+    def maintained_settings(self, selection: Entry | None = None) -> Table:
+        desired = super().maintained_settings(selection)
         desired["mcpServers"] = self.manifest["mcpServers"]
+        desired[_CATALOG] = self._catalog(selection)
         return desired
+
+    def _effective_entry(self, selection: Entry | None) -> Entry | None:
+        if selection is not None:
+            return selection
+        saved = read_document(self.state_file).get("selection")
+        entry = self.catalog.find(saved)
+        if entry is not None:
+            return entry
+        return self.catalog.choices[0] if self.catalog.choices else None
+
+    def _current_model(self, entry: Entry | None) -> str | None:
+        if entry is not None:
+            model = entry.get("env", {}).get(_MODEL_ENV)
+            if isinstance(model, str) and model:
+                return model
+            settings_model = table_or_empty(entry.get("settings")).get("model")
+            if isinstance(settings_model, str) and settings_model:
+                return settings_model
+        doc_model = read_document(self.config_file).get("model")
+        return doc_model if isinstance(doc_model, str) and doc_model else None
+
+    def _catalog(self, selection: Entry | None) -> list[object]:
+        entry = self._effective_entry(selection)
+        template = next((e for e in self.manifest["entries"] if "discover" in e), None)
+        if template is None:
+            return []
+        current = self._current_model(entry)
+        saved = read_document(self.state_file).get("selection")
+        entry_is_saved = entry is not None and saved is not None and entry.get("label") == saved
+        # A sync without a new selection rebuilds the saved model offline
+        # (catalog.find); only an explicit selection refreshes the catalog.
+        if selection is None and entry_is_saved:
+            previous = self._previous_catalog(current)
+            if previous is not None:
+                return previous
+        try:
+            models = self.served_models(template, template["discover"])
+        except SettingsError as error:
+            # A failed refresh keeps the catalog the last reconcile wrote.
+            print(
+                f"agent-settings: warning: {error}; keeping the saved model catalog",
+                file=sys.stderr,
+            )
+            previous = self._previous_catalog(current)
+            if previous is not None:
+                return previous
+            return [self._catalog_row(current, 0)] if current else []
+        return [
+            self._catalog_row(model, order, current=current) for order, model in enumerate(models)
+        ]
+
+    def _previous_catalog(self, current: str | None) -> list[object] | None:
+        owned = table_or_empty(read_document(self.state_file).get("owned"))
+        rows = owned.get(_CATALOG)
+        if not is_list(rows) or not rows:
+            return None
+        # Restamp currency: the kept rows must not name a stale current model.
+        kept: list[object] = []
+        for row in rows:
+            if not is_table(row):
+                return None
+            row = dict(row)
+            row["is_current"] = row.get("model_id") == current
+            if row.get("is_default") and not row["is_current"]:
+                row["is_default"] = False
+            kept.append(row)
+        if current and all(table_or_empty(r).get("model_id") != current for r in kept):
+            kept[0] = self._catalog_row(current, 0)
+        return kept
+
+    @staticmethod
+    def _catalog_row(model: str, order: int, *, current: str | None = None) -> Table:
+        # Default to this row when no current model is named, so the
+        # catalog Muse composes always has a current row.
+        row: Table = {
+            "model_id": model,
+            "display_label": model,
+            "provider_id": _PROVIDER_ID,
+            "profile_id": _PROFILE_ID,
+            "visibility": "visible",
+            "display_order": order,
+        }
+        if current is None or model == current:
+            row["is_current"] = True
+            row["is_default"] = True
+        return row
 
     @override
     def apply_selection(self, doc: Table, selection: Entry) -> None:

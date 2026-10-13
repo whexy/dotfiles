@@ -11,7 +11,9 @@
 }:
 let
   # The shim is a service, not a session process: Muse fetches its catalog
-  # from it on every start, and a launch that finds it down fails.
+  # from it on every start, and a launch that finds it down fails. The
+  # public proxy also rejects Muse's bearer-only requests at the
+  # Cloudflare Access edge, so the shim adds those headers on the way out.
   shimPort = 27182;
   shimBaseUrl = "http://127.0.0.1:${toString shimPort}/v1";
 
