@@ -1,7 +1,7 @@
 [project]
 name = "agent-settings"
 version = "1.0.0"
-description = "Writable Claude Code and Codex model selection with Nix-maintained defaults"
+description = "Writable Claude Code, Codex, and Muse Code model selection with Nix-maintained defaults"
 requires-python = ">=3.13"
 dependencies = ["tomlkit", "textual"]
 

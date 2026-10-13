@@ -32,7 +32,7 @@ def test_selection_persists_without_secrets(make_agent: MakeAgent, name: str) ->
     agent = make_agent(name)
     agent.reconcile(api_model(agent))
     path, argv, env = launch(agent, ["--help"])
-    if name == "codex":
+    if name in ("codex", "muse"):
         assert argv == [path, "--help"]
     else:
         assert argv[-1] == "--help"
@@ -71,12 +71,19 @@ def test_child_session_survives_other_selection(make_agent: MakeAgent, name: str
     agent.reconcile(default(agent))
     if name == "claude":
         caller = ["--settings", '{"hooks":{}}']
+    elif name == "muse":
+        caller = ["--model", "child-model", "hello"]
     else:
         caller = ["-c", "hooks.example=true", "exec", "-m", "child-model", "hello"]
     with patch.dict(os.environ, parent, clear=True):
         _, argv, env = launch(agent, caller)
     assert SECRET in env.values()
-    if name == "claude":
+    if name == "muse":
+        assert argv[-len(caller) :] == caller
+        overrides = [argv[index + 1] for index, arg in enumerate(argv) if arg == "-c"]
+        assert 'model="model"' in overrides
+        assert 'endpoint_transport.base_url="https://test.invalid"' in overrides
+    elif name == "claude":
         assert argv.count("--settings") == 1
         injected = json.loads(argv[argv.index("--settings") + 1])
         assert injected["hooks"] == {}
@@ -324,7 +331,7 @@ def test_codex_in_app_model_and_profile_survive_sync(make_agent: MakeAgent) -> N
 @pytest.mark.parametrize("name", AGENT_NAMES)
 def test_malformed_config_is_named_and_not_overwritten(make_agent: MakeAgent, name: str) -> None:
     agent = make_agent(name)
-    agent.root.mkdir()
+    agent.root.mkdir(parents=True, exist_ok=True)
     agent.config_file.write_text("not = [valid")
     with pytest.raises(SettingsError, match=re.escape(str(agent.config_file))):
         agent.reconcile()
@@ -379,3 +386,33 @@ def test_invalid_secret_does_not_save(make_agent: MakeAgent, secret: Path) -> No
     ):
         agent.select("/fake/launcher", [])
     assert not agent.state_file.exists()
+
+
+def test_muse_discovered_model_survives_sync(secret: Path) -> None:
+    entry: Entry = {
+        "label": "cliproxyapi",
+        "secrets": {"META_API_KEY": str(secret)},
+        "settings": {"endpoint_transport": {"base_url": "https://test.invalid", "auth": "bearer"}},
+        "discover": {
+            "url": "https://test.invalid/v1/models",
+            "keyEnv": "META_API_KEY",
+            "modelEnv": ["MUSE_MODEL"],
+        },
+    }
+    agent = create_agent(manifest("muse", [entry]))
+    with (
+        patch.object(agent, "served_models", return_value=["vendor/a", "b"]),
+        patch.object(agent, "pick", return_value="cliproxyapi/vendor/a"),
+    ):
+        chosen = agent.choose()
+    agent.reconcile(chosen)
+    doc = read_document(agent.config_file)
+    assert doc["model"] == "vendor/a"
+    assert child_table(doc, "endpoint_transport")["auth"] == "bearer"
+    assert doc["mcpServers"] == {"owned": {"command": "/new/server"}}
+    with patch.object(agent, "served_models", side_effect=AssertionError):
+        agent.sync()
+    assert read_document(agent.config_file)["model"] == "vendor/a"
+    _, _, env = launch(agent)
+    assert env["META_API_KEY"] == SECRET
+    assert SECRET not in agent.config_file.read_text()
