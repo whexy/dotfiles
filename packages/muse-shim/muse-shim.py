@@ -7,7 +7,12 @@ but first fetches its model catalog from ``{origin}/muse-code/models`` and
 refuses to start when that fetch fails. CLIProxyAPI has no such path, so
 this shim serves it from the proxy's own ``/v1/models`` and forwards
 everything else, adding the Cloudflare Access service-token headers the
-public proxy endpoint requires. Muse itself only ever talks to loopback.
+public proxy endpoint requires even for bearer-authenticated requests.
+Muse itself only ever talks to loopback.
+
+The provider rows served this way always arrive hidden in Muse, so they
+never show in its model picker; the wrapper separately declares the same
+models as visible ``model_catalog`` rows in Muse's settings.
 
 Configuration comes from the environment, set by the Nix wrapper:
 ``MUSE_SHIM_UPSTREAM``, ``MUSE_SHIM_PORT``, ``MUSE_SHIM_CF_ID_FILE``, and
@@ -111,7 +116,8 @@ class Handler(http.server.BaseHTTPRequestHandler):
         if path == "/healthz":
             self._send_json(200, {"status": "ok"})
         elif path == "/muse-code/models":
-            # CLIProxyAPI's model list is already the shape Muse parses.
+            # Parseable by Muse, but every row arrives hidden; visibility
+            # comes from the settings catalog the wrapper writes.
             self._forward("/v1/models")
         elif path == "/muse-code/config":
             # Feature flags for the Meta service. The 404 is not fatal:

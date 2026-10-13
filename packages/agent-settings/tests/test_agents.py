@@ -388,6 +388,95 @@ def test_invalid_secret_does_not_save(make_agent: MakeAgent, secret: Path) -> No
     assert not agent.state_file.exists()
 
 
+def muse_proxy(secret: Path) -> Entry:
+    return {
+        "label": "cliproxyapi",
+        "secrets": {"META_API_KEY": str(secret)},
+        "settings": {"endpoint_transport": {"base_url": "https://test.invalid", "auth": "bearer"}},
+        "discover": {
+            "url": "https://test.invalid/v1/models",
+            "keyEnv": "META_API_KEY",
+            "modelEnv": ["MUSE_MODEL"],
+        },
+    }
+
+
+def catalog_ids(doc: dict[str, object]) -> list[object]:
+    rows = doc["model_catalog"]
+    assert isinstance(rows, list)
+    return [row["model_id"] for row in rows if isinstance(row, dict)]
+
+
+def test_muse_catalog_lists_all_models_visibly(secret: Path) -> None:
+    agent = create_agent(manifest("muse", [muse_proxy(secret)]))
+    with (
+        patch.object(agent, "served_models", return_value=["vendor/a", "b"]),
+        patch.object(agent, "pick", return_value="cliproxyapi/vendor/a"),
+    ):
+        chosen = agent.choose()
+        # Reconcile inside the patch: reconcile itself refreshes the catalog.
+        agent.reconcile(chosen)
+    doc = read_document(agent.config_file)
+    rows = doc["model_catalog"]
+    assert isinstance(rows, list)
+    by_id = {row["model_id"]: row for row in rows if isinstance(row, dict)}
+    assert list(by_id) == ["vendor/a", "b"]
+    for row in by_id.values():
+        assert row["provider_id"] == "meta"
+        assert row["profile_id"] == "tbh"
+        assert row["visibility"] == "visible"
+    assert by_id["vendor/a"]["is_current"] is True
+    assert by_id["vendor/a"]["is_default"] is True
+    assert "is_current" not in by_id["b"]
+    # A user-declared row is not owned and survives the next refresh.
+    with edit_document(agent.config_file) as edited:
+        rows = edited["model_catalog"]
+        assert isinstance(rows, list)
+        rows.append({"model_id": "hand", "visibility": "visible"})
+    down = SettingsError("cliproxyapi: model discovery failed: connection refused")
+    with patch.object(agent, "served_models", side_effect=down):
+        agent.reconcile()
+    refreshed = read_document(agent.config_file)
+    assert catalog_ids(refreshed) == ["hand", "vendor/a", "b"]
+    assert refreshed["model"] == "vendor/a"
+
+
+def test_muse_catalog_preserved_when_discovery_fails(secret: Path) -> None:
+    agent = create_agent(manifest("muse", [muse_proxy(secret)]))
+    with (
+        patch.object(agent, "served_models", return_value=["vendor/a", "b"]),
+        patch.object(agent, "pick", return_value="cliproxyapi/vendor/a"),
+    ):
+        agent.reconcile(agent.choose())
+    down = SettingsError("cliproxyapi: model discovery failed: connection refused")
+    with patch.object(agent, "served_models", side_effect=down):
+        agent.reconcile()
+        agent.sync()
+    doc = read_document(agent.config_file)
+    assert catalog_ids(doc) == ["vendor/a", "b"]
+    rows = doc["model_catalog"]
+    assert isinstance(rows, list)
+    current = [row for row in rows if isinstance(row, dict) and row.get("is_current")]
+    assert [row["model_id"] for row in current] == ["vendor/a"]
+
+
+def test_muse_catalog_falls_back_to_the_selected_model(secret: Path) -> None:
+    agent = create_agent(manifest("muse", [muse_proxy(secret)]))
+    saved = agent.catalog.find("cliproxyapi/vendor/a")
+    assert saved is not None
+    down = SettingsError("cliproxyapi: model discovery failed: connection refused")
+    with patch.object(agent, "served_models", side_effect=down):
+        agent.reconcile(saved)
+    doc = read_document(agent.config_file)
+    assert catalog_ids(doc) == ["vendor/a"]
+    rows = doc["model_catalog"]
+    assert isinstance(rows, list)
+    row = rows[0]
+    assert isinstance(row, dict)
+    assert row["visibility"] == "visible"
+    assert row["is_current"] is True
+
+
 def test_muse_discovered_model_survives_sync(secret: Path) -> None:
     entry: Entry = {
         "label": "cliproxyapi",

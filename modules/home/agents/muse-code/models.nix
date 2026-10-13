@@ -4,9 +4,15 @@
 # Responses API CLIProxyAPI serves. It first fetches a model catalog from
 # `{origin}/muse-code/models`, a path CLIProxyAPI does not have, and refuses
 # to start when that fails, so the endpoint is the loopback muse-shim: it
-# serves the catalog from the proxy's `/v1/models` and forwards the rest,
-# adding the Cloudflare Access headers. The API key Muse sends is the
-# proxy's own, which the shim forwards untouched.
+# forwards everything (adding the Cloudflare Access headers the public proxy
+# endpoint requires even for Muse's own API key). The API key Muse sends
+# is the proxy's own, which the shim forwards untouched.
+#
+# The provider models Muse fetches that way always arrive hidden, so they
+# never appear in its /models picker. The wrapper therefore declares the
+# same models as visible rows in settings (`model_catalog`), rebuilt from
+# the proxy's model list at every select/sync; Muse composes those over
+# the provider rows.
 {
   proxy,
   defaults,
@@ -28,8 +34,8 @@ let
     };
   };
   # One entry per model the proxy serves when the picker opens. Discovery
-  # talks to CLIProxyAPI directly; the shim only exists for Muse's own
-  # catalog fetch at runtime.
+  # talks to CLIProxyAPI directly; the wrapper also turns this live list
+  # into the settings `model_catalog` Muse's own picker shows.
   aiProxyModels = {
     label = "cliproxyapi";
     secrets = proxy.cfAccessSecrets // {
