@@ -2,6 +2,7 @@
   config,
   options,
   lib,
+  pkgs,
   ...
 }:
 let
@@ -43,6 +44,23 @@ in
         # container its own binfmt_misc mount; without it nix would advertise
         # extra-platforms it cannot run.
         dotfiles.compat.binfmt.enable = lib.mkForce false;
+
+        # The Incus hosts' Ubuntu kernels let only AppArmor-profiled programs
+        # create the user namespace Chrome's sandbox runs in, so T3's browser
+        # fails to start without this profile. `t3 browser setup` cannot add
+        # it: its profile matches T3's own download path, not the store path
+        # of the packaged browser. The container loads it into its own
+        # AppArmor namespace; apparmor-profiles provides `abi/4.0`.
+        security.apparmor = {
+          enable = true;
+          packages = [ pkgs.apparmor-profiles ];
+          policies.t3-chrome-headless-shell.profile = ''
+            abi <abi/4.0>,
+            profile t3-chrome-headless-shell /nix/store/*-t3code-chrome-headless-shell-*/chrome-headless-shell flags=(unconfined) {
+              userns,
+            }
+          '';
+        };
       }
 
       # Installer leftovers of the LXC profile: a bundled nixpkgs channel and a
