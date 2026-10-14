@@ -27,11 +27,3 @@ spec:
       selfHeal: true
     syncOptions:
       - CreateNamespace=true
-      - RespectIgnoreDifferences=true
-  ignoreDifferences:
-    # The init node creates this namespace's Secrets out of band.
-    - group: ""
-      kind: Secret
-      namespace: <name>
-      jsonPointers:
-        - /data

@@ -49,7 +49,7 @@ file.
    argocd-image-updater.
 6. [Deploy to the cluster](reference/cluster.md): clusters-work layout,
    workload manifests, image auto-updater, tailnet ingress, docs.
-   - [Secrets](reference/secrets.md): agenix to Kubernetes Secret.
+   - [Secrets](reference/secrets.md): a SealedSecret in the app.
    - [Public host](reference/public-host.md): only when Wenxuan asks.
 7. [Verify end to end](reference/verify.md), and report anything you could
    not verify as unverified.

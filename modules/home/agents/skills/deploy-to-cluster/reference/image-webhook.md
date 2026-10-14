@@ -6,7 +6,8 @@ published; its 30-minute poll is only the fallback. User-owned packages send
 that repository through the `source` label.
 
 ```sh
-secret=$(cd <clusters-work>/secrets && agenix -d image-updater-webhook.age)
+secret=$(kubectl -n argocd get secret argocd-image-updater-secret \
+  -o jsonpath='{.data.webhook\.ghcr-secret}' | base64 -d)
 gh api repos/whexy/<name>/hooks --method POST --silent \
   -f name=web -F active=true -f 'events[]=package' \
   -f 'config[url]=https://image-updater.clusters.work/webhook?type=ghcr.io' \
@@ -14,5 +15,5 @@ gh api repos/whexy/<name>/hooks --method POST --silent \
 unset secret
 ```
 
-Decrypting needs the admin identity. If agenix cannot decrypt on this
-machine, ask Wenxuan. Never print the secret.
+Reading it needs the clusters-work dev shell's kubeconfig. If `kubectl`
+cannot reach the cluster on this machine, ask Wenxuan. Never print the secret.
