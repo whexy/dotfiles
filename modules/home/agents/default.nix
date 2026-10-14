@@ -294,6 +294,8 @@ in
         cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
         # Bearer token for the `personal` MCP server (see mcp.nix).
         n8n-mcp-token.file = ../../../secrets/n8n-mcp-token.age;
+        # whisper-1 for `transcribe`; a key restricted to the Audio API.
+        openai-api-key.file = ../../../secrets/openai-api-key.age;
       };
     }
   );

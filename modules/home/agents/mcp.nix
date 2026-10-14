@@ -49,6 +49,9 @@ let
   # variable, never the value, so no token reaches the store or a config file.
   secrets = {
     N8N_MCP_TOKEN = config.age.secrets.n8n-mcp-token.path;
+    # For the transcribe CLI, which every agent host installs. Not a server
+    # credential, but agents can only receive variables through this prelude.
+    OPENAI_API_KEY = config.age.secrets.openai-api-key.path;
   };
 in
 {
