@@ -8,6 +8,7 @@
   config,
   lib,
   rea,
+  video,
 }:
 let
   cfg = config.dotfiles.agents;
@@ -138,5 +139,8 @@ in
       command = lib.getExe rea.package;
       args = [ "mcp" ];
     };
+  }
+  // lib.optionalAttrs cfg.video.enable {
+    resolve.command = lib.getExe video.resolveMcp;
   };
 }
