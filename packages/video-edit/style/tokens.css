@@ -1,0 +1,52 @@
+/* B-roll style tokens, seeded from D:\Records\broll\src\lib.css.
+   Sizes are at a 1920x1080 design size; scale the stage to the slot. */
+:root {
+  --bg: #0e0f11;
+  --panel: #17181b;
+  --panel-2: #1f2024;
+  --line: #2a2b30;
+  --text: #f4f4f5;
+  --muted: #a1a1aa;
+  --dim: #6b6b74;
+
+  --green: #4ade80;
+  --amber: #fbbf24;
+  --red: #f87171;
+  --blue: #60a5fa;
+  --violet: #a78bfa;
+
+  --grid-dot: rgba(255, 255, 255, 0.055);
+  --grid-step: 40px;
+  --radius: 22px;
+  --stroke: 1.5px;
+
+  /* lib.js ease.out, ease.inOut and ease.back as CSS curves */
+  --ease-out: cubic-bezier(0.33, 1, 0.68, 1);
+  --ease-in-out: cubic-bezier(0.65, 0, 0.35, 1);
+  --ease-back: cubic-bezier(0.34, 1.56, 0.64, 1);
+  --enter: 0.6s;
+
+  --sans: "Inter", "Noto Sans SC", "Noto Sans CJK SC", sans-serif;
+  --mono: "JetBrains Mono", "Noto Sans Mono CJK SC", monospace;
+}
+
+.stage {
+  position: absolute;
+  inset: 0;
+  overflow: hidden;
+  background-color: var(--bg);
+  background-image: radial-gradient(
+    circle at 1px 1px,
+    var(--grid-dot) 1px,
+    transparent 0
+  );
+  background-size: var(--grid-step) var(--grid-step);
+}
+
+.card {
+  position: absolute;
+  box-sizing: border-box;
+  background: var(--panel);
+  border: var(--stroke) solid var(--line);
+  border-radius: var(--radius);
+}
