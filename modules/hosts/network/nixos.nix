@@ -1,6 +1,14 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
   cfg = config.dotfiles.network;
+  # WSL shares the Windows network stack, so the Windows client owns the
+  # tailnet node; a Linux tailscaled there would register a second one.
+  inherit (config.dotfiles.host) wsl;
 in
 {
   config = lib.mkMerge [
@@ -13,7 +21,7 @@ in
 
     (lib.mkIf cfg.networkmanager.enable { networking.networkmanager.enable = true; })
 
-    (lib.mkIf cfg.tailscale.enable {
+    (lib.mkIf (cfg.tailscale.enable && !wsl) {
       services.tailscale = {
         enable = true;
         port = cfg.tailscale.port;
@@ -29,8 +37,12 @@ in
       networking.firewall.trustedInterfaces = [ "tailscale0" ];
     })
 
-    (lib.mkIf (cfg.tailscale.enable && cfg.tailscale.userOperator) {
+    (lib.mkIf (cfg.tailscale.enable && cfg.tailscale.userOperator && !wsl) {
       services.tailscale.extraSetFlags = [ "--operator=${config.dotfiles.host.username}" ];
+    })
+
+    (lib.mkIf (cfg.tailscale.enable && wsl) {
+      environment.systemPackages = [ pkgs.tailscale-wsl ];
     })
   ];
 }
