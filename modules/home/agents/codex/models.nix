@@ -4,6 +4,8 @@
 }:
 # Codex discovers the proxy's models itself through `model_catalog_url`, so
 # its own model picker lists them; this entry only configures the provider.
+# The native login entry clears the provider so Codex uses its saved ChatGPT
+# login. It stays after the proxy entry, which removed selections migrate to.
 [
   {
     label = "cliproxyapi (default models)";
@@ -28,4 +30,5 @@
       };
     };
   }
+  { label = "default (ChatGPT login)"; }
 ]

@@ -76,4 +76,7 @@ in
       candidates = [ aiProxyModels ];
     };
   }
+  # Native claude.ai OAuth login: clears every proxy override. It stays
+  # after the proxy default, which removed selections migrate to.
+  { label = "default (claude.ai login)"; }
 ]
