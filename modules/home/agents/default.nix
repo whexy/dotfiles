@@ -115,7 +115,7 @@ in
         inherit pkgs lib perSystem;
         cfg = cfg.rea;
       };
-      video = import ./video/home.nix { inherit perSystem; };
+      video = import ./video/home.nix { inherit pkgs perSystem; };
       mcp = import ./mcp.nix {
         inherit
           pkgs
@@ -274,7 +274,8 @@ in
         // mkSkillLinks ".agents/skills"
         // mkSkillLinks ".claude/skills"
         // mkSkillLinks ".config/muse/skills"
-        // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
+        // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents)
+        // lib.optionalAttrs cfg.video.enable video.homeFiles;
 
         # CLIs that shared skills drive; every harness reaches them through PATH.
         packages = [
