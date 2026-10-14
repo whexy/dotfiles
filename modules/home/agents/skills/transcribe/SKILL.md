@@ -6,16 +6,20 @@ description: Transcribe audio/video files with the transcribe CLI into word-time
 # Transcribe
 
 `transcribe` turns an audio or video file into a word-by-word timed
-transcript built for editing decisions. It runs two OpenAI models:
-`gpt-transcribe` for the most accurate text and `whisper-1` for word
-timestamps (the only model that returns them), then aligns the accurate
-text onto the timings. Long files are chunked at silence boundaries
-automatically; timestamps in the output are always absolute.
+transcript built for editing decisions, using OpenAI `whisper-1` (the
+only model that returns word timestamps). Long files are chunked at
+silence boundaries automatically; timestamps in the output are always
+absolute.
 
-Costs about $0.011 per minute of media. Word timestamps are approximate
-(+/-0.1-0.5 s): good enough to decide what to cut, not frame-accurate.
-Snap cut points to silence and add ~0.15 s/0.25 s handles in the actual
-edit (ffmpeg, DaVinci Resolve, etc.).
+Costs about $0.006 per minute of media (~$0.36/hour). Word timestamps
+are approximate (+/-0.1-0.5 s): good enough to decide what to cut, not
+frame-accurate. Snap cut points to silence and add ~0.15 s/0.25 s
+handles in the actual edit (ffmpeg, DaVinci Resolve, etc.).
+
+The text is whisper-1's, verbatim. Individual words may be misheard
+(names, jargon, code-switched terms); read them against the surrounding
+context when you interpret the transcript. Cutting decisions depend on
+where words start and stop, not on perfect spelling.
 
 ## Setup
 
@@ -30,15 +34,14 @@ without a key or any API calls; run it first on long files.
 transcribe talk.mp4                              # annotated text to stdout
 transcribe talk.mp4 --format json -o talk.json   # full word-level data
 transcribe talk.mp4 --format srt -o talk.srt     # subtitles / Resolve import
-transcribe talk.mp4 --languages zh-cn en --keywords Kubernetes ArgoCD
+transcribe talk.mp4 --context "Kubernetes, ArgoCD, Wenxuan"
 ```
 
-- `--languages CODE...` hints the accurate pass (e.g. `zh-cn en`); use it
-  for non-English or code-switching audio.
-- `--keywords TERM...` and `--context "..."` bias names/jargon accuracy.
+- `--language CODE` hints the language (e.g. `zh`, `en`); omit to
+  auto-detect, which handles code-switching better.
+- `--context "..."` is whisper-1's glossary prompt (max ~224 tokens);
+  list names/jargon you expect to hear to bias their spelling.
 - `--pause SECONDS` (default 0.6) is the gap that starts a new segment.
-- `--timing-only` skips `gpt-transcribe` (whisper-1 only, cheaper, less
-  accurate text).
 - Progress goes to stderr; stdout carries only the transcript.
 
 ## Reading the output
@@ -55,9 +58,8 @@ Text format, one segment per line:
   (immediately repeated word), `<pause Xs>` long pause inside a segment,
   `(pause Xs)` silence before the segment. `# silence without speech`
   lines are silent stretches with no words at all (dead air, music).
-- JSON gives every word `start`/`end`/`gap_after`, `filler`/`stumble`
-  flags, and `source` (`timed` from whisper-1, `interpolated` where the
-  accurate text disagreed and timing was estimated proportionally).
+- JSON gives every word `start`/`end`/`gap_after` plus `filler`/`stumble`
+  flags.
 
 For cut planning: treat a filler plus its surrounding pauses as one cut
 region, cut only the first take of a `{{stumble}}`, and prefer cutting in

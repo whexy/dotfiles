@@ -1,25 +1,22 @@
 #!/usr/bin/env python3
 """Transcribe an audio/video file into an agent-readable, word-timed transcript.
 
-Two OpenAI models are used because no single one supplies both sides of
-what a cutting decision needs: `gpt-transcribe` produces the most accurate
-text (multi-language hints, keyword biasing) but returns no timestamps,
-while `whisper-1` is the only model that returns word timestamps but a
-generation behind on text. The accurate text is aligned onto the timed
-words (proportional timing where the two disagree), then pauses, fillers
-and repeated-word stumbles are annotated so an agent can propose cuts
-from the transcript alone. Word timestamps are approximate (roughly
-+/-0.1-0.5 s); treat them as decision support, not frame-accurate cut
-points, until they are snapped to silence in the actual edit.
+Uses OpenAI `whisper-1`, the only transcription model that returns word
+timestamps. The transcript is annotated (per-word gaps, fillers,
+repeated-word stumbles, silent stretches without speech) so an agent can
+propose video cuts from the transcript alone, reading individual word
+errors against the surrounding context. Word timestamps are approximate
+(roughly +/-0.1-0.5 s); treat them as decision support, not
+frame-accurate cut points, until they are snapped to silence in the
+actual edit.
 
-Default output is a compact annotated transcript; `--json` adds the full
-word-level data. Exit codes: 0 ok, 2 usage, 3 media/ffmpeg, 4 API,
-5 missing OPENAI_API_KEY.
+Default output is a compact annotated transcript; `--format json` gives
+the full word-level data. Exit codes: 0 ok, 2 usage, 3 media/ffmpeg,
+4 API, 5 missing OPENAI_API_KEY.
 """
 
 import argparse
 from concurrent.futures import ThreadPoolExecutor
-from difflib import SequenceMatcher
 import json
 import os
 from pathlib import Path
@@ -41,7 +38,8 @@ SILENCE_MIN = 0.3
 
 EXIT_OK, EXIT_USAGE, EXIT_MEDIA, EXIT_API, EXIT_NOKEY = 0, 2, 3, 4, 5
 
-PRICES_PER_MIN = {"gpt-transcribe": 0.0045, "whisper-1": 0.006}
+MODEL = "whisper-1"
+PRICE_PER_MIN = 0.006
 
 FILLERS_EN = {
     "um", "uh", "uhm", "umm", "uhh", "er", "erm", "hmm", "mm", "mhm",
@@ -175,28 +173,19 @@ def multipart(fields, file_field, filename, data):
 
 
 def transcribe_chunk(client, path, args):
-    data = path.read_bytes()
-    accurate, timed, next_prompt = None, None, None
-    if not args.timing_only:
-        fields = [("model", "gpt-transcribe")]
-        if args.context:
-            fields.append(("prompt", args.context))
-        for language in args.languages or []:
-            fields.append(("languages[]", language))
-        for keyword in args.keywords or []:
-            fields.append(("keywords[]", keyword))
-        accurate = client(fields, path.name, data)
-        next_prompt = accurate.get("text", "")[-200:] or None
     fields = [
-        ("model", "whisper-1"),
+        ("model", MODEL),
         ("response_format", "verbose_json"),
         ("timestamp_granularities[]", "word"),
         ("timestamp_granularities[]", "segment"),
     ]
-    if args.whisper_language:
-        fields.append(("language", args.whisper_language))
-    timed = client(fields, path.name, data)
-    return accurate, timed, next_prompt
+    if args.language:
+        fields.append(("language", args.language))
+    if args.context:
+        # Whisper's prompt window is 224 tokens; pass it through untouched
+        # rather than silently truncating a glossary the user chose.
+        fields.append(("prompt", args.context))
+    return client(fields, path.name, path.read_bytes())
 
 
 def make_client(api_key):
@@ -235,60 +224,6 @@ def make_client(api_key):
 
 def norm_key(word):
     return "".join(ch for ch in word.lower() if ch.isalnum())
-
-
-def align_words(ref_text, timed_words, span):
-    """Time `ref_text` tokens using `timed_words` [(text, start, end), ...].
-
-    Tokens matched by sequence alignment inherit the matched span; runs of
-    unmatched reference tokens split the time between neighbouring matches
-    in proportion to character length. Alignment runs on normalised keys
-    so punctuation/casing differences between the two models still match;
-    tokens that normalise to nothing (bare punctuation) always take the
-    interpolated path.
-    """
-    ref = ref_text.split()
-    if not ref:
-        return []
-    if not timed_words:
-        step = (span[1] - span[0]) / len(ref)
-        return [
-            (w, span[0] + i * step, span[0] + (i + 1) * step, False)
-            for i, w in enumerate(ref)
-        ]
-    ref_keys = [norm_key(w) for w in ref]
-    timed_keys = [norm_key(w) for w, _, _ in timed_words]
-    times = {}
-    matcher = SequenceMatcher(a=ref_keys, b=timed_keys, autojunk=False)
-    for a_lo, b_lo, size in matcher.get_matching_blocks():
-        for k in range(size):
-            if not ref_keys[a_lo + k]:
-                continue
-            _, start, end = timed_words[b_lo + k]
-            times[a_lo + k] = (start, end)
-    return [
-        (w, times[i][0], times[i][1], True)
-        if i in times
-        else (w, *_interpolated(ref, times, i, timed_words, span), False)
-        for i, w in enumerate(ref)
-    ]
-
-
-def _interpolated(ref, times, i, timed_words, span):
-    before = max((j for j in times if j < i), default=None)
-    after = min((j for j in times if j > i), default=None)
-    lo = times[before][1] if before is not None else span[0]
-    hi = times[after][0] if after is not None else span[1]
-    lo = max(lo, span[0])
-    hi = max(hi, lo)
-    run_start = before + 1 if before is not None else 0
-    run_end = after - 1 if after is not None else len(ref) - 1
-    weights = [max(1, len(ref[j])) for j in range(run_start, run_end + 1)]
-    total = sum(weights)
-    pos = i - run_start
-    start = lo + (hi - lo) * sum(weights[:pos]) / total
-    end = lo + (hi - lo) * sum(weights[: pos + 1]) / total
-    return start, end
 
 
 def annotate(words):
@@ -373,13 +308,13 @@ def ts(seconds):
 def render_text(result):
     lines = [
         f"# transcribe {result['source']} "
-        f"models={','.join(result['models'])} duration={result['duration']:.1f}s",
+        f"model={result['model']} duration={result['duration']:.1f}s",
         "# [MM:SS.ss-MM:SS.ss] segments split on pauses; "
         "(pause Xs) = silence before segment",
         "# {word} = filler, {{word}} = stumble (repeated word), "
         "<pause 1.2s> inline = long pause inside a segment",
-        "# word timings +/-0.1-0.5s: snap cut points to silence "
-        "and add handles before cutting",
+        "# whisper-1 text: read word errors against context; timings "
+        "+/-0.1-0.5s, snap cut points to silence and add handles",
         "",
     ]
     for seg in result["segments"]:
@@ -452,64 +387,36 @@ def process(args, client):
         timings["media_seconds"] = round(time.monotonic() - started, 2)
 
         started = time.monotonic()
-        if args.timing_only or len(files) == 1:
-            results = [transcribe_chunk(client, files[0], args)]
-            context = args.context
-            for extra in files[1:]:
-                carry = argparse.Namespace(**vars(args))
-                carry.context = results[-1][2] or context
-                results.append(transcribe_chunk(client, extra, carry))
-        else:
-            # Context carry-over needs sequential results; parallel chunks
-            # each get the user-supplied context instead.
-            with ThreadPoolExecutor(max_workers=4) as pool:
-                results = list(
-                    pool.map(lambda f: transcribe_chunk(client, f, args), files)
-                )
+        with ThreadPoolExecutor(max_workers=4) as pool:
+            results = list(
+                pool.map(lambda f: transcribe_chunk(client, f, args), files)
+            )
         timings["api_seconds"] = round(time.monotonic() - started, 2)
 
     words, languages = [], []
-    for (offset, chunk_end), (accurate, timed, _) in zip(chunks, results):
-        timed_words = [
-            (w.get("word", ""), offset + w["start"], offset + w["end"])
-            for w in timed.get("words", [])
-        ]
-        if args.timing_only:
-            aligned = [(w, s, e, True) for w, s, e in timed_words]
-        else:
-            for lang in accurate.get("languages", []):
-                code = lang.get("code") if isinstance(lang, dict) else lang
-                if code and code not in languages:
-                    languages.append(code)
-            aligned = align_words(
-                accurate.get("text", ""), timed_words, (offset, chunk_end)
-            )
+    for (offset, _), timed in zip(chunks, results):
+        code = timed.get("language")
+        if code and code not in languages:
+            languages.append(code)
         words += [
             {
-                "word": w,
-                "start": round(s, 3),
-                "end": round(e, 3),
-                "source": "timed" if ok else "interpolated",
+                "word": w.get("word", ""),
+                "start": round(offset + w["start"], 3),
+                "end": round(offset + w["end"], 3),
             }
-            for w, s, e, ok in aligned
-            if w
+            for w in timed.get("words", [])
+            if w.get("word")
         ]
-    if not languages and results:
-        code = results[0][1].get("language")
-        if code:
-            languages = [code]
 
     words.sort(key=lambda w: w["start"])
     annotate(words)
     segments = group_segments(words, args.pause)
-    models = ["whisper-1"] if args.timing_only else ["gpt-transcribe", "whisper-1"]
-    billed = duration / 60 * sum(PRICES_PER_MIN[m] for m in models)
     return {
         "source": str(source),
         "duration": duration,
-        "models": models,
+        "model": MODEL,
         "languages": languages,
-        "estimated_cost_usd": round(billed, 4),
+        "estimated_cost_usd": round(duration / 60 * PRICE_PER_MIN, 4),
         "timings": timings,
         "segments": segments,
         "silences": collapse_silences(silences, words),
@@ -518,18 +425,13 @@ def process(args, client):
 
 def estimate(args):
     duration = probe(Path(args.file))
-    models = ["whisper-1"] if args.timing_only else ["gpt-transcribe", "whisper-1"]
-    per_model = {
-        m: round(duration / 60 * PRICES_PER_MIN[m], 4) for m in models
-    }
     print(
         json.dumps(
             {
                 "source": args.file,
                 "duration_seconds": round(duration, 1),
-                "models": models,
-                "estimated_cost_usd": per_model,
-                "estimated_total_usd": round(sum(per_model.values()), 4),
+                "model": MODEL,
+                "estimated_cost_usd": round(duration / 60 * PRICE_PER_MIN, 4),
             },
             indent=2,
         )
@@ -552,28 +454,18 @@ def parse_args(argv=None):
         "and filler/stumble flags",
     )
     parser.add_argument(
-        "--languages", nargs="+", metavar="CODE",
-        help="language hints for the accurate pass, e.g. --languages zh-cn en",
-    )
-    parser.add_argument(
-        "--whisper-language", metavar="CODE",
-        help="single-language hint for the timing pass; omit to auto-detect "
+        "--language", metavar="CODE",
+        help="language hint (ISO 639-1, e.g. zh or en); omit to auto-detect "
         "(better for code-switching)",
     )
     parser.add_argument(
-        "--keywords", nargs="+", metavar="TERM",
-        help="names/jargon to bias the accurate pass towards",
-    )
-    parser.add_argument(
-        "--context", help="recording context prompt for the accurate pass"
+        "--context", metavar="TEXT",
+        help="glossary/context prompt to bias names and jargon "
+        "(whisper-1 accepts up to 224 tokens)",
     )
     parser.add_argument(
         "--pause", type=float, default=0.6, metavar="SECONDS",
         help="gap that starts a new segment (default 0.6)",
-    )
-    parser.add_argument(
-        "--timing-only", action="store_true",
-        help="skip gpt-transcribe; whisper-1 words and timing only",
     )
     parser.add_argument(
         "--no-silence", action="store_true",
@@ -607,11 +499,7 @@ def main(argv=None):
             return EXIT_NOKEY
         if sys.stderr.isatty() and not args.yes:
             duration = probe(Path(args.file))
-            models = (
-                ["whisper-1"] if args.timing_only
-                else ["gpt-transcribe", "whisper-1"]
-            )
-            cost = duration / 60 * sum(PRICES_PER_MIN[m] for m in models)
+            cost = duration / 60 * PRICE_PER_MIN
             eprint(
                 f"about to transcribe {args.file} "
                 f"({duration:.0f}s, ~${cost:.2f}). Ctrl-C to abort."

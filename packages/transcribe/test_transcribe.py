@@ -3,36 +3,6 @@ import unittest
 import transcribe as tr
 
 
-class AlignTest(unittest.TestCase):
-    def test_exact_match_uses_timed_spans(self):
-        timed = [("hello", 0.0, 0.5), ("world", 0.6, 1.0)]
-        aligned = tr.align_words("hello world", timed, (0.0, 1.0))
-        self.assertEqual(
-            aligned, [("hello", 0.0, 0.5, True), ("world", 0.6, 1.0, True)]
-        )
-
-    def test_substitution_is_interpolated_between_neighbours(self):
-        timed = [("deploy", 0.0, 0.5), ("too", 0.5, 0.8), ("prod", 0.8, 1.2)]
-        aligned = tr.align_words("deploy to prod", timed, (0.0, 1.2))
-        self.assertEqual(aligned[0], ("deploy", 0.0, 0.5, True))
-        word, start, end, ok = aligned[1]
-        self.assertEqual((word, ok), ("to", False))
-        self.assertGreaterEqual(start, 0.5)
-        self.assertLessEqual(end, 0.8)
-        self.assertEqual(aligned[2], ("prod", 0.8, 1.2, True))
-
-    def test_punctuation_and_case_differences_still_match(self):
-        timed = [("Hello,", 0.0, 0.4), ("WORLD.", 0.5, 0.9)]
-        aligned = tr.align_words("hello world", timed, (0.0, 0.9))
-        self.assertTrue(all(ok for _, _, _, ok in aligned))
-
-    def test_no_timed_words_spreads_over_span(self):
-        aligned = tr.align_words("a b", [], (2.0, 4.0))
-        self.assertEqual(
-            aligned, [("a", 2.0, 3.0, False), ("b", 3.0, 4.0, False)]
-        )
-
-
 class ChunkTest(unittest.TestCase):
     def test_short_file_is_one_chunk(self):
         self.assertEqual(tr.plan_chunks(300.0, []), [(0.0, 300.0)])
@@ -52,10 +22,7 @@ class ChunkTest(unittest.TestCase):
 
 
 def words(*items):
-    return [
-        {"word": w, "start": s, "end": e, "source": "timed"}
-        for w, s, e in items
-    ]
+    return [{"word": w, "start": s, "end": e} for w, s, e in items]
 
 
 class AnnotateTest(unittest.TestCase):
