@@ -9,7 +9,9 @@ picker, even with a terminal and no arguments.
 
 Type to search, use the arrow keys to choose, and press Enter to save and
 launch. Choose **cliproxyapi (default models)** to configure the proxy endpoint
-and authentication while clearing previous model and role overrides.
+and authentication while clearing previous model and role overrides. Choose
+**default (claude.ai login)** or **default (ChatGPT login)** to remove the proxy
+overrides and use the agent's own OAuth login.
 
 `claude-select` also lists every model the proxy's `/v1/models` serves when the
 picker opens. The chosen model fills every Claude Code role; choose **fusion**
