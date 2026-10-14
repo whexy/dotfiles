@@ -20,6 +20,16 @@ in
 
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
+    tldraw.enable = lib.mkOption {
+      type = lib.types.bool;
+      # The server only resolves on the tailnet, so registering it elsewhere
+      # leaves every agent with a permanently failing MCP server. Standalone
+      # homes have no osConfig to say whether this machine is on the tailnet.
+      default = args.osConfig.dotfiles.network.tailscale.enable or false;
+      defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
+      description = "Whether to register the tailnet tldraw MCP server (draw.at-basking.ts.net).";
+    };
+
     rea = {
       enable = lib.mkEnableOption "the REA reverse-engineering MCP server and CLI, with Ghidra";
       browser.enable = lib.mkEnableOption "website analysis and module-import tracing through Chromium";
@@ -254,6 +264,7 @@ in
 
         # CLIs that shared skills drive; every harness reaches them through PATH.
         packages = [
+          perSystem.self.transcribe
           perSystem.self.wechat-cli
         ]
         ++ lib.optional cfg.rea.enable rea.package

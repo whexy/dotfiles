@@ -76,6 +76,16 @@ in
       headers.Authorization = "Bearer \${N8N_MCP_TOKEN}";
     };
   }
+  // lib.optionalAttrs cfg.tldraw.enable {
+    # Live tldraw whiteboard rooms; agents read and draw diagrams that
+    # broadcast to anyone viewing the room. Unauthenticated: reachability is
+    # the only access control, which is why registration follows tailscale
+    # (see the option default in default.nix).
+    tldraw = {
+      type = "http";
+      url = "https://draw.at-basking.ts.net/mcp";
+    };
+  }
   // lib.optionalAttrs cfg.firefoxDevtools.enable {
     firefox-devtools = {
       # Not yet in the release branches; nixpkgs-unstable has it.
