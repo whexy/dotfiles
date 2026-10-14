@@ -11,7 +11,12 @@ let
     name = "claude";
     package = pkgs.llm-agents.claude-code;
     mcpServers = mcp.servers;
-    inherit prelude;
+    # The Bash tool otherwise runs the login shell, zsh, where unquoted
+    # expansions do not word-split and unmatched globs abort the command;
+    # models write bash and keep tripping on both.
+    prelude = prelude + ''
+      export CLAUDE_CODE_SHELL=${lib.getExe pkgs.bashInteractive}
+    '';
     managedLinks = [
       "CLAUDE.md"
       "skills"
