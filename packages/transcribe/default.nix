@@ -1,10 +1,10 @@
 { pkgs }:
 
-# Agent-facing transcription CLI: gpt-transcribe for the words, whisper-1
-# for word timestamps, aligned and annotated (pauses, fillers, stumbles)
-# so an agent can propose video cuts from the transcript. ffmpeg is bound
-# onto PATH because the tool shells out to it for probing, extraction,
-# chunking, and silence detection, and not every host has it installed.
+# Agent-facing transcription CLI: whisper-1 word timestamps, annotated
+# (pauses, fillers, stumbles) so an agent can propose video cuts from the
+# transcript. ffmpeg is bound onto PATH because the tool shells out to it
+# for probing, extraction, chunking, and silence detection, and not every
+# host has it installed.
 pkgs.stdenvNoCC.mkDerivation {
   pname = "transcribe";
   version = "1.0.0";
