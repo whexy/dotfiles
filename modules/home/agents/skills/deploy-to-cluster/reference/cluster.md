@@ -15,7 +15,7 @@ commits there continually.
 
 - **Nodes:** k3s, with all nodes joined over Tailscale:
   - an arm64 control-plane VM on AWS, `k8s-aws`, which is also the init node
-    that turns agenix secrets into Kubernetes Secrets;
+    that applies the bootstrap add-ons;
   - amd64 workers at home and on Incus;
   - a tainted node in Hangzhou.
 - **Layers:**
@@ -99,7 +99,7 @@ If the app needs secrets, follow [secrets.md](secrets.md).
 - Run `just validate`, and `just render gitops/apps/<name>` to see exactly what
   ArgoCD applies.
 - Commit in the clusters-work style (`gitops(<name>): …`, `secrets: …`,
-  `k3s: …`), push to `master`, then run `just deploy-aws` for new secrets.
+  `k3s: …`) and push to `master`.
 - In the same change, document the app as clusters-work requires:
   - `docs/<name>.md`, covering access, dependencies, secrets, state and
     backup, and verification;
