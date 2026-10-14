@@ -27,7 +27,7 @@ class CodexAgent(Agent):
         for entry in self.catalog.choices:
             providers.update(table_or_empty(entry.get("settings", {}).get("model_providers")))
         if selection is None:
-            provider = read_document(self.config_file).get("model_provider", "cliproxyapi")
+            provider = read_document(self.config_file).get("model_provider", "openai")
             selection = next((e for e in self.catalog.entries if _provider(e) == provider), None)
         if selection is not None:
             features = table_or_empty(selection.get("settings", {}).get("features"))
@@ -52,13 +52,17 @@ class CodexAgent(Agent):
     @override
     def snapshot(self) -> Session:
         doc = read_document(self.config_file)
-        provider = doc.get("model_provider", "cliproxyapi")
+        selection = read_document(self.state_file).get("selection")
+        provider = doc.get("model_provider", "openai")
         settings: Table = {"model_provider": provider}
         if "model" in doc:
             settings["model"] = doc["model"]
         entry = next((e for e in self.catalog.entries if _provider(e) == provider), None)
         if entry is not None:
             settings["model_providers"] = entry.get("settings", {})["model_providers"]
+        elif provider == "openai" and selection:
+            # The native ChatGPT login is the entry without provider settings.
+            entry = next((e for e in self.catalog.entries if "settings" not in e), None)
         # Child sessions retain discovery behavior when another selector changes the config.
         feature_keys = {
             key
