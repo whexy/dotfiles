@@ -3,6 +3,7 @@
 _final: prev: {
   _1password-cli = prev.writeShellScriptBin "op" ''
     set -euo pipefail
+    source ${../lib/wsl-interop.bash}
 
     CACHE_FILE="''${XDG_CACHE_HOME:-$HOME/.cache}/op-wsl/op-exe-path"
 
@@ -21,16 +22,16 @@ _final: prev: {
 
     # Method 1: WinGet packages (most common)
     if [[ -z "$OP_EXE" ]]; then
-      LOCALAPPDATA=$(wslpath "$(cmd.exe /c 'echo %LOCALAPPDATA%' 2>/dev/null | tr -d '\r\n')" 2>/dev/null) || true
+      LOCALAPPDATA=$(win_env_path LOCALAPPDATA) || true
       if [[ -n "$LOCALAPPDATA" ]]; then
         WINGET_PKGS="$LOCALAPPDATA/Microsoft/WinGet/Packages"
         OP_EXE=$(find "$WINGET_PKGS" -maxdepth 2 -name "op.exe" -type f 2>/dev/null | head -1) || true
       fi
     fi
 
-    # Method 2: Fall back to PATH (for other install methods)
+    # Method 2: Fall back to the Windows PATH (for other install methods)
     if [[ -z "$OP_EXE" ]] || [[ ! -x "$OP_EXE" ]]; then
-      OP_EXE=$(command -v op.exe 2>/dev/null) || true
+      OP_EXE=$(win_which op.exe) || true
     fi
 
     # Fail if not found

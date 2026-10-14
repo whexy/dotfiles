@@ -8,6 +8,7 @@
 _final: prev: {
   tailscale-wsl = prev.writeShellScriptBin "tailscale" ''
     set -euo pipefail
+    source ${../lib/wsl-interop.bash}
 
     CACHE_FILE="''${XDG_CACHE_HOME:-$HOME/.cache}/tailscale-wsl/tailscale-exe-path"
 
@@ -24,12 +25,12 @@ _final: prev: {
     # Search for tailscale.exe
     TS_EXE=""
 
-    # Method 1: PATH (the Windows installer adds its directory to the system PATH)
-    TS_EXE=$(command -v tailscale.exe 2>/dev/null) || true
+    # Method 1: the Windows PATH (the Windows installer adds its directory to the system PATH)
+    TS_EXE=$(win_which tailscale.exe) || true
 
     # Method 2: the default install location under Program Files
     if [[ -z "$TS_EXE" ]] || [[ ! -x "$TS_EXE" ]]; then
-      PROGRAM_FILES=$(wslpath "$(cmd.exe /c 'echo %ProgramFiles%' 2>/dev/null | tr -d '\r\n')" 2>/dev/null) || true
+      PROGRAM_FILES=$(win_env_path ProgramFiles) || true
       if [[ -n "$PROGRAM_FILES" ]] && [[ -x "$PROGRAM_FILES/Tailscale/tailscale.exe" ]]; then
         TS_EXE="$PROGRAM_FILES/Tailscale/tailscale.exe"
       fi
