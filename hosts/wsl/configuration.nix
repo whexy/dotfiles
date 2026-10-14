@@ -1,4 +1,4 @@
-{ flake, lib, ... }:
+{ flake, ... }:
 {
   imports = flake.lib.nixosHost {
     system = "x86_64-linux";
@@ -19,10 +19,5 @@
     ];
   };
 
-  dotfiles = {
-    system.autoUpgrade.enable = true;
-    # WSL shares the Windows network stack, so the Tailscale node belongs to
-    # the Windows client; a Linux tailscaled here would be a second node.
-    network.tailscale.enable = lib.mkForce false;
-  };
+  dotfiles.system.autoUpgrade.enable = true;
 }

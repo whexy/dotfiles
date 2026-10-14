@@ -14,7 +14,10 @@
     };
     networkmanager.enable = lib.mkEnableOption "NetworkManager";
     tailscale = {
-      enable = lib.mkEnableOption "Tailscale client";
+      enable = lib.mkEnableOption ''
+        Tailscale on this host. On WSL the Windows client owns the node, so
+        only a CLI that drives it is installed
+      '';
       userOperator = lib.mkEnableOption ''
         the primary user as Tailscale operator, so user services can change
         tailscaled state (e.g. `tailscale serve`) without root
