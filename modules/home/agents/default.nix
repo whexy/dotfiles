@@ -150,7 +150,8 @@ in
         # Taken from the package so the instructions match the server's tools.
         // lib.optionalAttrs cfg.rea.enable {
           reverse-engineer-anything = "${rea.base}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
-        };
+        }
+        // lib.optionalAttrs cfg.video.enable video.skills;
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
@@ -281,6 +282,7 @@ in
           perSystem.self.wechat-cli
         ]
         ++ lib.optional cfg.rea.enable rea.package
+        ++ lib.optionals cfg.video.enable video.packages
         ++ lib.concatMap (a: a.packages or [ ]) agents;
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);

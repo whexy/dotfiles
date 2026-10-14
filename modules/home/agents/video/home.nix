@@ -3,4 +3,10 @@
 { perSystem }:
 {
   resolveMcp = perSystem.self.resolve-mcp;
+
+  packages = [ perSystem.self.video-edit ];
+
+  skills = {
+    video-edit = ./skills/video-edit;
+  };
 }
