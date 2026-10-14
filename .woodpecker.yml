@@ -2,6 +2,9 @@
 variables:
   - &k8s_heavy
     kubernetes:
+      # nix-ci is amd64-only.
+      nodeSelector:
+        kubernetes.io/arch: amd64
       resources:
         requests:
           memory: 8Gi # only k8s-3 (~45Gi) can satisfy -> pinned to the big node
@@ -9,23 +12,44 @@ variables:
         limits:
           memory: 12Gi # <= LimitRange max
           cpu: "16" # <= LimitRange max; let nix use many of k8s-3's 24 cores
-  # GitHub App credentials and the flake features both update lanes need.
+  # The first Pod binds the local-path workspace; later steps follow its node.
+  - &amd64
+    kubernetes:
+      nodeSelector:
+        kubernetes.io/arch: amd64
+  # The shared CI cache's credentials, the only secrets a pull-request step may
+  # have. nix-ci fetches whatever an earlier run built and uploads, signed,
+  # what this one builds, so a package or check none of whose inputs changed
+  # is downloaded instead of built.
+  - &ci_cache
+    AWS_ACCESS_KEY_ID:
+      from_secret: ci_cache_access_key
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: ci_cache_secret_key
+    NIX_CACHE_SIGNING_KEY:
+      from_secret: nix_cache_signing_key
+  # GitHub App credentials and the build cache both update lanes need.
   - &github_app
+    <<: *ci_cache
     GITHUB_APP_ID:
       from_secret: github_app_id
     GITHUB_APP_INSTALLATION_ID:
       from_secret: github_app_installation_id
     GITHUB_APP_PRIVATE_KEY:
       from_secret: github_app_private_key
-    NIX_CONFIG: |
-      experimental-features = nix-command flakes
 when:
   event: [push, pull_request, cron, manual]
   cron: [nightly, weekly]
+labels:
+  platform: linux/amd64
+clone:
+  - name: git
+    image: woodpeckerci/plugin-git
+    backend_options: *amd64
 steps:
   # Update every flake input (weekly cron, or a manual run)
   update-flake:
-    image: nixos/nix:latest
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     when:
       - event: cron
         cron: weekly
@@ -60,7 +84,7 @@ steps:
   # pins live in package metadata rather than flake.lock, so this lane updates
   # every pin in one serialized commit.
   update-nightly-agents:
-    image: nixos/nix:latest
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     when:
       event: cron
       cron: nightly
@@ -102,16 +126,17 @@ steps:
   # Blueprint-generated host closure. `nix flake check --all-systems` is too
   # memory-heavy for this repo after Blueprint host discovery.
   check-flake:
-    image: nixos/nix:latest
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
     depends_on: []
     when:
       event: [push, pull_request]
+    environment: *ci_cache
     commands:
       - echo "=== Running pre-commit checks ==="
       - |
-        SYSTEM=$(nix eval --accept-flake-config --raw --impure --expr 'builtins.currentSystem' --extra-experimental-features 'nix-command flakes')
-        nix build --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#checks.$SYSTEM.pre-commit" -L --no-link
+        SYSTEM=$(nix eval --accept-flake-config --raw --impure --expr 'builtins.currentSystem')
+        nix build --accept-flake-config ".#checks.$SYSTEM.pre-commit" -L --no-link
       - echo "=== Evaluating representative NixOS configurations ==="
       - |
         for config in \
@@ -119,28 +144,30 @@ steps:
           wsl
         do
           echo "Evaluating $config..."
-          nix eval --accept-flake-config --extra-experimental-features 'nix-command flakes' ".#nixosConfigurations.$config.config.system.build.toplevel.drvPath" --show-trace
+          nix eval --accept-flake-config ".#nixosConfigurations.$config.config.system.build.toplevel.drvPath" --show-trace
           echo "OK - $config"
         done
       - echo "OK - representative NixOS configurations evaluate correctly"
   # Evaluate darwin and home-manager configurations (not covered by flake check)
   check-extra-configs:
-    image: nixos/nix:latest
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
     depends_on: []
     when:
       event: [push, pull_request]
+    environment: *ci_cache
     commands:
       - echo "=== Evaluating darwin configurations ==="
-      - nix eval --extra-experimental-features 'nix-command flakes' .#darwinConfigurations.golf.system.drvPath --show-trace
+      - nix eval .#darwinConfigurations.golf.system.drvPath --show-trace
       - echo "OK - golf"
       - echo "=== Evaluating home-manager configurations ==="
-      - nix eval --extra-experimental-features 'nix-command flakes' .#homeConfigurations.wenxuan@mars.activationPackage.drvPath --impure --show-trace
+      - nix eval .#homeConfigurations.wenxuan@mars.activationPackage.drvPath --impure --show-trace
       - echo "OK - mars (x86_64)"
       - echo "SUCCESS - All configurations evaluate correctly"
   # Build docs (astro) only when docs/ changes on master
   build-docs:
     image: node:22-alpine
+    backend_options: *amd64
     when:
       - event: push
         branch: master
@@ -154,6 +181,7 @@ steps:
   # Deploy docs to Cloudflare Workers (static assets) only when docs/ changes on master
   deploy-docs:
     image: node:22-alpine
+    backend_options: *amd64
     when:
       - event: push
         branch: master
