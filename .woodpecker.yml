@@ -148,14 +148,14 @@ steps:
           echo "OK - $config"
         done
       - echo "OK - representative NixOS configurations evaluate correctly"
-  # Evaluate darwin and home-manager configurations (not covered by flake check)
+  # Evaluate darwin and home-manager configurations (not covered by flake check).
+  # It builds nothing, so it has nothing to upload and gets no cache secrets.
   check-extra-configs:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
     depends_on: []
     when:
       event: [push, pull_request]
-    environment: *ci_cache
     commands:
       - echo "=== Evaluating darwin configurations ==="
       - nix eval .#darwinConfigurations.golf.system.drvPath --show-trace
