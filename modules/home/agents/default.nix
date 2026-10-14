@@ -52,6 +52,8 @@ in
       };
     };
 
+    video.enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio (WSL only for now)";
+
     t3code = {
       package = lib.mkOption {
         type = lib.types.nullOr lib.types.package;
@@ -113,12 +115,14 @@ in
         inherit pkgs lib perSystem;
         cfg = cfg.rea;
       };
+      video = import ./video/home.nix { inherit perSystem; };
       mcp = import ./mcp.nix {
         inherit
           pkgs
           config
           lib
           rea
+          video
           ;
       };
       # Agents commit as the user but did not write the code, so they leave
@@ -247,6 +251,15 @@ in
       ];
     in
     {
+      assertions = [
+        {
+          # Resolve's MCP server is a Windows program reached through WSL
+          # interop. Standalone homes have no osConfig to say this is WSL.
+          assertion = cfg.video.enable -> args.osConfig.dotfiles.host.wsl or false;
+          message = "dotfiles.agents.video.enable requires a WSL host.";
+        }
+      ];
+
       home = {
         # Single source of truth for global agent rules; every agent reads it.
         # pi and Claude Code get extra tool-specific guidance appended by
