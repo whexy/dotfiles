@@ -11,7 +11,10 @@ pkgs.stdenvNoCC.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
-  nativeCheckInputs = [ pkgs.python3 ];
+  nativeCheckInputs = [
+    pkgs.python3
+    pkgs.ffmpeg
+  ];
   doCheck = true;
   checkPhase = ''
     runHook preCheck

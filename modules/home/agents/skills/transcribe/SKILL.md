@@ -11,10 +11,12 @@ only model that returns word timestamps). Long files are chunked at
 silence boundaries automatically; timestamps in the output are always
 absolute.
 
-Costs about $0.006 per minute of media (~$0.36/hour). Word timestamps
-are approximate (+/-0.1-0.5 s): good enough to decide what to cut, not
-frame-accurate. Snap cut points to silence and add ~0.15 s/0.25 s
-handles in the actual edit (ffmpeg, DaVinci Resolve, etc.).
+Costs about $0.006 per minute of media (~$0.36/hour). Word edges land
+about +/-0.2 s from the real pause edges: good enough to decide what to
+cut, never a cut point. Snap every cut point to a detected silence
+(`video-edit snap` does this when editing video; elsewhere run ffmpeg
+`silencedetect` at the JSON's `silence.threshold_db`) and add
+~0.15 s/0.25 s handles in the actual edit.
 
 The text is whisper-1's, verbatim. Individual words may be misheard
 (names, jargon, code-switched terms); read them against the surrounding
@@ -24,8 +26,10 @@ where words start and stop, not on perfect spelling.
 ## Setup
 
 Needs `OPENAI_API_KEY` in the environment (a key with the Audio scope).
-If a command exits 5, the key is missing: ask the user to export it, do
-not invent one. `transcribe --estimate FILE` prints duration and cost
+The agent launcher exports it from the agenix secret
+`secrets/openai-api-key.age`. If a command exits 5 (key missing) or 4
+with `HTTP 401` (key rejected), ask the user to set that secret with
+`agenix -e secrets/openai-api-key.age` and rebuild; do not invent a key. `transcribe --estimate FILE` prints duration and cost
 without a key or any API calls; run it first on long files.
 
 ## Usage
@@ -35,13 +39,26 @@ transcribe talk.mp4                              # annotated text to stdout
 transcribe talk.mp4 --format json -o talk.json   # full word-level data
 transcribe talk.mp4 --format srt -o talk.srt     # subtitles / Resolve import
 transcribe talk.mp4 --context "Kubernetes, ArgoCD, Wenxuan"
+transcribe --from-json talk.json --format srt    # re-render, no API call
 ```
+
+When editing, transcribe each source once to JSON and keep it; render
+the text view and SRT from it with `--from-json`, which takes `--format`,
+`--pause` and `--no-silence` but needs no key, API call, or ffmpeg.
+Leave silence detection on for that one run: silences cannot be added
+back from the JSON later.
 
 - `--language CODE` hints the language (e.g. `zh`, `en`); omit to
   auto-detect, which handles code-switching better.
 - `--context "..."` is whisper-1's glossary prompt (max ~224 tokens);
   list names/jargon you expect to hear to bias their spelling.
+- For Chinese recordings pass neither: on the user's footage auto-detect
+  got the language right and a glossary did not improve the text.
 - `--pause SECONDS` (default 0.6) is the gap that starts a new segment.
+- `--silence-db DB` is the silence threshold in dBFS. The default, `auto`,
+  is the audio's measured noise floor + 9 dB, or -35 dB when there is no
+  floor to measure (mostly digital silence). Silences under 0.5 s are
+  ignored. The JSON records the values used under `silence`.
 - Progress goes to stderr; stdout carries only the transcript.
 
 ## Reading the output
@@ -55,18 +72,24 @@ Text format, one segment per line:
 ```
 
 - `{word}` filler (um/uh/like/basically/嗯/那个/然后…), `{{word}}` stumble
-  (immediately repeated word), `<pause Xs>` long pause inside a segment,
-  `(pause Xs)` silence before the segment. `# silence without speech`
-  lines are silent stretches with no words at all (dead air, music).
+  (a word or phrase said twice in a row, both takes marked),
+  `<pause Xs>` long pause inside a segment, `(pause Xs)` silence before
+  the segment. `# silence without speech` lines are silences no word
+  gap accounts for: dead air, music, or a pause whisper stretched a
+  word over.
+- A doubled single hanzi (刚刚, but also a stutter like 我我) and 一X一X
+  (一台一台) are not marked as stumbles.
 - JSON gives every word `start`/`end`/`gap_after` plus `filler`/`stumble`
   flags.
 
 For cut planning: treat a filler plus its surrounding pauses as one cut
-region, cut only the first take of a `{{stumble}}`, and prefer cutting in
+region, cut only the first take of a `{{stumble}}` (after checking the
+sentence: 虚拟机，虚拟机里面… repeats on purpose), and prefer cutting in
 `(pause …)` gaps. False starts and repeated whole sentences are not
 marked; spot them in the text and use the segment timestamps.
 
 ## Exit codes
 
-`0` ok · `2` usage · `3` media/ffmpeg problem · `4` API error · `5`
+`0` ok · `2` usage (or a `--from-json` file that is not transcribe
+JSON) · `3` media/ffmpeg problem · `4` API error · `5`
 `OPENAI_API_KEY` not set.
