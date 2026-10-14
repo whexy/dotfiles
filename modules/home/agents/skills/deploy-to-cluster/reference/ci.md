@@ -17,8 +17,41 @@ create repo secrets.
 - `github_app_id`, `github_app_installation_id` and `github_app_private_key`:
   the `whexy-bot` GitHub App that release-please acts as. The App is installed
   on every `whexy/*` repository, so new repos need no GitHub-side setup.
+- `ci_cache_access_key`, `ci_cache_secret_key` and `nix_cache_signing_key`:
+  the shared build cache (below).
 
-Never use a secret in a `pull_request` step.
+Never use a secret in a `pull_request` step, except the three build-cache
+secrets. They let a step write the cache, which is acceptable because only
+Wenxuan's own code runs in this CI.
+
+## Build cache
+
+Steps start in empty pods, so use the shared cache
+([whexy/ci-cache](https://github.com/whexy/ci-cache)) for anything a step
+downloads or builds:
+
+- A Nix step runs on `ghcr.io/whexy/nix-ci:<version>` instead of `nixos/nix`,
+  with the cache's secrets. The image enables flakes, so it needs no
+  `NIX_CONFIG`:
+
+  ```yaml
+  image: ghcr.io/whexy/nix-ci:0.1.0-alpha.1
+  environment:
+    AWS_ACCESS_KEY_ID:
+      from_secret: ci_cache_access_key
+    AWS_SECRET_ACCESS_KEY:
+      from_secret: ci_cache_secret_key
+    NIX_CACHE_SIGNING_KEY:
+      from_secret: nix_cache_signing_key
+  ```
+
+- Other toolchains restore and save their cache directory (`.npm`, a cargo
+  home) with the `ghcr.io/whexy/ci-cache` plugin; its README has the step
+  pair.
+
+nix-ci builds without the Nix sandbox, which step pods cannot host, so a check
+that reaches the network passes in CI; only a sandboxed build on a laptop
+catches it.
 
 ## Pipeline shape (`templates/app/.woodpecker.yaml`)
 
