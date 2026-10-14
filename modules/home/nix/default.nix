@@ -34,6 +34,12 @@ in
         '';
       };
     };
+    ciCache.enable = lib.mkEnableOption ''
+      substituting from whexy/ci-cache's cache of CI builds through this user's
+      nix.conf. Integrated homes get it from the system daemon instead; a
+      standalone home needs it only on the tailnet, where the cache is served,
+      and only a user the daemon trusts can add a substituter
+    '';
     pinRegistry.enable = lib.mkEnableOption "pinning the user nixpkgs registry and search path";
     gc.enable = lib.mkEnableOption "weekly garbage collection of this user's profile generations older than 30 days";
 
@@ -59,7 +65,7 @@ in
   };
 
   config = lib.mkMerge [
-    (lib.mkIf (cfg.caches.enable || cfg.ghTokenFlakes.enable) {
+    (lib.mkIf (cfg.caches.enable || cfg.ciCache.enable || cfg.ghTokenFlakes.enable) {
       # Home Manager uses this package to validate nix.conf, not to manage the daemon.
       nix.package = lib.mkDefault pkgs.nix;
     })
@@ -67,6 +73,9 @@ in
       nix.settings = import ../../../lib/nix-settings.nix // {
         accept-flake-config = cfg.caches.acceptFlakeConfig;
       };
+    })
+    (lib.mkIf cfg.ciCache.enable {
+      nix.settings = import ../../../lib/ci-cache-settings.nix;
     })
     (lib.mkIf cfg.pinRegistry.enable {
       nix = {

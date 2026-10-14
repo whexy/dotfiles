@@ -17,6 +17,17 @@ in
 {
   options.dotfiles.nix = {
     caches.enable = lib.mkEnableOption "dotfiles binary caches and flake settings";
+    ciCache.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = config.dotfiles.network.tailscale.enable;
+      defaultText = lib.literalExpression "config.dotfiles.network.tailscale.enable";
+      example = false;
+      description = ''
+        Whether the Nix daemon substitutes, for every user, from whexy/ci-cache's
+        cache of CI builds. It follows Tailscale because the cache is served
+        only on the tailnet.
+      '';
+    };
     pinRegistry.enable = lib.mkEnableOption "pinning the `nixpkgs` flake reference to this system's nixpkgs";
     gc.enable = lib.mkEnableOption "weekly garbage collection of system profile generations older than 14 days";
     optimise.enable = lib.mkEnableOption "automatic nix store optimisation";
@@ -44,6 +55,10 @@ in
       # setting it here would trip the "nixpkgs.config with nixpkgs.pkgs" assertion
       # since blueprint injects nixpkgs.pkgs into every host.
       nix.settings = import ../../../lib/nix-settings.nix;
+    })
+
+    (lib.mkIf cfg.ciCache.enable {
+      nix.settings = import ../../../lib/ci-cache-settings.nix;
     })
 
     (lib.mkIf cfg.pinRegistry.enable {
