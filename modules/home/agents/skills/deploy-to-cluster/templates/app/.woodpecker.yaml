@@ -77,6 +77,18 @@ steps:
           exit 1
         }
 
+  # Building here rather than in the Dockerfile lets the build cache reach it;
+  # the Dockerfile only copies .image in.
+  - name: build
+    image: <toolchain image>
+    when:
+      event: tag
+    backend_options: *amd64
+    commands:
+      - <install from the lockfile>
+      - <build>
+      - <copy what the image needs into .image/>
+
   - name: publish
     image: woodpeckerci/plugin-docker-buildx:6.1.2
     when:
@@ -99,7 +111,7 @@ steps:
       password:
         from_secret: ghcr_token
       dockerfile: Dockerfile
-      context: .
+      context: .image
       platforms: linux/amd64
       tags:
         - ${CI_COMMIT_TAG##v}

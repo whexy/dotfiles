@@ -2,7 +2,11 @@
 
 The project needs a `Dockerfile` at its root:
 
-- Use a multi-stage build so the runtime image holds no build tools or tests.
+- Only copy in what CI already built. The pipeline's `build` step writes it to
+  `.image/`, which is the image's build context; the Dockerfile runs no
+  install or build ([why](ci.md#docker-images)).
+- Give the repo a script or flake app that runs the same build and then
+  `docker build`, since the Dockerfile no longer builds on its own.
 - Run as UID/GID 1000 and work on a read-only root filesystem with a writable
   `/tmp`. Keep all persistent state under `/data`.
 - Serve a health endpoint for probes; the templates use `GET /healthz`.
@@ -16,8 +20,9 @@ The project needs a `Dockerfile` at its root:
   ARG SOURCE_REVISION=unknown
   ```
 
-`.dockerignore` must exclude `.git`, `.woodpecker*`, `release/`, tests, docs
-and local data.
+A repo under the [inline-cache exception](ci.md#docker-images) builds inside
+Docker with the repo as its context. Its `.dockerignore` must exclude `.git`,
+`.woodpecker*`, `release/`, tests, docs and local data.
 
 CI builds linux/amd64 only, because the cluster's workers are amd64. CI adds
 the OCI labels, including `org.opencontainers.image.source`, which links the
