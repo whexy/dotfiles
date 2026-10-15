@@ -1,10 +1,10 @@
 {
-  version = "0.0.46-nightly.20261014.3093";
+  version = "0.0.46-nightly.20261014.3132";
 
   hashes = {
-    darwin-arm64 = "sha512-XsJ12hsaxTlCS914oPXZ0tv3D+MKc9Yxz6ad+Pv+6C9VFshokRbqRjUrih4TAhmsMOnNpEVwKm3NXiHPe41+KQ==";
-    linux-arm64 = "sha512-MylWQiH/SZBah3JiWYUleLQ/qviNTcw+jcXinhk+u2fIPZgqt1vNoa/9XL6ob9SON0eyUXGGbazsnnvI2wjY6g==";
-    linux-x64 = "sha512-/xlc1S/V/sJtTs13rGoUiFckCq27n5BilnrXrbT22rrb4XYFznSQXGUi/nnf6SjWD7c4wjMygjdKrbVRyHKkVg==";
+    darwin-arm64 = "sha512-+INGy0zQxAwNe7rFFHP7+qIbh1JXYLIFG2f7Qvf2ZpWLAXKYOpXToAXVxVg1+0kK2BFW3CsDUySB5BWpU6b2Nw==";
+    linux-arm64 = "sha512-5col06pp3mgn8Kpaz+sjp+QIp7ZrLOtFEyxeltS1IW1R9EXIpm+5dnw9uVEdmsaFvWKMXdK13vbduVbBL/VbRA==";
+    linux-x64 = "sha512-l4PB8hZf2xwEn32rmFiN22J/NDwo0E1jcBJ8lGVPhH2bYHvpJE6kIVPTo/MoRDA1pU1PPF7Rr304c/shAZmlrA==";
   };
 
   browser = {
