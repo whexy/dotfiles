@@ -14,60 +14,19 @@ from agent_settings.documents import edit_document, read_document
 from agent_settings.errors import SettingsError
 
 
-def muse_config_home() -> Path:
-    """The user's real XDG config home, ignoring a named config's export.
-
-    A launched named config sets XDG_CONFIG_HOME to its own container; that
-    must not move the default config it was forked from.
-    """
-    home = Path.home()
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config")).expanduser()
-    data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share")).expanduser()
-    configs = data / "agent-settings" / "muse" / "configs"
-    if config_home == configs or configs in config_home.parents:
-        return home / ".config"
-    return config_home
-
-
 @final
 class Profiles:
-    def __init__(
-        self,
-        agent: str,
-        config_name: str | None = None,
-        default: Path | None = None,
-        subdir: str = "",
-    ) -> None:
+    def __init__(self, agent: str) -> None:
         self.agent = agent
-        self.config_name = config_name or ("config.toml" if agent == "codex" else "settings.json")
-        # Muse's config directory is `muse` under the XDG config home, and a
-        # named config relocates that home, so its root sits one level deeper.
-        self.subdir = subdir or ("muse" if agent == "muse" else "")
-        if default is not None:
-            self.default = default
-        elif agent == "muse":
-            self.default = muse_config_home() / "muse"
-        else:
-            self.default = Path.home() / f".{agent}"
+        self.default = Path.home() / f".{agent}"
         data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
         self.directory = data / "agent-settings" / agent / "configs"
-
-    def root_in(self, container: Path) -> Path:
-        return container / self.subdir if self.subdir else container
-
-    def container(self, root: Path) -> Path:
-        return root.parent if self.subdir else root
-
-    def is_managed(self, root: Path) -> bool:
-        """Whether `root` is a named config this manager may delete."""
-        container = self.container(root)
-        return root != self.default and container.parent == self.directory
 
     def configurations(self) -> dict[str, Path]:
         result = {"default": self.default}
         if self.directory.exists():
             result.update(
-                (p.name, self.root_in(p))
+                (p.name, p)
                 for p in sorted(self.directory.iterdir())
                 if p.is_dir() and not p.is_symlink() and not p.name.startswith(".")
             )
@@ -98,12 +57,10 @@ class Profiles:
         if target.exists() or target.is_symlink():
             raise SettingsError(f"config already exists: {name}")
         temporary = Path(tempfile.mkdtemp(prefix=".fork-", dir=self.directory))
-        root = self.root_in(temporary)
-        root.mkdir(parents=True, exist_ok=True)
         try:
             # An allowlist keeps tokens, transcripts, caches, and trust state out of forks.
             files = [
-                self.config_name,
+                "settings.json" if self.agent == "claude" else "config.toml",
                 "dotfiles-settings.json",
                 "CLAUDE.md" if self.agent == "claude" else "AGENTS.md",
                 "skills",
@@ -116,7 +73,7 @@ class Profiles:
             if self.agent == "codex":
                 files.extend(p.name for p in source.glob("*.config.toml"))
             for filename in dict.fromkeys([*files, *managed_links]):
-                src, dst = source / filename, root / filename
+                src, dst = source / filename, temporary / filename
                 follows_default = source == self.default or (
                     src.is_symlink() and src.readlink() == self.default / filename
                 )
@@ -132,25 +89,24 @@ class Profiles:
                     else source / ".claude.json"
                 )
                 mcp = read_document(registry).get("mcpServers", {})
-                with edit_document(root / ".claude.json") as doc:
+                with edit_document(temporary / ".claude.json") as doc:
                     doc["mcpServers"] = mcp
             temporary.rename(target)
-            return self.root_in(target)
         finally:
             if temporary.exists():
                 shutil.rmtree(temporary)
+        return target
 
     def delete(self, root: Path) -> None:
         with self._lock():
             self._delete(root)
 
     def _delete(self, root: Path) -> None:
-        container = self.container(root)
-        if root == self.default or container.parent != self.directory or container.is_symlink():
+        if root == self.default or root.parent != self.directory or root.is_symlink():
             raise SettingsError("only configs created by this manager can be deleted")
-        if container.name not in self.configurations():
+        if root.name not in self.configurations():
             raise SettingsError("config no longer exists")
-        shutil.rmtree(container)
+        shutil.rmtree(root)
 
 
 def _copy(source: Path, target: Path, *, materialize: bool = False) -> None:
