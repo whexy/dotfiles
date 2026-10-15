@@ -24,6 +24,7 @@ pkgs.stdenvNoCC.mkDerivation {
   nativeCheckInputs = [
     python
     pkgs.ffmpeg
+    perSystem.self.manimgx
   ];
   doCheck = true;
   checkPhase = ''

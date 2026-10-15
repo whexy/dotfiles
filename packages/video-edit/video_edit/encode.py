@@ -20,14 +20,31 @@ UNTAGGED = {None, "", "unknown", "unspecified", "reserved"}
 COLORSPACE_NAME = {"bt709": "bt709", "bt601": "bt470bg"}
 OUT_TAGS = "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv"
 SCALE_FLAGS = "flags=lanczos+accurate_rnd+full_chroma_int"
+MANIMGX = "manimgx"
+
+
+def raw_timing(info):
+    """A raw render's frame rate and the number of frames in its clip.
+
+    ManimGX stores a picture held still as one sample lasting several frames,
+    so its packets undercount and its average rate drifts; its duration on
+    its stream rate counts the frames instead. It also closes on a frame at
+    the scene's own end, one past the clip.
+    """
+    if info["encoder"] != MANIMGX:
+        return rate(info["avg_frame_rate"]) or rate(info["r_frame_rate"]), info["frames"]
+    fps = rate(info["r_frame_rate"])
+    if fps is None or not info["duration"]:
+        return fps, None
+    return fps, frames_of(info["duration"], fps) - 1
 
 
 def colour_input(info, matrix="auto", rng="auto"):
     """How to read a raw render's colours.
 
-    An untagged matrix is read as BT.601: ffmpeg converts RGB to YUV with
-    BT.601 unless told otherwise, which is how Manim's libx264 output is
-    encoded. HyperFrames tags only the matrix (bt709), which is honoured.
+    An untagged matrix is read as BT.601, which ffmpeg and libx264 use to
+    convert RGB to YUV unless told otherwise. ManimGX tags BT.601 (smpte170m)
+    and HyperFrames tags only the matrix (bt709); both tags are honoured.
     """
     if info["rgb"]:
         return {"kind": "rgb", "matrix": None, "range": "pc", "notes": ["RGB input"]}
@@ -41,7 +58,7 @@ def colour_input(info, matrix="auto", rng="auto"):
             matrix = "bt601"
             notes.append(
                 "matrix untagged: read as BT.601 (ffmpeg's RGB->YUV default, "
-                "e.g. Manim/libx264); pass --input-matrix bt709 if the renderer "
+                "e.g. libx264); pass --input-matrix bt709 if the renderer "
                 "converted with BT.709"
             )
         else:
@@ -139,18 +156,18 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", dry_run=False):
             f"{raw} has an alpha channel; slots are full-screen and opaque, so "
             "render on the style background"
         )
-    raw_fps = rate(info["avg_frame_rate"]) or rate(info["r_frame_rate"])
-    if raw_fps is None or not info["frames"]:
+    raw_fps, raw_frames = raw_timing(info)
+    if raw_fps is None or not raw_frames:
         raise MediaError(f"cannot read the frame rate or frame count of {raw}")
     fps = slot["fps"]
-    converted = frames_of(info["frames"] / raw_fps, fps)
+    converted = frames_of(raw_frames / raw_fps, fps)
     shortfall = slot["frames"] - converted
     if abs(shortfall) > 1:
         need = frames_of(slot["frames"] / fps, raw_fps)
         return 1, {
             "ok": False,
             "errors": [
-                f"raw has {info['frames']} frames at {float(raw_fps):g} fps "
+                f"raw has {raw_frames} frames at {float(raw_fps):g} fps "
                 f"({converted} at {fps}); the slot needs exactly {slot['frames']}: "
                 f"render {need} frames at {float(raw_fps):g} fps"
             ],
@@ -178,7 +195,7 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", dry_run=False):
         "out": root.rel(out),
         "frames": slot["frames"],
         "input": {
-            "frames": info["frames"],
+            "frames": raw_frames,
             "fps": f"{raw_fps.numerator}/{raw_fps.denominator}",
             "pix_fmt": info["pix_fmt"],
             "matrix": colour["matrix"],
@@ -272,7 +289,10 @@ def text_findings(src_dir, whitelist, limit=20):
 
 
 def contact_sheet(path, total, fps, out, count=12, cols=4, tile_w=480):
-    """N evenly spaced frames tiled into one PNG, alpha on a checkerboard."""
+    """N evenly spaced frames at `fps` tiled into one PNG, alpha on a checkerboard.
+
+    `fps` resamples first, so a held picture counts every frame it shows.
+    """
     from PIL import Image, ImageDraw
 
     from . import fonts
@@ -284,7 +304,7 @@ def contact_sheet(path, total, fps, out, count=12, cols=4, tile_w=480):
         run(
             [
                 "ffmpeg", "-v", "error", "-i", str(path), "-vf",
-                f"select='{expr}',scale={tile_w}:-2,format=rgba",
+                f"fps={fps},select='{expr}',scale={tile_w}:-2,format=rgba",
                 "-fps_mode", "passthrough", "-frames:v", str(len(picks)),
                 f"{tmp}/f_%03d.png",
             ]
@@ -329,11 +349,15 @@ def run_check(root, file, slot_arg, draft=False):
         problems.append(
             f"size {info['width']}x{info['height']}, want {want['width']}x{want['height']}"
         )
-    for key in ("r_frame_rate", "avg_frame_rate"):
+    _, frames = raw_timing(info)
+    rates = ["r_frame_rate"]
+    if info["encoder"] != MANIMGX:
+        rates.append("avg_frame_rate")
+    for key in rates:
         if rate(info[key]) != Fraction(want["fps"]):
             problems.append(f"{key} {info[key]}, want {want['fps']}")
-    if info["frames"] != want["frames"]:
-        problems.append(f"{info['frames']} frames, want {want['frames']}")
+    if frames != want["frames"]:
+        problems.append(f"{frames} frames, want {want['frames']}")
     if info["alpha"] and not slot.get("alpha"):
         problems.append(f"has alpha ({info['pix_fmt']}); the slot is opaque")
     if not draft:
@@ -365,7 +389,7 @@ def run_check(root, file, slot_arg, draft=False):
         problems += text_findings(slot_dir / "src", rules.get("textWhitelist", []))
     sheet = file.with_suffix(".sheet.png")
     try:
-        contact_sheet(file, info["frames"], want["fps"], sheet)
+        contact_sheet(file, frames, want["fps"], sheet)
     except MediaError as err:
         problems.append(f"contact sheet failed: {err}")
         sheet = None
@@ -376,7 +400,7 @@ def run_check(root, file, slot_arg, draft=False):
         "slot": slot["id"],
         "signature": slot["signature"],
         "problems": problems,
-        "frames": info["frames"],
+        "frames": frames,
         "size": stat.st_size,
         "mtime_ns": stat.st_mtime_ns,
     }
