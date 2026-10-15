@@ -45,102 +45,73 @@ let
     "--firefoxArg=-ExtensionSettings"
     "--firefoxArg={}"
   ];
-
-  # Variable -> agenix secret holding its value. Servers reference the
-  # variable, never the value, so no token reaches the store or a config file.
-  secrets = {
-    N8N_MCP_TOKEN = config.age.secrets.n8n-mcp-token.path;
-    # For the transcribe CLI, which every agent host installs. Not a server
-    # credential, but agents can only receive variables through this prelude.
-    OPENAI_API_KEY = config.age.secrets.openai-api-key.path;
-  };
 in
 {
-  # Shell lines every agent launcher runs before starting its agent, which
-  # cannot read agenix files itself. The paths are shell fragments that only
-  # a shell resolves. An unreadable secret leaves its variable unset, so the
-  # agent still starts and reports the one server it cannot authenticate to.
-  exportSecrets = lib.concatStrings (
-    lib.mapAttrsToList (name: path: ''
-      if secret=$(${pkgs.coreutils}/bin/cat "${path}" 2>/dev/null); then export ${name}="$secret"; fi
-    '') secrets
-  );
-
-  servers = {
-    # n8n workflow that reaches the user away from the desk: phone push,
-    # WeChat, and a Slack note-to-self. Its MCP Server Trigger authenticates
-    # callers by bearer token.
-    #
-    # `type` is Claude's discriminator for a remote server; Codex and Pi
-    # select the transport using `url`. Claude Code and Pi expand `${VAR}` in
-    # header values; the Codex and OpenCode renderers translate it.
-    personal = {
-      type = "http";
-      url = "https://n8n.clusters.work/mcp/3e3dc609-1939-47ed-94ef-964a3164dfae";
-      headers.Authorization = "Bearer \${N8N_MCP_TOKEN}";
+  servers =
+    lib.optionalAttrs cfg.tldraw.enable {
+      # Live tldraw whiteboard rooms; agents read and draw diagrams that
+      # broadcast to anyone viewing the room. Unauthenticated: reachability is
+      # the only access control, which is why registration follows tailscale
+      # (see the option default in default.nix).
+      #
+      # `type` is Claude's discriminator for a remote server; Codex and Pi
+      # select the transport using `url`.
+      tldraw = {
+        type = "http";
+        url = "https://draw.at-basking.ts.net/mcp";
+      };
+    }
+    // lib.optionalAttrs cfg.firefoxDevtools.enable {
+      firefox-devtools = {
+        # Not yet in the release branches; nixpkgs-unstable has it.
+        command = lib.getExe pkgs.unstable.firefox-devtools-mcp;
+        args = [
+          # Agents run on machines with no display, and even on desktops a
+          # browser window they cannot see is only a distraction.
+          "--headless"
+          # Keeps cookies and logins in ~/.firefox-devtools-mcp instead of a
+          # fresh temporary profile per session. The server never opens the
+          # user's real profile either way.
+          "--auto-profile"
+          # Network, console, debugger, and profiler modules on top of the
+          # default preset; this is what makes the server useful for debugging
+          # a page rather than only reading it.
+          "--tool-preset"
+          "developer"
+          # BiDi otherwise applies Firefox's automation-test preferences, which
+          # disable features (notably browser.ml.*) a real page may depend on.
+          "--pref"
+          "remote.prefs.recommended=false"
+          # The desktop browser's HttpsOnlyMode policy reaches automation too: on
+          # macOS policies come from the org.mozilla.firefox defaults domain,
+          # which is per-user rather than per-profile, so a dedicated profile
+          # does not escape it. Without this an agent cannot open the plain-HTTP
+          # origins dev servers serve, and the http:// navigation fails instead
+          # of showing the interstitial a human would click through.
+          #
+          # HttpsOnlyMode=enabled only sets the default, so a user-branch value
+          # wins; it would be locked under force_enabled.
+          "--pref"
+          "dom.security.https_only_mode=false"
+          "--pref"
+          "dom.security.https_only_mode_pbm=false"
+          # Auto-detection looks for a Firefox in the platform's standard
+          # install location, which a Nix-installed browser is not in.
+          "--firefox-path"
+          firefox.binaryPath
+        ]
+        ++ unpolicedExtensions;
+      };
+    }
+    // lib.optionalAttrs cfg.rea.enable {
+      # Registered here rather than by `rea setup`, which would write an
+      # npx-pinned entry into every agent's own config.
+      rea = {
+        command = lib.getExe rea.package;
+        args = [ "mcp" ];
+      };
+    }
+    // lib.optionalAttrs cfg.video.enable {
+      resolve.command = lib.getExe video.resolveMcp;
     };
-  }
-  // lib.optionalAttrs cfg.tldraw.enable {
-    # Live tldraw whiteboard rooms; agents read and draw diagrams that
-    # broadcast to anyone viewing the room. Unauthenticated: reachability is
-    # the only access control, which is why registration follows tailscale
-    # (see the option default in default.nix).
-    tldraw = {
-      type = "http";
-      url = "https://draw.at-basking.ts.net/mcp";
-    };
-  }
-  // lib.optionalAttrs cfg.firefoxDevtools.enable {
-    firefox-devtools = {
-      # Not yet in the release branches; nixpkgs-unstable has it.
-      command = lib.getExe pkgs.unstable.firefox-devtools-mcp;
-      args = [
-        # Agents run on machines with no display, and even on desktops a
-        # browser window they cannot see is only a distraction.
-        "--headless"
-        # Keeps cookies and logins in ~/.firefox-devtools-mcp instead of a
-        # fresh temporary profile per session. The server never opens the
-        # user's real profile either way.
-        "--auto-profile"
-        # Network, console, debugger, and profiler modules on top of the
-        # default preset; this is what makes the server useful for debugging
-        # a page rather than only reading it.
-        "--tool-preset"
-        "developer"
-        # BiDi otherwise applies Firefox's automation-test preferences, which
-        # disable features (notably browser.ml.*) a real page may depend on.
-        "--pref"
-        "remote.prefs.recommended=false"
-        # The desktop browser's HttpsOnlyMode policy reaches automation too: on
-        # macOS policies come from the org.mozilla.firefox defaults domain,
-        # which is per-user rather than per-profile, so a dedicated profile
-        # does not escape it. Without this an agent cannot open the plain-HTTP
-        # origins dev servers serve, and the http:// navigation fails instead
-        # of showing the interstitial a human would click through.
-        #
-        # HttpsOnlyMode=enabled only sets the default, so a user-branch value
-        # wins; it would be locked under force_enabled.
-        "--pref"
-        "dom.security.https_only_mode=false"
-        "--pref"
-        "dom.security.https_only_mode_pbm=false"
-        # Auto-detection looks for a Firefox in the platform's standard
-        # install location, which a Nix-installed browser is not in.
-        "--firefox-path"
-        firefox.binaryPath
-      ]
-      ++ unpolicedExtensions;
-    };
-  }
-  // lib.optionalAttrs cfg.rea.enable {
-    # Registered here rather than by `rea setup`, which would write an
-    # npx-pinned entry into every agent's own config.
-    rea = {
-      command = lib.getExe rea.package;
-      args = [ "mcp" ];
-    };
-  }
-  // lib.optionalAttrs cfg.video.enable {
-    resolve.command = lib.getExe video.resolveMcp;
-  };
 }

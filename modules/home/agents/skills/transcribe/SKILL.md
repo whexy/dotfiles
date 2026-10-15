@@ -25,9 +25,9 @@ where words start and stop, not on perfect spelling.
 
 ## Setup
 
-Needs `OPENAI_API_KEY` in the environment (a key with the Audio scope).
-The agent launcher exports it from the agenix secret
-`secrets/openai-api-key.age`. If a command exits 5 (key missing) or 4
+`transcribe` reads its OpenAI key (one with the Audio scope) from the
+agenix secret `secrets/openai-api-key.age` itself; do not export
+`OPENAI_API_KEY`. If a command exits 5 (key missing) or 4
 with `HTTP 401` (key rejected), ask the user to set that secret with
 `agenix -e secrets/openai-api-key.age` and rebuild; do not invent a key. `transcribe --estimate FILE` prints duration and cost
 without a key or any API calls; run it first on long files.

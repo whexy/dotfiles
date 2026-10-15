@@ -11,8 +11,8 @@ let
   # The package installs its binary as `opencode2` to coexist with v1.
   #
   # The shared background server inherits the environment of the launch that
-  # starts it and resolves `{env:...}` from there, so it keeps the MCP secrets
-  # it started with until `opencode service restart`.
+  # starts it, so it keeps that launch's prelude until `opencode service
+  # restart`.
   package = pkgs.writeShellScriptBin "opencode" ''
     ${prelude}
     exec ${lib.getExe' upstream "opencode2"} "$@"

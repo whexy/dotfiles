@@ -2,7 +2,9 @@
 
 # Deterministic core of the video-editing toolkit: EDL validation, frame
 # math, generated DaVinci Resolve scripts, B-roll slot definitions, NVENC
-# finalizing and verification. ffmpeg and `transcribe` are bound onto PATH.
+# finalizing and verification. ffmpeg is bound onto PATH. `transcribe` is
+# only a fallback after the caller's PATH, where the agents module installs
+# the wrapper that supplies its API key.
 # /usr/lib/wsl/lib carries WSL's libcuda/libnvidia-encode, which NVENC
 # needs; the Nix build sandbox has no GPU, so tests drive the filter graph
 # with a software encoder instead.
@@ -35,12 +37,8 @@ pkgs.stdenvNoCC.mkDerivation {
     cp -r main.py video_edit style $out/lib/video-edit/
     makeWrapper ${python}/bin/python3 $out/bin/video-edit \
       --add-flags "$out/lib/video-edit/main.py" \
-      --prefix PATH : ${
-        pkgs.lib.makeBinPath [
-          pkgs.ffmpeg
-          perSystem.self.transcribe
-        ]
-      } \
+      --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.ffmpeg ]} \
+      --suffix PATH : ${pkgs.lib.makeBinPath [ perSystem.self.transcribe ]} \
       --prefix LD_LIBRARY_PATH : /usr/lib/wsl/lib \
       --set-default VIDEO_EDIT_FONT ${font}
     runHook postInstall
