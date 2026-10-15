@@ -137,9 +137,19 @@ in
           gpgSign = false
       '';
       # Shell lines every agent launcher runs before starting its agent; the
-      # agent's tool shells inherit what they export.
-      prelude = mcp.exportSecrets + ''
+      # agent and its tool shells inherit what they export, so a secret must
+      # never go here; a tool that needs one reads it in its own wrapper (see
+      # `transcribe`).
+      prelude = ''
         export GIT_CONFIG_GLOBAL=${gitConfig}
+      '';
+      # whisper-1 needs an OpenAI key in the environment of this process
+      # alone; the store and the agent that runs it never see the key.
+      transcribe = pkgs.writeShellScriptBin "transcribe" ''
+        if secret=$(${pkgs.coreutils}/bin/cat "${config.age.secrets.openai-api-key.path}" 2>/dev/null); then
+          export OPENAI_API_KEY="$secret"
+        fi
+        exec ${lib.getExe perSystem.self.transcribe} "$@"
       '';
       # Every skill is a directory holding a SKILL.md, per the Agent Skills
       # standard every harness implements.
@@ -265,7 +275,7 @@ in
 
         # CLIs that shared skills drive; every harness reaches them through PATH.
         packages = [
-          perSystem.self.transcribe
+          transcribe
           perSystem.self.wechat-cli
         ]
         ++ lib.optional cfg.rea.enable rea.package
@@ -294,8 +304,6 @@ in
         # Cloudflare Access; every agent must present the service token.
         cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
         cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
-        # Bearer token for the `personal` MCP server (see mcp.nix).
-        n8n-mcp-token.file = ../../../secrets/n8n-mcp-token.age;
         # whisper-1 for `transcribe`; a key restricted to the Audio API.
         openai-api-key.file = ../../../secrets/openai-api-key.age;
       };

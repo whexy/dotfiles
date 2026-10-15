@@ -369,8 +369,9 @@ def run_verify_audio(root, version=None):
             raise TranscribeError("transcribe is not on PATH") from err
         if result.returncode == 5:
             raise NoKeyError(
-                "transcribe needs OPENAI_API_KEY (exit 5); ask the user to export "
-                f"it, then rerun. The cut audio is ready at {root.rel(audio)}"
+                "transcribe has no OpenAI key (exit 5); ask the user to set "
+                "secrets/openai-api-key.age with agenix and rebuild, then rerun. "
+                f"The cut audio is ready at {root.rel(audio)}"
             )
         if result.returncode != 0:
             tail = " ".join(result.stderr.strip().splitlines()[-3:])
