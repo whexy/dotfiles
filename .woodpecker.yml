@@ -12,11 +12,6 @@ variables:
         limits:
           memory: 12Gi # <= LimitRange max
           cpu: "16" # <= LimitRange max; let nix use many of k8s-3's 24 cores
-  # The first Pod binds the local-path workspace; later steps follow its node.
-  - &amd64
-    kubernetes:
-      nodeSelector:
-        kubernetes.io/arch: amd64
   # The shared CI cache's credentials, the only secrets a pull-request step may
   # have. nix-ci fetches whatever an earlier run built and uploads, signed,
   # what this one builds, so a package or check none of whose inputs changed
@@ -43,9 +38,11 @@ when:
 labels:
   platform: linux/amd64
 clone:
+  # The clone's Pod binds the local-path workspace to its node, and every later
+  # step follows it there, so it asks for what the heavy steps need.
   - name: git
     image: woodpeckerci/plugin-git
-    backend_options: *amd64
+    backend_options: *k8s_heavy
 steps:
   # Update every flake input (weekly cron, or a manual run)
   update-flake:
@@ -167,7 +164,6 @@ steps:
   # Build docs (astro) only when docs/ changes on master
   build-docs:
     image: node:22-alpine
-    backend_options: *amd64
     when:
       - event: push
         branch: master
@@ -181,7 +177,6 @@ steps:
   # Deploy docs to Cloudflare Workers (static assets) only when docs/ changes on master
   deploy-docs:
     image: node:22-alpine
-    backend_options: *amd64
     when:
       - event: push
         branch: master
