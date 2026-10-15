@@ -20,10 +20,6 @@ The project needs a `Dockerfile` at its root:
   ARG SOURCE_REVISION=unknown
   ```
 
-A repo under the [inline-cache exception](ci.md#docker-images) builds inside
-Docker with the repo as its context. Its `.dockerignore` must exclude `.git`,
-`.woodpecker*`, `release/`, tests, docs and local data.
-
 CI builds linux/amd64 only, because the cluster's workers are amd64. CI adds
 the OCI labels, including `org.opencontainers.image.source`, which links the
 GHCR package to the repository. Keep the package private. The cluster pulls
