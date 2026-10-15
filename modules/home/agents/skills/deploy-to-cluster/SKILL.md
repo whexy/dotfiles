@@ -39,10 +39,9 @@ file.
 
 1. [Repository](reference/repository.md): private repo, rebase-only merges,
    branch ruleset.
-2. [Container image](reference/image.md): Dockerfile and `.dockerignore`
-   requirements.
-3. [Woodpecker CI](reference/ci.md): activation, org secrets, pipeline shape,
-   cluster limits, debugging failed pipelines.
+2. [Container image](reference/image.md): Dockerfile requirements.
+3. [Woodpecker CI](reference/ci.md): activation, org secrets, build cache,
+   Docker images, pipeline shape, cluster limits, debugging failed pipelines.
 4. [release-please](reference/release.md): release flow, config settings,
    bootstrapping, going stable.
 5. [Image-update webhook](reference/image-webhook.md): GHCR package events to
