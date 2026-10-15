@@ -30,6 +30,8 @@
       onepasswordGui.enable = lib.mkDefault true;
       # Touch ID / Apple Watch sudo; only has an effect on Darwin.
       biometricSudo.enable = lib.mkDefault true;
+      # swaylock PIN unlock, inert until `lock-pin set`; only has an effect on NixOS.
+      lockPin.enable = lib.mkDefault true;
     };
     # Homebrew casks; only has an effect on Darwin.
     homebrew.enable = lib.mkDefault true;

@@ -1,4 +1,4 @@
-# Security group: sudo, 1Password, fail2ban, biometric unlock.
+# Security group: sudo, 1Password, fail2ban, biometric and PIN unlock.
 { lib, ... }:
 {
   options.dotfiles.security = {
@@ -10,5 +10,6 @@
     soteria.enable = lib.mkEnableOption "Soteria graphical Polkit authentication agent (Linux)";
     fail2ban.enable = lib.mkEnableOption "fail2ban intrusion prevention";
     biometricSudo.enable = lib.mkEnableOption "Touch ID / Apple Watch authentication for sudo";
+    lockPin.enable = lib.mkEnableOption "PIN unlock for swaylock, set with `lock-pin set` (Linux)";
   };
 }
