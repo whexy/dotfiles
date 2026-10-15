@@ -4,9 +4,9 @@ The project needs a `Dockerfile` at its root:
 
 - Only copy in what CI already built. The pipeline's `build` step writes it to
   `.image/`, which is the image's build context; the Dockerfile runs no
-  install or build ([why](ci.md#docker-images)).
+  install or build ([Docker images](ci.md#docker-images)).
 - Give the repo a script or flake app that runs the same build and then
-  `docker build`, since the Dockerfile no longer builds on its own.
+  `docker build`, for local builds.
 - Run as UID/GID 1000 and work on a read-only root filesystem with a writable
   `/tmp`. Keep all persistent state under `/data`.
 - Serve a health endpoint for probes; the templates use `GET /healthz`.
