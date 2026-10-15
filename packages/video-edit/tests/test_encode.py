@@ -12,11 +12,34 @@ from video_edit.media import probe_video
 from video_edit.project import default_spec
 
 HAVE_FFMPEG = shutil.which("ffmpeg") is not None
+HAVE_MANIMGX = shutil.which("manimgx") is not None
 PATCHES = [(200, 40, 40), (40, 200, 60), (40, 60, 200), (128, 128, 128), (14, 15, 17), (251, 191, 36)]
 W, H = 320, 180
 # Max per-channel error after finalize. The conversion alone measured 2;
 # the lossy libx265 stand-in adds a few; reading BT.601 as BT.709 is ~25.
 TOLERANCE = 6
+
+
+# The colour patches side by side under a dot that moves for half the clip,
+# then holds still.
+MANIMGX_SCENE = """
+import manimgx as m
+
+
+class Patches(m.Scene):
+    def construct(self) -> None:
+        patches = {patches!r}
+        width = m.config.frame_width / len(patches)
+        for i, colour in enumerate(patches):
+            x = (i + 0.5) * width - m.config.frame_width / 2
+            self.add(m.Rectangle(
+                width=width, height=m.config.frame_height, fill_color=colour,
+                fill_opacity=1, stroke_width=0,
+            ).move_to(m.RIGHT * x))
+        dot = m.Dot(m.UP * 3.5 + m.LEFT * 6, color=m.WHITE)
+        self.play(dot.animate.shift(m.RIGHT * 12), run_time={move})
+        self.wait({hold})
+"""
 
 
 def ffmpeg(*args):
@@ -146,7 +169,7 @@ class FinalizeTest(unittest.TestCase):
         self.edit.close()
 
     def raw(self, name, frames, matrix="bt601", tags=(), fps=60, size=(W, H)):
-        """A raw render of the colour patches, like Manim (untagged BT.601)."""
+        """A raw render of the colour patches, untagged BT.601 like plain libx264."""
         tagged = self.edit.tmp / f"{name}.tagged.mp4"
         ffmpeg(
             "-f", "rawvideo", "-pix_fmt", "rgb24", "-s", f"{W}x{H}", "-r", str(fps), "-i", str(self.rgb),
@@ -161,8 +184,8 @@ class FinalizeTest(unittest.TestCase):
                str(out))
         return out
 
-    def test_manim_style_bt601_untagged(self):
-        raw = self.raw("manim", 120)
+    def test_untagged_bt601(self):
+        raw = self.raw("untagged", 120)
         info = probe_video(raw, count=None)
         self.assertEqual(info["color_space"], None)
         self.assertGreater(error(measure(raw, "bt709")), 15)  # the shift a naive pass keeps
@@ -194,6 +217,43 @@ class FinalizeTest(unittest.TestCase):
         self.assertEqual(code, 0, payload)
         self.assertIn("from tag bt709", payload["notes"][0])
         self.assertLessEqual(error(measure(self.root / payload["out"], "bt709")), TOLERANCE)
+
+    @unittest.skipUnless(HAVE_MANIMGX, "needs manimgx")
+    def test_manimgx_holds_and_closing_frame(self):
+        scene = self.slot_dir / "src" / "scene.py"
+        patches = ["#%02x%02x%02x" % p for p in PATCHES]
+        half = self.slot["duration"] / 2
+        draft = self.slot["draft"]
+
+        def render(name, want, hold):
+            scene.write_text(MANIMGX_SCENE.format(patches=patches, move=half, hold=hold))
+            out = self.slot_dir / name / "G1.mp4"
+            subprocess.run(
+                ["manimgx", "render", str(scene), "-r", f"{want['width']}x{want['height']}",
+                 "--fps", str(want["fps"]), "-o", str(out)],
+                check=True, capture_output=True,
+            )
+            return out
+
+        code, report = encode.run_check(
+            self.root, render("draft", draft, half), self.slot_dir, draft=True
+        )
+        self.assertEqual(code, 0, report)
+        # The held half is one sample, so far fewer frames decode than show.
+        self.assertLess(report["probe"]["frames"], draft["frames"] * 3 // 4)
+        code, payload = encode.run_finalize(
+            self.root, render("render", self.slot, half), self.slot_dir
+        )
+        self.assertEqual(code, 0, payload)
+        self.assertEqual(payload["input"]["frames"], self.slot["frames"])
+        self.assertEqual(payload["notes"], ["matrix from tag smpte170m"])
+        out = self.root / payload["out"]
+        self.assertEqual(probe_video(out)["frames"], self.slot["frames"])
+        self.assertLessEqual(error(measure(out, "bt709")), TOLERANCE)
+        # A scene one frame short of the clip fails the draft check.
+        short = render("draft", draft, half - 1 / draft["fps"])
+        code, report = encode.run_check(self.root, short, self.slot_dir, draft=True)
+        self.assertIn(f"{draft['frames'] - 1} frames, want {draft['frames']}", report["problems"])
 
     def test_frame_count_fitting(self):
         code, payload = encode.run_finalize(self.root, self.raw("short", 119), self.slot_dir)
