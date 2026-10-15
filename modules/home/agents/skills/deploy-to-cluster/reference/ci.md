@@ -26,9 +26,8 @@ Wenxuan's own code runs in this CI.
 
 ## Build cache
 
-Steps start in empty pods. The shared cache
-([whexy/ci-cache](https://github.com/whexy/ci-cache)) keeps downloads and
-builds between runs:
+Use the shared cache ([whexy/ci-cache](https://github.com/whexy/ci-cache))
+for downloads and builds:
 
 - A Nix step runs on `ghcr.io/whexy/nix-ci:<version>` instead of `nixos/nix`,
   with the cache's secrets. The image enables flakes, so it needs no
@@ -45,13 +44,10 @@ builds between runs:
       from_secret: nix_cache_signing_key
   ```
 
-- Other toolchains restore and save their cache directory (`.npm`, a cargo
+- For other toolchains, restore and save the cache directory (`.npm`, a cargo
   home) with the `ghcr.io/whexy/ci-cache` plugin; its README has the step
-  pair.
-
-The plugin's two steps cost 7–8 s together. Add them only where a step spends
-clearly more than about 8 s downloading or rebuilding. A warm npm cache saves
-`npm ci` only 1–3 s, since most of it is unpacking.
+  pair. Add the pair only when a step spends more than about 8 s downloading
+  or rebuilding.
 
 nix-ci builds without the Nix sandbox, which step pods cannot host, so a check
 that reaches the network passes in CI; only a sandboxed build on a laptop
@@ -59,28 +55,22 @@ catches it.
 
 ### Docker images
 
-CI Cache does not reach the Docker build, so keep the expensive work out of it
+Build outside Docker
 ([ci-cache README](https://github.com/whexy/ci-cache#docker-images)):
 
-1. A normal step builds, with the cache above, and copies what the image needs
+1. Build in a normal step, with the cache above, and copy what the image needs
    into a workspace directory. The template's `build` step uses `.image/`.
-2. The image step's `context:` is that directory, and the Dockerfile only
-   `COPY`s from it.
-3. The Dockerfile no longer builds on its own, so give the repo a script or
-   flake app that runs the build and then `docker build`, for laptops.
+2. Point the image step's `context:` at that directory, and have the
+   Dockerfile only `COPY` from it.
+3. Give the repo a script or flake app that runs the build and then
+   `docker build`, for local builds.
 
-The exception is a repo that Woodpecker trusts to run privileged steps, whose
-own `docker:29-dind` step runs `docker build`, and whose expensive layers end
-up in the final image. Build with
-`--cache-to type=inline --cache-from ghcr.io/whexy/<name>:<last version>` to
-reuse the final image's layers from GHCR; layers of earlier build stages are
-not covered. whexy/simple-pipe's `scripts/release_images.py` does this, but
-reads `latest`, which this pipeline does not push.
+whexy/t3code's `.woodpecker/self-hosted-build.yaml` builds two images this
+way.
 
-Do not add a BuildKit layer cache in CI Cache or on a `plugin-docker-buildx`
-step: the plugin's steps cannot receive the S3 keys and stamp each commit's
-time into every `WORKDIR`, so a new commit misses from there on, and a dind
-`docker build`'s default driver rejects `type=s3`.
+A repo that Woodpecker trusts to run privileged steps may run `docker build`
+in its own `docker:29-dind` step instead. When its heavy layers end up in the
+final image, build with `--cache-to type=inline --cache-from <repo>:latest`.
 
 ## Pipeline shape (`templates/app/.woodpecker.yaml`)
 
