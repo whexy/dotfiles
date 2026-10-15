@@ -1,0 +1,38 @@
+Skip an adapter whose D3D12 device cannot be created: Dozen failed its whole
+enumeration on one, losing every other GPU with it.
+
+Report conformance version 1.0.0: wgpu hides an adapter reporting major
+version 0 unless the application sets ALLOW_UNDERLYING_NONCOMPLIANT_ADAPTER,
+which ManimGX's engine does not (nor does it read the WGPU_* variables).
+
+--- a/src/microsoft/vulkan/dzn_device.c
++++ b/src/microsoft/vulkan/dzn_device.c
+@@ -998,7 +998,7 @@
+       /* Core 1.2 */
+       .driverID = VK_DRIVER_ID_MESA_DOZEN,
+       .conformanceVersion = (VkConformanceVersion){
+-         .major = 0,
++         .major = 1,
+          .minor = 0,
+          .subminor = 0,
+          .patch = 0,
+--- a/src/microsoft/vulkan/dzn_dxcore.cpp
++++ b/src/microsoft/vulkan/dzn_dxcore.cpp
+@@ -60,7 +60,7 @@
+    VkResult result = VK_SUCCESS;
+    uint32_t adapter_count = list->GetAdapterCount();
+    IDXCoreAdapter *adapter;
+-   for (uint32_t i = 0; i < adapter_count && result == VK_SUCCESS; ++i) {
++   for (uint32_t i = 0; i < adapter_count && result != VK_ERROR_OUT_OF_HOST_MEMORY; ++i) {
+       result = VK_ERROR_INITIALIZATION_FAILED;
+       if (SUCCEEDED(list->GetAdapter(i, IID_PPV_ARGS(&adapter)))) {
+          dzn_physical_device_desc desc = { 0 };
+@@ -90,7 +90,7 @@
+ 
+    list->Release();
+    factory->Release();
+-   return result;
++   return result == VK_ERROR_OUT_OF_HOST_MEMORY ? result : VK_SUCCESS;
+ }
+ 
+ void

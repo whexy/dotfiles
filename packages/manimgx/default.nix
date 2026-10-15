@@ -52,6 +52,8 @@ let
     hash = "sha256-BWZHD1ZhNnr/R6DBgerqZw1XdNoRoPpdpAVUnXns0Gg=";
   };
 
+  dzn = import ./dzn.nix { inherit pkgs; };
+
   # The agent skill, the user guide and the example films, read by path.
   # The checkout's top-level files are left out: its AGENTS.md is for
   # developing ManimGX, not for using it.
@@ -96,14 +98,23 @@ python3.pkgs.buildPythonApplication {
   pythonRelaxDeps = [ "typer" ];
 
   # wgpu dlopens Vulkan's loader, which finds Mesa's drivers through
-  # /run/opengl-driver; on WSL that is dzn, which loads libd3d12 from
-  # /usr/lib/wsl/lib. Without a usable adapter the engine draws with the
-  # lavapipe the wheel bundles, on the CPU.
+  # /run/opengl-driver. wgpu refuses the stock Dozen there, WSL's only GPU
+  # driver, so the engine would draw with llvmpipe on the CPU; the patched
+  # Dozen is added beside it (it loads libd3d12 from /usr/lib/wsl/lib, and
+  # finds no adapter off WSL). The engine knowingly runs on a non-conformant
+  # driver, so Mesa's warning about one is silenced.
   makeWrapperArgs = [
     "--prefix"
     "LD_LIBRARY_PATH"
     ":"
     "${lib.makeLibraryPath [ pkgs.vulkan-loader ]}:/usr/lib/wsl/lib"
+    "--prefix"
+    "VK_ADD_DRIVER_FILES"
+    ":"
+    "${dzn}/share/vulkan/icd.d"
+    "--set-default"
+    "MESA_VK_IGNORE_CONFORMANCE_WARNING"
+    "1"
   ];
 
   pythonImportsCheck = [ "manimgx" ];
