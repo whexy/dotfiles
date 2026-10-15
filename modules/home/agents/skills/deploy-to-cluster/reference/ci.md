@@ -68,10 +68,6 @@ Build outside Docker
 whexy/t3code's `.woodpecker/self-hosted-build.yaml` builds two images this
 way.
 
-A repo that Woodpecker trusts to run privileged steps may run `docker build`
-in its own `docker:29-dind` step instead. When its heavy layers end up in the
-final image, build with `--cache-to type=inline --cache-from <repo>:latest`.
-
 ## Pipeline shape (`templates/app/.woodpecker.yaml`)
 
 | Event                        | Steps                                                                                              |
