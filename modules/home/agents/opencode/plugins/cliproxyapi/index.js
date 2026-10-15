@@ -1,11 +1,17 @@
 // OpenCode plugin: the CLIProxyAPI provider, with the proxy's live model list.
 //
-// Every model /v1/models serves is registered and refreshed while OpenCode
-// runs, so models the proxy drops disappear without a restart. A model takes
-// its package (wire format), limits, and capabilities from the entry with the
-// same ID in OpenCode's own catalog, vendors first. Models the catalog does
-// not know use OpenCode's model defaults. GPT IDs always use Responses over
-// WebSocket; other unknown IDs use the OpenAI-compatible HTTP package.
+// The model list comes from the proxy's Codex model catalog
+// (`/v1/models?client_version=<Codex version>`), whose records carry the
+// display names and limits the OpenAI-shaped list omits. Every listed model
+// is registered and refreshed while OpenCode runs, so models the proxy drops
+// disappear without a restart. A model takes its package (wire format) from
+// the entry with the same ID in OpenCode's own catalog, vendors first; its
+// name, limits, input modalities, reasoning efforts, and effort-update
+// support come from the proxy's catalog, because requests must follow what
+// the proxy declares it supports. Models
+// neither catalog knows use OpenCode's model defaults. GPT IDs always use
+// Responses over WebSocket; other unknown IDs use the OpenAI-compatible HTTP
+// package.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -49,8 +55,9 @@ async function readCredentials(options) {
   };
 }
 
-async function fetchServed(baseUrl, credentials) {
-  const response = await fetch(`${baseUrl}/v1/models`, {
+async function fetchServed(baseUrl, credentials, codexVersion) {
+  const query = new URLSearchParams({ client_version: codexVersion });
+  const response = await fetch(`${baseUrl}/v1/models?${query}`, {
     headers: {
       Authorization: `Bearer ${credentials.apiKey}`,
       ...credentials.headers,
@@ -63,13 +70,65 @@ async function fetchServed(baseUrl, credentials) {
     throw new Error(`CLIProxyAPI model discovery failed: ${response.status}`);
   }
   const payload = await response.json();
-  if (!Array.isArray(payload?.data)) {
+  if (!Array.isArray(payload?.models)) {
     throw new Error("CLIProxyAPI model discovery returned no model list");
   }
-  const ids = payload.data
-    .map((model) => model?.id)
-    .filter((id) => typeof id === "string" && id.length > 0);
-  return [...new Set(ids)].sort();
+  const seen = new Set();
+  const served = [];
+  for (const record of payload.models) {
+    const id = record?.slug;
+    // Codex owns `visibility`: "hide" marks non-chat models (TTS, image
+    // generation) that do not belong in a model picker.
+    if (
+      typeof id !== "string" ||
+      id.length === 0 ||
+      seen.has(id) ||
+      record.visibility === "hide"
+    )
+      continue;
+    seen.add(id);
+    const input = Array.isArray(record.input_modalities)
+      ? record.input_modalities.filter(
+          (modality) => modality === "text" || modality === "image",
+        )
+      : undefined;
+    const efforts = Array.isArray(record.supported_reasoning_levels)
+      ? [
+          ...new Set(
+            record.supported_reasoning_levels.flatMap((level) =>
+              typeof level?.effort === "string" && level.effort
+                ? [level.effort]
+                : [],
+            ),
+          ),
+        ]
+      : undefined;
+    served.push({
+      id,
+      name:
+        typeof record.display_name === "string" && record.display_name
+          ? record.display_name
+          : id,
+      context:
+        typeof record.context_window === "number"
+          ? record.context_window
+          : undefined,
+      output:
+        typeof record.max_tokens === "number" ? record.max_tokens : undefined,
+      input: input && input.length > 0 ? input : undefined,
+      efforts,
+      defaultEffort:
+        typeof record.default_reasoning_level === "string" &&
+        record.default_reasoning_level
+          ? record.default_reasoning_level
+          : undefined,
+      effortUpdates:
+        typeof record.supports_reasoning_effort_updates === "boolean"
+          ? record.supports_reasoning_effort_updates
+          : undefined,
+    });
+  }
+  return served.sort((a, b) => a.id.localeCompare(b.id));
 }
 
 function catalogEntry(editor, id) {
@@ -85,7 +144,47 @@ function catalogEntry(editor, id) {
   }
 }
 
-export function proxyModel(editor, baseUrl, id) {
+function deepClone(value) {
+  return structuredClone(value);
+}
+
+function effortVariant(entry, pkg, effort) {
+  const provided = entry?.variants?.find((variant) => variant.id === effort);
+  if (provided) return deepClone(provided);
+  switch (pkg) {
+    case "@opencode/ai/providers/anthropic":
+      return {
+        id: effort,
+        settings: {
+          thinking: { type: "adaptive", display: "summarized" },
+          effort,
+        },
+      };
+    case "@opencode/ai/providers/google":
+      return {
+        id: effort,
+        settings: {
+          thinkingConfig: { thinkingLevel: effort, includeThoughts: true },
+        },
+      };
+    case "@opencode/ai/providers/openai":
+    case "@opencode/ai/providers/openai/responses":
+    case "@opencode/ai/providers/xai":
+      return {
+        id: effort,
+        settings: {
+          reasoningEffort: effort,
+          reasoningSummary: "auto",
+          include: ["reasoning.encrypted_content"],
+        },
+      };
+    default:
+      return { id: effort, settings: { reasoningEffort: effort } };
+  }
+}
+
+export function proxyModel(editor, baseUrl, served) {
+  const id = served.id;
   const match = catalogEntry(editor, id);
   const chatgpt = id.startsWith("gpt-");
   const pkg = chatgpt
@@ -109,14 +208,64 @@ export function proxyModel(editor, baseUrl, id) {
   // The catalog entry's provider identity would route usage and options to
   // that vendor instead of this provider.
   const { canonical: _canonical, ...model } = base;
+  const modelEfforts = Array.isArray(served.efforts)
+    ? served.efforts
+    : undefined;
+  const variants = modelEfforts
+    ? modelEfforts.map((effort) => effortVariant(model, pkg, effort))
+    : (model.variants ?? []);
+  const defaultSettings = {};
+  if (
+    modelEfforts &&
+    modelEfforts.length > 0 &&
+    typeof served.defaultEffort === "string" &&
+    !modelEfforts.includes(served.defaultEffort)
+  ) {
+    console.warn(
+      `cliproxyapi: default reasoning effort ${served.defaultEffort} for ${id} is not in CPA's effort list`,
+    );
+  }
+  if (
+    modelEfforts &&
+    typeof served.defaultEffort === "string" &&
+    modelEfforts.includes(served.defaultEffort)
+  ) {
+    Object.assign(
+      defaultSettings,
+      effortVariant(model, pkg, served.defaultEffort).settings,
+    );
+  }
   return {
-    ...model,
+    ...deepClone(model),
     id,
     modelID: id,
     providerID: PROVIDER,
     package: pkg,
+    // The proxy, not OpenCode's catalog, names what it serves: proxy-only
+    // models have no catalog entry, and gateways may relabel known ones.
+    name: served.name,
+    capabilities: {
+      ...(model.capabilities ?? {
+        tools: true,
+        input: ["text", "image"],
+        output: ["text"],
+      }),
+      input: served.input ?? model.capabilities?.input ?? ["text", "image"],
+    },
+    compatibility: {
+      ...(model.compatibility ?? {}),
+      ...(typeof served.effortUpdates === "boolean"
+        ? { supportsEffortUpdates: served.effortUpdates }
+        : {}),
+    },
+    variants,
+    limit: {
+      context: served.context ?? model.limit.context,
+      output: served.output ?? model.limit.output,
+    },
     settings: {
       ...settings,
+      ...defaultSettings,
       baseURL: `${baseUrl}${PATHS[pkg]}`,
     },
   };
@@ -127,16 +276,20 @@ export default {
   setup: async (ctx) => {
     const options = ctx.options;
     const baseUrl = options.baseUrl.replace(/\/+$/, "");
-    const state = { credentials: undefined, ids: [] };
+    const state = { credentials: undefined, served: [] };
 
     const refresh = async () => {
       const credentials = await readCredentials(options);
-      const ids = await fetchServed(baseUrl, credentials);
+      const served = await fetchServed(
+        baseUrl,
+        credentials,
+        options.codexVersion,
+      );
       const changed =
-        JSON.stringify(ids) !== JSON.stringify(state.ids) ||
+        JSON.stringify(served) !== JSON.stringify(state.served) ||
         JSON.stringify(credentials) !== JSON.stringify(state.credentials);
       state.credentials = credentials;
-      state.ids = ids;
+      state.served = served;
       return changed;
     };
 
@@ -162,7 +315,9 @@ export default {
           },
           headers: state.credentials.headers,
         },
-        models: state.ids.map((id) => proxyModel(editor, baseUrl, id)),
+        models: state.served.map((served) =>
+          proxyModel(editor, baseUrl, served),
+        ),
       });
     });
 

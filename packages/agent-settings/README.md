@@ -13,8 +13,10 @@ and authentication while clearing previous model and role overrides. Choose
 **default (claude.ai login)** or **default (ChatGPT login)** to remove the proxy
 overrides and use the agent's own OAuth login.
 
-`claude-select` also lists every model the proxy's `/v1/models` serves when the
-picker opens. The chosen model fills every Claude Code role; choose **fusion**
+`claude-select` also lists every model the proxy's Codex catalog
+(`GET <proxy>/v1/models?client_version=<codexVersion>`) lists when the
+picker opens, by its catalog display name (falling back to the model ID). The
+chosen model fills every Claude Code role; choose **fusion**
 to pick a model per role instead. A saved model stays selected after it leaves
 the proxy's list, and requests to it fail until you choose another. When the
 list cannot be fetched, the picker shows why and offers only the saved model.

@@ -33,6 +33,7 @@ let
     ];
     entries = import ./models.nix {
       inherit
+        pkgs
         proxy
         ;
     };

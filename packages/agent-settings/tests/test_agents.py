@@ -243,11 +243,21 @@ def discovered(secret: Path) -> Entry:
 def test_claude_discovered_model_fills_roles_and_survives_sync(secret: Path) -> None:
     agent = create_agent(manifest("claude", [discovered(secret)]))
     with (
-        patch.object(agent, "served_models", return_value=["vendor/a", "b"]),
+        patch.object(
+            agent,
+            "served_models",
+            return_value=[("vendor/a", "Vendor A"), ("b", "b")],
+        ),
         patch.object(agent, "pick", return_value="proxy/vendor/a") as pick,
     ):
         entry = agent.choose()
-    assert pick.call_args.args[0] == ["default", "proxy/vendor/a", "proxy/b"]
+    # The picker renders display names; labels keep model IDs for identity.
+    assert pick.call_args.args[0] == [
+        "default",
+        "proxy · Vendor A · vendor/a",
+        "proxy/b",
+    ]
+    assert pick.call_args.args[1] == ["default", "proxy/vendor/a", "proxy/b"]
     assert entry.get("env", {}) == {
         "ANTHROPIC_BASE_URL": "https://test.invalid",
         "ANTHROPIC_MODEL": "vendor/a",
@@ -275,7 +285,8 @@ def test_unreachable_model_list_offers_the_saved_model(secret: Path) -> None:
         patch.object(agent, "pick", return_value="proxy/vendor/a") as pick,
     ):
         entry = agent.choose()
-    labels, prompt = pick.call_args.args
+    displays, labels, prompt = pick.call_args.args
+    assert displays == ["proxy/vendor/a", "default"]
     assert labels == ["proxy/vendor/a", "default"]
     assert "connection refused" in prompt
     assert entry.get("env", {})["ANTHROPIC_MODEL"] == "vendor/a"
@@ -293,7 +304,7 @@ def test_claude_fusion_picks_discovered_role_models_and_survives_sync(secret: Pa
     }
     agent = create_agent(manifest("claude", [fusion]))
     with (
-        patch.object(agent, "served_models", return_value=["large", "small"]),
+        patch.object(agent, "served_models", return_value=[("large", "Large"), ("small", "Small")]),
         patch.object(agent, "pick", side_effect=["fusion", "proxy/large", "proxy/small"]),
     ):
         entry = agent.choose()

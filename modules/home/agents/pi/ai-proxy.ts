@@ -3,7 +3,7 @@ import {
   type ExtensionAPI,
   type ProviderModelConfig,
 } from "@earendil-works/pi-coding-agent";
-import type { Api, Model } from "@earendil-works/pi-ai";
+import type { Api, Model, ThinkingLevel } from "@earendil-works/pi-ai";
 import {
   getBuiltinModels,
   getBuiltinProviders,
@@ -22,6 +22,10 @@ type AiProxyConfig = {
   cfAccessIdPath: string;
   cfAccessSecretPath: string;
   cat: string;
+  // The model list comes from the proxy's Codex model catalog, whose records
+  // carry the display names and limits the OpenAI-shaped list omits, so the
+  // extension presents itself as the installed Codex.
+  codexVersion: string;
   fallbackModels: string[];
 };
 
@@ -47,6 +51,7 @@ const {
   cfAccessIdPath: CF_ACCESS_ID_PATH,
   cfAccessSecretPath: CF_ACCESS_SECRET_PATH,
   cat: CAT,
+  codexVersion: CODEX_VERSION,
   // Without any cliproxyapi model, pi starts on another provider's model
   // instead, so an outage before the first successful discovery registers
   // the models pi is configured to use.
@@ -55,6 +60,17 @@ const {
 
 const BASE_URL = `${PROXY_BASE_URL}/v1`;
 const CACHE_PATH = join(getAgentDir(), "cache", "cliproxyapi-model-ids.json");
+
+// The subset of a Codex catalog record this extension registers.
+type ServedModel = {
+  id: string;
+  name: string;
+  contextWindow?: number;
+  maxTokens?: number;
+  input?: Array<"text" | "image">;
+  reasoningLevels?: string[];
+  reasoning?: boolean;
+};
 
 // CLIProxyAPI accepts every one of these formats for every model it serves,
 // so a catalog entry only decides which one fits the model best. Each value is
@@ -80,25 +96,75 @@ function catalogEntry(id: string): Model<Api> | undefined {
   }
 }
 
-// Models pi's catalog does not know use Chat Completions with the defaults pi
-// applies to custom models in models.json. Extension-registered models get no
-// such defaults, so they are spelled out here.
-function toProxyModel(id: string): ProviderModelConfig {
-  const entry = catalogEntry(id);
+const THINKING_LEVELS: ThinkingLevel[] = [
+  "minimal",
+  "low",
+  "medium",
+  "high",
+  "xhigh",
+  "max",
+];
+
+function thinkingLevelMap(
+  served: ServedModel,
+  entry?: Model<Api>,
+): Model<Api>["thinkingLevelMap"] {
+  if (!served.reasoningLevels) return entry?.thinkingLevelMap;
+  const supported = new Set(served.reasoningLevels);
+  const map = { ...(entry?.thinkingLevelMap ?? {}) };
+  for (const level of THINKING_LEVELS) {
+    if (supported.has(level)) {
+      // A borrowed string is the level's wire spelling; a borrowed null
+      // would veto a level CPA declares supported.
+      if (map[level] == null) map[level] = level;
+      continue;
+    }
+    map[level] = null;
+  }
+  // Pi offers `off` by default, but CPA declares the support set: only an
+  // explicit "none"/"off" effort means thinking can be disabled.
+  if (supported.has("none") || supported.has("off")) {
+    if (map.off == null) map.off = supported.has("none") ? "none" : "off";
+  } else {
+    map.off = null;
+  }
+  return map;
+}
+
+// A model takes its API (wire format) from pi's own catalog; its name,
+// limits, input modalities, and the reasoning levels it may use come from
+// the proxy's catalog. Models pi's catalog does not know use Chat
+// Completions with the defaults pi applies to custom models in models.json.
+// Extension-registered models get no such defaults, so they are spelled out
+// here.
+function toProxyModel(served: ServedModel): ProviderModelConfig {
+  const entry = catalogEntry(served.id);
   if (!entry) {
     return {
-      id,
-      name: id,
+      id: served.id,
+      // The proxy names what it serves: proxy-only models have no entry in
+      // pi's catalog, and gateways may relabel known ones.
+      name: served.name,
       api: "openai-completions",
-      reasoning: false,
-      input: ["text"],
+      reasoning: served.reasoning ?? false,
+      thinkingLevelMap: thinkingLevelMap(served),
+      input: served.input ?? ["text"],
       cost: { input: 0, output: 0, cacheRead: 0, cacheWrite: 0 },
-      contextWindow: 128000,
-      maxTokens: 16384,
+      contextWindow: served.contextWindow ?? 128000,
+      maxTokens: served.maxTokens ?? 16384,
     };
   }
   const { provider: _p, ...model } = entry;
-  return { ...model, baseUrl: PROXY_URLS[entry.api] };
+  return {
+    ...model,
+    name: served.name,
+    reasoning: served.reasoning ?? model.reasoning,
+    thinkingLevelMap: thinkingLevelMap(served, entry),
+    contextWindow: served.contextWindow ?? model.contextWindow,
+    maxTokens: served.maxTokens ?? model.maxTokens,
+    input: served.input ?? model.input,
+    baseUrl: PROXY_URLS[entry.api],
+  };
 }
 
 const execFileAsync = promisify(execFile);
@@ -121,11 +187,12 @@ async function readSecret(path: string): Promise<string> {
   return secret;
 }
 
-async function fetchServedIds(
+async function fetchServed(
   apiKey: string,
   cfAccess: Record<string, string>,
-): Promise<string[]> {
-  const response = await fetch(`${BASE_URL}/models`, {
+): Promise<ServedModel[]> {
+  const query = new URLSearchParams({ client_version: CODEX_VERSION });
+  const response = await fetch(`${BASE_URL}/models?${query}`, {
     headers: { Authorization: `Bearer ${apiKey}`, ...cfAccess },
     // undici strips Authorization across origins but forwards custom headers,
     // so a redirect would hand the Cloudflare Access token to whatever origin
@@ -137,27 +204,102 @@ async function fetchServedIds(
     throw new Error(`HTTP ${response.status} ${response.statusText}`);
   }
 
-  const payload = (await response.json()) as { data?: Array<{ id?: string }> };
-  return (payload.data ?? []).flatMap(({ id }) => (id ? [id] : []));
+  type CatalogRecord = {
+    slug?: string;
+    display_name?: string;
+    context_window?: number;
+    max_tokens?: number;
+    input_modalities?: string[];
+    supported_reasoning_levels?: Array<{ effort?: string }>;
+    visibility?: string;
+  };
+  const payload = (await response.json()) as { models?: CatalogRecord[] };
+  if (!Array.isArray(payload.models)) {
+    throw new Error("catalog returned no model list");
+  }
+  const seen = new Set<string>();
+  const served: ServedModel[] = [];
+  for (const record of payload.models) {
+    const id = record?.slug;
+    // Codex owns `visibility`: "hide" marks non-chat models (TTS, image
+    // generation) that do not belong in a model picker.
+    if (
+      typeof id !== "string" ||
+      id.length === 0 ||
+      seen.has(id) ||
+      record.visibility === "hide"
+    )
+      continue;
+    seen.add(id);
+    const input = Array.isArray(record.input_modalities)
+      ? record.input_modalities.filter(
+          (modality): modality is "text" | "image" =>
+            modality === "text" || modality === "image",
+        )
+      : undefined;
+    const reasoningLevels = Array.isArray(record.supported_reasoning_levels)
+      ? [
+          ...new Set(
+            record.supported_reasoning_levels.flatMap((level) =>
+              typeof level?.effort === "string" && level.effort
+                ? [level.effort]
+                : [],
+            ),
+          ),
+        ]
+      : undefined;
+    served.push({
+      id,
+      name:
+        typeof record.display_name === "string" && record.display_name
+          ? record.display_name
+          : id,
+      contextWindow:
+        typeof record.context_window === "number"
+          ? record.context_window
+          : undefined,
+      maxTokens:
+        typeof record.max_tokens === "number" ? record.max_tokens : undefined,
+      input: input && input.length > 0 ? input : undefined,
+      reasoningLevels,
+      reasoning:
+        reasoningLevels === undefined ? undefined : reasoningLevels.length > 0,
+    });
+  }
+  return served;
 }
 
-async function discoverServedIds(): Promise<string[]> {
+async function discoverServed(): Promise<ServedModel[]> {
   const [apiKey, cfAccessId, cfAccessSecret] = await Promise.all([
     readSecret(API_KEY_PATH),
     readSecret(CF_ACCESS_ID_PATH),
     readSecret(CF_ACCESS_SECRET_PATH),
   ]);
-  return fetchServedIds(apiKey, {
+  return fetchServed(apiKey, {
     "CF-Access-Client-Id": cfAccessId,
     "CF-Access-Client-Secret": cfAccessSecret,
   });
 }
 
-async function readCachedIds(): Promise<string[] | undefined> {
+async function readCached(): Promise<ServedModel[] | undefined> {
   try {
-    const ids = JSON.parse(await readFile(CACHE_PATH, "utf8")) as unknown;
-    if (Array.isArray(ids) && ids.every((id) => typeof id === "string")) {
-      return ids;
+    const cached = JSON.parse(await readFile(CACHE_PATH, "utf8")) as unknown;
+    if (Array.isArray(cached)) {
+      // Caches written before display names hold bare IDs.
+      if (cached.every((id) => typeof id === "string")) {
+        return (cached as string[]).map((id) => ({ id, name: id }));
+      }
+      if (
+        cached.every(
+          (model) =>
+            typeof model === "object" &&
+            model !== null &&
+            typeof (model as { id?: unknown }).id === "string" &&
+            typeof (model as { name?: unknown }).name === "string",
+        )
+      ) {
+        return cached as ServedModel[];
+      }
     }
   } catch {
     // An absent or unreadable cache is the same as none.
@@ -166,24 +308,24 @@ async function readCachedIds(): Promise<string[] | undefined> {
 }
 
 // Concurrent pi processes each rename a complete file into place.
-async function writeCachedIds(ids: string[]): Promise<void> {
+async function writeCached(served: ServedModel[]): Promise<void> {
   await mkdir(dirname(CACHE_PATH), { recursive: true });
   const temporaryPath = `${CACHE_PATH}.${process.pid}.tmp`;
-  await writeFile(temporaryPath, `${JSON.stringify(ids)}\n`, "utf8");
+  await writeFile(temporaryPath, `${JSON.stringify(served)}\n`, "utf8");
   await rename(temporaryPath, CACHE_PATH);
 }
 
 export default async function (pi: ExtensionAPI) {
-  let ids: string[];
+  let served: ServedModel[];
   try {
-    ids = await discoverServedIds();
+    served = await discoverServed();
     // A cache that cannot be written only costs the next outage its list.
-    await writeCachedIds(ids).catch(() => {});
+    await writeCached(served).catch(() => {});
   } catch (error) {
     // Pi exits when an extension fails to load, so a brief proxy outage
     // must fall back instead of throwing.
-    const cached = await readCachedIds();
-    ids = cached ?? FALLBACK_MODELS;
+    const cached = await readCached();
+    served = cached ?? FALLBACK_MODELS.map((id) => ({ id, name: id }));
     const reason = error instanceof Error ? error.message : String(error);
     const notice =
       `CLIProxyAPI model list unavailable (${reason}); using ` +
@@ -205,6 +347,6 @@ export default async function (pi: ExtensionAPI) {
       "CF-Access-Client-Id": `!${CAT} "${CF_ACCESS_ID_PATH}"`,
       "CF-Access-Client-Secret": `!${CAT} "${CF_ACCESS_SECRET_PATH}"`,
     },
-    models: ids.map(toProxyModel),
+    models: served.map(toProxyModel),
   });
 }
