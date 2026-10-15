@@ -20,6 +20,8 @@ let
     # /bin/cat does not exist on NixOS, so the reader cannot rely on an
     # inherited PATH.
     cat = "${pkgs.coreutils}/bin/cat";
+    # The extension reads the proxy's Codex model catalog.
+    codexVersion = pkgs.llm-agents.codex.version;
     # pi's default model and web-search's summary model.
     fallbackModels = pkgs.lib.unique [
       defaults.defaultModel

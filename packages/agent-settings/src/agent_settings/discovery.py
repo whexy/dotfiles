@@ -19,8 +19,8 @@ class _RefuseRedirect(HTTPRedirectHandler):
         return None
 
 
-def served_models(template: Entry, discover: Discover) -> list[str]:
-    """IDs of the models the template's endpoint serves, sorted."""
+def served_models(template: Entry, discover: Discover) -> list[tuple[str, str]]:
+    """(ID, display name) of the models the template's endpoint serves, sorted."""
     secrets = read_secrets(template.get("secrets", {}))
     headers = {
         "Authorization": f"Bearer {secrets[discover['keyEnv']]}",
@@ -35,8 +35,16 @@ def served_models(template: Entry, discover: Discover) -> list[str]:
             payload = cast(object, json.load(response))
     except (OSError, ValueError) as error:
         raise SettingsError(f"{template['label']}: model discovery failed: {error}") from error
-    data = payload.get("data") if is_table(payload) else None
-    if not is_list(data):
+    models = payload.get("models") if is_table(payload) else None
+    if not is_list(models):
         raise SettingsError(f"{template['label']}: model discovery returned no model list")
-    models = {model.get("id") for model in data if is_table(model)}
-    return sorted(model for model in models if isinstance(model, str) and model)
+    served: dict[str, str] = {}
+    for model in models:
+        if not is_table(model):
+            continue
+        slug, name = model.get("slug"), model.get("display_name")
+        # Codex owns `visibility`: "hide" marks non-chat models (TTS, image
+        # generation) that do not belong in a model picker.
+        if isinstance(slug, str) and slug and model.get("visibility") != "hide":
+            served.setdefault(slug, name if isinstance(name, str) and name else slug)
+    return sorted(served.items())

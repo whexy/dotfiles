@@ -31,9 +31,19 @@ class Picker(App[str]):
         Binding("ctrl+d", "manage('delete')", "Delete config", show=False, priority=True),
     ]
 
-    def __init__(self, labels: list[str], prompt: str, *, manage: bool = False) -> None:
+    def __init__(
+        self,
+        labels: list[str],
+        values: list[str] | None = None,
+        prompt: str = "",
+        *,
+        manage: bool = False,
+    ) -> None:
         super().__init__()
+        # Options render `labels`; a pick returns the parallel `values` entry,
+        # so display names never double as selection identity.
         self.labels = labels
+        self.values = labels if values is None else values
         self.title = prompt
         self.manage = manage
 
@@ -77,7 +87,7 @@ class Picker(App[str]):
 
     def choose(self, option: Option) -> None:
         if option.id is not None:
-            self.exit(self.labels[int(option.id)])
+            self.exit(self.values[int(option.id)])
 
     @on(Button.Pressed)
     def pressed(self, event: Button.Pressed) -> None:
@@ -117,8 +127,14 @@ class TextPrompt(App[str]):
         self.exit()
 
 
-def pick(labels: list[str], prompt: str, *, manage: bool = False) -> str:
-    result = Picker(labels, prompt, manage=manage).run()
+def pick(
+    labels: list[str],
+    values: list[str] | None = None,
+    prompt: str = "",
+    *,
+    manage: bool = False,
+) -> str:
+    result = Picker(labels, values, prompt, manage=manage).run()
     if result is None:
         raise KeyboardInterrupt
     return result

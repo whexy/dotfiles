@@ -2,6 +2,7 @@
 # claude reads ANTHROPIC_MODEL and authenticates with ANTHROPIC_API_KEY.
 # Compatible providers additionally require ANTHROPIC_BASE_URL.
 {
+  pkgs,
   proxy,
 }:
 let
@@ -52,7 +53,9 @@ let
       CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
     };
     discover = {
-      url = "${proxy.baseUrl}/v1/models";
+      # The proxy's Codex catalog carries display names the /v1/models
+      # list omits.
+      url = "${proxy.baseUrl}/v1/models?client_version=${pkgs.llm-agents.codex.version}";
       keyEnv = "ANTHROPIC_API_KEY";
       modelEnv = [
         "ANTHROPIC_MODEL"

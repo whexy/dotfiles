@@ -62,14 +62,20 @@ class ClaudeAgent(Agent):
     def _resolve_fusion(self, fusion: Fusion) -> Entry:
         """Pick the main model, then one model per role from the same provider."""
         candidates, notice = self.live_entries(fusion["candidates"])
-        main = self.pick([c["label"] for c in candidates], f"main model{notice}")
+        main = self.pick(
+            [c.get("display", c["label"]) for c in candidates],
+            [c["label"] for c in candidates],
+            f"main model{notice}",
+        )
         entry = copy.deepcopy(next(c for c in candidates if c["label"] == main))
         provider, model = main.split("/", 1)
-        labels = [c["label"] for c in candidates if c["label"].startswith(f"{provider}/")]
+        same = [c for c in candidates if c["label"].startswith(f"{provider}/")]
+        displays = [c.get("display", c["label"]) for c in same]
+        labels = [c["label"] for c in same]
         env = entry.setdefault("env", {})
         env.update({_SUBAGENT_MODEL: model, _ALLOW_UNKNOWN_MODELS: "1"})
         for role in fusion["roles"]:
-            env[role["export"]] = self.pick(labels, role["prompt"]).split("/", 1)[1]
+            env[role["export"]] = self.pick(displays, labels, role["prompt"]).split("/", 1)[1]
         return entry
 
     @override

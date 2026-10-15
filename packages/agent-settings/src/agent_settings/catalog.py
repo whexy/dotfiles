@@ -25,7 +25,7 @@ class Discover(TypedDict):
     """Stand for one entry per model a live model list serves."""
 
     url: str
-    """An OpenAI-style model list endpoint."""
+    """A Codex model catalog endpoint (`/v1/models?client_version=...`)."""
     keyEnv: str
     """Secret variable holding the bearer token for `url`."""
     modelEnv: list[str]
@@ -34,6 +34,10 @@ class Discover(TypedDict):
 
 class Entry(TypedDict):
     label: str
+    display: NotRequired[str]
+    """Picker text when it differs from the label; discovery puts the model's
+    display name here while the label keeps the model ID, so saved selections
+    stay resolvable regardless of naming changes."""
     env: NotRequired[dict[str, str]]
     """Nonsecret environment, saved into the agent's native settings."""
     secrets: NotRequired[dict[str, str]]
@@ -58,11 +62,13 @@ class Manifest(TypedDict):
     maintainedSettings: Table
 
 
-def model_entry(template: Entry, model: str) -> Entry:
+def model_entry(template: Entry, model: str, name: str | None = None) -> Entry:
     """The entry a discovery template stands for when it serves `model`."""
     entry = copy.deepcopy(template)
     discover = entry.pop("discover")
     entry["label"] = f"{template['label']}/{model}"
+    if name is not None and name != model:
+        entry["display"] = f"{template['label']} · {name} · {model}"
     entry["env"] = entry.get("env", {}) | dict.fromkeys(discover["modelEnv"], model)
     return entry
 
@@ -114,7 +120,9 @@ class Catalog:
         return keys
 
 
-def expand(entries: list[Entry], served: Callable[[Entry, Discover], list[str]]) -> list[Entry]:
+def expand(
+    entries: list[Entry], served: Callable[[Entry, Discover], list[tuple[str, str]]]
+) -> list[Entry]:
     """Replace each discovery template with an entry per served model."""
     expanded: list[Entry] = []
     for entry in entries:
@@ -122,5 +130,5 @@ def expand(entries: list[Entry], served: Callable[[Entry, Discover], list[str]])
         if discover is None:
             expanded.append(entry)
         else:
-            expanded += [model_entry(entry, model) for model in served(entry, discover)]
+            expanded += [model_entry(entry, model, name) for model, name in served(entry, discover)]
     return expanded

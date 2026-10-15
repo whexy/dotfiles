@@ -23,7 +23,17 @@ class _Handler(BaseHTTPRequestHandler):
             self.send_header("Location", "http://elsewhere.invalid/v1/models")
             self.end_headers()
             return
-        body = json.dumps({"data": [{"id": "b"}, {"id": "a/x"}, {"id": "b"}, {}]}).encode()
+        body = json.dumps(
+            {
+                "models": [
+                    {"slug": "b", "display_name": "Bee"},
+                    {"slug": "a/x", "display_name": "Aye Ex"},
+                    {"slug": "b", "display_name": "Bee"},
+                    {"slug": "tts", "display_name": "TTS", "visibility": "hide"},
+                    {},
+                ]
+            }
+        ).encode()
         self.send_response(200)
         self.send_header("Content-Type", "application/json")
         self.end_headers()
@@ -44,7 +54,7 @@ def server() -> Iterator[str]:
     httpd.shutdown()
 
 
-def served(secret: Path, url: str) -> list[str]:
+def served(secret: Path, url: str) -> list[tuple[str, str]]:
     template: Entry = {
         "label": "proxy",
         "secrets": {"API_KEY": str(secret), "EDGE": str(secret)},
@@ -54,7 +64,7 @@ def served(secret: Path, url: str) -> list[str]:
 
 
 def test_served_models_sends_credentials(secret: Path, server: str) -> None:
-    assert served(secret, f"{server}/v1/models") == ["a/x", "b"]
+    assert served(secret, f"{server}/v1/models") == [("a/x", "Aye Ex"), ("b", "Bee")]
     headers = _Handler.seen[0]
     assert headers["Authorization"] == f"Bearer {SECRET}"
     assert headers["X-Edge"] == SECRET

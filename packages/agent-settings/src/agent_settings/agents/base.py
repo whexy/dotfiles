@@ -93,7 +93,7 @@ class Agent(ABC):
     def load_credentials(self, entry: Entry, env: dict[str, str]) -> None:
         env.update(read_secrets(entry.get("secrets", {})))
 
-    def served_models(self, template: Entry, discover: Discover) -> list[str]:
+    def served_models(self, template: Entry, discover: Discover) -> list[tuple[str, str]]:
         from agent_settings import discovery
 
         return discovery.served_models(template, discover)
@@ -107,14 +107,15 @@ class Agent(ABC):
         saved = read_document(self.state_file).get("selection")
         failures: list[str] = []
 
-        def served(template: Entry, discover: Discover) -> list[str]:
+        def served(template: Entry, discover: Discover) -> list[tuple[str, str]]:
             try:
                 return self.served_models(template, discover)
             except SettingsError as error:
                 failures.append(f"\n{error}; showing only the saved model")
                 prefix = f"{template['label']}/"
                 if isinstance(saved, str) and saved.startswith(prefix):
-                    return [saved.removeprefix(prefix)]
+                    model = saved.removeprefix(prefix)
+                    return [(model, model)]
                 return []
 
         return expand(entries, served), "".join(failures)
@@ -153,19 +154,21 @@ class Agent(ABC):
         choices, notice = self.live_entries(self.catalog.choices)
         while True:
             labels = [entry["label"] for entry in choices]
+            displays = [entry.get("display", entry["label"]) for entry in choices]
             current = read_document(self.state_file).get("selection")
             if isinstance(current, str) and current in labels:
-                labels.remove(current)
-                labels.insert(0, current)
+                index = labels.index(current)
+                labels.insert(0, labels.pop(index))
+                displays.insert(0, displays.pop(index))
             prompt = f"{self.name} · {profiles.name(self.root)}{notice}"
-            label = self.pick(labels, prompt, manage=True)
+            label = self.pick(displays, labels, prompt, manage=True)
             if label not in (SWITCH, FORK, DELETE):
                 entry = copy.deepcopy(next(e for e in choices if e["label"] == label))
                 return self.refine_choice(entry)
             try:
                 if label == SWITCH:
                     configs = profiles.configurations()
-                    selected = pick(list(configs), "Switch config for this launch")
+                    selected = pick(list(configs), prompt="Switch config for this launch")
                     self.set_root(configs[selected])
                 elif label == FORK:
                     name = ask("Name for the new config (settings copied; fresh login and history)")
@@ -186,17 +189,24 @@ class Agent(ABC):
             except KeyboardInterrupt:
                 continue
             except (SettingsError, OSError, ValueError) as error:
-                pick(["Back"], str(error))
+                pick(["Back"], prompt=str(error))
 
     def set_root(self, root: Path) -> None:
         self.root = root
         self.config_file = root / self.config_name
         self.state_file = root / "dotfiles-settings.json"
 
-    def pick(self, labels: list[str], prompt: str, *, manage: bool = False) -> str:
+    def pick(
+        self,
+        displays: list[str],
+        labels: list[str] | None = None,
+        prompt: str = "",
+        *,
+        manage: bool = False,
+    ) -> str:
         from agent_settings.picker import pick
 
-        return pick(labels, prompt, manage=manage)
+        return pick(displays, labels, prompt, manage=manage)
 
     def sync(self) -> None:
         """Reconcile every profile and migrate removed selections to the default."""

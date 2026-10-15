@@ -32,8 +32,9 @@ in
   default_agent = "build";
   update = "disable";
   share = "disabled";
-  # The plugin registers the provider and the proxy's live model list. It
-  # reads the agenix secrets itself because OpenCode's shared background
+  # The plugin registers the provider and the proxy's live model list from
+  # its Codex model catalog, so it presents itself as the installed Codex.
+  # It reads the agenix secrets itself because OpenCode's shared background
   # server outlives the launch that started it.
   plugins = [
     {
@@ -45,6 +46,7 @@ in
           cfAccessIdPath
           cfAccessSecretPath
           ;
+        codexVersion = pkgs.llm-agents.codex.version;
         # /bin/cat does not exist on NixOS.
         cat = "${pkgs.coreutils}/bin/cat";
       };
