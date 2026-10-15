@@ -27,7 +27,7 @@ directory holding `spec.json`, `style/` and `slots/`. `<id>` is your slot's id.
 ## Choose an engine
 
 Use HyperFrames (HTML, CSS and GSAP, rendered frame-exact) by default. Use
-Manim for math, graphs and diagrams that morph.
+ManimGX for math, graphs and diagrams that morph.
 
 - HyperFrames: read `hyperframes-core/SKILL.md` and
   `hyperframes-animation/SKILL.md` in `~/.local/share/video-edit/docs/hyperframes/`.
@@ -35,8 +35,11 @@ Manim for math, graphs and diagrams that morph.
   are for interactive sessions. Where the docs say `npx hyperframes` or
   `npm run`, run `hyperframes` itself: `npx` fetches a copy whose Chrome cannot
   start here.
-- Manim: `manim` is Manim CE 0.20.1 with TinyTeX. Read
-  `~/.local/share/video-edit/docs/manim-video/SKILL.md`.
+- ManimGX: `manimgx` is ManimGX 0.1.1, Manim CE's API (`import manimgx as m`)
+  on a GPU renderer. Typst sets `Tex` and `MathTex`; there is no LaTeX. In
+  `~/.local/share/video-edit/docs/manimgx/`, read `SKILL.md` and
+  `user-guide/coming-from-manim-ce.md`; the other guides in `user-guide/` and
+  the scenes in `examples/` cover each feature.
 
 ## Build
 
@@ -68,7 +71,7 @@ Then, in `index.html`:
   });
   ```
 
-For Manim, write `slots/<id>/src/scene.py`; its `run_time`s and `wait`s come
+For ManimGX, write `slots/<id>/src/scene.py`; its `run_time`s and `wait`s come
 from the beats' seconds and add up to `duration`.
 
 ## Render and check
@@ -78,11 +81,12 @@ from the beats' seconds and add up to `duration`.
 
    ```sh
    hyperframes render slots/<id>/src --gpu --fps <draft fps> --output slots/<id>/draft/<id>.mp4
-   manim render slots/<id>/src/scene.py <Scene> -r <w>,<h> --fps <draft fps> \
-     --disable_caching --media_dir slots/<id>/draft -o <id>
+   manimgx render slots/<id>/src/scene.py <Scene> -r <w>x<h> --fps <draft fps> \
+     -o slots/<id>/draft/<id>.mp4
    ```
 
-   Manim writes `slots/<id>/draft/videos/scene/<h>p<fps>/<id>.mp4`.
+   ManimGX also writes a storyboard beside the video and lists layout
+   problems; fix the ones the brief does not intend.
 
 3. Run `video-edit check <draft> --slot slots/<id> --draft`, then look at the
    contact sheet it produces. Fix and repeat from step 1 until the check
@@ -92,12 +96,12 @@ from the beats' seconds and add up to `duration`.
 
    ```sh
    hyperframes render slots/<id>/src --gpu --fps <fps> --resolution 4k --output slots/<id>/render/<id>.mp4
-   manim render slots/<id>/src/scene.py <Scene> -r <width>,<height> --fps <fps> \
-     --disable_caching --media_dir slots/<id>/render -o <id>
+   manimgx render slots/<id>/src/scene.py <Scene> -r <width>x<height> --fps <fps> \
+     -o slots/<id>/render/<id>.mp4
    ```
 
 5. Run `video-edit finalize <raw> --slot slots/<id>`. It writes
-   `slots/<id>/out/<id>_vN.mp4`. For Manim output, add `--input-matrix bt601`.
+   `slots/<id>/out/<id>_vN.mp4`.
 6. Run `video-edit check slots/<id>/out/<id>_vN.mp4 --slot slots/<id>`. Once it passes,
    render nothing more unless the brief changes.
 7. Write `slots/<id>/report.md`: the clip's path, the engine, every
