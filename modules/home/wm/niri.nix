@@ -388,7 +388,9 @@ in
 
             # ── Power & Escape ────────────────────────────────────────
             "${hyper}+P".action.power-off-monitors = [ ];
-            "${hyper}+X" = {
+            # The Lock key on Logitech MX keyboards sends the Windows lock
+            # chord rather than a lock keysym.
+            "Super+L" = {
               action.spawn = [
                 swaylock
                 "-f"
