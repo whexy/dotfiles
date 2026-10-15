@@ -77,8 +77,7 @@ steps:
           exit 1
         }
 
-  # Building here rather than in the Dockerfile lets the build cache reach it;
-  # the Dockerfile only copies .image in.
+  # Build here, not in the Dockerfile, which only copies .image in.
   - name: build
     image: <toolchain image>
     when:
