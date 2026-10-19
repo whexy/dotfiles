@@ -24,7 +24,7 @@ let
   # monochrome white; color is reserved for state (charging, low, muted) and
   # the accent-blue active workspace.
   colors = {
-    bar = "0x00000000"; # fully transparent, wallpaper shows through
+    bar = "0xff000000"; # solid black
     fg = "0xffffffff"; # primary text/icons
     glass = "0x1affffff"; # 10% white, default item capsule
     glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
