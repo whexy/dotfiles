@@ -79,7 +79,10 @@ in
     })
     (lib.mkIf cfg.pinRegistry.enable {
       nix = {
-        registry.nixpkgs.flake = inputs.nixpkgs;
+        registry.nixpkgs.to = {
+          type = "path";
+          path = "${pkgs.callPackage ../../../lib/unfree-nixpkgs.nix { inherit (inputs) nixpkgs; }}";
+        };
         # Deliberately unpinned: `nix shell unstable#pkg` reaches packages
         # newer than the stable branch.
         registry.unstable.to = {
