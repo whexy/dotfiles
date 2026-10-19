@@ -65,8 +65,11 @@ in
       nix = {
         # `nix run nixpkgs#pkg` would otherwise re-resolve a branch head on
         # every call under tarball-ttl = 0. Pinning also makes ad-hoc commands
-        # use the same package set as the system closure.
-        registry.nixpkgs.flake = systemNixpkgs;
+        # use the same package set as the system closure, unfree included.
+        registry.nixpkgs.to = {
+          type = "path";
+          path = "${pkgs.callPackage ../../../lib/unfree-nixpkgs.nix { nixpkgs = systemNixpkgs; }}";
+        };
 
         # Deliberately unpinned: `nix shell unstable#pkg` reaches packages
         # newer than the stable system branch.
