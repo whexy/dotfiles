@@ -20,9 +20,13 @@ let
       file=
     else
       dir=$(dirname -- "$target")
-      file=$target
+      file=$(basename -- "$target")
     fi
     cd "$dir"
+    # `drop` resolves names against the server's cwd, which a reused session
+    # may have changed.
+    dir=$(pwd -P)
+    file=''${file:+$dir/$file}
     # Not XDG_RUNTIME_DIR: logind may wipe it while nvim keeps running, and the
     # next link would start a second nvim on the same files. The directory must
     # be private, since whoever can plant a socket in it gets their server
@@ -35,6 +39,9 @@ let
       echo "$rundir is not a private directory of uid $uid" >&2
       exit 1
     fi
+    # Keyed by the resolved folder, so every link into it reaches one server.
+    # macOS has shasum but no sha256sum.
+    id=$(printf '%s:%s\n' "$client" "$dir" | { sha256sum 2>/dev/null || shasum -a 256; } | cut -c1-16)
     sock=$rundir/$id.sock
     if ! nvim --server "$sock" --remote-expr 1 >/dev/null 2>&1; then
       rm -f "$sock"
@@ -159,7 +166,7 @@ let
       [[ $host != -* && $host != *[[:space:]]* ]] || fail "invalid SSH host"
       [[ $path != *$'\n'* && $path != *$'\r'* ]] || fail "invalid remote path"
 
-      id=$(printf '%s\n' "$(id -un)@$(uname -n):$host:$path" | sha256sum | cut -c1-16)
+      client=$(printf '%s\n' "$(id -un)@$(uname -n):$host" | sha256sum | cut -c1-16)
       quote() { printf "'%s'" "''${1//\'/\'\\\'\'}"; }
 
       # Any web page can emit these links, so no host is handed the agent. The
@@ -175,7 +182,7 @@ let
 
       remote_sock=$(
         {
-          printf 'target=%s\nid=%s\n' "$(quote "$path")" "$id"
+          printf 'target=%s\nclient=%s\n' "$(quote "$path")" "$client"
           cat <<'EOF'
       ${remoteScript}
       EOF
