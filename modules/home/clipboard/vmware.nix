@@ -46,6 +46,7 @@ in
         waylandToX11Once = pkgs.writeShellApplication {
           name = "clipboard-wayland-to-x11-once";
           runtimeInputs = [
+            pkgs.gnugrep
             pkgs.wl-clipboard
             pkgs.xsel
           ];
