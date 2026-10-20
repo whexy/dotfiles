@@ -37,11 +37,13 @@ pkgs.writeShellApplication {
     while [ $# -gt 0 ]; do
       case "$1" in
         --label)
-          label="''${2:-}"
+          [ $# -ge 2 ] || { usage >&2; exit 2; }
+          label="$2"
           shift 2
           ;;
         --ttl)
-          ttl="''${2:-}"
+          [ $# -ge 2 ] || { usage >&2; exit 2; }
+          ttl="$2"
           shift 2
           ;;
         -h | --help)
@@ -73,14 +75,14 @@ pkgs.writeShellApplication {
       echo "t3-pair: this machine is not connected to a tailnet" >&2
       exit 1
     fi
-    # Match on the MagicDNS label rather than HostName: that is the name the
-    # HTTPS certificate is issued for.
+    # Match on the MagicDNS name, whole or its first label, rather than
+    # HostName: that is the name the HTTPS certificate is issued for.
     peer=$(
       jq -r --arg host "''${host,,}" '
         if $host == "" then .Self
         else
           [.Self, (.Peer // {} | .[])]
-          | map(select((.DNSName | split(".")[0]) == $host))
+          | map(select(.DNSName | rtrimstr(".") | . == $host or split(".")[0] == $host))
           | first // empty
         end
         | "\(.ID) \(.DNSName | rtrimstr("."))"
