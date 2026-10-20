@@ -61,7 +61,8 @@ in
         url = "https://draw.at-basking.ts.net/mcp";
       };
     }
-    // lib.optionalAttrs cfg.firefoxDevtools.enable {
+    # The server drives the automation browser, which supplies the binary.
+    // lib.optionalAttrs (cfg.firefoxDevtools.enable && firefox.enable) {
       firefox-devtools = {
         # Not yet in the release branches; nixpkgs-unstable has it.
         command = lib.getExe pkgs.unstable.firefox-devtools-mcp;
