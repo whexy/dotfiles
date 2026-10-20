@@ -9,10 +9,11 @@ let
   osConfig = args.osConfig or null;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
   # No screen to open a browser on. WSL has no desktop of its own but opens
-  # previews in Windows.
+  # previews in Windows. Standalone homes only run on servers.
   isHeadless =
-    osConfig != null
-    && (osConfig.dotfiles.hardware.headless || !(osConfig.dotfiles.desktop.enable || isWsl));
+    osConfig == null
+    || osConfig.dotfiles.hardware.headless
+    || !(osConfig.dotfiles.desktop.enable || isWsl);
 in
 {
   config = lib.mkIf config.dotfiles.editor.typst.enable {
@@ -65,11 +66,11 @@ in
         function()
           local client = vim.lsp.get_clients({ name = "tinymist" })[1]
           if not client then return vim.notify("tinymist not running!", vim.log.levels.ERROR) end
-          client.request("workspace/executeCommand", {
+          client:request("workspace/executeCommand", {
             command = "tinymist.pinMain",
             arguments = { vim.api.nvim_buf_get_name(0) },
           }, function(err)
-            vim.notify(err and ("error pinning: " .. err) or "successfully pinned",
+            vim.notify(err and ("error pinning: " .. err.message) or "successfully pinned",
               err and vim.log.levels.ERROR or vim.log.levels.INFO)
           end)
         end
