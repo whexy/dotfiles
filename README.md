@@ -52,8 +52,8 @@ Woodpecker CI evaluates configurations on every push and runs the pre-commit
 checks (treefmt, statix, nil, deadnix).
 
 Weekly, a GitHub App bot updates every `flake.lock` input when they drift.
-Nightly, the same bot refreshes only `numtide/llm-agents.nix`, whose agent
-releases move faster than the rest of the flake.
+Nightly, the same bot refreshes only `numtide/llm-agents.nix` and the T3 Code
+nightly pin, whose releases move faster than the rest of the flake.
 
 Servers and standalone Home Manager setups auto-upgrade daily from the flake, so
 the fleet stays near the same revision.
