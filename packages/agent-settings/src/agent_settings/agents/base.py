@@ -111,11 +111,12 @@ class Agent(ABC):
             try:
                 return self.served_models(template, discover)
             except SettingsError as error:
-                failures.append(f"\n{error}; showing only the saved model")
                 prefix = f"{template['label']}/"
                 if isinstance(saved, str) and saved.startswith(prefix):
+                    failures.append(f"\n{error}; showing only the saved model")
                     model = saved.removeprefix(prefix)
                     return [(model, model)]
+                failures.append(f"\n{error}")
                 return []
 
         return expand(entries, served), "".join(failures)
@@ -151,8 +152,13 @@ class Agent(ABC):
         from agent_settings.picker import DELETE, FORK, SWITCH, ask, pick
 
         profiles = Profiles(self.name)
+        root = self.root
         choices, notice = self.live_entries(self.catalog.choices)
         while True:
+            if self.root != root:
+                # An unreachable model list falls back to this config's saved model.
+                root = self.root
+                choices, notice = self.live_entries(self.catalog.choices)
             labels = [entry["label"] for entry in choices]
             displays = [entry.get("display", entry["label"]) for entry in choices]
             current = read_document(self.state_file).get("selection")

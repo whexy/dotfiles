@@ -81,7 +81,15 @@ class Profiles:
                     # Resolve through the default path, never pin a Nix store generation.
                     dst.symlink_to(self.default / filename)
                 elif src.exists() or src.is_symlink():
-                    _copy(src, dst, materialize=filename in files[:2])
+                    # Links resolve through the source, following its Home
+                    # Manager generations, unless it is a config this manager
+                    # can delete; those links are copied as they are.
+                    _copy(
+                        src,
+                        dst,
+                        materialize=filename in files[:2],
+                        through_source=source.parent != self.directory,
+                    )
             if self.agent == "claude":
                 registry = (
                     Path.home() / ".claude.json"
@@ -109,13 +117,14 @@ class Profiles:
         shutil.rmtree(root)
 
 
-def _copy(source: Path, target: Path, *, materialize: bool = False) -> None:
+def _copy(source: Path, target: Path, *, materialize: bool = False, through_source: bool) -> None:
     if source.is_symlink() and not materialize:
-        target.symlink_to(source)
+        target.symlink_to(source if through_source else source.readlink())
     elif source.is_dir():
         target.mkdir(mode=0o700)
         for child in source.iterdir():
-            _copy(child, target / child.name)
+            _copy(child, target / child.name, through_source=through_source)
     else:
         shutil.copyfile(source, target)
-        target.chmod(0o600)
+        # Hook scripts must stay executable.
+        target.chmod(0o700 if source.stat().st_mode & 0o100 else 0o600)

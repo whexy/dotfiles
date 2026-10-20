@@ -15,6 +15,8 @@ from agent_settings.agents import Agent, create_agent
 from agent_settings.catalog import Entry
 from agent_settings.documents import child_table, edit_document, read_document
 from agent_settings.errors import SettingsError
+from agent_settings.picker import SWITCH
+from agent_settings.profiles import Profiles
 
 type MakeAgent = Callable[[str], Agent]
 
@@ -290,6 +292,40 @@ def test_unreachable_model_list_offers_the_saved_model(secret: Path) -> None:
     assert labels == ["proxy/vendor/a", "default"]
     assert "connection refused" in prompt
     assert entry.get("env", {})["ANTHROPIC_MODEL"] == "vendor/a"
+
+
+def test_switching_config_offers_its_own_saved_model_offline(secret: Path) -> None:
+    agent = create_agent(manifest("claude", [discovered(secret)]))
+    first, second = (agent.catalog.find(f"proxy/vendor/{m}") for m in "ab")
+    assert first is not None and second is not None
+    agent.reconcile(first)
+    other = Profiles("claude").fork(agent.root, "other", [])
+    agent.set_root(other)
+    agent.reconcile(second)
+    agent.set_root(Profiles("claude").default)
+    down = SettingsError("proxy: model discovery failed: connection refused")
+    with (
+        patch.object(agent, "served_models", side_effect=down),
+        patch.object(agent, "pick", side_effect=[SWITCH, "proxy/vendor/b"]) as pick,
+        patch("agent_settings.picker.pick", return_value="other"),
+    ):
+        agent.choose()
+    assert pick.call_args.args[1] == ["proxy/vendor/b", "default"]
+
+
+def test_unreachable_fusion_models_are_reported(secret: Path) -> None:
+    fusion: Entry = {
+        "label": "fusion",
+        "fusion": {"roles": [], "candidates": [discovered(secret)]},
+    }
+    agent = create_agent(manifest("claude", [fusion]))
+    down = SettingsError("proxy: model discovery failed: connection refused")
+    with (
+        patch.object(agent, "served_models", side_effect=down),
+        patch.object(agent, "pick", return_value="fusion"),
+        pytest.raises(SettingsError, match="connection refused"),
+    ):
+        agent.choose()
 
 
 def test_claude_fusion_picks_discovered_role_models_and_survives_sync(secret: Path) -> None:

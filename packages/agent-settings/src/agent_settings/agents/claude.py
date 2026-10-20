@@ -62,6 +62,8 @@ class ClaudeAgent(Agent):
     def _resolve_fusion(self, fusion: Fusion) -> Entry:
         """Pick the main model, then one model per role from the same provider."""
         candidates, notice = self.live_entries(fusion["candidates"])
+        if not candidates:
+            raise SettingsError(f"no models to pick from{notice}")
         main = self.pick(
             [c.get("display", c["label"]) for c in candidates],
             [c["label"] for c in candidates],
