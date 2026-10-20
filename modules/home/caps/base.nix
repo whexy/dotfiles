@@ -1,7 +1,7 @@
 # base home cap preset: terminal essentials every user gets.
 #
-# Assigns dotfiles.* home options (plain priority); users and hosts can
-# override individual options with lib.mkForce.
+# Assigns dotfiles.* home options with lib.mkDefault; users and hosts can
+# override individual options with plain assignments.
 args@{
   pkgs,
   lib,

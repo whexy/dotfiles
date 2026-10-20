@@ -1,7 +1,7 @@
 # base cap preset: very basic settings, all systems should have them.
 #
-# Caps are preset modules: importing one assigns dotfiles.* options (plain
-# priority). Hosts override individual options with lib.mkForce.
+# Caps are preset modules: importing one assigns dotfiles.* options with
+# lib.mkDefault. Hosts override individual options with plain assignments.
 { flake, lib, ... }:
 {
   dotfiles = {

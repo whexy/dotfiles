@@ -47,20 +47,24 @@ are imported selectively.
 
 ## Capabilities
 
-Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, `service`), but
-**caps are not options or features**. They are preset modules:
+Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, `service`, and
+the home-only `sysadmin` and `agent`), but **caps are not options or
+features**. They are preset modules:
 
 - `modules/caps/<cap>.nix` assigns system `dotfiles.*` options
 - `modules/home/caps/<cap>.nix` assigns Home Manager software options and
   cap-specific package lists
 
 Feature option defaults have the lowest priority. Importing a cap assigns
-normal-priority preset values. A host or user customizes the preset with
-`lib.mkForce`, for example:
+preset values with `lib.mkDefault`, so a host or user customizes the preset
+with a plain assignment, for example:
 
 ```nix
-dotfiles.virtualization.docker.enable = lib.mkForce false;
+dotfiles.virtualization.docker.enable = false;
 ```
+
+`lib.mkForce` is only needed to override a value a feature module assigns at
+normal priority.
 
 A cap should only tune feature options; implementation remains in semantic
 feature groups. Platform-specific options may be enabled by the same preset

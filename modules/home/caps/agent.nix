@@ -4,8 +4,8 @@
 # agent harnesses, or secrets.
 #
 # Used instead of base, not on top of it, since base carries a person's
-# terminal. Assigns dotfiles.* home options (plain priority); users and hosts
-# can override individual options with lib.mkForce.
+# terminal. Assigns dotfiles.* home options with lib.mkDefault; users and
+# hosts can override individual options with plain assignments.
 { pkgs, lib, ... }:
 {
   dotfiles = {
