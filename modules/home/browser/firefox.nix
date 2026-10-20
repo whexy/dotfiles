@@ -19,10 +19,14 @@ in
       # See modules/home/desktop/macbook-screen-density.nix for the full story. When that
       # compensation is active, GTK text-scaling-factor = 0.75 also shrinks
       # Firefox content (Firefox folds GTK font scaling into its CSS px → device
-      # px conversion). Pinning layout.css.devPixelsPerPx to "2.0" forces Firefox
-      # content to render at the same ratio Safari uses on the paired macOS host,
-      # bypassing the GTK text-scaling-factor influence for web content.
-      macbookScreen = !isDarwin && (osConfig.dotfiles.hardware.display.macbookScreen or false);
+      # px conversion). Pinning layout.css.devPixelsPerPx (tuned on the panel to
+      # 2.67) makes Firefox content match the size Safari renders on the paired
+      # macOS host, bypassing the GTK text-scaling-factor influence for web
+      # content.
+      densityCompensated =
+        !isDarwin
+        && config.dotfiles.desktop.macbookScreenDensity.enable
+        && (osConfig.dotfiles.hardware.display.macbookScreen or false);
     in
     {
       programs.firefox = {
@@ -74,7 +78,7 @@ in
                 { }
             )
             // (
-              if macbookScreen then
+              if densityCompensated then
                 {
                   "layout.css.devPixelsPerPx" = "2.67";
                 }
