@@ -36,9 +36,11 @@ def socket_identity(path):
 
 
 def read_agents(state):
+    # Live agents re-register from their shells, so a damaged registry is
+    # dropped rather than wedging every connection.
     try:
         return json.loads((state / "agents.json").read_text())
-    except FileNotFoundError:
+    except (FileNotFoundError, json.JSONDecodeError):
         return []
 
 
@@ -106,18 +108,22 @@ def connect_upstream(state):
         for agent in reversed(agents.copy()):
             upstream = socket.socket(socket.AF_UNIX)
             try:
-                if socket_identity(agent["path"]) != agent:
+                try:
+                    identity = socket_identity(agent["path"])
+                except ValueError:
+                    identity = None
+                # Whatever now occupies the path, the registered agent is gone.
+                if identity != agent:
                     raise FileNotFoundError("Socket identity changed")
                 upstream.settimeout(1)
                 upstream.connect(agent["path"])
                 upstream.settimeout(None)
-            except (OSError, ValueError) as error:
+            except OSError as error:
                 upstream.close()
                 # Only definitive disappearance is evicted. Busy or denied agents
                 # must not silently send authorization to another laptop.
                 if (
-                    isinstance(error, OSError)
-                    and error.errno in (errno.ENOENT, errno.ECONNREFUSED, errno.ENOTDIR)
+                    error.errno in (errno.ENOENT, errno.ECONNREFUSED, errno.ENOTDIR)
                     or isinstance(error, FileNotFoundError)
                 ):
                     agents.remove(agent)

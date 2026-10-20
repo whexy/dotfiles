@@ -239,6 +239,20 @@ class RouterTests(unittest.TestCase):
                 router.connect_upstream(self.state)
         self.assertEqual(len(router.read_agents(self.state)), 1)
 
+    def test_replaced_or_corrupt_registry_entries_fall_back(self):
+        office = self.agent(b"office:")
+        laptop = self.agent(b"laptop:")
+        self.register(office)
+        self.register(laptop)
+        laptop.close()
+        laptop.path.write_text("not a socket")
+        self.request(b"office:")
+        self.assertEqual(len(router.read_agents(self.state)), 1)
+        (self.state / "agents.json").write_text("")
+        newer = self.agent(b"newer:")
+        self.register(newer)
+        self.request(b"newer:")
+
     def test_refuses_non_socket_and_unsafe_state(self):
         file = self.home / "not-a-socket"
         file.write_text("keep")
