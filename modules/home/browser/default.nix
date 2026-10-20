@@ -17,12 +17,10 @@
         };
       };
     };
-    chromium.enable = lib.mkEnableOption "Chromium";
   };
 
   imports = [
     ./automation.nix
     ./firefox.nix
-    ./chromium.nix
   ];
 }

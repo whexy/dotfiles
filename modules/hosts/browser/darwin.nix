@@ -9,8 +9,6 @@ let
 in
 {
   config = {
-    homebrew.casks =
-      lib.optionals (cfg.firefox.enable || cfg.firefox.automation.enable) [ "firefox" ]
-      ++ lib.optional cfg.chromium.enable "google-chrome";
+    homebrew.casks = lib.optionals (cfg.firefox.enable || cfg.firefox.automation.enable) [ "firefox" ];
   };
 }
