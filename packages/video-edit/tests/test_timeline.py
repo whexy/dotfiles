@@ -167,6 +167,19 @@ class SnapTest(unittest.TestCase):
         self.assertEqual(new["ranges"][0]["start"], round(240 / FPS, 4))
         self.assertEqual(report["short"][0]["edge"], "start")
 
+    def test_crossing_ranges_join_on_a_frame_both_edges_accept(self):
+        words = [
+            {"word": "x", "start": 0.5, "end": 2.0, "index": 0},
+            {"word": "y", "start": 2.18, "end": 4.0, "index": 1},
+        ]
+        silences = Silences([[0.0, 0.5], [2.0, 2.18], [4.0, 4.5]])
+        edl = edl_with({"start": 0.4, "end": 2.05}, {"start": 2.15, "end": 4.2})
+        new, report = timeline.snap(edl, words, silences, FPS)
+        self.assertEqual(report["joined"], [[0, 1]])
+        self.assertEqual(new["ranges"][0]["end"], new["ranges"][1]["start"])
+        result = timeline.validate(new, words, silences, FPS, 5.0)
+        self.assertEqual(result["errors"], [])
+
     def test_locked_ranges_are_untouched(self):
         edl = edl_with({"start": 1.02, "end": 1.65, "lock": True})
         new, report = self.snap(edl)

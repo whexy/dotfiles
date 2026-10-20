@@ -244,10 +244,14 @@ TEXT_PATTERNS = (
 )
 
 
-def _visible(text, whitelist):
-    text = re.sub(r"&[a-z]+;|&#\d+;", " ", text)
+def _unlisted(text, whitelist):
     for word in whitelist:
         text = re.sub(re.escape(word), " ", text, flags=re.I)
+    return text
+
+
+def _visible(text, whitelist):
+    text = _unlisted(re.sub(r"&[a-z]+;|&#\d+;", " ", text), whitelist)
     return re.search(r"\w", text) is not None
 
 
@@ -270,7 +274,7 @@ def text_findings(src_dir, whitelist, limit=20):
             continue
         rel = path.relative_to(src_dir.parent)
         for n, line in enumerate(text.splitlines(), 1):
-            if CJK.search(line):
+            if CJK.search(_unlisted(line, whitelist)):
                 findings.append(f"{rel}:{n}: CJK characters: {line.strip()[:60]}")
         blanked = BLOCKS.sub(lambda m: "\n" * m.group(0).count("\n"), text)
         for pattern, suffixes in TEXT_PATTERNS:

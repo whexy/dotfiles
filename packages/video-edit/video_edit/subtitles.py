@@ -31,8 +31,8 @@ def plan_words(root, version=None, section=None):
 
 
 def clock(t):
-    minutes, seconds = divmod(max(t, 0.0), 60)
-    return f"{int(minutes):02d}:{seconds:05.2f}"
+    minutes, centis = divmod(round(max(t, 0.0) * 100), 6000)
+    return f"{minutes:02d}:{centis // 100:02d}.{centis % 100:02d}"
 
 
 def render_words(plan, words):

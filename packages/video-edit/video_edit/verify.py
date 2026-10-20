@@ -330,7 +330,7 @@ def diff_speech(expected, heard, cut_times, near=1.0):
                 "expected": "".join(lost),
                 "heard": "".join(gained),
                 "out_time": round(t, 2),
-                "cut": None if cut is None else cut + 1,
+                "cut": cut,
                 "cut_time": None if at is None else round(at, 2),
                 "at_cut": close and kind != "variant",
             }
@@ -379,7 +379,10 @@ def run_verify_audio(root, version=None):
         write_json(meta_path, {"plan": sha})
     _, heard = transcript.load(heard_path)
     expected = kept_words(plan["ranges"], edit.words, plan["fps"])
-    cut_times = [r["rec_in"] / plan["fps"] for r in plan["ranges"][1:]]
+    # Cut k starts range k, and the last one ends the output: the head and tail
+    # trim speech like any other cut.
+    fps = plan["fps"]
+    cut_times = [r["rec_in"] / fps for r in plan["ranges"]] + [plan["duration_frames"] / fps]
     issues, repeats, ratio = diff_speech(expected, heard, cut_times)
     flagged = {}
     for issue in issues:
@@ -397,7 +400,7 @@ def run_verify_audio(root, version=None):
         "flagged_cuts": [
             {
                 "cut": cut,
-                "at": round(cut_times[cut - 1], 2),
+                "at": round(cut_times[cut], 2),
                 "issues": [f"{i['kind']}: expected {i['expected']!r} heard {i['heard']!r}" for i in found],
                 "look": f"video-edit strip --cut {cut} --version {n}",
             }

@@ -184,17 +184,17 @@ class SpeechDiffTest(unittest.TestCase):
 
     def test_pieces_join_and_case_is_ignored(self):
         heard = [word(c, 0.1 * i) for i, c in enumerate("大家好今天讲")] + [word("K", 0.6), word("ubernetes", 0.65)]
-        issues, repeats, ratio = verify.diff_speech(self.EXPECTED, heard, [0.3])
+        issues, repeats, ratio = verify.diff_speech(self.EXPECTED, heard, [0.0, 0.3])
         self.assertEqual(issues, [])
         self.assertEqual(ratio, 1.0)
 
     def test_repeats_are_tolerated_both_ways(self):
         heard = [word(c, 0.1 * i) for i, c in enumerate("大家家好今天讲kubernetes")]
-        issues, repeats, _ = verify.diff_speech(self.EXPECTED, heard, [0.3])
+        issues, repeats, _ = verify.diff_speech(self.EXPECTED, heard, [0.0, 0.3])
         self.assertEqual((issues, repeats), ([], 1))
         expected = [word(c, 0.1 * i) for i, c in enumerate("我我觉得")]
         heard = [word(c, 0.1 * i) for i, c in enumerate("我觉得")]
-        issues, repeats, _ = verify.diff_speech(expected, heard, [0.2])
+        issues, repeats, _ = verify.diff_speech(expected, heard, [0.0, 0.2])
         self.assertEqual((issues, repeats), ([], 1))
 
     def test_far_variants_are_not_flagged(self):
@@ -204,7 +204,7 @@ class SpeechDiffTest(unittest.TestCase):
 
     def test_leaked_speech_at_a_cut(self):
         heard = [word(c, 0.1 * i) for i, c in enumerate("大家好嗯今天讲")] + [word("kubernetes", 0.7)]
-        issues, _, _ = verify.diff_speech(self.EXPECTED, heard, [0.3])
+        issues, _, _ = verify.diff_speech(self.EXPECTED, heard, [0.0, 0.3])
         self.assertEqual([(i["kind"], i["heard"], i["cut"]) for i in issues], [("leaked", "嗯", 1)])
 
 
