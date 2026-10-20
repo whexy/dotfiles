@@ -62,13 +62,39 @@ in
         default = null;
         description = "T3 Code package; null selects the pinned nightly package.";
       };
-      server.enable = lib.mkOption {
-        type = lib.types.bool;
-        # Clients only reach the server through Tailscale Serve. Standalone
-        # homes have no osConfig to say whether this machine is on the tailnet.
-        default = args.osConfig.dotfiles.network.tailscale.enable or false;
-        defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
-        description = "Whether to run the T3 Code server, published on the tailnet through Tailscale Serve.";
+      server = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          # The default network is the tailnet. Standalone homes have no
+          # osConfig to say whether this machine is on it, so hosts off the
+          # tailnet enable the server themselves with `network = "lan"`.
+          default = args.osConfig.dotfiles.network.tailscale.enable or false;
+          defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
+          description = "Whether to run the T3 Code server.";
+        };
+        network = lib.mkOption {
+          type = lib.types.enum [
+            "tailnet"
+            "lan"
+          ];
+          default = "tailnet";
+          description = ''
+            Network clients reach the server on. `tailnet` publishes it through
+            Tailscale Serve at `https://<MagicDNS name>:35338`. `lan` serves it
+            at `http://<address>:3773`, where the address is this host's
+            private IPv4 LAN address, detected when the server starts and
+            followed when it changes (Linux only).
+          '';
+        };
+        lanInterface = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          example = "eth0";
+          description = ''
+            Interface whose private IPv4 address the `lan` server binds; null
+            takes the address the default route uses.
+          '';
+        };
       };
       pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
     };
@@ -263,6 +289,12 @@ in
           # interop. Standalone homes have no osConfig to say this is WSL.
           assertion = cfg.video.enable -> args.osConfig.dotfiles.host.wsl or false;
           message = "dotfiles.agents.video.enable requires a WSL host.";
+        }
+        {
+          # The LAN address comes from the kernel's routes through iproute2.
+          assertion =
+            cfg.t3code.server.enable && cfg.t3code.server.network == "lan" -> pkgs.stdenv.hostPlatform.isLinux;
+          message = ''dotfiles.agents.t3code.server.network = "lan" requires a Linux host.'';
         }
       ];
 
