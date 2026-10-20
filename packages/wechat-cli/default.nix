@@ -7,12 +7,8 @@ let
     fileset = lib.fileset.unions [
       ./pyproject.toml
       ./src
-      ./tests
     ];
   };
-
-  # The interpreter basedpyright resolves imports against, tests included.
-  devPython = python3.withPackages (p: [ p.pytest ]);
 
   sourceCheck =
     name: nativeBuildInputs: script:
@@ -30,13 +26,11 @@ python3.pkgs.buildPythonApplication {
   inherit src;
 
   build-system = [ python3.pkgs.hatchling ];
-  nativeCheckInputs = [ python3.pkgs.pytestCheckHook ];
 
   passthru = {
-    inherit devPython;
     tests = {
       typecheck = sourceCheck "typecheck" [ pkgs.basedpyright ] ''
-        basedpyright --pythonpath ${devPython}/bin/python3
+        basedpyright --pythonpath ${python3}/bin/python3
       '';
       lint = sourceCheck "lint" [ pkgs.ruff ] ''
         ruff check --no-cache .

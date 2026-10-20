@@ -183,7 +183,7 @@ function effortVariant(entry, pkg, effort) {
   }
 }
 
-export function proxyModel(editor, baseUrl, served) {
+function proxyModel(editor, baseUrl, served) {
   const id = served.id;
   const match = catalogEntry(editor, id);
   const chatgpt = id.startsWith("gpt-");

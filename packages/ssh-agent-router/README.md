@@ -77,9 +77,3 @@ not agent keys.
 ```sh
 nix build .#ssh-agent-router --no-link
 ```
-
-The package runs its Python unittest suite during the build. Tests cover newest
-selection, both disconnect orders, stale socket files, no-agent/reconnect,
-duplicate registration, concurrent clients/registration, conversation pinning,
-denial behavior, permissions, symlink migration, daemon restart, shell routing,
-and real OpenSSH key listing and signing with disposable test keys.

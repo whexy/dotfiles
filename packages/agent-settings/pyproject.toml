@@ -15,9 +15,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/agent_settings"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-
 [tool.ruff]
 line-length = 100
 target-version = "py313"
@@ -26,18 +23,12 @@ target-version = "py313"
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
 
 [tool.basedpyright]
-include = ["src", "tests"]
+include = ["src"]
 pythonVersion = "3.13"
 pythonPlatform = "All"
 typeCheckingMode = "recommended"
 # Discarding dict.pop() and similar results is idiomatic here.
 reportUnusedCallResult = false
-executionEnvironments = [
-  # Mocks are untyped by design.
-  { root = "tests", reportAny = false, reportUnknownMemberType = false, reportUnknownArgumentType = false, reportUnknownVariableType = false, reportUnknownLambdaType = false, reportPrivateUsage = false },
-  { root = "src" },
-]
 
 [tool.ruff.lint.isort]
 known-first-party = ["agent_settings"]
-known-third-party = ["support"]

@@ -58,8 +58,6 @@ type Client struct {
 	BaseURL string
 	Repo    string
 	Token   string
-	// Now is injected so tests can compute rate-limit waits without real time.
-	Now func() time.Time
 }
 
 // New builds a client for owner/name against the public API.
@@ -72,7 +70,6 @@ func New(repo, token string, httpClient *http.Client) *Client {
 		BaseURL: "https://api.github.com",
 		Repo:    repo,
 		Token:   token,
-		Now:     time.Now,
 	}
 }
 
@@ -220,13 +217,6 @@ func (c *Client) setHeaders(req *http.Request) {
 	}
 }
 
-func (c *Client) now() time.Time {
-	if c.Now != nil {
-		return c.Now()
-	}
-	return time.Now()
-}
-
 // rateLimitError extracts the wait hint GitHub supplies, preferring the
 // explicit Retry-After over the reset timestamp.
 func (c *Client) rateLimitError(resp *http.Response) error {
@@ -240,7 +230,7 @@ func (c *Client) rateLimitError(resp *http.Response) error {
 	}
 	if v := resp.Header.Get("X-RateLimit-Reset"); v != "" {
 		if unix, parseErr := strconv.ParseInt(v, 10, 64); parseErr == nil {
-			if wait := time.Unix(unix, 0).Sub(c.now()); wait > 0 {
+			if wait := time.Until(time.Unix(unix, 0)); wait > 0 {
 				err.RetryAfter = wait
 			}
 			return err

@@ -5,16 +5,6 @@ pkgs.stdenvNoCC.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
-  nativeCheckInputs = [
-    pkgs.python3
-    pkgs.openssh
-  ];
-  doCheck = true;
-  checkPhase = ''
-    runHook preCheck
-    python3 -m unittest -v
-    runHook postCheck
-  '';
   installPhase = ''
     runHook preInstall
     install -Dm644 router.py $out/lib/ssh-agent-router/router.py

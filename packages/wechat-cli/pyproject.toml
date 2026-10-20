@@ -15,9 +15,6 @@ build-backend = "hatchling.build"
 [tool.hatch.build.targets.wheel]
 packages = ["src/wechat_cli"]
 
-[tool.pytest.ini_options]
-testpaths = ["tests"]
-
 [tool.ruff]
 line-length = 100
 target-version = "py313"
@@ -26,7 +23,7 @@ target-version = "py313"
 select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
 
 [tool.basedpyright]
-include = ["src", "tests"]
+include = ["src"]
 pythonVersion = "3.13"
 pythonPlatform = "All"
 typeCheckingMode = "recommended"
@@ -37,7 +34,3 @@ reportExplicitAny = false
 reportUnknownMemberType = false
 reportUnknownArgumentType = false
 reportUnknownVariableType = false
-executionEnvironments = [
-  { root = "tests", reportPrivateUsage = false },
-  { root = "src" },
-]

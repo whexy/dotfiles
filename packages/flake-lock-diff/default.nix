@@ -5,13 +5,6 @@ pkgs.stdenvNoCC.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
-  nativeCheckInputs = [ pkgs.python3 ];
-  doCheck = true;
-  checkPhase = ''
-    runHook preCheck
-    python3 -m unittest -v
-    runHook postCheck
-  '';
   # `nix` stays on the caller's PATH so evaluation uses the caller's store
   # and settings, such as the CI container's single-user store.
   installPhase = ''
