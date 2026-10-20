@@ -1,4 +1,4 @@
-export type Cap = "base" | "dev" | "dev-lite" | "gui" | "service";
+export type Cap = "base" | "dev" | "dev-lite" | "gui" | "service" | "sysadmin";
 
 export interface Host {
   /** Display name (flake target where applicable). */
@@ -35,6 +35,14 @@ export const categories: Category[] = [
         note: "Home workstation. The daily driver. Gaming included.",
       },
       {
+        label: "seeley",
+        hardware: "lab desktop",
+        caps: ["base", "dev", "gui"],
+        cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#seeley",
+        nhCmd: "nh os switch --hostname seeley github:whexy/dotfiles",
+        note: "Lab desktop that mostly serves as a headless server. Auto-upgrading.",
+      },
+      {
         label: "mudd",
         hardware: "lab VM",
         caps: ["base", "dev"],
@@ -65,6 +73,14 @@ export const categories: Category[] = [
         cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#neith",
         nhCmd: "nh os switch --hostname neith github:whexy/dotfiles",
         note: "Incus system container for development. Auto-upgrading.",
+      },
+      {
+        label: "deimos",
+        hardware: "Incus container",
+        caps: ["base", "dev"],
+        cmd: "sudo nixos-rebuild switch --flake github:whexy/dotfiles#deimos",
+        nhCmd: "nh os switch --hostname deimos github:whexy/dotfiles",
+        note: "Incus system container on mars. Auto-upgrading.",
       },
       {
         label: "wsl",
@@ -123,7 +139,7 @@ export const categories: Category[] = [
       {
         label: "b3srv0",
         hardware: "root @ /root",
-        caps: ["base"],
+        caps: ["base", "sysadmin"],
         cmd: "home-manager switch --flake github:whexy/dotfiles#root@b3srv0",
         nhCmd:
           "nh home switch github:whexy/dotfiles --no-nom -c root@b3srv0 -b backup",
@@ -132,7 +148,7 @@ export const categories: Category[] = [
       {
         label: "proxmox",
         hardware: "root @ /root",
-        caps: ["base"],
+        caps: ["base", "sysadmin"],
         cmd: "home-manager switch --flake github:whexy/dotfiles#root@proxmox",
         nhCmd:
           "nh home switch github:whexy/dotfiles --no-nom -c root@proxmox -b backup",
@@ -150,13 +166,6 @@ export const categories: Category[] = [
         caps: ["base", "dev"],
         cmd: "just build-wsl",
         note: "Import with: wsl --import NixOS <path> result/wsl/nixos.wsl",
-      },
-      {
-        label: "moore VM",
-        hardware: "QEMU dev VM launcher",
-        caps: ["base", "dev"],
-        cmd: "just build-moore-vm",
-        note: "Dev VM for the moore server. ssh -p 2222 whexy@localhost.",
       },
       {
         label: "zoozve image",
@@ -177,6 +186,13 @@ export const categories: Category[] = [
         hardware: "Incus container image",
         caps: ["base", "dev"],
         cmd: "just build-neith",
+        note: "Rootfs + Incus metadata tarballs. Import with incus image import.",
+      },
+      {
+        label: "deimos image",
+        hardware: "Incus container image",
+        caps: ["base", "dev"],
+        cmd: "just build-deimos",
         note: "Rootfs + Incus metadata tarballs. Import with incus image import.",
       },
     ],
@@ -206,6 +222,11 @@ export const capNotes: Record<Cap, { name: string; blurb: string }> = {
   service: {
     name: "service",
     blurb: "Headless service hosts. Minimal, hardened, always on.",
+  },
+  sysadmin: {
+    name: "sysadmin",
+    blurb:
+      "Root profiles on servers. Inspection and network tools, kubectl, agents.",
   },
 };
 
