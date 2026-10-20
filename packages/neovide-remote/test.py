@@ -63,6 +63,17 @@ with tempfile.TemporaryDirectory() as root:
         second = Connection(url)
         connections.append(second)
         assert second.call('nvim_eval', 'getpid()') == pid
+        # Links to a file in the folder, or to the folder spelled with a
+        # trailing slash, reach the same session.
+        notes = os.path.join(folder, 'notes.txt')
+        open(notes, 'w').close()
+        for link in [url + '/', url + quote('/notes.txt')]:
+            other = Connection(link)
+            connections.append(other)
+            assert other.call('nvim_eval', 'getpid()') == pid
+            other.close()
+            connections.remove(other)
+        assert second.call('nvim_buf_get_name', 0) == os.path.realpath(notes)
         first.close()
         connections.remove(first)
         assert second.call('nvim_get_var', 'relay_test') == 'survives disconnect'
