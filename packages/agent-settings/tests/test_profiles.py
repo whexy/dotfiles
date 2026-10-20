@@ -176,6 +176,29 @@ def test_fork_of_fork_survives_source_deletion(make_agent: MakeAgent, home: Path
     assert (second / "CLAUDE.md").readlink() == home / ".claude/CLAUDE.md"
 
 
+def test_fork_of_fork_keeps_nested_links_and_executable_hooks(
+    make_agent: MakeAgent, home: Path
+) -> None:
+    agent = make_agent("claude")
+    agent.reconcile()
+    generation = home / "generation"
+    generation.write_text("skill")
+    (agent.root / "skills").mkdir()
+    (agent.root / "skills/nix").symlink_to(generation)
+    hook = agent.root / "hooks/notify.sh"
+    hook.parent.mkdir()
+    hook.write_text("#!/bin/sh\n")
+    hook.chmod(0o755)
+    profiles = Profiles("claude")
+    first = profiles.fork(agent.root, "first", [])
+    second = profiles.fork(first, "second", [])
+    profiles.delete(first)
+    assert (second / "skills/nix").readlink() == agent.root / "skills/nix"
+    assert (second / "skills/nix").read_text() == "skill"
+    assert os.access(second / "hooks/notify.sh", os.X_OK)
+    assert not os.access(second / agent.config_name, os.X_OK)
+
+
 def test_fork_external_instructions_are_preserved(home: Path) -> None:
     source = home / "external"
     source.mkdir()
