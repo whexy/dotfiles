@@ -8,8 +8,8 @@ let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.wm;
   enabled = cfg.darwin.enable && cfg.darwin.windowManager == "paneru";
-  autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
-  macbookScreen = osConfig != null && (osConfig.dotfiles.hardware.display.macbookScreen or true);
+  autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
+  macbookScreen = osConfig.dotfiles.hardware.display.macbookScreen or false;
   topPadding =
     if (config.dotfiles.panel.sketchybar.enable && autoHideMenuBar && (!macbookScreen)) then 34 else 0;
   bottomPadding = if (config.dotfiles.panel.sketchybar.enable && !autoHideMenuBar) then 34 else 0;
@@ -31,6 +31,10 @@ let
     arrow_down = "downarrow";
     arrow_left = "leftarrow";
     arrow_right = "rightarrow";
+    up = "uparrow";
+    down = "downarrow";
+    left = "leftarrow";
+    right = "rightarrow";
   };
 
   # Convert a Ghostty keybind trigger ("cmd+shift+arrow_up") into a Paneru
@@ -46,14 +50,14 @@ let
   # Keys bound inside Ghostty (modules/home/terminal/ghostty.nix) must
   # bypass Paneru and go straight to the terminal.
   ghosttyPassthrough = map (kb: toPaneruChord (lib.head (lib.splitString "=" kb))) (
-    config.programs.ghostty.settings.keybind or [ ]
+    lib.filter (kb: !lib.hasSuffix "=unbind" kb) (config.programs.ghostty.settings.keybind or [ ])
   );
   luaStringList = lib.concatMapStringsSep ", " (s: ''"${s}"'');
 
   # The terminal-spawn binding is SSH-context aware when multiplexing is on:
   # `ssh-window launch` clones the focused window's SSH destination.
   terminalLaunch =
-    if config.dotfiles.ssh.windowMultiplexing.enable then
+    if config.programs.ssh-window.enable then
       "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &"
     else
       "/usr/bin/env -i /usr/bin/open -a Ghostty";

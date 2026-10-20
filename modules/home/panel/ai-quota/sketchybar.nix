@@ -20,7 +20,7 @@ let
   cfg = config.dotfiles.panel;
   showCountdown = cfg.aiQuota.showCountdown;
   osConfig = args.osConfig or null;
-  barOnTop = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
+  barOnTop = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
   shared = import ./shared.nix;
   inherit (shared) apiUrl logos updateInterval;
 

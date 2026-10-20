@@ -227,7 +227,7 @@ let
     (map workspaceItem (lib.range 1 9))
     ++ lib.optional isPaneru paneruStateItem
     ++ [ frontAppItem ]
-    ++ lib.optional config.dotfiles.ssh.windowMultiplexing.enable sshContextItem;
+    ++ lib.optional config.programs.ssh-window.enable sshContextItem;
 
   mkAgent = name: programArguments: {
     enable = true;

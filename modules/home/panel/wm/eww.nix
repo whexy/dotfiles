@@ -45,7 +45,7 @@ in
       defs = ''
         (deflisten WORKSPACES :initial "[]" "${workspacesScript}")
         (deflisten WINDOW_TITLE "${windowTitleScript}")
-        ${lib.optionalString config.dotfiles.ssh.windowMultiplexing.enable ''
+        ${lib.optionalString config.programs.ssh-window.enable ''
           (deflisten SSH_CONTEXT :initial "" "${niriEvents.sshContext sshWindow}")
         ''}
 
@@ -60,7 +60,7 @@ in
                 (label :text {ws.idx})))))
         (defwidget window-title []
           (box :class "pill window-title" (label :text WINDOW_TITLE :limit-width 50)))
-        ${lib.optionalString config.dotfiles.ssh.windowMultiplexing.enable ''
+        ${lib.optionalString config.programs.ssh-window.enable ''
           (defwidget ssh-context []
             (box :class "pill ssh-context" :visible {SSH_CONTEXT != ""}
               (label :text {"󰣀 " + SSH_CONTEXT} :limit-width 40)))
@@ -112,9 +112,7 @@ in
 
       left = lib.mkMerge [
         (lib.mkBefore [ "workspaces" ])
-        (lib.mkAfter (
-          [ "window-title" ] ++ lib.optional config.dotfiles.ssh.windowMultiplexing.enable "ssh-context"
-        ))
+        (lib.mkAfter ([ "window-title" ] ++ lib.optional config.programs.ssh-window.enable "ssh-context"))
       ];
     };
   };

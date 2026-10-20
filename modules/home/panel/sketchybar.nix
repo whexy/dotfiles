@@ -14,7 +14,7 @@ let
   cfg = config.dotfiles.panel;
   osConfig = args.osConfig or null;
 
-  autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
+  autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
   barPosition = if autoHideMenuBar then "top" else "bottom";
 
   sketchybar = lib.getExe pkgs.sketchybar;
