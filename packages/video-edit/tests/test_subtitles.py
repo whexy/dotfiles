@@ -89,6 +89,8 @@ class SubtitleTest(unittest.TestCase):
 
     def test_clock_helpers(self):
         self.assertEqual(subtitles.stamp(3600 + 61.5), "01:01:01,500")
+        self.assertEqual(subtitles.clock(59.996), "01:00.00")
+        self.assertEqual(subtitles.clock(61.5), "01:01.50")
         self.assertEqual(subtitles.tc_seconds("01:00:00:30", 60), 3600.5)
 
 

@@ -424,15 +424,21 @@ def snap(edl, words, silences, fps, cuts=None):
             r["start"], r["end"] = round(pair[0] / fps, 4), round(pair[1] / fps, 4)
         frames.append(tuple(pair))
     # Two ranges that meet in one short silence can cross after snapping;
-    # join them at the silence's middle instead.
+    # join them near the silence's middle instead, on a frame both edges
+    # accept when the silence has one.
     order = sorted(range(len(frames)), key=lambda i: frames[i][0])
     for a, b in zip(order, order[1:]):
         if frames[a][1] > frames[b][0] >= frames[a][0]:
             span = silences.containing(frames[b][0] / fps)
             if span and not (new["ranges"][a].get("lock") or new["ranges"][b].get("lock")):
-                mid = frames_of((span[0] + span[1]) / 2, fps)
-                if frames[a][0] < mid < frames[b][1]:
-                    new["ranges"][a]["end"] = new["ranges"][b]["start"] = round(mid / fps, 4)
+                at = frames_of((span[0] + span[1]) / 2, fps)
+                windows = [edge_window(kind, span, fps, cuts)[0] for kind in ("out", "in")]
+                lo = max((w[0] for w in windows if w), default=at)
+                hi = min((w[1] for w in windows if w), default=at)
+                if lo <= hi:
+                    at = min(max(at, lo), hi)
+                if frames[a][0] < at < frames[b][1]:
+                    new["ranges"][a]["end"] = new["ranges"][b]["start"] = round(at / fps, 4)
                     report.setdefault("joined", []).append([a, b])
     moves = [abs(m["moved_ms"]) for m in report["moved"] + report["short"]]
     report["median_move_ms"] = round(statistics.median(moves)) if moves else 0
