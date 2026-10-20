@@ -53,11 +53,11 @@ let
     fi
 
     iface="$(printf '%s\n' "$route" | ${gawk} '{for (i = 1; i <= NF; i++) if ($i == "dev") print $(i + 1)}')"
-    if ${gawk} -v iface="$iface" '$1 ~ iface":" { found = 1 } END { exit !found }' /proc/net/wireless 2>/dev/null; then
+    if ${gawk} -v iface="$iface" '$1 == iface ":" { found = 1 } END { exit !found }' /proc/net/wireless 2>/dev/null; then
       ssid="$(${iwgetid} "$iface" --raw 2>/dev/null)"
       echo "󰤨 ''${ssid:-wifi}"
     else
-      addr="$(${ip} -4 addr show "$iface" 2>/dev/null | ${gawk} '/inet /{split($2, a, "/"); print a[1]}')"
+      addr="$(${ip} -4 addr show "$iface" 2>/dev/null | ${gawk} '/inet /{split($2, a, "/"); print a[1]; exit}')"
       echo "󰈀 $addr"
     fi
   '';
