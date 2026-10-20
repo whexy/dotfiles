@@ -7,7 +7,7 @@ description: Serve a web UI to Wenxuan over the tailnet and hand him the URL. Us
 
 You almost always run on a different machine from the one Wenxuan is sitting
 at. Most of his hosts are headless NixOS servers (`mudd`, `neith`, `phobos`,
-`deimos`, `zoozve`, `moore`, `wsl`): no display, no `xdg-open`, no browser on
+`deimos`, `zoozve`, `wsl`): no display, no `xdg-open`, no browser on
 `PATH`. A `localhost` URL is useless to him, and nothing can open a browser
 for him.
 

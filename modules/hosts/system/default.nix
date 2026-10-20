@@ -19,8 +19,7 @@ in
           The nixosConfigurations.<name> (NixOS) or
           darwinConfigurations.<name> (Darwin) output of the upstream repo
           (flake.lib.upstreamRef) to switch to. Override when the flake
-          output name differs from the runtime hostname (e.g. moore has
-          networking.hostName "moore-vm").
+          output name differs from the runtime hostname.
         '';
         example = "remote-dev";
       };

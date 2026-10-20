@@ -76,11 +76,6 @@ in
               HostName = "venus.cs.northwestern.edu";
               User = "wenxuan";
             };
-
-            "moore" = {
-              HostName = "moore.wot.eecs.northwestern.edu";
-              User = "wsk9140";
-            };
           };
         };
       }
