@@ -236,6 +236,12 @@ class RenderTest(unittest.TestCase):
         srt = tr.render_srt(segments)
         self.assertIn("00:01:01,500 --> 00:01:02,000", srt)
 
+    def test_rounding_carries_into_the_next_unit(self):
+        srt = tr.render_srt([{"start": 1.9996, "end": 59.9996, "text": "hi"}])
+        self.assertIn("00:00:02,000 --> 00:01:00,000", srt)
+        self.assertEqual(tr.ts(59.996), "01:00.00")
+        self.assertEqual(tr.ts(61.5), "01:01.50")
+
 
 RAW_WORDS = (
     ("So", 0.0, 0.3),

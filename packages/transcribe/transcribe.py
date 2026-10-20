@@ -415,8 +415,8 @@ def group_segments(words, pause_min):
 
 
 def ts(seconds):
-    minutes, secs = divmod(max(seconds, 0.0), 60)
-    return f"{int(minutes):02d}:{secs:05.2f}"
+    minutes, centis = divmod(round(max(seconds, 0.0) * 100), 6000)
+    return f"{minutes:02d}:{centis // 100:02d}.{centis % 100:02d}"
 
 
 def render_text(result):
@@ -457,10 +457,11 @@ def render_text(result):
 
 def render_srt(segments):
     def stamp(seconds):
-        whole = int(seconds)
-        hours, rem = divmod(whole, 3600)
-        minutes, secs = divmod(rem, 60)
-        return f"{hours:02d}:{minutes:02d}:{secs:02d},{int(round((seconds - whole) * 1000)):03d}"
+        ms = round(seconds * 1000)
+        hours, ms = divmod(ms, 3_600_000)
+        minutes, ms = divmod(ms, 60_000)
+        secs, ms = divmod(ms, 1000)
+        return f"{hours:02d}:{minutes:02d}:{secs:02d},{ms:03d}"
 
     cues = []
     for i, seg in enumerate(segments, 1):
