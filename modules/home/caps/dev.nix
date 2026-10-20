@@ -1,6 +1,6 @@
 # dev home cap preset: full development environment.
 # Package bundles live in the `tooling` and `editor` feature groups; this
-# preset enables all of them. Hosts disable bundles with lib.mkForce.
+# preset enables all of them. Hosts disable bundles with plain assignments.
 {
   config,
   lib,

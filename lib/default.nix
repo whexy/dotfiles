@@ -22,8 +22,8 @@ let
     llm-tools = import ../overlays/llm-tools.nix { inherit (inputs) llm-agents; };
   };
 
-  # Caps are preset modules, not options. They assign feature options at
-  # normal priority; hosts override individual values with lib.mkForce.
+  # Caps are preset modules, not options. They assign feature options with
+  # lib.mkDefault; hosts override individual values with plain assignments.
   capsModules = caps: map (cap: ../modules/caps/${cap}.nix) caps;
   homeCapsModules = caps: map (cap: ../modules/home/caps/${cap}.nix) caps;
 
