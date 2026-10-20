@@ -43,15 +43,5 @@ in
         }
       '';
     };
-
-    programs.ssh = lib.mkDefault {
-      enable = true;
-      enableDefaultConfig = false;
-      settings = {
-        "*" = {
-          AddKeysToAgent = "yes";
-        };
-      };
-    };
   };
 }

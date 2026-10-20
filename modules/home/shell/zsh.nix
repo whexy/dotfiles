@@ -83,18 +83,6 @@ in
           ''
         ];
       };
-
-      programs.ssh = lib.mkDefault {
-        enable = true;
-        enableDefaultConfig = false;
-        # HM 26.05 deprecated `matchBlocks`; entries now live under `settings`
-        # using OpenSSH directive names directly (no `extraOptions` wrapper).
-        settings = {
-          "*" = {
-            AddKeysToAgent = "yes";
-          };
-        };
-      };
     }
   );
 }
