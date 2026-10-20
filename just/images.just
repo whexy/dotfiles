@@ -210,20 +210,3 @@ build-proxmox CONFIG DISK_GB="auto":
     echo "Created: $VMA_FILE"
     echo ""
     echo "Upload to Proxmox and restore with: qmrestore <file>.vma.zst <vmid>"
-
-# Build the moore server dev VM launcher (run on moore via nix-portable)
-# After building, run on moore:
-#   export NIX_DISK_IMAGE=/tmp/moore-vm-$USER.qcow2
-#   ./result/moore/bin/run-moore-vm-vm
-# Then: ssh -p 2222 whexy@localhost
-build-moore-vm:
-    @mkdir -p result
-    @echo "Building moore VM launcher..."
-    nix build .#nixosConfigurations.moore.config.system.build.vm -o result/moore
-    @echo ""
-    @echo "Build complete! Launcher: result/moore/bin/run-moore-vm-vm"
-    @echo ""
-    @echo "Run on moore:"
-    @echo "  export NIX_DISK_IMAGE=/tmp/moore-vm-\$USER.qcow2"
-    @echo "  ./result/moore/bin/run-moore-vm-vm"
-    @echo "Then: ssh -p 2222 whexy@localhost"
