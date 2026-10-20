@@ -21,17 +21,18 @@
 #     CF-Access-Client-Id:     <from secrets/cf-access-dotfiles-id.age>
 #     CF-Access-Client-Secret: <from secrets/cf-access-dotfiles-secret.age>
 #
-# rclone reads `RCLONE_HEADER` (comma-separated `Header: Value` pairs) from
-# the environment, but neither systemd nor launchd can interpolate
-# environment values from on-disk files. So the per-mount unit's command is
-# wrapped in a tiny shell script (`cfAccessWrapper`) that:
+# rclone takes the nas remote's `headers` option from the environment
+# (`RCLONE_CONFIG_NAS_HEADERS`), but neither systemd nor launchd can
+# interpolate environment values from on-disk files. So the per-mount unit's
+# command is wrapped in a tiny shell script (`cfAccessWrapper`) that:
 #
 #   1. reads both secret files at runtime, and
-#   2. exports `RCLONE_HEADER`, then `exec`s rclone with the original args.
+#   2. exports `RCLONE_CONFIG_NAS_HEADERS`, then `exec`s rclone with the
+#      original args.
 #
 # This is symmetrical to how `programs.rclone.remotes.*.secrets` already
-# handles the WebDAV password (via `rclone config update`), except headers
-# aren't a config field — they're a CLI/env-time concern.
+# handles the WebDAV password (via `rclone config update`), except the one
+# `headers` value combines two secret files.
 {
   config,
   lib,
@@ -268,8 +269,9 @@ in
       cfIdPath = config.age.secrets.cf-access-dotfiles-id.path;
       cfSecretPath = config.age.secrets.cf-access-dotfiles-secret.path;
 
-      # Wrapper: reads CF Access secrets from disk, sets RCLONE_HEADER, exec's
-      # whatever command (with args) it was given. Usage:
+      # Wrapper: reads CF Access secrets from disk, sets
+      # RCLONE_CONFIG_NAS_HEADERS, exec's whatever command (with args) it was
+      # given. Usage:
       #   cfAccessWrapper /path/to/rclone mount ...
       cfAccessWrapper = pkgs.writeShellScript "rclone-nas-cf-access-wrapper" ''
         set -euo pipefail
@@ -289,14 +291,15 @@ in
         cf_id=$(<"${cfIdPath}")
         cf_secret=$(<"${cfSecretPath}")
 
-        # rclone's `RCLONE_HEADER` env var doesn't reliably CSV-split into
-        # multiple header entries (it ends up either as one mashed string or
-        # with literal quote chars in the header name, depending on the form).
-        # Inject `--header` twice as CLI args instead — this works
-        # unambiguously and is position-independent.
-        exec "$@" \
-          --header "CF-Access-Client-Id: $cf_id" \
-          --header "CF-Access-Client-Secret: $cf_secret"
+        # The environment, unlike argv, is private to the mount process. The
+        # option is a CSV list of name,value pairs, so quote every field.
+        csv() {
+          local v=''${1//\"/\"\"}
+          printf '"%s"' "$v"
+        }
+        RCLONE_CONFIG_NAS_HEADERS="$(csv CF-Access-Client-Id),$(csv "$cf_id"),$(csv CF-Access-Client-Secret),$(csv "$cf_secret")"
+        export RCLONE_CONFIG_NAS_HEADERS
+        exec "$@"
       '';
 
       rcloneBin = lib.getExe config.programs.rclone.package;
@@ -330,7 +333,7 @@ in
 
       # Darwin: the existing per-mount script does `mkdir -p` + `exec rclone
       # nfsmount …`. We replicate it here, but invoke rclone through the
-      # wrapper so RCLONE_HEADER is set.
+      # wrapper so the CF Access headers are set.
       nasDarwinScript = pkgs.writeShellScript "rclone-mount-nas" ''
         set -euo pipefail
         mkdir -p "${nasMountPoint}"
@@ -407,8 +410,8 @@ in
       # ── Linux (systemd user) overrides ───────────────────────────────────
       # - PATH: HM rclone module hardcodes /run/wrappers/bin (NixOS-specific).
       #   On non-NixOS Linux hosts, fusermount3 lives in /usr/bin, so extend it.
-      # - nas ExecStart: route through cfAccessWrapper so RCLONE_HEADER is set
-      #   before rclone runs. The shared module's ExecStartPre (`mkdir -p`)
+      # - nas ExecStart: route through cfAccessWrapper so the CF Access headers
+      #   are set before rclone runs. The shared module's ExecStartPre (`mkdir -p`)
       #   stays untouched.
       # Both blocks are silently ignored on Darwin (systemd.user is disabled).
       systemd.user.services."rclone-mount:.@nas".Service = {
@@ -423,7 +426,7 @@ in
 
       # ── Darwin (launchd) override ────────────────────────────────────────
       # Replace the shared module's nas mount script with one that injects
-      # RCLONE_HEADER via cfAccessWrapper. No-op on Linux (launchd.agents is
+      # the CF Access headers via cfAccessWrapper. No-op on Linux (launchd.agents is
       # not evaluated there).
       launchd.agents."rclone-mount:.@nas".config.ProgramArguments = lib.mkForce [
         "${nasDarwinScript}"
