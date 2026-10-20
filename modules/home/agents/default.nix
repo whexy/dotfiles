@@ -20,6 +20,8 @@ in
 
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
+    iphoneUse.enable = lib.mkEnableOption "the iPhone Use MCP server, which drives a USB-connected iPhone through WebDriverAgent";
+
     tldraw.enable = lib.mkOption {
       type = lib.types.bool;
       # The server only resolves on the tailnet, so registering it elsewhere
@@ -116,6 +118,7 @@ in
         cfg = cfg.rea;
       };
       video = import ./video/home.nix { inherit pkgs perSystem; };
+      iphoneUse = perSystem.self.iphone-use;
       mcp = import ./mcp.nix {
         inherit
           pkgs
@@ -123,6 +126,7 @@ in
           lib
           rea
           video
+          iphoneUse
           ;
       };
       # Agents commit as the user but did not write the code, so they leave
@@ -161,7 +165,11 @@ in
         // lib.optionalAttrs cfg.rea.enable {
           reverse-engineer-anything = "${rea.base}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
         }
-        // lib.optionalAttrs cfg.video.enable video.skills;
+        // lib.optionalAttrs cfg.video.enable video.skills
+        // lib.optionalAttrs cfg.iphoneUse.enable {
+          iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
+          iphone-use-setup = "${iphoneUse}/share/iphone-use/skills/iphone-use-setup";
+        };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.

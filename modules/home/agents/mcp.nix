@@ -9,6 +9,7 @@
   lib,
   rea,
   video,
+  iphoneUse,
 }:
 let
   cfg = config.dotfiles.agents;
@@ -114,5 +115,10 @@ in
     }
     // lib.optionalAttrs cfg.video.enable {
       resolve.command = lib.getExe video.resolveMcp;
+    }
+    // lib.optionalAttrs cfg.iphoneUse.enable {
+      # The wrapper supplies the Python, Node and git the setup worker calls;
+      # WDA itself is fetched and built into the user's state directory.
+      iphone_use.command = lib.getExe iphoneUse;
     };
 }
