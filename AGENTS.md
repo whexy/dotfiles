@@ -125,6 +125,30 @@ while the upgrade source and all its inputs stay public. Keep the fragment out
 of `nix.settings`/git, and refresh it by re-running activation after
 `gh auth login`.
 
+## T3 Code server
+
+`dotfiles.agents.t3code.server.network` picks where clients reach the server.
+Hosts on the tailnet keep the default, `tailnet`: the server listens on
+loopback and Tailscale Serve publishes it at `https://<MagicDNS name>:35338`.
+Hosts off the tailnet (b3srv0, mars, venus) set `lan`: the server listens on
+the host's own LAN address at `http://<address>:3773`, and nothing calls
+`tailscale`.
+
+The `lan-address` package finds that address when the server starts: the
+source address of the default route, or the address on `server.lanInterface`
+when set. Only RFC 1918 addresses qualify, so the server never binds a public
+address, Tailscale's 100.64.0.0/10, or another interface's bridge address.
+Without one it waits rather than falling back. The server restarts when a
+different address holds for two checks in a row (about 20 s); losing the
+address alone does not restart it, since the socket works again when the
+address returns.
+
+A LAN host needs lingering (`sudo loginctl enable-linger <user>`, which its
+auto-upgrade already requires) to start the server at boot, and its firewall
+must admit TCP 3773 from the LAN. Traffic, pairing tokens included, is plain
+HTTP, so this suits only a trusted LAN. `t3-pair <host>` pairs a LAN host over
+ssh, at the address its running server reports.
+
 ## Verification
 
 (Before verification, remember to use `git add` to add new files, as flake

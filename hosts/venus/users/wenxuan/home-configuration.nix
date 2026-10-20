@@ -16,6 +16,11 @@
   ];
   dotfiles = {
     autoUpgrade.enable = true;
+    # Off the tailnet, so T3 Code clients connect over the LAN.
+    agents.t3code.server = {
+      enable = true;
+      network = "lan";
+    };
   };
 
   targets.genericLinux.enable = true;

@@ -13,7 +13,14 @@
     inputs.self.lib.overlays.unstable
     inputs.self.lib.overlays.llm-tools
   ];
-  dotfiles.autoUpgrade.enable = true;
+  dotfiles = {
+    autoUpgrade.enable = true;
+    # Off the tailnet, so T3 Code clients connect over the LAN.
+    agents.t3code.server = {
+      enable = true;
+      network = "lan";
+    };
+  };
 
   targets.genericLinux.enable = true;
   targets.genericLinux.gpu.enable = false;
