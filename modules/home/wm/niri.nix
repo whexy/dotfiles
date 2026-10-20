@@ -274,7 +274,7 @@ in
             # its niri backend keeps the same `+new-window` D-Bus activation.
             "${hyper}+T" = {
               action.spawn =
-                if config.dotfiles.ssh.windowMultiplexing.enable then
+                if config.programs.ssh-window.enable then
                   [
                     "${config.programs.ssh-window.package}/bin/ssh-window"
                     "launch"

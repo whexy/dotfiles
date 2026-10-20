@@ -33,7 +33,7 @@ in
       }
       {
         "modules-left" = lib.mkAfter (
-          [ "niri/window" ] ++ lib.optional config.dotfiles.ssh.windowMultiplexing.enable "custom/ssh-context"
+          [ "niri/window" ] ++ lib.optional config.programs.ssh-window.enable "custom/ssh-context"
         );
         "niri/window" = {
           format = "{}";
@@ -45,7 +45,7 @@ in
           };
         };
       }
-      (lib.mkIf config.dotfiles.ssh.windowMultiplexing.enable {
+      (lib.mkIf config.programs.ssh-window.enable {
         # Without an interval Waybar keeps the listener running and shows
         # each line it prints.
         "custom/ssh-context" = {

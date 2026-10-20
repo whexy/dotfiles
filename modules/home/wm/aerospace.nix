@@ -8,11 +8,11 @@ args@{
 let
   cfg = config.dotfiles.wm;
   osConfig = args.osConfig or null;
-  autoHideMenuBar = osConfig != null && (osConfig.dotfiles.hardware.display.autoHideMenuBar or true);
+  autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
   # On notched MacBook panels macOS reserves the menu-bar height at the top of
   # the visible frame even with the menu bar auto-hidden, so a top gap there
   # would double-count it (see paneru.nix for the same treatment).
-  macbookScreen = osConfig != null && (osConfig.dotfiles.hardware.display.macbookScreen or true);
+  macbookScreen = osConfig.dotfiles.hardware.display.macbookScreen or false;
   sketchybar = lib.getExe pkgs.sketchybar;
 in
 {
@@ -127,7 +127,7 @@ in
           cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
           cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
           cmd-alt-ctrl-shift-t =
-            if config.dotfiles.ssh.windowMultiplexing.enable then
+            if config.programs.ssh-window.enable then
               # SSH-context aware: clones the focused window's ssh destination.
               "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch"
             else
