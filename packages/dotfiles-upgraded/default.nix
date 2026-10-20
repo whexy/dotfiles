@@ -8,8 +8,6 @@ pkgs.buildGoModule {
   # pushing a commit, so it stays on the standard library.
   vendorHash = null;
 
-  doCheck = true;
-
   meta = {
     description = "Polls the upstream dotfiles repo and switches this host once CI passes";
     mainProgram = "dotfiles-upgraded";

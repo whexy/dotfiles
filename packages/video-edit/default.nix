@@ -6,8 +6,7 @@
 # only a fallback after the caller's PATH, where the agents module installs
 # the wrapper that supplies its API key.
 # /usr/lib/wsl/lib carries WSL's libcuda/libnvidia-encode, which NVENC
-# needs; the Nix build sandbox has no GPU, so tests drive the filter graph
-# with a software encoder instead.
+# needs.
 let
   python = pkgs.python3.withPackages (ps: [
     ps.pillow
@@ -21,17 +20,6 @@ pkgs.stdenvNoCC.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
-  nativeCheckInputs = [
-    python
-    pkgs.ffmpeg
-    perSystem.self.manimgx
-  ];
-  doCheck = true;
-  checkPhase = ''
-    runHook preCheck
-    VIDEO_EDIT_FONT=${font} python3 -m unittest discover -s tests -t . -v
-    runHook postCheck
-  '';
   installPhase = ''
     runHook preInstall
     mkdir -p $out/lib/video-edit

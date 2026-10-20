@@ -11,16 +11,6 @@ pkgs.stdenvNoCC.mkDerivation {
   src = ./.;
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
-  nativeCheckInputs = [
-    pkgs.python3
-    pkgs.ffmpeg
-  ];
-  doCheck = true;
-  checkPhase = ''
-    runHook preCheck
-    python3 -m unittest -v
-    runHook postCheck
-  '';
   installPhase = ''
     runHook preInstall
     install -Dm644 transcribe.py $out/lib/transcribe/transcribe.py

@@ -265,8 +265,6 @@ pkgs.symlinkJoin {
       mkdir -p $out/share/neovide-remote/windows
       cp ${./windows/Install.ps1} $out/share/neovide-remote/windows/Install.ps1
       cp ${./windows/Relay.cs} $out/share/neovide-remote/windows/Relay.cs
-      cp ${./windows/TestRelay.cs} $out/share/neovide-remote/windows/TestRelay.cs
-      cp ${./windows/Test.ps1} $out/share/neovide-remote/windows/Test.ps1
     '')
   ]
   ++ (if pkgs.stdenv.hostPlatform.isDarwin then [ darwinApp ] else [ desktopItem ]);

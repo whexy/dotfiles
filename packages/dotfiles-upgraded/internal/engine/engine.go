@@ -1,8 +1,7 @@
 // Package engine implements the poll → gate → switch → record loop.
 //
 // Every effect the loop depends on (time, GitHub, the rebuild itself) arrives
-// through an interface, so the whole state machine is exercised in tests
-// without a clock, a network or a Nix store.
+// through an interface.
 package engine
 
 import (

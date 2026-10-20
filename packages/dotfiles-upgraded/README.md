@@ -143,10 +143,3 @@ builds itself; only evaluation stays with the daemon.
 ```sh
 nix build .#dotfiles-upgraded --no-link
 ```
-
-The package runs its Go test suite during the build. Tests cover the state
-machine transitions, the backoff schedule and its bounds, conditional GET with
-ETag persistence, rate-limit handling with and without a credential, state file
-round-trips including corrupt and missing files, and the rebuild exec path. A
-fake clock keeps the suite instant, and the engine tests drive a fake switcher
-so they never shell out.

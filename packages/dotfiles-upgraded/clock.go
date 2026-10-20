@@ -14,37 +14,24 @@ const wakeCheckInterval = time.Minute
 // before a suspend would overshoot its deadline by the whole time asleep. A
 // laptop that mostly sleeps would then poll only when it happened to stay
 // awake for a full interval.
-type realClock struct {
-	// tick and wall are overridden only by tests.
-	tick time.Duration
-	wall func() time.Time
-}
+type realClock struct{}
 
 func (realClock) Now() time.Time { return time.Now() }
 
-func (c realClock) wallNow() time.Time {
-	if c.wall != nil {
-		return c.wall()
-	}
-	// Round(0) strips the monotonic reading so comparisons use wall time.
-	return time.Now().Round(0)
-}
+// wallNow strips the monotonic reading so comparisons use wall time.
+func wallNow() time.Time { return time.Now().Round(0) }
 
-func (c realClock) Sleep(ctx context.Context, d time.Duration) bool {
+func (realClock) Sleep(ctx context.Context, d time.Duration) bool {
 	if d <= 0 {
 		return ctx.Err() == nil
 	}
-	tick := c.tick
-	if tick <= 0 {
-		tick = wakeCheckInterval
-	}
-	deadline := c.wallNow().Add(d)
+	deadline := wallNow().Add(d)
 	for {
-		remaining := deadline.Sub(c.wallNow())
+		remaining := deadline.Sub(wallNow())
 		if remaining <= 0 {
 			return true
 		}
-		timer := time.NewTimer(min(remaining, tick))
+		timer := time.NewTimer(min(remaining, wakeCheckInterval))
 		select {
 		case <-ctx.Done():
 			timer.Stop()

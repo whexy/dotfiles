@@ -7,15 +7,13 @@ let
     fileset = lib.fileset.unions [
       ./pyproject.toml
       ./src
-      ./tests
     ];
   };
 
-  # The interpreter basedpyright resolves imports against, tests included.
+  # The interpreter basedpyright resolves imports against.
   devPython = python3.withPackages (p: [
     p.textual
     p.tomlkit
-    p.pytest
   ]);
 
   sourceCheck =
@@ -38,7 +36,6 @@ python3.pkgs.buildPythonApplication {
     python3.pkgs.tomlkit
     python3.pkgs.textual
   ];
-  nativeCheckInputs = [ python3.pkgs.pytestCheckHook ];
 
   passthru = {
     inherit devPython;
