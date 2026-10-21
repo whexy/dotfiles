@@ -23,29 +23,35 @@ if [ -z "$version" ]; then
   exit 1
 fi
 
-# npm publishes each tarball's SRI hash, so only the linux-x64 tarball, which
-# carries the browser pin below, has to be downloaded.
+# T3 stopped publishing per-platform npm packages after 0.1.1-nightly.3190:
+# the `t3` npm package is now a shim that downloads the matching archive from
+# the GitHub Release and verifies it against that release's SHA256SUMS. Pin
+# those hashes. Only the linux-x64 archive, which carries the browser pin
+# below, has to be downloaded.
+release_base="https://github.com/pingdotgg/t3code/releases/download/v${version}"
+sums=$(curl -fsSL "$release_base/SHA256SUMS")
+sum_for() {
+  awk -v archive="t3-${version}-$1.tar.gz" '$2 == archive { print $1 }' <<<"$sums"
+}
 hashes=()
 for platform in linux-x64 linux-arm64 darwin-arm64; do
-  manifest_url="https://registry.npmjs.org/@t3code/t3-${platform}/${version}"
-  manifest=$(curl -fsSL "$manifest_url" || true)
-  hash=$(sed -n 's/.*"integrity":"\(sha512-[^"]*\)".*/\1/p' <<<"$manifest")
+  hash=$(sum_for "$platform")
   if [ -z "$hash" ]; then
-    echo "t3code-nightly: could not read the tarball integrity from $manifest_url" >&2
+    echo "t3code-nightly: t3-${version}-${platform}.tar.gz not listed in $release_base/SHA256SUMS" >&2
     exit 1
   fi
-  hashes+=("$hash")
+  hashes+=("$(nix hash convert --hash-algo sha256 --to sri "$hash")")
 done
 
-url="https://registry.npmjs.org/@t3code/t3-linux-x64/-/t3-linux-x64-${version}.tgz"
-prefetch=$(nix store prefetch-file --json --hash-type sha512 --expected-hash "${hashes[0]}" "$url")
+url="$release_base/t3-${version}-linux-x64.tar.gz"
+prefetch=$(nix store prefetch-file --json --hash-type sha256 --expected-hash "${hashes[0]}" "$url")
 tarball=$(sed -n 's/.*"storePath": *"\([^"]*\)".*/\1/p' <<<"$prefetch")
 
 # T3 downloads a pinned Chrome for Testing headless shell at runtime, which
 # cannot load its libraries on NixOS. The server source embedded in the
 # executable carries the pin, so read it from there to package the same build.
 browser_pins=$(
-  tar -xzOf "$tarball" package/t3 |
+  tar -xzOf "$tarball" "t3-${version}-linux-x64/t3" |
     LC_ALL=C sed -n '\#^//\#region src/preview/PreviewBrowser.ts$#,/chromePlatform = /p' |
     LC_ALL=C awk '
       /VERSION = "/ { match($0, /"[^"]+"/); print "version", substr($0, RSTART + 1, RLENGTH - 2) }

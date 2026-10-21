@@ -88,12 +88,14 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "t3code-nightly";
   inherit (metadata) version;
 
+  # The `t3` npm package no longer carries per-platform builds; it downloads
+  # this archive from the GitHub Release, so fetch it there directly.
   src = pkgs.fetchurl {
-    url = "https://registry.npmjs.org/@t3code/t3-${platform}/-/t3-${platform}-${finalAttrs.version}.tgz";
+    url = "https://github.com/pingdotgg/t3code/releases/download/v${finalAttrs.version}/t3-${finalAttrs.version}-${platform}.tar.gz";
     hash = metadata.hashes.${platform};
   };
 
-  sourceRoot = "package";
+  sourceRoot = "t3-${finalAttrs.version}-${platform}";
 
   nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
     pkgs.autoPatchelfHook
