@@ -5,12 +5,11 @@
 #
 # The token is minted on the dev host (over ssh unless it is this machine) and
 # handed back as a pairing URL on the host's public tunnel name when it
-# answers, else on its Tailscale Serve name, or, for a host off the tailnet, on
-# the LAN address its server listens on. The public name comes from the host
-# name given, or this machine's hostname, never from the tailnet: a WSL host
-# shares its Windows host's node and so its tailnet name. A client paired over
-# the public name learns the Tailscale route from the server and prefers it
-# where it works; paired over Tailscale, it never learns the public one. ssh
+# answers, else on its Tailscale Serve name. The public name comes from the
+# host name given, or this machine's hostname, never from the tailnet: a WSL
+# host shares its Windows host's node and so its tailnet name. A client paired
+# over the public name learns the Tailscale route from the server and prefers
+# it where it works; paired over Tailscale, it never learns the public one. ssh
 # and tailscale come from PATH on purpose: they must be the user's configured
 # ssh and the CLI matching the running tailscaled.
 pkgs.writeShellApplication {
@@ -27,11 +26,10 @@ pkgs.writeShellApplication {
     usage: t3-pair [--label LABEL] [--ttl DURATION] [host]
 
     Mint a one-time T3 Code pairing URL on [host] (a dotfiles host, a tailnet
-    machine name, an ssh host serving T3 Code on its LAN, or this machine when
-    omitted) and copy it to the clipboard when one is available. The URL uses
-    the public tunnel name of [host], or of this machine's hostname, when it
-    answers, else the host's tailnet name. Paste it into T3 Code under
-    Settings -> Connections -> Add environment.
+    machine name, or this machine when omitted) and copy it to the clipboard
+    when one is available. The URL uses the public tunnel name of [host], or
+    of this machine's hostname, when it answers, else the host's tailnet name.
+    Paste it into T3 Code under Settings -> Connections -> Add environment.
 
       --label LABEL     name shown in the host's client list (default: this host)
       --ttl DURATION    how long the unused link stays valid (default: 5m)
@@ -121,29 +119,8 @@ pkgs.writeShellApplication {
     fi
 
     if [ -z "$base_url" ]; then
-      # Off the tailnet the server listens on its host's LAN address, which
-      # only that host knows; t3 records the origin it listens on.
-      if [ -z "$host" ]; then
-        here=true
-        where="this machine"
-        runtime=$(cat "$HOME/.t3/userdata/server-runtime.json" 2>/dev/null || true)
-      else
-        where="'$host'"
-        runtime=$(ssh "$host" cat .t3/userdata/server-runtime.json 2>/dev/null || true)
-      fi
-      origin=$(jq -r '.origin // empty' <<<"$runtime" 2>/dev/null || true)
-      if [ -z "$origin" ]; then
-        echo "t3-pair: no T3 Code server found on $where, over the tailnet or its LAN" >&2
-        exit 1
-      fi
-      # Restricted like the arguments above, since it reaches the remote
-      # shells too. A loopback origin is a tailnet server's.
-      if ! [[ "$origin" =~ ^http://[0-9]{1,3}(\.[0-9]{1,3}){3}:[0-9]+$ ]] ||
-        [[ "$origin" == http://127.* ]]; then
-        echo "t3-pair: the T3 Code server on $where listens on $origin, which other machines cannot reach; pair a tailnet server from the tailnet" >&2
-        exit 1
-      fi
-      base_url=$origin
+      echo "t3-pair: no T3 Code server found for '$name' at its public name or on the tailnet" >&2
+      exit 1
     fi
 
     # Every agent host has the t3 CLI, which mints tokens whether or not a

@@ -127,36 +127,25 @@ of `nix.settings`/git, and refresh it by re-running activation after
 
 ## T3 Code server
 
-`dotfiles.agents.t3code.server.network` picks where clients reach the server.
-Hosts on the tailnet keep the default, `tailnet`: the server listens on
-loopback and Tailscale Serve publishes it at `https://<MagicDNS name>:35338`.
-Hosts off the tailnet (b3srv0, mars, venus) set `lan`: the server listens on
-the host's own LAN address at `http://<address>:3773`, and nothing calls
-`tailscale`.
+The server listens only on loopback, at port 3773. On tailnet hosts
+(`dotfiles.agents.t3code.server.tailnet.enable`, on by default wherever
+`dotfiles.network.tailscale` is), Tailscale Serve also publishes it at
+`https://<MagicDNS name>:35338`. Every server is published on the public
+internet by its own tunnel (below).
 
-The `lan-address` package finds that address when the server starts: the
-source address of the default route, or the address on `server.lanInterface`
-when set. Only RFC 1918 addresses qualify, so the server never binds a public
-address, Tailscale's 100.64.0.0/10, or another interface's bridge address.
-Without one it waits rather than falling back. The server restarts when a
-different address holds for two checks in a row (about 20 s); losing the
-address alone does not restart it, since the socket works again when the
-address returns.
-
-A LAN host needs lingering (`sudo loginctl enable-linger <user>`, which its
-auto-upgrade already requires) to start the server at boot, and its firewall
-must admit TCP 3773 from the LAN. Traffic, pairing tokens included, is plain
-HTTP, so this suits only a trusted LAN. `t3-pair <host>` pairs a LAN host over
-ssh, at the address its running server reports.
+Standalone homes have no `osConfig`, so a standalone host that runs the
+server enables it, its tailnet route, and `server.tunnel.hostName` itself
+(b3srv0, off the tailnet; proxmox, on it). Its user services start at boot
+only with lingering, which the auto-upgrade module turns on.
 
 ### Public tunnel
 
-A tailnet server is also published on the public internet at
+Every server is published on the public internet at
 `https://<host>-t3.clusters.work` (`flake.lib.t3PublicHost`, the single place
 the name is defined) by the `t3code-tunnel` user service
-(`server.tunnel.enable`, on by default for tailnet servers). Each host runs its
-own Cloudflare tunnel to the server's loopback port, so traffic never passes
-through the cluster.
+(`server.tunnel.enable`, on by default wherever the server runs). Each host
+runs its own Cloudflare tunnel to the server's loopback port, so traffic never
+passes through the cluster.
 
 No host is set up by hand. Every host decrypts the same `cloudflared-cert`
 secret, the cert from one `cloudflared tunnel login` for the zone. On start the
