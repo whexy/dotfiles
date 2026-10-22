@@ -12,6 +12,11 @@
 // neither catalog knows use OpenCode's model defaults. GPT IDs always use
 // Responses over WebSocket; other unknown IDs use the OpenAI-compatible HTTP
 // package.
+//
+// OpenCode decodes and replays provider-hosted web search but never declares
+// the tool, so agent turns get it added on the wire when the model's proxy
+// route (`owned_by` in the OpenAI-shaped list) hands it to a provider that
+// runs it.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -19,7 +24,7 @@ const PROVIDER = "cliproxyapi";
 const REFRESH_MS = 60_000;
 // Gateways list the same model ID under their own package, so the model's
 // vendor is consulted before them.
-const VENDORS = ["anthropic", "openai", "google", "xai"];
+const VENDORS = ["anthropic", "openai", "google", "xai", "meta"];
 // CLIProxyAPI accepts each package's wire format for every model it serves.
 // Each value is the API path in the convention that package appends to.
 const PATHS = {
@@ -27,10 +32,18 @@ const PATHS = {
   "@opencode/ai/providers/openai/responses": "/v1",
   "@opencode/ai/providers/anthropic": "/v1",
   "@opencode/ai/providers/xai": "/v1",
+  "@opencode/ai/providers/meta/responses": "/v1",
   "@opencode/ai/providers/google": "/v1beta",
   "@opencode/ai/providers/openai-compatible": "/v1",
 };
 const FALLBACK = "@opencode/ai/providers/openai-compatible";
+// Routes whose executor passes a hosted search tool to a provider that runs
+// it. Antigravity drops the tool, and Chat Completions upstreams turn a
+// Messages search tool into a client function OpenCode cannot run.
+const SEARCH_ROUTES = new Set(["openai", "anthropic", "xai", "meta"]);
+// Codex's live mode; its cached mode (`false`) searches only OpenAI's index.
+const RESPONSES_SEARCH = { type: "web_search", external_web_access: true };
+const MESSAGES_SEARCH = { type: "web_search_20250305", name: "web_search" };
 
 const execFileAsync = promisify(execFile);
 
@@ -55,9 +68,8 @@ async function readCredentials(options) {
   };
 }
 
-async function fetchServed(baseUrl, credentials, codexVersion) {
-  const query = new URLSearchParams({ client_version: codexVersion });
-  const response = await fetch(`${baseUrl}/v1/models?${query}`, {
+async function fetchModels(baseUrl, credentials, query = "") {
+  const response = await fetch(`${baseUrl}/v1/models${query}`, {
     headers: {
       Authorization: `Bearer ${credentials.apiKey}`,
       ...credentials.headers,
@@ -69,7 +81,26 @@ async function fetchServed(baseUrl, credentials, codexVersion) {
   if (!response.ok) {
     throw new Error(`CLIProxyAPI model discovery failed: ${response.status}`);
   }
-  const payload = await response.json();
+  return response.json();
+}
+
+async function fetchOwners(baseUrl, credentials) {
+  const payload = await fetchModels(baseUrl, credentials);
+  if (!Array.isArray(payload?.data)) {
+    throw new Error("CLIProxyAPI model discovery returned no model owners");
+  }
+  return new Map(
+    payload.data.flatMap((record) =>
+      typeof record?.id === "string" && typeof record.owned_by === "string"
+        ? [[record.id, record.owned_by]]
+        : [],
+    ),
+  );
+}
+
+async function fetchServed(baseUrl, credentials, codexVersion) {
+  const query = new URLSearchParams({ client_version: codexVersion });
+  const payload = await fetchModels(baseUrl, credentials, `?${query}`);
   if (!Array.isArray(payload?.models)) {
     throw new Error("CLIProxyAPI model discovery returned no model list");
   }
@@ -271,25 +302,35 @@ function proxyModel(editor, baseUrl, served) {
   };
 }
 
+// A request without tools is one the agent made toolless on purpose.
+function addSearch(body, tool) {
+  if (!Array.isArray(body?.tools) || body.tools.length === 0) return false;
+  if (body.tools.some((t) => String(t?.type).startsWith("web_search")))
+    return false;
+  body.tools.push(tool);
+  return true;
+}
+
 export default {
   id: "dotfiles.cliproxyapi",
   setup: async (ctx) => {
     const options = ctx.options;
     const baseUrl = options.baseUrl.replace(/\/+$/, "");
-    const state = { credentials: undefined, served: [] };
+    const state = { credentials: undefined, served: [], owners: new Map() };
 
     const refresh = async () => {
       const credentials = await readCredentials(options);
-      const served = await fetchServed(
-        baseUrl,
-        credentials,
-        options.codexVersion,
-      );
+      const [served, owners] = await Promise.all([
+        fetchServed(baseUrl, credentials, options.codexVersion),
+        fetchOwners(baseUrl, credentials),
+      ]);
       const changed =
         JSON.stringify(served) !== JSON.stringify(state.served) ||
         JSON.stringify(credentials) !== JSON.stringify(state.credentials);
       state.credentials = credentials;
       state.served = served;
+      // Owners only gate search per request, so they need no provider reload.
+      state.owners = owners;
       return changed;
     };
 
@@ -320,6 +361,46 @@ export default {
         ),
       });
     });
+
+    // Titles and compaction summaries have no use for search.
+    const searches = (event) =>
+      event.kind === "primary" &&
+      SEARCH_ROUTES.has(state.owners.get(event.model.id));
+    await ctx.session.hook(
+      "experimental.ws.send",
+      (event) => {
+        if (!searches(event)) return;
+        const frame = JSON.parse(event.frame);
+        if (
+          frame.type === "response.create" &&
+          addSearch(frame, RESPONSES_SEARCH)
+        )
+          event.frame = JSON.stringify(frame);
+      },
+      { providerID: PROVIDER },
+    );
+    await ctx.session.hook(
+      "http.request",
+      async (event) => {
+        if (!searches(event) || event.request.method !== "POST") return;
+        const path = new URL(event.request.url).pathname;
+        const tool = path.endsWith("/responses")
+          ? RESPONSES_SEARCH
+          : path.endsWith("/messages")
+            ? MESSAGES_SEARCH
+            : undefined;
+        if (!tool) return;
+        const body = await event.request.clone().json();
+        if (!addSearch(body, tool)) return;
+        const headers = new Headers(event.request.headers);
+        headers.delete("content-length");
+        event.request = new Request(event.request, {
+          headers,
+          body: JSON.stringify(body),
+        });
+      },
+      { providerID: PROVIDER },
+    );
 
     const timer = setInterval(() => {
       refresh()
