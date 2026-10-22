@@ -11,6 +11,7 @@ pkgs.writers.writePython3Bin "motd"
     """Render a compact, responsive system dashboard for interactive shells."""
 
     import fcntl
+    import getpass
     import json
     import os
     import platform
@@ -272,11 +273,14 @@ pkgs.writers.writePython3Bin "motd"
     def get_activation():
         # The profile symlink is replaced on every switch, so its own mtime is the
         # activation time; the generation it points at may be much older on rollback.
+        # Home Manager keeps its profile in the first of these two directories
+        # that exists, so a home without the XDG one uses the global per-user one.
+        state_home = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
         for label, path in (
             ("system", "/nix/var/nix/profiles/system"),
             ("system", "/run/current-system"),
-            ("home-manager", os.path.expanduser("~/.local/state/nix/profiles/home-manager")),
-            ("home-manager", os.path.expanduser("~/.nix-profile")),
+            ("home-manager", os.path.join(state_home, "nix/profiles/home-manager")),
+            ("home-manager", "/nix/var/nix/profiles/per-user/%s/home-manager" % getpass.getuser()),
         ):
             if not os.path.islink(path):
                 continue
