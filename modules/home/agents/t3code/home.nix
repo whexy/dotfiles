@@ -157,9 +157,26 @@ let
     '';
   };
 
+  # The server reads these from its own environment, and the desktop app
+  # forwards the telemetry flag from the login shell to the server it bundles.
+  # Home Manager exports session variables into both the login shell and the
+  # systemd user environment, which is how each surface receives them.
+  privacyEnv = {
+    T3CODE_TELEMETRY_ENABLED = "false";
+    # Also overrides the standard OTEL_SDK_DISABLED, so an OTLP endpoint set
+    # elsewhere still exports nothing.
+    T3CODE_OTEL_SDK_DISABLED = "true";
+    # The local NDJSON trace file cannot be switched off, only emptied.
+    T3CODE_TRACE_MIN_LEVEL = "None";
+    T3CODE_TRACE_MAX_FILES = "1";
+    T3CODE_TRACE_MAX_BYTES = "65536";
+  };
+
 in
 {
   packages = [ t3code ] ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
+
+  sessionVariables = privacyEnv;
 
   homeFiles = lib.optionalAttrs linkBrowser {
     ${browserDir}.source = browser;
