@@ -351,7 +351,9 @@ in
 
         shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
 
-        sessionVariables = lib.optionalAttrs cfg.rea.enable rea.sessionVariables;
+        sessionVariables =
+          lib.mergeAttrsList (map (a: a.sessionVariables or { }) agents)
+          // lib.optionalAttrs cfg.rea.enable rea.sessionVariables;
 
         activation = lib.mergeAttrsList (map (a: a.activation or { }) agents) // {
           inherit migrateSkillsDir removeCmuxPiExtension;
