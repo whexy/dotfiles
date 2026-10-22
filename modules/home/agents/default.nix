@@ -66,47 +66,46 @@ in
       server = {
         enable = lib.mkOption {
           type = lib.types.bool;
-          # The default network is the tailnet. Standalone homes have no
-          # osConfig to say whether this machine is on it, so hosts off the
-          # tailnet enable the server themselves with `network = "lan"`.
+          # Standalone homes have no osConfig to say whether this machine is
+          # on the tailnet, so they enable the server themselves.
           default = args.osConfig.dotfiles.network.tailscale.enable or false;
           defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
-          description = "Whether to run the T3 Code server.";
-        };
-        network = lib.mkOption {
-          type = lib.types.enum [
-            "tailnet"
-            "lan"
-          ];
-          default = "tailnet";
           description = ''
-            Network clients reach the server on. `tailnet` publishes it through
-            Tailscale Serve at `https://<MagicDNS name>:35338`. `lan` serves it
-            at `http://<address>:3773`, where the address is this host's
-            private IPv4 LAN address, detected when the server starts and
-            followed when it changes (Linux only).
+            Whether to run the T3 Code server. It listens on loopback only,
+            for Tailscale Serve and the Cloudflare tunnel to publish.
           '';
         };
-        lanInterface = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = null;
-          example = "eth0";
-          description = ''
-            Interface whose private IPv4 address the `lan` server binds; null
-            takes the address the default route uses.
-          '';
-        };
-        tunnel.enable = lib.mkOption {
+        tailnet.enable = lib.mkOption {
           type = lib.types.bool;
-          default = cfg.t3code.server.enable && cfg.t3code.server.network == "tailnet";
-          defaultText = lib.literalExpression ''config.dotfiles.agents.t3code.server.enable && config.dotfiles.agents.t3code.server.network == "tailnet"'';
+          default = args.osConfig.dotfiles.network.tailscale.enable or false;
+          defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
           description = ''
-            Whether to publish the server on the public internet through a
-            Cloudflare tunnel at the host's `flake.lib.t3PublicHost` name. The
-            host creates its own tunnel and DNS record on first start with the
-            shared `cloudflared-cert` secret. The server's own pairing is the
-            only gate in front of it.
+            Whether to publish the server on the tailnet through Tailscale
+            Serve at `https://<MagicDNS name>:35338`.
           '';
+        };
+        tunnel = {
+          enable = lib.mkOption {
+            type = lib.types.bool;
+            default = cfg.t3code.server.enable;
+            defaultText = lib.literalExpression "config.dotfiles.agents.t3code.server.enable";
+            description = ''
+              Whether to publish the server on the public internet through a
+              Cloudflare tunnel at the host's `flake.lib.t3PublicHost` name. The
+              host creates its own tunnel and DNS record on first start with the
+              shared `cloudflared-cert` secret. The server's own pairing is the
+              only gate in front of it.
+            '';
+          };
+          hostName = lib.mkOption {
+            type = lib.types.nullOr lib.types.str;
+            default = args.osConfig.dotfiles.host.hostName or null;
+            defaultText = lib.literalExpression "osConfig.dotfiles.host.hostName or null";
+            description = ''
+              Dotfiles host name the tunnel and its public name derive from.
+              Standalone homes have no osConfig to supply it.
+            '';
+          };
         };
       };
       pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
@@ -285,7 +284,6 @@ in
             flake
             gitConfig
             ;
-          hostName = args.osConfig.dotfiles.host.hostName or null;
         })
         (import ./gcai/home.nix {
           inherit
@@ -306,22 +304,10 @@ in
           message = "dotfiles.agents.video.enable requires a WSL host.";
         }
         {
-          # The LAN address comes from the kernel's routes through iproute2.
-          assertion =
-            cfg.t3code.server.enable && cfg.t3code.server.network == "lan" -> pkgs.stdenv.hostPlatform.isLinux;
-          message = ''dotfiles.agents.t3code.server.network = "lan" requires a Linux host.'';
-        }
-        {
-          # The tunnel forwards to the loopback port only a tailnet server
-          # listens on, and names itself after the host, which standalone
-          # homes have no osConfig to supply.
           assertion =
             cfg.t3code.server.tunnel.enable
-            ->
-              cfg.t3code.server.enable
-              && cfg.t3code.server.network == "tailnet"
-              && args ? osConfig.dotfiles.host.hostName;
-          message = ''dotfiles.agents.t3code.server.tunnel.enable requires a host-integrated home running the server with network = "tailnet".'';
+            -> cfg.t3code.server.enable && cfg.t3code.server.tunnel.hostName != null;
+          message = "dotfiles.agents.t3code.server.tunnel.enable requires the server and dotfiles.agents.t3code.server.tunnel.hostName.";
         }
       ];
 

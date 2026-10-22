@@ -15,10 +15,13 @@
   ];
   dotfiles = {
     autoUpgrade.enable = true;
-    # Off the tailnet, so T3 Code clients connect over the LAN.
-    agents.t3code.server = {
-      enable = true;
-      network = "lan";
+    agents.t3code = {
+      # Off the tailnet, so the tunnel is the server's only route.
+      server = {
+        enable = true;
+        tunnel.hostName = "b3srv0";
+      };
+      pair.enable = true;
     };
   };
 

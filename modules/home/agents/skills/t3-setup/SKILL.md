@@ -5,16 +5,16 @@ description: How Wenxuan's T3 Code servers are reached without T3 Connect - publ
 
 # T3 Code on Wenxuan's hosts
 
-Wenxuan does not use T3 Connect. Every host whose T3 Code server runs on the
-tailnet has two routes to it instead, both set up by dotfiles:
+Wenxuan does not use T3 Connect. Every T3 Code server has these routes
+instead, both set up by dotfiles:
 
 | Route                               | URL                                      |
 | ----------------------------------- | ---------------------------------------- |
 | Public, through a Cloudflare tunnel | `https://<host>-t3.clusters.work`        |
 | Tailnet, through Tailscale Serve    | `https://<host>.at-basking.ts.net:35338` |
 
-`<host>` is the dotfiles host name, which is also `hostname -s`. A host whose
-server listens on its LAN instead has neither route.
+`<host>` is the dotfiles host name, which is also `hostname -s`. A host off
+the tailnet, such as b3srv0, has only the public route.
 
 The public route is up only if T3's descriptor answers. Every other
 `*.clusters.work` name also answers, with a 302 to whexy.com/404, so a status

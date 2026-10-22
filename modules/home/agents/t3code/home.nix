@@ -5,7 +5,6 @@
   perSystem,
   flake,
   gitConfig,
-  hostName,
 }:
 let
   cfg = config.dotfiles.agents.t3code;
@@ -23,65 +22,8 @@ let
 
   t3 = lib.getExe' t3code "t3";
 
-  # Tailnet clients reach the server through Tailscale Serve, which proxies to
-  # this loopback port; LAN clients connect to it directly.
+  # Tailscale Serve and the Cloudflare tunnel both proxy to this loopback port.
   port = 3773;
-
-  lanAddress = lib.escapeShellArgs (
-    [ (lib.getExe perSystem.self.lan-address) ]
-    ++ lib.optionals (cfg.server.lanInterface != null) [
-      "--interface"
-      cfg.server.lanInterface
-    ]
-  );
-
-  publish = {
-    tailnet = ''
-      # A new host starts this service before anyone logs in to the tailnet, and
-      # t3 only warns when `tailscale serve` fails, leaving the server
-      # unreachable.
-      until [ "$(tailscale status --json 2>/dev/null | ${lib.getExe pkgs.jq} -r .BackendState)" = Running ]; do
-        sleep 10
-      done
-      exec ${t3} serve \
-        --host 127.0.0.1 --port ${toString port} \
-        --tailscale-serve --tailscale-serve-port 35338 --no-browser
-    '';
-
-    # Binding the LAN address rather than 0.0.0.0 keeps the server off public
-    # interfaces, container bridges, and VPNs. User services cannot wait for
-    # the system's network, so at boot there may be no address yet.
-    lan = ''
-      until address=$(${lanAddress} 2>/dev/null); do
-        if [ -z "''${waiting-}" ]; then
-          echo "t3-serve: no private LAN IPv4 address yet, waiting" >&2
-          waiting=1
-        fi
-        sleep 10
-      done
-      ${t3} serve --host "$address" --port ${toString port} --no-browser &
-      server=$!
-      # t3 cannot move its socket to a new address. A socket whose address
-      # disappears keeps listening and works again once the address returns,
-      # so only a different address restarts the server, and only when two
-      # checks in a row agree: a brief flap must not end running sessions.
-      moved=""
-      while sleep 10 && kill -0 "$server" 2>/dev/null; do
-        current=$(${lanAddress} 2>/dev/null) || current=""
-        if [ -z "$current" ] || [ "$current" = "$address" ]; then
-          moved=""
-        elif [ "$current" = "$moved" ]; then
-          echo "t3-serve: LAN address moved from $address to $current, restarting" >&2
-          kill "$server"
-          wait "$server"
-          exit 1
-        else
-          moved=$current
-        fi
-      done
-      wait "$server"
-    '';
-  };
 
   # Service managers start with a bare environment; source the same session
   # variables and profile PATH a login shell would get.
@@ -105,12 +47,29 @@ let
       export GIT_CONFIG_GLOBAL=${gitConfig}
       cd ${lib.escapeShellArg config.home.homeDirectory}
     ''
-    + publish.${cfg.server.network}
+    + (
+      if cfg.server.tailnet.enable then
+        ''
+          # A new host starts this service before anyone logs in to the tailnet, and
+          # t3 only warns when `tailscale serve` fails, leaving the server
+          # unreachable.
+          until [ "$(tailscale status --json 2>/dev/null | ${lib.getExe pkgs.jq} -r .BackendState)" = Running ]; do
+            sleep 10
+          done
+          exec ${t3} serve \
+            --host 127.0.0.1 --port ${toString port} \
+            --tailscale-serve --tailscale-serve-port 35338 --no-browser
+        ''
+      else
+        ''
+          exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser
+        ''
+    )
   );
 
   tunnel = {
-    name = "t3-${hostName}";
-    hostname = flake.lib.t3PublicHost hostName;
+    name = "t3-${cfg.server.tunnel.hostName}";
+    hostname = flake.lib.t3PublicHost cfg.server.tunnel.hostName;
     credentials = "${config.xdg.stateHome}/t3code-tunnel/credentials.json";
   };
 
@@ -196,12 +155,7 @@ in
   systemdUserServices =
     lib.optionalAttrs (cfg.server.enable && !isDarwin) {
       t3code = {
-        Unit.Description =
-          {
-            tailnet = "T3 Code server, published on the tailnet";
-            lan = "T3 Code server, published on the LAN";
-          }
-          .${cfg.server.network};
+        Unit.Description = "T3 Code server";
         Service = {
           ExecStart = "${serve}";
           Restart = "on-failure";
