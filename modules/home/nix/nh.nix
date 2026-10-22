@@ -5,10 +5,16 @@
 # Building local edits is the deliberate case and names the path
 # explicitly (`nh os switch .`), which also reads as a local build at the
 # call site.
+#
+# The default is baked into the nh wrapper rather than exported as a session
+# variable: Home Manager's session variables reach only the shells it
+# configures, never a distro login shell such as root's bash on a standalone
+# host, and are skipped under a tmux server started before activation.
 {
   config,
   flake,
   lib,
+  pkgs,
   ...
 }:
 let
@@ -23,10 +29,10 @@ in
       default = flake.lib.upstreamRef;
       example = "/home/wenxuan/Personal/dotfiles";
       description = ''
-        Flake reference used for `NH_FLAKE`, which nh falls back to when a
-        command is given no installable. Applies to `nh os`, `nh home`, and
-        `nh darwin` alike; nh's per-command `NH_*_FLAKE` variables take
-        priority over it and are left unset here.
+        Flake reference nh falls back to when a command is given no
+        installable, set as the `NH_FLAKE` default in its wrapper. Applies to
+        `nh os`, `nh home`, and `nh darwin` alike; `NH_FLAKE` or nh's
+        per-command `NH_*_FLAKE` variables in the environment take priority.
 
         A `github:` reference is served from the flake registry cache, so a
         bare `nh os switch` can lag behind the branch tip until the command
@@ -38,7 +44,14 @@ in
   config = lib.mkIf cfg.enable {
     programs.nh = {
       enable = true;
-      inherit (cfg) flake;
+      package = pkgs.symlinkJoin {
+        inherit (pkgs.nh) name meta;
+        paths = [ pkgs.nh ];
+        nativeBuildInputs = [ pkgs.makeWrapper ];
+        postBuild = ''
+          wrapProgram $out/bin/nh --set-default NH_FLAKE ${lib.escapeShellArg cfg.flake}
+        '';
+      };
     };
   };
 }
