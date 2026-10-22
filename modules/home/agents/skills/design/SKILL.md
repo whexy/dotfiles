@@ -38,6 +38,10 @@ Delete persistent text that only:
 
 Never invent copy just to complete a layout.
 
+Avoid unnecessary secondary labels and descriptions. Let the layout do the
+explaining: grouping, order, alignment, and emphasis already show what belongs
+together and what matters most.
+
 Avoid AI-style decorative copy such as:
 
 - "Your X, made simple."
