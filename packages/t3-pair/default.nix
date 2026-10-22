@@ -6,11 +6,13 @@
 # The token is minted on the dev host (over ssh unless it is this machine) and
 # handed back as a pairing URL on the host's public tunnel name when it
 # answers, else on its Tailscale Serve name, or, for a host off the tailnet, on
-# the LAN address its server listens on. A client paired over the public name
-# learns the Tailscale route from the server and prefers it where it works;
-# paired over Tailscale, it never learns the public one. ssh and tailscale come
-# from PATH on purpose: they must be the user's configured ssh and the CLI
-# matching the running tailscaled.
+# the LAN address its server listens on. The public name comes from the host
+# name given, or this machine's hostname, never from the tailnet: a WSL host
+# shares its Windows host's node and so its tailnet name. A client paired over
+# the public name learns the Tailscale route from the server and prefers it
+# where it works; paired over Tailscale, it never learns the public one. ssh
+# and tailscale come from PATH on purpose: they must be the user's configured
+# ssh and the CLI matching the running tailscaled.
 pkgs.writeShellApplication {
   name = "t3-pair";
   runtimeInputs = [
@@ -24,11 +26,12 @@ pkgs.writeShellApplication {
       cat <<'EOF'
     usage: t3-pair [--label LABEL] [--ttl DURATION] [host]
 
-    Mint a one-time T3 Code pairing URL on [host] (a tailnet machine name, an
-    ssh host serving T3 Code on its LAN, or this machine when omitted) and copy
-    it to the clipboard when one is available. The URL uses the host's public
-    tunnel name when it answers, else its tailnet name. Paste it into T3 Code
-    under Settings -> Connections -> Add environment.
+    Mint a one-time T3 Code pairing URL on [host] (a dotfiles host, a tailnet
+    machine name, an ssh host serving T3 Code on its LAN, or this machine when
+    omitted) and copy it to the clipboard when one is available. The URL uses
+    the public tunnel name of [host], or of this machine's hostname, when it
+    answers, else the host's tailnet name. Paste it into T3 Code under
+    Settings -> Connections -> Add environment.
 
       --label LABEL     name shown in the host's client list (default: this host)
       --ttl DURATION    how long the unused link stays valid (default: 5m)
@@ -75,8 +78,22 @@ pkgs.writeShellApplication {
       fi
     done
 
-    base_url=""
+    self_name=$(hostname -s)
     here=false
+    if [ -z "$host" ] || [ "''${host,,}" = "''${self_name,,}" ]; then
+      here=true
+    fi
+
+    base_url=""
+    name=''${host:-$self_name}
+    public_url="https://${flake.lib.t3PublicHost "\${name,,}"}"
+    # Names without a tunnel still answer, through the cluster's wildcard
+    # route, so only T3's own descriptor proves the tunnel is up.
+    if curl -fs --max-time 10 "$public_url/.well-known/t3/environment" |
+      jq -e .environmentId >/dev/null 2>&1; then
+      base_url=$public_url
+    fi
+
     if status=$(tailscale status --json 2>/dev/null) &&
       [ "$(jq -r '.BackendState' <<<"$status")" = Running ]; then
       # Match on the MagicDNS name, whole or its first label, rather than
@@ -94,14 +111,7 @@ pkgs.writeShellApplication {
       )
       if [ -n "$peer" ]; then
         read -r peer_id dns_name <<<"$peer"
-        short_name=''${dns_name%%.*}
-        public_url="https://${flake.lib.t3PublicHost "\${short_name}"}"
-        # Names without a tunnel still answer, through the cluster's wildcard
-        # route, so only T3's own descriptor proves the tunnel is up.
-        if curl -fs --max-time 10 "$public_url/.well-known/t3/environment" |
-          jq -e .environmentId >/dev/null 2>&1; then
-          base_url=$public_url
-        else
+        if [ -z "$base_url" ]; then
           base_url="https://$dns_name:35338"
         fi
         if [ "$peer_id" = "$(jq -r '.Self.ID' <<<"$status")" ]; then
