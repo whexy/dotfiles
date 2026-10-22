@@ -11,14 +11,10 @@
 # flake output after hosts/<host>/users/<user> but doesn't pass the host
 # name into the module; the real machine hostname may differ).
 #
-# NOTE: on headless servers the user manager stops when you log out, which
+# On headless servers the user manager stops when its user logs out, which
 # takes this daemon down with it and silently strands the host on its current
-# generation. A long-running service depends on lingering more than the timer
-# it replaces did, since there is no later catch-up run. Enable it once,
-# manually, per host:
-#   sudo loginctl enable-linger <user>
-# Confirm with `loginctl show-user <user> -p Linger` and check convergence in
-# "$XDG_STATE_HOME/dotfiles-upgraded/status.json".
+# generation, so activation turns on lingering for the user. Check
+# convergence in "$XDG_STATE_HOME/dotfiles-upgraded/status.json".
 {
   config,
   flake,
@@ -128,6 +124,15 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # logind's polkit policy lets any user linger without authentication; a
+    # host that tightens it needs `sudo loginctl enable-linger <user>` once.
+    home.activation.enableLinger = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ ! -e /var/lib/systemd/linger/${config.home.username} ]; then
+        run ${lib.getExe' pkgs.systemd "loginctl"} enable-linger ${lib.escapeShellArg config.home.username} ||
+          warnEcho "Could not enable lingering: the auto-upgrade daemon stops when ${config.home.username} logs out."
+      fi
+    '';
+
     systemd.user.services.dotfiles-upgraded = {
       Unit = {
         Description = "Auto-upgrade Home Manager from ${upstreamRef}";
