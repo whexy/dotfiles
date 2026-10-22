@@ -9,6 +9,7 @@ args@{
   config,
   lib,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -93,6 +94,18 @@ in
           description = ''
             Interface whose private IPv4 address the `lan` server binds; null
             takes the address the default route uses.
+          '';
+        };
+        tunnel.enable = lib.mkOption {
+          type = lib.types.bool;
+          default = cfg.t3code.server.enable && cfg.t3code.server.network == "tailnet";
+          defaultText = lib.literalExpression ''config.dotfiles.agents.t3code.server.enable && config.dotfiles.agents.t3code.server.network == "tailnet"'';
+          description = ''
+            Whether to publish the server on the public internet through a
+            Cloudflare tunnel at the host's `flake.lib.t3PublicHost` name. The
+            host creates its own tunnel and DNS record on first start with the
+            shared `cloudflared-cert` secret. The server's own pairing is the
+            only gate in front of it.
           '';
         };
       };
@@ -269,8 +282,10 @@ in
             config
             lib
             perSystem
+            flake
             gitConfig
             ;
+          hostName = args.osConfig.dotfiles.host.hostName or null;
         })
         (import ./gcai/home.nix {
           inherit
@@ -295,6 +310,18 @@ in
           assertion =
             cfg.t3code.server.enable && cfg.t3code.server.network == "lan" -> pkgs.stdenv.hostPlatform.isLinux;
           message = ''dotfiles.agents.t3code.server.network = "lan" requires a Linux host.'';
+        }
+        {
+          # The tunnel forwards to the loopback port only a tailnet server
+          # listens on, and names itself after the host, which standalone
+          # homes have no osConfig to supply.
+          assertion =
+            cfg.t3code.server.tunnel.enable
+            ->
+              cfg.t3code.server.enable
+              && cfg.t3code.server.network == "tailnet"
+              && args ? osConfig.dotfiles.host.hostName;
+          message = ''dotfiles.agents.t3code.server.tunnel.enable requires a host-integrated home running the server with network = "tailnet".'';
         }
       ];
 
@@ -346,6 +373,11 @@ in
         cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
         # whisper-1 for `transcribe`; a key restricted to the Audio API.
         openai-api-key.file = ../../../secrets/openai-api-key.age;
+      }
+      // lib.optionalAttrs cfg.t3code.server.tunnel.enable {
+        # `cloudflared tunnel login` cert for the T3 tunnel's zone: it creates
+        # tunnels and edits any DNS record in that zone.
+        cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
       };
     }
   );

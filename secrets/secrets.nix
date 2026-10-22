@@ -17,4 +17,5 @@ in
   "cf-access-dotfiles-secret.age".publicKeys = [ key ];
   "ai-proxy-api-key.age".publicKeys = [ key ];
   "openai-api-key.age".publicKeys = [ key ];
+  "cloudflared-cert.age".publicKeys = [ key ];
 }
