@@ -64,10 +64,12 @@ External config directories are reconciled when selecting a model in them.
   definitions from Nix. Unknown settings, hooks, plugins, and servers survive.
   TOML comments survive edits. Retired Nix values are removed only when unchanged.
   These entries are maintained defaults, not security enforcement.
-- `dotfiles.security.agentPolicy.enable` installs Claude's Nix-store permission
-  rules in the native managed-settings directory on Darwin and NixOS. It is
-  enabled by the system dev/dev-lite presets. Standalone Home Manager maintains
-  the same user rules but cannot enforce system policy. No new Codex sandbox or
+- `dotfiles.security.agentPolicy.enable` installs Claude's policy in the native
+  managed-settings directory on Darwin and NixOS: the Nix-store permission rules
+  and a 1-hour prompt cache TTL. API-key sessions otherwise get 5-minute caches,
+  and T3 Code offers to compact a thread once its cache expires. It is enabled by
+  the system dev/dev-lite presets. Standalone Home Manager maintains the same user
+  settings but cannot enforce system policy. No new Codex sandbox or
   approval restrictions are imposed: add supported requirements through a system
   module when an actual policy is needed, not by making `config.toml` read-only.
 
