@@ -3,7 +3,9 @@
   config,
   lib,
   perSystem,
+  flake,
   gitConfig,
+  hostName,
 }:
 let
   cfg = config.dotfiles.agents.t3code;
@@ -106,6 +108,55 @@ let
     + publish.${cfg.server.network}
   );
 
+  tunnel = {
+    name = "t3-${hostName}";
+    hostname = flake.lib.t3PublicHost hostName;
+    credentials = "${config.xdg.stateHome}/t3code-tunnel/credentials.json";
+  };
+
+  tunnelConfig = (pkgs.formats.yaml { }).generate "t3code-tunnel.yml" {
+    tunnel = tunnel.name;
+    credentials-file = tunnel.credentials;
+    ingress = [
+      {
+        inherit (tunnel) hostname;
+        service = "http://127.0.0.1:${toString port}";
+      }
+      { service = "http_status:404"; }
+    ];
+  };
+
+  # Every host shares one `cloudflared tunnel login` cert, so a new host
+  # creates its own tunnel and DNS record here instead of being set up by hand.
+  publishTunnel = pkgs.writeShellApplication {
+    name = "t3code-tunnel";
+    runtimeInputs = [
+      pkgs.cloudflared
+      pkgs.coreutils
+    ];
+    text = ''
+      # agenix may decrypt after this starts; failing lets the service retry.
+      cert="${config.age.secrets.cloudflared-cert.path}"
+      if [ ! -s "$cert" ]; then
+        echo "t3code-tunnel: secret is not ready: $cert" >&2
+        exit 1
+      fi
+      export TUNNEL_ORIGIN_CERT="$cert"
+
+      credentials=${lib.escapeShellArg tunnel.credentials}
+      if [ ! -s "$credentials" ]; then
+        mkdir -p ${lib.escapeShellArg (dirOf tunnel.credentials)}
+        # The tunnel outlives this file, e.g. after a reinstall, and its name
+        # stays taken, so recover its credentials before creating one.
+        cloudflared tunnel token --cred-file "$credentials" ${tunnel.name} ||
+          cloudflared tunnel create --cred-file "$credentials" ${tunnel.name}
+      fi
+
+      cloudflared tunnel route dns --overwrite-dns ${tunnel.name} ${tunnel.hostname}
+      exec cloudflared tunnel --no-autoupdate --config ${tunnelConfig} run
+    '';
+  };
+
 in
 {
   packages = [ t3code ] ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
@@ -125,33 +176,62 @@ in
     '';
   };
 
-  systemdUserServices = lib.optionalAttrs (cfg.server.enable && !isDarwin) {
-    t3code = {
-      Unit.Description =
-        {
-          tailnet = "T3 Code server, published on the tailnet";
-          lan = "T3 Code server, published on the LAN";
-        }
-        .${cfg.server.network};
-      Service = {
-        ExecStart = "${serve}";
-        Restart = "on-failure";
-        RestartSec = 10;
+  systemdUserServices =
+    lib.optionalAttrs (cfg.server.enable && !isDarwin) {
+      t3code = {
+        Unit.Description =
+          {
+            tailnet = "T3 Code server, published on the tailnet";
+            lan = "T3 Code server, published on the LAN";
+          }
+          .${cfg.server.network};
+        Service = {
+          ExecStart = "${serve}";
+          Restart = "on-failure";
+          RestartSec = 10;
+        };
+        Install.WantedBy = [ "default.target" ];
       };
-      Install.WantedBy = [ "default.target" ];
+    }
+    // lib.optionalAttrs (cfg.server.tunnel.enable && !isDarwin) {
+      t3code-tunnel = {
+        Unit = {
+          Description = "Cloudflare tunnel publishing the T3 Code server at ${tunnel.hostname}";
+          After = [ "agenix.service" ];
+          Wants = [ "agenix.service" ];
+        };
+        Service = {
+          ExecStart = lib.getExe publishTunnel;
+          Restart = "on-failure";
+          RestartSec = 10;
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
     };
-  };
 
-  launchdAgents = lib.optionalAttrs (cfg.server.enable && isDarwin) {
-    t3code = {
-      enable = true;
-      config = {
-        ProgramArguments = [ "${serve}" ];
-        RunAtLoad = true;
-        KeepAlive.SuccessfulExit = false;
-        StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
-        StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
+  launchdAgents =
+    lib.optionalAttrs (cfg.server.enable && isDarwin) {
+      t3code = {
+        enable = true;
+        config = {
+          ProgramArguments = [ "${serve}" ];
+          RunAtLoad = true;
+          KeepAlive.SuccessfulExit = false;
+          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
+          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
+        };
+      };
+    }
+    // lib.optionalAttrs (cfg.server.tunnel.enable && isDarwin) {
+      t3code-tunnel = {
+        enable = true;
+        config = {
+          ProgramArguments = [ (lib.getExe publishTunnel) ];
+          RunAtLoad = true;
+          KeepAlive.SuccessfulExit = false;
+          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code-tunnel.log";
+          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code-tunnel.log";
+        };
       };
     };
-  };
 }

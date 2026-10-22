@@ -8,6 +8,12 @@ let
   # location means changing it here.
   upstreamRef = "github:whexy/dotfiles";
 
+  # Public name of a host's T3 Code server, where its Cloudflare tunnel
+  # publishes it; the tunnel service and t3-pair both derive it from here.
+  # Keep it one label below the zone: Cloudflare's free certificate covers
+  # only `*.<zone>`.
+  t3PublicHost = host: "${host}-t3.clusters.work";
+
   overlays = {
     container-darwin = import ../overlays/container-darwin.nix;
     direnv-darwin = import ../overlays/direnv-darwin.nix;
@@ -68,6 +74,7 @@ in
 {
   inherit
     upstreamRef
+    t3PublicHost
     overlays
     capsModules
     homeCapsModules

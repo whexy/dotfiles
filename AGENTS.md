@@ -149,6 +149,33 @@ must admit TCP 3773 from the LAN. Traffic, pairing tokens included, is plain
 HTTP, so this suits only a trusted LAN. `t3-pair <host>` pairs a LAN host over
 ssh, at the address its running server reports.
 
+### Public tunnel
+
+A tailnet server is also published on the public internet at
+`https://<host>-t3.clusters.work` (`flake.lib.t3PublicHost`, the single place
+the name is defined) by the `t3code-tunnel` user service
+(`server.tunnel.enable`, on by default for tailnet servers). Each host runs its
+own Cloudflare tunnel to the server's loopback port, so traffic never passes
+through the cluster.
+
+No host is set up by hand. Every host decrypts the same `cloudflared-cert`
+secret, the cert from one `cloudflared tunnel login` for the zone. On start the
+service creates the tunnel `t3-<host>` (or recovers its credentials into
+`~/.local/state/t3code-tunnel/` when the tunnel already exists), points the DNS
+name at it, and runs it. The cert can create tunnels and edit every DNS record
+in the zone; it adds little to what the shared agenix key already exposes on
+each host.
+
+The server's own pairing is the only gate. There is no Cloudflare Access on
+these names: the mobile app cannot sign in to it, and the web client's
+cross-origin requests would be redirected to its login page.
+
+Pair hosts with `t3-pair`, which prefers the public URL whenever it answers. A
+client paired over the public URL learns the server's Tailscale route and puts
+it first, so it stays on the tailnet where that works and falls back to the
+tunnel elsewhere. Paired over Tailscale, a client never learns the public URL,
+because servers report only their LAN and Tailscale addresses.
+
 ## Verification
 
 (Before verification, remember to use `git add` to add new files, as flake
