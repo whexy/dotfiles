@@ -49,9 +49,13 @@ in
         codexVersion = pkgs.llm-agents.codex.version;
         # /bin/cat does not exist on NixOS.
         cat = "${pkgs.coreutils}/bin/cat";
+        # The cluster's SearXNG, in the proxy's Cloudflare Access application.
+        searchUrl = "https://search.clusters.work";
       };
     }
   ];
+  # Registered by the plugin above; models with hosted search do not see it.
+  websearch.provider = "searxng";
   mcp.servers = lib.mapAttrs (_: toMcp) mcp.servers;
 
   permissions = [

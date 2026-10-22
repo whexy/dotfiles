@@ -14,9 +14,10 @@
 // package.
 //
 // OpenCode decodes and replays provider-hosted web search but never declares
-// the tool, so agent turns get it added on the wire when the model's proxy
-// route (`owned_by` in the OpenAI-shaped list) hands it to a provider that
-// runs it.
+// the tool, so it is added on the wire when the model's proxy route
+// (`owned_by` in the OpenAI-shaped list) hands it to a provider that runs it.
+// Every other model gets OpenCode's own `websearch` tool, backed by the
+// cluster's SearXNG behind the proxy's Cloudflare Access service token.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
@@ -44,6 +45,8 @@ const SEARCH_ROUTES = new Set(["openai", "anthropic", "xai", "meta"]);
 // Codex's live mode; its cached mode (`false`) searches only OpenAI's index.
 const RESPONSES_SEARCH = { type: "web_search", external_web_access: true };
 const MESSAGES_SEARCH = { type: "web_search_20250305", name: "web_search" };
+// SearXNG answers with a page of about 20; OpenCode's own backends return 8.
+const SEARXNG_RESULTS = 8;
 
 const execFileAsync = promisify(execFile);
 
@@ -302,6 +305,41 @@ function proxyModel(editor, baseUrl, served) {
   };
 }
 
+async function searxng(searchUrl, headers, query, signal) {
+  const url = new URL("/search", searchUrl);
+  url.search = new URLSearchParams({ q: query, format: "json" }).toString();
+  const response = await fetch(url, {
+    headers,
+    // A redirect would hand the Cloudflare Access token to another origin.
+    redirect: "error",
+    signal: AbortSignal.any([signal, AbortSignal.timeout(25_000)]),
+  });
+  if (!response.ok) {
+    throw new Error(`SearXNG search failed: ${response.status}`);
+  }
+  const payload = await response.json();
+  if (!Array.isArray(payload?.results)) {
+    throw new Error("SearXNG returned no result list");
+  }
+  return payload.results
+    .filter((result) => typeof result?.url === "string")
+    .slice(0, SEARXNG_RESULTS)
+    .map((result) => {
+      const published = Date.parse(result.publishedDate);
+      return {
+        url: result.url,
+        ...(typeof result.title === "string" && result.title
+          ? { title: result.title }
+          : {}),
+        ...(typeof result.content === "string" && result.content
+          ? { content: result.content }
+          : {}),
+        // OpenCode rejects a result without `time`, even an empty one.
+        time: Number.isFinite(published) ? { published } : {},
+      };
+    });
+}
+
 // A request without tools is one the agent made toolless on purpose.
 function addSearch(body, tool) {
   if (!Array.isArray(body?.tools) || body.tools.length === 0) return false;
@@ -362,10 +400,40 @@ export default {
       });
     });
 
-    // Titles and compaction summaries have no use for search.
+    await ctx.websearch.transform((editor) => {
+      editor.add({
+        id: "searxng",
+        name: "SearXNG",
+        execute: async ({ query }, { signal }) => {
+          if (!state.credentials) {
+            throw new Error("cliproxyapi: Cloudflare Access token not loaded");
+          }
+          return searxng(
+            options.searchUrl,
+            state.credentials.headers,
+            query,
+            signal,
+          );
+        },
+      });
+    });
+
+    const hosted = (model) => SEARCH_ROUTES.has(state.owners.get(model.id));
+    // A model with hosted search keeps only that one.
+    for (const name of ["context", "compaction"]) {
+      await ctx.session.hook(
+        name,
+        (event) => {
+          if (hosted(event.model)) delete event.tools.websearch;
+        },
+        { providerID: PROVIDER },
+      );
+    }
+    // Compaction keeps the agent turn's tools to reuse its prompt cache;
+    // titles carry none.
     const searches = (event) =>
-      event.kind === "primary" &&
-      SEARCH_ROUTES.has(state.owners.get(event.model.id));
+      (event.kind === "primary" || event.kind === "compaction") &&
+      hosted(event.model);
     await ctx.session.hook(
       "experimental.ws.send",
       (event) => {
