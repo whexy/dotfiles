@@ -84,7 +84,7 @@ pkgs.writeShellApplication {
 
     base_url=""
     name=''${host:-$self_name}
-    public_url="https://${flake.lib.t3PublicHost "\${name,,}"}"
+    public_url="https://${flake.lib.publicHost "t3" "\${name,,}"}"
     # Names without a tunnel still answer, through the cluster's wildcard
     # route, so only T3's own descriptor proves the tunnel is up.
     if curl -fs --max-time 10 "$public_url/.well-known/t3/environment" |
