@@ -57,6 +57,8 @@ in
 
     video.enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio (WSL only for now)";
 
+    spark.enable = lib.mkEnableOption "the Spark skill, which searches and reads mail through the `spark` CLI that Spark Desktop installs";
+
     t3code = {
       package = lib.mkOption {
         type = lib.types.nullOr lib.types.package;
@@ -207,7 +209,10 @@ in
         // lib.optionalAttrs cfg.iphoneUse.enable {
           iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
           iphone-use-setup = "${iphoneUse}/share/iphone-use/skills/iphone-use-setup";
-        };
+        }
+        # The search-and-read part of `spark skill` from Spark 1.4.1; compare
+        # against a newer CLI's output when its commands change.
+        // lib.optionalAttrs cfg.spark.enable { spark = ./spark; };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
