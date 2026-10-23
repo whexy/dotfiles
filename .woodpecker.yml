@@ -186,6 +186,7 @@ steps:
     commands:
       - echo "=== Deploying docs to Cloudflare Workers ==="
       - cd docs
-      - npx --yes wrangler@latest deploy
+      # wrangler is a docs devDependency, installed by build-docs.
+      - npx wrangler deploy
       - echo "OK - deployed"
     depends_on: [build-docs]
