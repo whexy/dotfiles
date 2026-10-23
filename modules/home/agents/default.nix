@@ -93,7 +93,7 @@ in
             defaultText = lib.literalExpression "config.dotfiles.agents.t3code.server.enable";
             description = ''
               Whether to publish the server on the public internet through a
-              Cloudflare tunnel at the host's `flake.lib.t3PublicHost` name. The
+              Cloudflare tunnel at the host's `flake.lib.publicHost "t3"` name. The
               host creates its own tunnel and DNS record on first start with the
               shared `cloudflared-cert` secret. The server's own pairing is the
               only gate in front of it.
@@ -153,6 +153,7 @@ in
         agentSettings = perSystem.self.agent-settings;
       };
       proxy = import ./proxy.nix { inherit config; };
+      mkTunnel = import ./tunnel.nix { inherit pkgs config lib; };
       rea = import ./rea.nix {
         inherit pkgs lib perSystem;
         cfg = cfg.rea;
@@ -288,6 +289,7 @@ in
             perSystem
             flake
             gitConfig
+            mkTunnel
             ;
         })
         (import ./gcai/home.nix {
