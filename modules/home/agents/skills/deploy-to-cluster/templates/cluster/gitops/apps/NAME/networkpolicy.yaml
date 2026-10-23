@@ -1,0 +1,39 @@
+# Nothing reaches a Pod in this namespace unless a policy below admits it;
+# kubelet probes from the Pod's own node still pass. Rules and recipes:
+# docs/network-exposure.md.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: default-deny-ingress
+  namespace: <name>
+spec:
+  podSelector: {}
+  policyTypes:
+    - Ingress
+# The tailnet ingress proxies (tailscale-ingress.yaml). For a public route,
+# add the Gateway block from docs/network-exposure.md to the same `from` list.
+---
+apiVersion: networking.k8s.io/v1
+kind: NetworkPolicy
+metadata:
+  name: <name>
+  namespace: <name>
+spec:
+  podSelector:
+    matchLabels:
+      app: <name>
+  policyTypes:
+    - Ingress
+  ingress:
+    - from:
+        - namespaceSelector:
+            matchLabels:
+              kubernetes.io/metadata.name: tailscale
+          podSelector:
+            matchLabels:
+              tailscale.com/parent-resource: ingress-proxies
+              tailscale.com/parent-resource-type: proxygroup
+      ports:
+        - protocol: TCP
+          port: <port>

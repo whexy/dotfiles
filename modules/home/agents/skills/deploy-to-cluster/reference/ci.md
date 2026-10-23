@@ -1,7 +1,9 @@
 # Woodpecker CI
 
-Woodpecker runs at <https://make.clusters.work> on the cluster's Kubernetes
-backend. There are no GitHub Actions. Activating a repo also installs its
+Woodpecker runs on the cluster's Kubernetes backend. Its web UI is
+tailnet-only at <https://woodpecker.at-basking.ts.net>; its API, which
+`woodpecker-cli` and GitHub's webhooks use, is public at
+<https://make.clusters.work>. There are no GitHub Actions. Activating a repo also installs its
 GitHub webhook:
 
 ```sh
@@ -97,6 +99,11 @@ way.
 - Steps default to 1 vCPU / 2 GiB and are OOMKilled above that. Heavy steps
   declare `backend_options.kubernetes.resources`; the image build requests 2
   CPU / 4 GiB with limits of 4 CPU / 6 GiB.
+- Pipeline Pods reach only each other, DNS, the CI cache and the public
+  internet. Nothing else in the cluster, no node and nothing on the tailnet;
+  a step that needs more needs a NetworkPolicy change in clusters-work. A step
+  that calls its pipeline's service container must retry for its first few
+  seconds.
 - Images are built with `woodpeckerci/plugin-docker-buildx`, the only plugin
   allowed to run privileged. It is configured with:
   - `context: .image`, the `build` step's output;

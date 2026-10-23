@@ -56,8 +56,9 @@ and the env.
   infrastructure that other workloads depend on.
 - **Application:** add `gitops/argocd-apps/<name>.yaml` and list it in
   `gitops/argocd-apps/kustomization.yaml`.
-- **In-cluster dependencies** may admit clients by NetworkPolicy or by
-  per-client key. Extend them in the dependency's own app.
+- **In-cluster dependencies** admit clients by NetworkPolicy: add the app's
+  namespace to the dependency's `networkpolicy.yaml`, in the dependency's own
+  app, and keep any per-client key as well.
 
 ## Image auto-updater
 
@@ -82,13 +83,22 @@ argocd-image-updater.argoproj.io/git-branch: master
 - To check now instead of waiting for the poll, run
   `just image-update --dry-run`.
 
-## Ingress: tailnet only by default
+## Exposure: tailnet only by default
 
-`tailscale-ingress.yaml` serves `https://<name>.at-basking.ts.net` through
-the shared `ingress-proxies` ProxyGroup. The app still authenticates its own
-users.
+clusters-work's `docs/network-exposure.md` is binding for every way into the
+app; read it before writing these files. `just validate` fails without the
+NetworkPolicy, and the API server rejects NodePorts, host ports and
+non-tailscale Ingresses.
 
-A public host is added only when Wenxuan asks; see [public-host.md](public-host.md).
+- `tailscale-ingress.yaml` serves `https://<name>.at-basking.ts.net` through
+  the shared `ingress-proxies` ProxyGroup. The app still authenticates its
+  own users.
+- `networkpolicy.yaml` denies all ingress to the namespace and admits the
+  tailnet ingress proxies on the app's port. Add every other source the app
+  needs (a public route, an in-cluster client) there.
+- A public host is added only when Wenxuan asks; see
+  [public-host.md](public-host.md).
+- Add the app's row to the inventory in `docs/network-exposure.md`.
 
 ## Secrets
 

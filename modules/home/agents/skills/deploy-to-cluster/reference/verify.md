@@ -8,7 +8,8 @@
 - **Cluster:**
   - ArgoCD shows the Application Synced and Healthy;
   - `kubectl -n <name> rollout status deployment/<name>` succeeds;
-  - the health endpoint and ingress respond;
+  - the health endpoint and the tailnet host respond, and for a public
+    route its paths answer while an unlisted path gets the Gateway's 404;
   - one real end-to-end use of the app works.
 - **Updates:** the next release reaches the cluster through an image-updater
   commit, with no manual tag bump.
