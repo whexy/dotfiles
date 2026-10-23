@@ -21,17 +21,21 @@ diagrams; use a raster image only when it materially helps understanding.
 ## Build the page
 
 1. Write one self-contained HTML document with inline `<style>` and
-   `<script>`. Use controls, step-through sequences, sliders, or animations
-   only when they teach something specific, and keep them accessible.
+   `<script>`, directly in the `html_preview` call. Both tools take the page
+   inline, so every extra copy, such as a file, costs a full rewrite. Use
+   controls, step-through sequences, sliders, or animations only when they
+   teach something specific.
 2. Fit the thread: leave `html`, `body`, and the outer element without a
    background, use a fluid width with no outer padding, card, or banner title,
    and style with T3's injected theme variables (`--background`,
-   `--foreground`, `--muted`, `--card`, ...) so it follows light and dark
-   mode. Give charts fixed pixel heights; never use `100vh` or
-   `height: 100%` on `html` or `body`.
-3. Check it with `html_preview` in both `dark` and `light`, and at about
-   `390` wide for phones. Read the screenshot and console output, and confirm
-   the teaching interactions work. Fix and repeat.
+   `--foreground`, `--muted`, `--card`, ...). Give charts fixed pixel heights;
+   never use `100vh` or `height: 100%` on `html` or `body`.
+3. Preview once with the tool's defaults: dark, at the desktop reply width.
+   The page is read once, in the user's thread, so it must be correct there,
+   not tuned for every theme and device; do not preview other themes or
+   widths. Read the screenshot and console output, and confirm the content is
+   right. To check an interaction, let the script run it and `console.log` the
+   result in the same preview. Preview again only to check a fix.
 4. Publish it with `html_render`, using the preview's `contentHeight` as the
    height.
 5. Write the final reply after the page. The reader already sees the page:
