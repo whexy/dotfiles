@@ -47,7 +47,9 @@ file.
 5. [Image-update webhook](reference/image-webhook.md): GHCR package events to
    argocd-image-updater.
 6. [Deploy to the cluster](reference/cluster.md): clusters-work layout,
-   workload manifests, image auto-updater, tailnet ingress, docs.
+   workload manifests, image auto-updater, tailnet ingress and
+   NetworkPolicy (clusters-work's `docs/network-exposure.md` is binding),
+   docs.
    - [Secrets](reference/secrets.md): a SealedSecret in the app.
    - [Public host](reference/public-host.md): only when Wenxuan asks.
 7. [Verify end to end](reference/verify.md), and report anything you could

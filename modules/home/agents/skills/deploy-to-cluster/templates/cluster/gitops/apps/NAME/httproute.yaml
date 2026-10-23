@@ -1,0 +1,23 @@
+# Public route: only when Wenxuan asks (reference/public-host.md). List only
+# the paths callers off the tailnet use, add this file to kustomization.yaml,
+# and admit the public Gateway in networkpolicy.yaml.
+---
+apiVersion: gateway.networking.k8s.io/v1
+kind: HTTPRoute
+metadata:
+  name: <name>-public
+  namespace: <name>
+spec:
+  parentRefs:
+    - name: public
+      namespace: envoy-gateway-system
+  hostnames:
+    - <name>.clusters.work
+  rules:
+    - matches:
+        - path:
+            type: PathPrefix
+            value: /<public path>
+      backendRefs:
+        - name: <name>
+          port: <port>
