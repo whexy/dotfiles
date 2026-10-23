@@ -155,6 +155,26 @@ it first, so it stays on the tailnet where that works and falls back to the
 tunnel elsewhere. Paired over Tailscale, a client never learns the public URL,
 because servers report only their LAN and Tailscale addresses.
 
+## Spark MCP server
+
+`packages/spark-mcp` serves the email-reading tools of Spark Desktop's stdio
+MCP server (`spark mcp`) over Streamable HTTP, at `POST /mcp` behind a bearer
+token, and rejects every other Spark tool. Each request spawns its own
+`spark mcp`, so the server holds no state.
+
+sheridan runs it (`dotfiles.agents.spark.server.enable`) as the `spark-mcp`
+launchd agent on loopback port 8765. The `spark-mcp-tunnel` agent publishes
+only `/mcp`, at `https://sheridan-spark.clusters.work/mcp` (tunnel
+`spark-sheridan`).
+
+- `spark mcp` talks to the Spark Desktop app in the user's GUI session, so the
+  server is a user agent and answers only while the app runs.
+- Run the CLI through the `/usr/local/bin/spark` symlink, never by the path it
+  resolves to: from inside the app bundle it cannot reach the app.
+- Clients send the `spark-mcp-token` agenix secret as
+  `Authorization: Bearer <token>`. On sheridan it is at
+  `$(getconf DARWIN_USER_TEMP_DIR)/agenix/spark-mcp-token`.
+
 ## Public tunnels
 
 Each service a host publishes on the public internet gets its own Cloudflare

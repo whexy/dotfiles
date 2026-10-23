@@ -4,6 +4,9 @@
 
   dotfiles = {
     wm.darwin.windowManager = "aerospace";
-    agents.spark.enable = true;
+    agents.spark = {
+      enable = true;
+      server.enable = true;
+    };
   };
 }
