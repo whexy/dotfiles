@@ -1,5 +1,4 @@
 {
-  pkgs,
   config,
   lib,
   perSystem,
@@ -18,15 +17,17 @@ let
   # --spark stays at its default, the /usr/local/bin/spark symlink. Run by
   # the path that resolves to, inside the app bundle, the CLI cannot reach
   # Spark Desktop.
-  serve = pkgs.writeShellScript "spark-mcp-serve" ''
-    # agenix may decrypt after this starts; failing lets launchd retry.
-    token="${config.age.secrets.spark-mcp-token.path}"
-    if [ ! -s "$token" ]; then
-      echo "spark-mcp: secret is not ready: $token" >&2
-      exit 1
-    fi
-    exec ${lib.getExe perSystem.self.spark-mcp} --token-file "$token" --port ${toString port}
-  '';
+  serve = [
+    (lib.getExe perSystem.self.spark-mcp)
+    "--port"
+    (toString port)
+    # The Zero Trust organization whose Access application in front of the
+    # hostname signs the assertions the server verifies.
+    "--access-team-domain"
+    "whexy.cloudflareaccess.com"
+    "--access-aud"
+    cfg.server.accessAud
+  ];
 
   tunnel =
     let
@@ -49,7 +50,7 @@ in
       spark-mcp = {
         enable = true;
         config = {
-          ProgramArguments = [ "${serve}" ];
+          ProgramArguments = serve;
           RunAtLoad = true;
           KeepAlive.SuccessfulExit = false;
           StandardOutPath = log;

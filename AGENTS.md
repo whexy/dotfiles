@@ -158,9 +158,9 @@ because servers report only their LAN and Tailscale addresses.
 ## Spark MCP server
 
 `packages/spark-mcp` serves the email-reading tools of Spark Desktop's stdio
-MCP server (`spark mcp`) over Streamable HTTP, at `POST /mcp` behind a bearer
-token, and rejects every other Spark tool. Each request spawns its own
-`spark mcp`, so the server holds no state.
+MCP server (`spark mcp`) over Streamable HTTP, at `POST /mcp`, and rejects
+every other Spark tool. Each request spawns its own `spark mcp`, so the server
+holds no state.
 
 sheridan runs it (`dotfiles.agents.spark.server.enable`) as the `spark-mcp`
 launchd agent on loopback port 8765. The `spark-mcp-tunnel` agent publishes
@@ -171,9 +171,14 @@ only `/mcp`, at `https://sheridan-spark.clusters.work/mcp` (tunnel
   server is a user agent and answers only while the app runs.
 - Run the CLI through the `/usr/local/bin/spark` symlink, never by the path it
   resolves to: from inside the app bundle it cannot reach the app.
-- Clients send the `spark-mcp-token` agenix secret as
-  `Authorization: Bearer <token>`. On sheridan it is at
-  `$(getconf DARWIN_USER_TEMP_DIR)/agenix/spark-mcp-token`.
+
+A Cloudflare Access application in the Zero Trust dashboard (not in git)
+covers the hostname, with Managed OAuth on. MCP clients that speak OAuth, such
+as ChatGPT and Claude.ai connectors, register themselves with Access and sign
+the owner in through its identity provider; other clients send an Access
+service token. The server verifies the Access JWT on every request against
+the team domain and the application's AUD tag (`server.accessAud`), so it has
+no credentials of its own.
 
 ## Public tunnels
 
