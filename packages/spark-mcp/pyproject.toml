@@ -1,0 +1,35 @@
+[project]
+name = "spark-mcp"
+version = "0.1.0"
+description = "Spark's email search and reading tools as a remote MCP server"
+requires-python = ">=3.13"
+dependencies = ["mcp", "starlette", "uvicorn"]
+
+[project.scripts]
+spark-mcp = "spark_mcp.server:main"
+
+[build-system]
+requires = ["hatchling"]
+build-backend = "hatchling.build"
+
+[tool.hatch.build.targets.wheel]
+packages = ["src/spark_mcp"]
+
+[tool.ruff]
+line-length = 100
+target-version = "py313"
+
+[tool.ruff.lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
+
+[tool.ruff.lint.isort]
+known-first-party = ["spark_mcp"]
+
+[tool.basedpyright]
+include = ["src"]
+pythonVersion = "3.13"
+pythonPlatform = "All"
+typeCheckingMode = "recommended"
+reportUnusedCallResult = false
+# argparse results are untyped.
+reportAny = false
