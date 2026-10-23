@@ -3,7 +3,7 @@ name = "spark-mcp"
 version = "0.1.0"
 description = "Spark's email search and reading tools as a remote MCP server"
 requires-python = ">=3.13"
-dependencies = ["mcp", "starlette", "uvicorn"]
+dependencies = ["mcp", "pyjwt[crypto]", "starlette", "uvicorn"]
 
 [project.scripts]
 spark-mcp = "spark_mcp.server:main"

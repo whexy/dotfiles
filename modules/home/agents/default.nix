@@ -59,12 +59,25 @@ in
 
     spark = {
       enable = lib.mkEnableOption "the Spark skill, which searches and reads mail through the `spark` CLI that Spark Desktop installs";
-      server.enable = lib.mkEnableOption ''
-        spark-mcp, which serves Spark Desktop's email-reading tools to MCP
-        clients off this Mac. A Cloudflare tunnel publishes it at
-        `https://<host>-spark.clusters.work/mcp` (`flake.lib.publicHost`),
-        where clients send the `spark-mcp-token` secret as a bearer token
-      '';
+      server = {
+        enable = lib.mkEnableOption ''
+          spark-mcp, which serves Spark Desktop's email-reading tools to MCP
+          clients off this Mac. A Cloudflare tunnel publishes it at
+          `https://<host>-spark.clusters.work/mcp` (`flake.lib.publicHost`),
+          behind a Cloudflare Access application that admits clients by
+          OAuth or service token
+        '';
+        accessAud = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = null;
+          description = ''
+            AUD tag of the Cloudflare Access application covering this host's
+            spark-mcp hostname. The server admits only requests carrying an
+            Access assertion for it. The tag identifies the application; it
+            is not a secret.
+          '';
+        };
+      };
     };
 
     t3code = {
@@ -302,7 +315,6 @@ in
         })
         (import ./spark/home.nix {
           inherit
-            pkgs
             config
             lib
             perSystem
@@ -340,6 +352,10 @@ in
           # the host, which standalone homes have no osConfig to supply.
           assertion = cfg.spark.server.enable -> args.osConfig.nixpkgs.hostPlatform.isDarwin or false;
           message = "dotfiles.agents.spark.server.enable requires a nix-darwin host.";
+        }
+        {
+          assertion = cfg.spark.server.enable -> cfg.spark.server.accessAud != null;
+          message = "dotfiles.agents.spark.server.enable requires dotfiles.agents.spark.server.accessAud, the AUD tag of the host's Access application.";
         }
       ];
 
@@ -398,10 +414,6 @@ in
         # `cloudflared tunnel login` cert for the tunnels' zone: it creates
         # tunnels and edits any DNS record in that zone.
         cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
-      }
-      // lib.optionalAttrs cfg.spark.server.enable {
-        # The bearer token every spark-mcp client sends.
-        spark-mcp-token.file = ../../../secrets/spark-mcp-token.age;
       };
     }
   );

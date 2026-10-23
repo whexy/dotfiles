@@ -7,11 +7,14 @@ let
     fileset = lib.fileset.unions [
       ./pyproject.toml
       ./src
+      ./tests
     ];
   };
 
   dependencies = with python3.pkgs; [
     mcp
+    pyjwt
+    cryptography
     starlette
     uvicorn
   ];
@@ -36,6 +39,7 @@ python3.pkgs.buildPythonApplication {
 
   build-system = [ python3.pkgs.hatchling ];
   pythonImportsCheck = [ "spark_mcp.server" ];
+  nativeCheckInputs = [ python3.pkgs.pytestCheckHook ];
 
   passthru.tests = {
     typecheck = sourceCheck "typecheck" [ pkgs.basedpyright ] ''

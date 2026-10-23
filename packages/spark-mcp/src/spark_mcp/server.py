@@ -2,13 +2,14 @@
 
 import argparse
 import contextlib
-import hmac
+import logging
 import shutil
 from collections.abc import AsyncGenerator
 from importlib.metadata import version
-from pathlib import Path
 
 import anyio
+import anyio.to_thread
+import jwt
 import uvicorn
 from mcp import ClientSession, McpError, StdioServerParameters, types
 from mcp.client.stdio import stdio_client
@@ -51,6 +52,8 @@ address for `from:` and `to:` filters."""
 # A call stuck on Spark Desktop would otherwise hold its `spark mcp` process
 # open indefinitely.
 TIMEOUT_SECONDS = 120
+
+logger = logging.getLogger(__name__)
 
 
 async def forward[ResultT: types.Result](
@@ -107,24 +110,44 @@ def build_server(spark: str) -> Server:
     return server
 
 
-class RequireToken:
-    def __init__(self, app: ASGIApp, token: str) -> None:
+# Cloudflare Access authenticates every caller, by OAuth or a service token,
+# before the tunnel, and signs an assertion for the origin. Verifying it here
+# keeps out a request that reaches the port without passing Access.
+class RequireAccess:
+    def __init__(self, app: ASGIApp, team_domain: str, audience: str) -> None:
         self.app: ASGIApp = app
-        self.expected: bytes = f"Bearer {token}".encode()
+        self.issuer: str = f"https://{team_domain}"
+        self.audience: str = audience
+        # Caches Access's signing keys and refetches them when an assertion
+        # names a key it has not seen, which is how Access rotates them.
+        self.keys: jwt.PyJWKClient = jwt.PyJWKClient(f"{self.issuer}/cdn-cgi/access/certs")
 
     async def __call__(self, scope: Scope, receive: Receive, send: Send) -> None:
         if scope["type"] == "http":
-            given = Headers(scope=scope).get("authorization", "").encode()
-            if not hmac.compare_digest(given, self.expected):
-                response = PlainTextResponse(
-                    "Unauthorized", status_code=401, headers={"WWW-Authenticate": "Bearer"}
-                )
-                await response(scope, receive, send)
+            assertion = Headers(scope=scope).get("cf-access-jwt-assertion")
+            if assertion is None or not await self.verify(assertion):
+                await PlainTextResponse("Unauthorized", status_code=401)(scope, receive, send)
                 return
         await self.app(scope, receive, send)
 
+    async def verify(self, assertion: str) -> bool:
+        try:
+            # Fetching the keys is blocking network I/O.
+            key = await anyio.to_thread.run_sync(self.keys.get_signing_key_from_jwt, assertion)
+            jwt.decode(
+                assertion,
+                key.key,
+                algorithms=["RS256"],
+                audience=self.audience,
+                issuer=self.issuer,
+            )
+        except jwt.PyJWTError as error:
+            logger.warning("Rejected an Access assertion: %s", error)
+            return False
+        return True
 
-def build_app(spark: str, token: str) -> Starlette:
+
+def build_app(spark: str, team_domain: str, audience: str) -> Starlette:
     manager = StreamableHTTPSessionManager(build_server(spark), json_response=True, stateless=True)
 
     @contextlib.asynccontextmanager
@@ -138,7 +161,7 @@ def build_app(spark: str, token: str) -> Starlette:
     endpoint = StreamableHTTPASGIApp(manager)
     return Starlette(
         routes=[Route("/mcp", endpoint=endpoint, methods=["POST"])],
-        middleware=[Middleware(RequireToken, token=token)],
+        middleware=[Middleware(RequireAccess, team_domain=team_domain, audience=audience)],
         lifespan=lifespan,
     )
 
@@ -149,20 +172,22 @@ def main() -> None:
         description="Serve Spark's email search and reading tools over MCP at /mcp.",
     )
     parser.add_argument(
-        "--token-file",
-        type=Path,
+        "--access-team-domain",
         required=True,
-        help="file holding the bearer token clients must send",
+        help="Cloudflare Access team domain, e.g. example.cloudflareaccess.com",
+    )
+    parser.add_argument(
+        "--access-aud",
+        required=True,
+        help="AUD tag of the Access application in front of this server",
     )
     parser.add_argument("--host", default="127.0.0.1", help="address to listen on (%(default)s)")
     parser.add_argument("--port", type=int, default=8765, help="port to listen on (%(default)s)")
     parser.add_argument("--spark", default=SPARK, help="Spark CLI executable (%(default)s)")
     args = parser.parse_args()
 
-    token = args.token_file.read_text().strip()
-    if not token:
-        parser.error(f"{args.token_file} is empty")
     if shutil.which(args.spark) is None:
         parser.error(f"{args.spark} is not an executable; point --spark at the Spark CLI")
 
-    uvicorn.run(build_app(args.spark, token), host=args.host, port=args.port)
+    app = build_app(args.spark, args.access_team_domain, args.access_aud)
+    uvicorn.run(app, host=args.host, port=args.port)
