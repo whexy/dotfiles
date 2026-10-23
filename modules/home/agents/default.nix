@@ -57,7 +57,15 @@ in
 
     video.enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio (WSL only for now)";
 
-    spark.enable = lib.mkEnableOption "the Spark skill, which searches and reads mail through the `spark` CLI that Spark Desktop installs";
+    spark = {
+      enable = lib.mkEnableOption "the Spark skill, which searches and reads mail through the `spark` CLI that Spark Desktop installs";
+      server.enable = lib.mkEnableOption ''
+        spark-mcp, which serves Spark Desktop's email-reading tools to MCP
+        clients off this Mac. A Cloudflare tunnel publishes it at
+        `https://<host>-spark.clusters.work/mcp` (`flake.lib.publicHost`),
+        where clients send the `spark-mcp-token` secret as a bearer token
+      '';
+    };
 
     t3code = {
       package = lib.mkOption {
@@ -213,7 +221,7 @@ in
         }
         # The search-and-read part of `spark skill` from Spark 1.4.1; compare
         # against a newer CLI's output when its commands change.
-        // lib.optionalAttrs cfg.spark.enable { spark = ./spark; };
+        // lib.optionalAttrs cfg.spark.enable { spark = ./spark/skill; };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
@@ -292,6 +300,17 @@ in
             mkTunnel
             ;
         })
+        (import ./spark/home.nix {
+          inherit
+            pkgs
+            config
+            lib
+            perSystem
+            flake
+            mkTunnel
+            ;
+          hostName = args.osConfig.dotfiles.host.hostName or null;
+        })
         (import ./gcai/home.nix {
           inherit
             pkgs
@@ -315,6 +334,12 @@ in
             cfg.t3code.server.tunnel.enable
             -> cfg.t3code.server.enable && cfg.t3code.server.tunnel.hostName != null;
           message = "dotfiles.agents.t3code.server.tunnel.enable requires the server and dotfiles.agents.t3code.server.tunnel.hostName.";
+        }
+        {
+          # Spark Desktop runs only on macOS, and the tunnel's name comes from
+          # the host, which standalone homes have no osConfig to supply.
+          assertion = cfg.spark.server.enable -> args.osConfig.nixpkgs.hostPlatform.isDarwin or false;
+          message = "dotfiles.agents.spark.server.enable requires a nix-darwin host.";
         }
       ];
 
@@ -369,10 +394,14 @@ in
         # whisper-1 for `transcribe`; a key restricted to the Audio API.
         openai-api-key.file = ../../../secrets/openai-api-key.age;
       }
-      // lib.optionalAttrs cfg.t3code.server.tunnel.enable {
-        # `cloudflared tunnel login` cert for the T3 tunnel's zone: it creates
+      // lib.optionalAttrs (cfg.t3code.server.tunnel.enable || cfg.spark.server.enable) {
+        # `cloudflared tunnel login` cert for the tunnels' zone: it creates
         # tunnels and edits any DNS record in that zone.
         cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
+      }
+      // lib.optionalAttrs cfg.spark.server.enable {
+        # The bearer token every spark-mcp client sends.
+        spark-mcp-token.file = ../../../secrets/spark-mcp-token.age;
       };
     }
   );
