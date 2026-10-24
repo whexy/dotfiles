@@ -15,6 +15,7 @@
       enable = lib.mkDefault true;
       firefoxDevtools.enable = lib.mkDefault true;
       iphoneUse.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isDarwin;
+      studio.enable = lib.mkDefault true;
       t3code.pair.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser

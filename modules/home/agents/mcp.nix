@@ -116,6 +116,15 @@ in
     // lib.optionalAttrs cfg.video.enable {
       resolve.command = lib.getExe video.resolveMcp;
     }
+    // lib.optionalAttrs cfg.studio.enable {
+      # Cloudflare Access is the server's OAuth provider, and Studio acts as
+      # the account its sign-in names, refusing the agents' service token, so
+      # every agent signs the owner in itself (see AGENTS.md).
+      studio = {
+        type = "http";
+        url = "https://studio-mcp.clusters.work/mcp";
+      };
+    }
     // lib.optionalAttrs cfg.iphoneUse.enable {
       # The wrapper supplies the Python, Node and git the setup worker calls;
       # WDA itself is fetched and built into the user's state directory.

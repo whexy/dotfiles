@@ -57,6 +57,18 @@ in
 
     video.enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio (WSL only for now)";
 
+    studio.enable = lib.mkOption {
+      type = lib.types.bool;
+      # B-roll slots take generated footage from it.
+      default = cfg.video.enable;
+      defaultText = lib.literalExpression "config.dotfiles.agents.video.enable";
+      description = ''
+        Whether to register SimpleStudio's MCP server, which generates video
+        on the studio's GPU Workers. Each agent signs in to it once per
+        machine, through Cloudflare Access.
+      '';
+    };
+
     spark = {
       enable = lib.mkEnableOption "the Spark skill, which searches and reads mail through the `spark` CLI that Spark Desktop installs";
       server = {
