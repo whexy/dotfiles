@@ -60,6 +60,9 @@ def parser():
                    help="YUV matrix of the raw render (auto: its tag; untagged = bt601)")
     p.add_argument("--input-range", choices=["auto", "tv", "pc"], default="auto",
                    help="YUV range of the raw render (auto: its tag; untagged = tv)")
+    p.add_argument("--footage", action="store_true",
+                   help="the raw is footage, not a render made for the slot: cut it to "
+                   "the slot's length and centre-crop it to the slot's aspect")
     p.add_argument("--dry-run", action="store_true", help="print the ffmpeg command only")
 
     p = cmd("check", "verify a render against its slot; writes a contact sheet")
@@ -121,7 +124,8 @@ def dispatch(args):
         root = _slot_root(args)
         if c == "finalize":
             return encode.run_finalize(
-                root, args.raw, args.slot, args.input_matrix, args.input_range, args.dry_run
+                root, args.raw, args.slot, args.input_matrix, args.input_range,
+                args.footage, args.dry_run,
             )
         return encode.run_check(root, args.file, args.slot, args.draft)
     if c == "strip":
