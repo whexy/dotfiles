@@ -82,10 +82,25 @@ def colour_input(info, matrix="auto", rng="auto"):
     return {"kind": kind, "matrix": matrix, "range": rng, "notes": notes}
 
 
-def filter_graph(colour, info, width, height, fps, raw_fps, pad):
+def footage_crop(info, width, height):
+    """The centred region of footage at the slot's aspect, or None when it has it.
+
+    Sides stay even, as 4:2:0 needs.
+    """
+    w, h = info["width"], info["height"]
+    if w * height > h * width:
+        w = h * width // height // 2 * 2
+    elif w * height < h * width:
+        h = w * height // width // 2 * 2
+    else:
+        return None
+    return w, h
+
+
+def filter_graph(colour, info, width, height, fps, raw_fps, pad, crop=None):
     """-vf for a raw render: BT.709 limited 4:2:0 at the slot size and rate."""
     resize = (info["width"], info["height"]) != (width, height)
-    parts = []
+    parts = [f"crop={crop[0]}:{crop[1]}"] if crop else []
     if colour["kind"] == "yuv":
         parts.append(
             "colorspace="
@@ -145,7 +160,9 @@ def next_output(slot_dir, slot_id):
     return Path(slot_dir) / "out" / f"{slot_id}_v{n}.mp4"
 
 
-def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", dry_run=False):
+def run_finalize(
+    root, raw, slot_arg, matrix="auto", rng="auto", footage=False, dry_run=False
+):
     slot, slot_dir = load_slot(slot_arg)
     if slot.get("alpha"):
         raise UsageError("alpha slots can't be finalized: the final spec is 4:2:0 HEVC")
@@ -162,7 +179,8 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", dry_run=False):
     fps = slot["fps"]
     converted = frames_of(raw_frames / raw_fps, fps)
     shortfall = slot["frames"] - converted
-    if abs(shortfall) > 1:
+    # Footage is not cut to the slot's beats, so any excess may go.
+    if shortfall > 1 or (shortfall < -1 and not footage):
         need = frames_of(slot["frames"] / fps, raw_fps)
         return 1, {
             "ok": False,
@@ -173,8 +191,9 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", dry_run=False):
             ],
         }
     colour = colour_input(info, matrix, rng)
+    crop = footage_crop(info, slot["width"], slot["height"]) if footage else None
     vf = filter_graph(
-        colour, info, slot["width"], slot["height"], fps, raw_fps, max(0, shortfall)
+        colour, info, slot["width"], slot["height"], fps, raw_fps, max(0, shortfall), crop
     )
     encoder = os.environ.get("VIDEO_EDIT_ENCODER") or spec["final"]["encoder"]
     out = next_output(slot_dir, slot["id"])
@@ -184,6 +203,8 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", dry_run=False):
         *encode_args(spec, fps, slot["frames"], encoder), str(partial),
     ]
     notes = list(colour["notes"])
+    if crop:
+        notes.append(f"cropped to {crop[0]}x{crop[1]} for the slot's aspect")
     if raw_fps != fps:
         notes.append(f"frame rate converted {float(raw_fps):g} -> {fps}")
     if shortfall > 0:
