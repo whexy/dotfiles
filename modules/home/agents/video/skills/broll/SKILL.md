@@ -1,13 +1,14 @@
 ---
 name: broll
-description: Render one B-roll animation slot for the video-edit pipeline. Use when assigned a `slots/<id>/` directory to fill with an animation.
+description: Fill one B-roll slot for the video-edit pipeline with an animation or generated footage. Use when assigned a `slots/<id>/` directory to fill.
 ---
 
 # B-roll slot
 
-You turn one slot into a finished clip: a full-screen, opaque animation that
-plays over part of the voiceover. Run every command from the edit root, the
-directory holding `spec.json`, `style/` and `slots/`. `<id>` is your slot's id.
+You turn one slot into a finished clip: a full-screen, opaque animation or
+piece of footage that plays over part of the voiceover. Run every command from
+the edit root, the directory holding `spec.json`, `style/` and `slots/`. `<id>`
+is your slot's id.
 
 ## Inputs
 
@@ -27,7 +28,9 @@ directory holding `spec.json`, `style/` and `slots/`. `<id>` is your slot's id.
 ## Choose an engine
 
 Use HyperFrames (HTML, CSS and GSAP, rendered frame-exact) by default. Use
-ManimGX for math, graphs and diagrams that morph.
+ManimGX for math, graphs and diagrams that morph. When the brief asks for real
+footage, generate it with Studio instead; see
+[Footage from Studio](#footage-from-studio).
 
 - HyperFrames: read `hyperframes-core/SKILL.md` and
   `hyperframes-animation/SKILL.md` in `~/.local/share/video-edit/docs/hyperframes/`.
@@ -107,6 +110,37 @@ from the beats' seconds and add up to `duration`.
 7. Write `slots/<id>/report.md`: the clip's path, the engine, every
    interpretation you chose, and the check results.
 
+## Footage from Studio
+
+The `studio` MCP server generates video on the studio's GPU Workers. Its clips
+run 5 to 14.375 s at 24 fps, so it fills slots of at most 14 s. Footage does
+not land on beats: pick one shot that works across the whole slot.
+
+1. Write the prompt to `slots/<id>/src/prompt.md`: the subject, action,
+   setting, camera and light of one continuous shot. Ask for no text, signs
+   or captions unless `spec.json` allows the text.
+2. `create_session` titled `<video name> <id>`, then `generate_video` with the
+   prompt and `duration` set to the slot's `duration` plus 0.1, at least 5.
+   Leave out `mode`, `width` and `height`: from a prompt alone Studio uses its
+   largest canvas, 1344x768. Don't upload pictures; `upload_image` sends the
+   file as base64 inside the tool call.
+3. Poll `get_generation` until it ends. Download a completed clip's
+   `video_url` at once, since the link expires after 15 minutes, numbering
+   each generation:
+
+   ```sh
+   curl -fsSL -o slots/<id>/render/<id>_g1.mp4 '<video_url>'
+   ```
+
+4. Continue from step 5 of [Render and check](#render-and-check), passing
+   `--footage` to `video-edit finalize`: it cuts the clip to the slot's length
+   and crops it to the slot's aspect. Look at the contact sheet `check`
+   writes. If the footage misses the brief, change the prompt and generate
+   again, three generations at most, then deliver the closest and say what is
+   off.
+
+`report.md` also gives the final prompt and the generation's id and seed.
+
 ## Rules
 
 - Render frame-exact with the commands above. Never record a screen or a
@@ -116,8 +150,8 @@ from the beats' seconds and add up to `duration`.
 - Write only inside `slots/<id>/`; only `video-edit finalize` writes to
   `out/`. Never edit `style/`.
 - No text on screen unless `spec.json` allows that text.
-- Ease every motion, never linear. Bring in one new element at a time. Hold
-  the final frame for at least 1 s.
+- In animations, ease every motion, never linear. Bring in one new element
+  at a time. Hold the final frame for at least 1 s.
 - Never call the Resolve MCP.
 - Don't ask questions. Take the obvious reading of the brief and note it in
   `report.md`.

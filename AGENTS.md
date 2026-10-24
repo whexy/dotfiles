@@ -180,6 +180,26 @@ service token. The server verifies the Access JWT on every request against
 the team domain and the application's AUD tag (`server.accessAud`), so it has
 no credentials of its own.
 
+## SimpleStudio MCP server
+
+`dotfiles.agents.studio` (on the `dev` cap, and wherever `video` is) registers
+SimpleStudio's MCP server, `https://studio-mcp.clusters.work/mcp`, with every
+agent. Its tools generate video on the studio's GPU Workers, and the `broll`
+skill fills B-roll slots with that footage.
+
+Cloudflare Access is the server's OAuth provider. Studio acts as the account
+whose email the sign-in names and refuses service tokens, so each agent signs
+the owner in itself, once per machine:
+
+- Claude Code: `claude mcp login studio`
+- Codex: `codex mcp login studio`
+- OpenCode: `opencode mcp auth studio`
+
+Over SSH, pass `--no-browser` to Claude Code or Codex and paste the redirect
+URL back. T3 Code's sessions use the same token stores. Each agent registers
+its own loopback callback with Access, so the Access application needs no
+redirect URIs for them.
+
 ## Public tunnels
 
 Each service a host publishes on the public internet gets its own Cloudflare

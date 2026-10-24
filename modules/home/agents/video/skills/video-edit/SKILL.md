@@ -51,8 +51,9 @@ pauses that every cut is judged against and caches them.
 ### 2. Propose, then wait
 
 Read the whole transcript. Propose the strategy in plain English: what
-goes, what stays, the sections, and where B-roll would help. Wait for the
-user's approval before writing `edl.json`.
+goes, what stays, the sections, and where B-roll would help, each as an
+animation or as real footage. Wait for the user's approval before writing
+`edl.json`.
 
 ### 3. Write the cut list and snap it
 
@@ -96,8 +97,9 @@ on the planned frame. `--section S` builds one section as its own timeline.
 
 A slot is one B-roll clip. `video-edit slots` writes `slots/<id>/slot.json`
 with its length, sizes and the speech under it, already on the slot's own
-clock. Write `slots/<id>/brief.md` from the template below, then spawn one
-subagent per slot, all in parallel, with your harness's subagent tool
+clock. Write `slots/<id>/brief.md` from the template below, saying when a
+slot is real footage, which the slot agent generates with Studio. Then spawn
+one subagent per slot, all in parallel, with your harness's subagent tool
 (Claude Code's Agent tool, OpenCode's task tool, or T3's `delegate_task`).
 
 When they finish, build again. Only slots whose newest output passed
@@ -182,16 +184,16 @@ Do not ask questions. Decide, and note your assumptions in report.md.
 
 ## Commands
 
-| Command                                                                   | Does                                                         |
-| ------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `init MAIN --name NAME [--camera CAM]`                                    | creates the edit root, `sources.json`, `spec.json`, `style/` |
-| `silences [--refresh]`                                                    | detects pauses at the noise floor + 9 dB                     |
-| `snap [--dry-run]`                                                        | moves range edges into silences                              |
-| `sync-script` / `set-offset N [--at S]`                                   | camera alignment                                             |
-| `build [--section S] [--version N] [--no-camera]`                         | plan and build script                                        |
-| `slots`                                                                   | `slots/<id>/slot.json` per overlay                           |
-| `finalize RAW --slot DIR [--input-matrix auto\|bt601\|bt709] [--dry-run]` | NVENC encode to `out/<id>_vN.mp4`                            |
-| `check FILE --slot DIR [--draft]`                                         | spec check plus contact sheet                                |
-| `strip VIDEO START END` / `strip --cut K`                                 | filmstrip and waveform PNG                                   |
-| `words [--section S]` / `srt CUES [-o FILE] [--start-tc TC]`              | subtitles                                                    |
-| `readback-script` / `verify-timeline` / `verify-audio`                    | verification                                                 |
+| Command                                                                               | Does                                                           |
+| ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
+| `init MAIN --name NAME [--camera CAM]`                                                | creates the edit root, `sources.json`, `spec.json`, `style/`   |
+| `silences [--refresh]`                                                                | detects pauses at the noise floor + 9 dB                       |
+| `snap [--dry-run]`                                                                    | moves range edges into silences                                |
+| `sync-script` / `set-offset N [--at S]`                                               | camera alignment                                               |
+| `build [--section S] [--version N] [--no-camera]`                                     | plan and build script                                          |
+| `slots`                                                                               | `slots/<id>/slot.json` per overlay                             |
+| `finalize RAW --slot DIR [--footage] [--input-matrix auto\|bt601\|bt709] [--dry-run]` | NVENC encode to `out/<id>_vN.mp4`; `--footage` trims and crops |
+| `check FILE --slot DIR [--draft]`                                                     | spec check plus contact sheet                                  |
+| `strip VIDEO START END` / `strip --cut K`                                             | filmstrip and waveform PNG                                     |
+| `words [--section S]` / `srt CUES [-o FILE] [--start-tc TC]`                          | subtitles                                                      |
+| `readback-script` / `verify-timeline` / `verify-audio`                                | verification                                                   |
