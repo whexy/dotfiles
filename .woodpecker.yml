@@ -141,6 +141,7 @@ steps:
     environment: *github_app
     commands:
       - cp flake.lock /tmp/flake.lock.old
+      - cp packages/t3code-nightly/metadata.nix /tmp/t3code-metadata.old.nix
       - nix flake update llm-agents
       - ./packages/t3code-nightly/update.sh
       - |
@@ -161,6 +162,12 @@ steps:
         # The package report is informational; a failure must not block the update.
         report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
           report="Package report unavailable; see the CI log."
+        # The report compares flake.lock only, so it never sees the T3 pin move.
+        t3_old=$(nix eval --raw --file /tmp/t3code-metadata.old.nix version)
+        t3_new=$(nix eval --raw --file packages/t3code-nightly/metadata.nix version)
+        if [ "$t3_old" != "$t3_new" ]; then
+          report=$(printf '%s\n\nT3 Code:\n  t3code-nightly  %s -> %s' "$report" "$t3_old" "$t3_new")
+        fi
         # The commit is checked here before it is pushed, so its push skips CI.
         git commit -m "chore: update nightly agent packages" -m "$report" -m "[skip ci]"
       - *check
