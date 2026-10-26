@@ -25,7 +25,6 @@ let
     unstable = import ../overlays/unstable.nix { inherit (inputs) nixpkgs-unstable; };
     tailscale-security = import ../overlays/tailscale-security.nix;
     cloudflared-security = import ../overlays/cloudflared-security.nix;
-    firefox-devtools-mcp-profile = import ../overlays/firefox-devtools-mcp-profile.nix;
     llm-tools = import ../overlays/llm-tools.nix { inherit (inputs) llm-agents; };
   };
 
