@@ -103,6 +103,43 @@ asserts `nixpkgs.config == { }` when `nixpkgs.pkgs` is set. Host-specific
 hardware lives beside the host as `hardware.nix`; reusable platform and image
 behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 
+## Secrets
+
+agenix secrets live in `secrets/`, encrypted to one key per machine;
+`secrets/secrets.nix` lists each file's recipients. System secrets
+(`age.secrets` in NixOS and nix-darwin) decrypt with the host key,
+`/etc/ssh/ssh_host_ed25519_key`. A Home Manager user cannot read that key, so
+it decrypts with `~/.ssh/agenix_ed25519`, generated on that machine and never
+copied; root homes use the host key. `modules/home/all.nix` sets this identity
+for every home.
+
+The agenix CLI only looks for `~/.ssh/id_ed25519` and `~/.ssh/id_rsa`, so pass
+the identity to every command, run from `secrets/`:
+
+```sh
+agenix -e openai-api-key.age -i ~/.ssh/agenix_ed25519
+```
+
+To add a machine, generate its key there:
+
+```sh
+ssh-keygen -t ed25519 -N "" -f ~/.ssh/agenix_ed25519
+```
+
+On WSL, `ssh-keygen` is Windows' `ssh-keygen.exe`, which cannot write into
+the Linux home; run `/run/current-system/sw/bin/ssh-keygen` instead.
+
+Add its `.pub` to `secrets/secrets.nix` (a NixOS or nix-darwin host also adds
+`/etc/ssh/ssh_host_ed25519_key.pub`; a root home adds only the host key). Then
+rekey on mudd or sheridan, the editors that can decrypt every file:
+
+```sh
+agenix -r -i ~/.ssh/agenix_ed25519
+```
+
+Dropping a recipient does not revoke what that machine already decrypted;
+rotate the secret too.
+
 ## Private flake fetches
 
 `dotfiles.nix.ghTokenFlakes` (home, on the `dev` and `dev-lite` caps) lets
@@ -228,8 +265,8 @@ secret, the cert from one `cloudflared tunnel login` for the zone. On start a
 tunnel service creates its tunnel (or recovers its credentials into
 `~/.local/state/<service name>/` when the tunnel already exists), points the
 DNS name at it, and runs it. The cert can create tunnels and edit every DNS
-record in the zone; it adds little to what the shared agenix key already
-exposes on each host.
+record in the zone, so only homes that run a tunnel can decrypt it (see
+[Secrets](#secrets)).
 
 ## Verification
 

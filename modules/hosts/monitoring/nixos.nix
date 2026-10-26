@@ -18,7 +18,6 @@ in
     })
 
     (lib.mkIf cfg.beszel.enable {
-      age.identityPaths = [ "/home/${config.dotfiles.host.username}/.config/agenix/key.txt" ];
       age.secrets.beszel-token.file = ../../../secrets/beszel-token.age;
 
       services.beszel.agent = {
