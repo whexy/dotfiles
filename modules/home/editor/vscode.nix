@@ -3,12 +3,109 @@
 # are the only ones VS Code can load.
 {
   config,
+  inputs,
   lib,
   pkgs,
+  vimPkgs,
   ...
 }:
 let
   platform = if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux";
+
+  # The Nixvim profile's editing behavior and editing plugins, without its LSP,
+  # completion, and UI plugins, which duplicate VS Code. The wrapper loads the
+  # init itself, since vscode-neovim passes no `-u` without an init path.
+  #
+  # The Tree-sitter grammars come from the Nixvim profile, so Neovim and its
+  # plugins come from the profile's package set too: grammars built for one
+  # nvim-treesitter do not necessarily load in another's Neovim.
+  neovim =
+    (inputs.nixvim.lib.evalNixvim {
+      modules = [
+        ./neovim-editing.nix
+        {
+          nixpkgs.pkgs = vimPkgs;
+          inherit (config.programs.nixvim) package;
+          enableMan = false;
+          luaLoader.enable = true;
+
+          globals = {
+            mapleader = " ";
+            maplocalleader = ",";
+          };
+          opts = {
+            ignorecase = true;
+            smartcase = true;
+          };
+          plugins.treesitter.grammarPackages = config.programs.nixvim.plugins.treesitter.grammarPackages;
+
+          # Neovim's own provider needs wl-copy or pbcopy on the extension
+          # host's PATH; VS Code's clipboard API works everywhere VS Code runs.
+          extraConfigLuaPre = "vim.g.clipboard = vim.g.vscode_clipboard";
+          autoCmd = [
+            {
+              event = [ "TextYankPost" ];
+              callback.__raw = ''
+                function()
+                  local event = vim.v.event
+                  if event.operator == "y" and event.regname == "" then
+                    vim.fn.setreg("+", event.regcontents, event.regtype)
+                  end
+                end
+              '';
+            }
+          ];
+
+          keymaps = [
+            {
+              mode = "n";
+              key = "<esc>";
+              action = "<cmd>noh<cr><esc>";
+              options.desc = "Escape and Clear hlsearch";
+            }
+            {
+              mode = "x";
+              key = "<";
+              action = "<gv";
+            }
+            {
+              mode = "x";
+              key = ">";
+              action = ">gv";
+            }
+            # Recursive, so they reach vscode-neovim's <C-w> mappings to editor
+            # groups.
+            {
+              mode = "n";
+              key = "<leader>-";
+              action = "<C-w>s";
+              options = {
+                remap = true;
+                desc = "Split Window Below";
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>|";
+              action = "<C-w>v";
+              options = {
+                remap = true;
+                desc = "Split Window Right";
+              };
+            }
+            {
+              mode = "n";
+              key = "<leader>wd";
+              action = "<C-w>c";
+              options = {
+                remap = true;
+                desc = "Delete Window";
+              };
+            }
+          ];
+        }
+      ];
+    }).config.build.package;
 in
 {
   config = lib.mkIf config.dotfiles.editor.vscode.enable {
@@ -38,10 +135,7 @@ in
           "extensions.ignoreRecommendations" = true;
           "editor.lineNumbers" = "relative";
 
-          # Plain Neovim rather than the Nixvim build, whose baked-in init
-          # starts LSP, completion, and UI plugins that duplicate VS Code.
-          "vscode-neovim.neovimExecutablePaths.${platform}" = lib.getExe pkgs.neovim-unwrapped;
-          "vscode-neovim.neovimInitVimPaths.${platform}" = "${./vscode-neovim.lua}";
+          "vscode-neovim.neovimExecutablePaths.${platform}" = lib.getExe neovim;
           # vscode-neovim does not declare Restricted Mode support, so VS Code
           # would disable it in every folder not yet trusted.
           "extensions.supportUntrustedWorkspaces"."asvetliakov.vscode-neovim".supported = true;
