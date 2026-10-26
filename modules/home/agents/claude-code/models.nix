@@ -41,6 +41,10 @@ let
         label = "${id} (default models)";
         env = {
           ANTHROPIC_BASE_URL = gateway.baseUrl;
+          # Context usage of a model Claude Code does not know comes from the
+          # API instead of an assumed 200k window. That includes a gateway
+          # model named at launch, as T3 Code's model picker does.
+          CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
         };
         secrets = proxy.cfAccessSecrets // {
           ANTHROPIC_API_KEY = gateway.apiKeyPath;
@@ -52,9 +56,6 @@ let
       # built-in role default the gateway may not serve.
       models = default // {
         label = id;
-        env = default.env // {
-          CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
-        };
         discover = {
           url = gateway.catalogUrl;
           keyEnv = "ANTHROPIC_API_KEY";

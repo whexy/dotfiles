@@ -155,6 +155,21 @@ it first, so it stays on the tailnet where that works and falls back to the
 tunnel elsewhere. Paired over Tailscale, a client never learns the public URL,
 because servers report only their LAN and Tailscale addresses.
 
+### Gateway models for Claude
+
+T3's Claude model picker also lists every non-Claude model CLIProxyAPI serves,
+with the reasoning levels Claude Code accepts. `t3-claude-models` writes them
+into `~/.t3/userdata/settings.json` as custom models of T3's `claudeAgent`
+provider. Activation runs it; run it yourself to pick up a changed catalog.
+While the gateway or its secrets are unavailable, the list stays as it was.
+
+T3 starts Claude Code through the `claude` launcher, so these models go to the
+gateway `claude-select` saved. They work only while that is CLIProxyAPI, the
+default.
+
+Custom models added in T3 itself survive a refresh: `dotfiles-settings.json`
+beside T3's settings records the models `t3-claude-models` wrote.
+
 ## Spark MCP server
 
 `packages/spark-mcp` serves the email-reading tools of Spark Desktop's stdio

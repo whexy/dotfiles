@@ -333,6 +333,7 @@ in
             lib
             perSystem
             flake
+            proxy
             gitConfig
             mkTunnel
             ;
