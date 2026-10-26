@@ -33,7 +33,14 @@ in
         # Ordinary peers hide the problem because this host dials them first and
         # conntrack admits the reply.
         openFirewall = true;
+        # The kill switch below makes tailscaled reject every `tailscale set`
+        # while the stored prefs still ask for the SSH server.
+        extraSetFlags = [ "--ssh=false" ];
       };
+      # Tailscale SSH has unpatched privilege-escalation findings
+      # (https://tailscale.com/ssh-investigation-update), so OpenSSH serves
+      # port 22 on tailscale0 until a fixed tailscale ships.
+      systemd.services.tailscaled.environment.TS_DISABLE_SSH_SERVER = "1";
       networking.firewall.trustedInterfaces = [ "tailscale0" ];
     })
 
