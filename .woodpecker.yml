@@ -78,6 +78,19 @@ variables:
         rm -f "$keyfile"
       fi
     fi
+  # Push the update lanes' checked commit to the primary branch as the GitHub
+  # App, retrying a failed push 3 times.
+  - &push |
+    GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
+    origin_url="$(git remote get-url origin)"
+    trap 'git remote set-url origin "$origin_url"' EXIT
+    git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
+    attempt=1
+    until git push origin HEAD:master; do
+      [ "$attempt" -le 3 ] || exit 1
+      sleep $((attempt * 10))
+      attempt=$((attempt + 1))
+    done
 # Branches other than master are checked through their pull requests.
 when:
   - event: push
@@ -123,12 +136,7 @@ steps:
         # The commit is checked here before it is pushed, so its push skips CI.
         git commit -m "chore: update flake inputs" -m "$report" -m "[skip ci]"
       - *check
-      - |
-        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
-        origin_url="$(git remote get-url origin)"
-        trap 'git remote set-url origin "$origin_url"' EXIT
-        git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
-        git push origin HEAD:master
+      - *push
   # Update the fast-moving agent packages (nightly cron). The T3 pin lives in
   # package metadata rather than flake.lock, so this lane updates both pins in
   # one serialized commit.
@@ -171,12 +179,7 @@ steps:
         # The commit is checked here before it is pushed, so its push skips CI.
         git commit -m "chore: update nightly agent packages" -m "$report" -m "[skip ci]"
       - *check
-      - |
-        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
-        origin_url="$(git remote get-url origin)"
-        trap 'git remote set-url origin "$origin_url"' EXIT
-        git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
-        git push origin HEAD:master
+      - *push
   check:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy

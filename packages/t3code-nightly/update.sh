@@ -15,7 +15,7 @@ if [ -z "${T3CODE_UPDATE_TOOLS:-}" ]; then
 fi
 
 metadata="$repo_root/packages/t3code-nightly/metadata.nix"
-dist_tags=$(curl -fsSL https://registry.npmjs.org/-/package/t3/dist-tags)
+dist_tags=$(curl -fsSL --retry 3 https://registry.npmjs.org/-/package/t3/dist-tags)
 version=$(sed -n 's/.*"nightly":"\([^"]*\)".*/\1/p' <<<"$dist_tags")
 
 if [ -z "$version" ]; then
@@ -29,7 +29,7 @@ fi
 # those hashes. Only the linux-x64 archive, which carries the browser pin
 # below, has to be downloaded.
 release_base="https://github.com/pingdotgg/t3code/releases/download/v${version}"
-sums=$(curl -fsSL "$release_base/SHA256SUMS")
+sums=$(curl -fsSL --retry 3 "$release_base/SHA256SUMS")
 sum_for() {
   awk -v archive="t3-${version}-$1.tar.gz" '$2 == archive { print $1 }' <<<"$sums"
 }
