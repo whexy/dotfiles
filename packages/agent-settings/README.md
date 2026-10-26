@@ -1,28 +1,30 @@
 # Agent settings
 
-Use `claude-select` or `codex-select` to choose a CLIProxyAPI configuration,
-save it, and launch. The searchable terminal UI provides config actions at the
+Use `claude-select` or `codex-select` to choose a model gateway
+configuration (CLIProxyAPI or magpie), save it, and launch. The searchable terminal UI provides config actions at the
 bottom. Ordinary `claude` and `codex` never open a picker, even with a terminal
 and no arguments.
 
 ## Config manager
 
 Type to search, use the arrow keys to choose, and press Enter to save and
-launch. Choose **cliproxyapi (default models)** to configure the proxy endpoint
-and authentication while clearing previous model and role overrides. Choose
-**default (claude.ai login)** or **default (ChatGPT login)** to remove the proxy
-overrides and use the agent's own OAuth login.
+launch. Choose **cliproxyapi (default models)** or **magpie (default models)**
+to configure that gateway's endpoint and authentication while clearing previous
+model and role overrides. Choose **default (claude.ai login)** or **default
+(ChatGPT login)** to remove the gateway overrides and use the agent's own OAuth
+login.
 
-`claude-select` also lists every model the proxy's Codex catalog
-(`GET <proxy>/v1/models?client_version=<codexVersion>`) lists when the
-picker opens, by its catalog display name (falling back to the model ID). The
-chosen model fills every Claude Code role; choose **fusion**
-to pick a model per role instead. A saved model stays selected after it leaves
-the proxy's list, and requests to it fail until you choose another. When the
-list cannot be fetched, the picker shows why and offers only the saved model.
+`claude-select` also lists every model each gateway's Codex catalog lists when
+the picker opens (CLIProxyAPI: `GET /v1/models?client_version=<codexVersion>`;
+magpie: `GET /v1/codex/models`), by its catalog display name (falling back to
+the model ID). The chosen model fills every Claude Code role; choose **fusion**
+to pick a model per role instead, among the main model's gateway. A saved model
+stays selected after it leaves the gateway's list, and requests to it fail until
+you choose another. When a list cannot be fetched, the picker shows why and
+offers only the saved model from that gateway.
 
-Codex lists the proxy's models in its own `/model` picker, so `codex-select`
-offers only the default configuration.
+Codex lists the selected gateway's models in its own `/model` picker, so
+`codex-select` offers one configuration per gateway.
 
 The buttons at the bottom also have shortcuts:
 

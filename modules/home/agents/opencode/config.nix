@@ -32,24 +32,19 @@ in
   default_agent = "build";
   update = "disable";
   share = "disabled";
-  # The plugin registers the provider and the proxy's live model list from
-  # its Codex model catalog, so it presents itself as the installed Codex.
-  # It reads the agenix secrets itself because OpenCode's shared background
-  # server outlives the launch that started it.
+  # The plugin registers a provider per gateway, each with the gateway's
+  # live model list from its Codex model catalog. It reads the agenix
+  # secrets itself because OpenCode's shared background server outlives the
+  # launch that started it.
   plugins = [
     {
-      package = "${./plugins/cliproxyapi}";
+      package = "${./plugins/proxy}";
       options = {
-        inherit (proxy)
-          baseUrl
-          apiKeyPath
-          cfAccessIdPath
-          cfAccessSecretPath
-          ;
-        codexVersion = pkgs.llm-agents.codex.version;
+        inherit (proxy) cfAccessIdPath cfAccessSecretPath;
+        gateways = lib.mapAttrsToList (id: gateway: gateway // { inherit id; }) proxy.gateways;
         # /bin/cat does not exist on NixOS.
         cat = "${pkgs.coreutils}/bin/cat";
-        # The cluster's SearXNG, in the proxy's Cloudflare Access application.
+        # The cluster's SearXNG, in the gateways' Cloudflare Access application.
         searchUrl = "https://search.clusters.work";
       };
     }
@@ -84,10 +79,10 @@ in
       resource = "*";
       effect = "deny";
     }
-    {
-      action = "provider.use";
-      resource = "cliproxyapi";
-      effect = "allow";
-    }
-  ];
+  ]
+  ++ map (id: {
+    action = "provider.use";
+    resource = id;
+    effect = "allow";
+  }) (lib.attrNames proxy.gateways);
 }

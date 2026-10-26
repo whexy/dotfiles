@@ -16,17 +16,28 @@ import { promisify } from "node:util";
 // Injected by Home Manager (see proxy.nix). The secret paths are agenix
 // shell fragments rather than literal paths, so they are only valid inside
 // a shell; `readSecret` is the single place that resolves them.
-type AiProxyConfig = {
+type Gateway = {
+  // The provider ID pi registers the gateway under.
+  id: string;
+  name: string;
   baseUrl: string;
   apiKeyPath: string;
+  // The gateway's Codex model catalog, whose records carry the display names
+  // and limits the OpenAI-shaped list omits.
+  catalogUrl: string;
+  // Model IDs are `<gateway provider>/<upstream ID>`.
+  qualifiedIds: boolean;
+  // Without any model of the default provider, pi starts on another
+  // provider's model instead, so an outage before the first successful
+  // discovery registers the models pi is configured to use.
+  fallbackModels: string[];
+};
+
+type AiProxyConfig = {
+  gateways: Gateway[];
   cfAccessIdPath: string;
   cfAccessSecretPath: string;
   cat: string;
-  // The model list comes from the proxy's Codex model catalog, whose records
-  // carry the display names and limits the OpenAI-shaped list omits, so the
-  // extension presents itself as the installed Codex.
-  codexVersion: string;
-  fallbackModels: string[];
 };
 
 // Loading this source directly instead of the generated file leaves the config
@@ -36,7 +47,7 @@ function loadConfig(): AiProxyConfig {
     .__AI_PROXY_CONFIG__;
   if (!config) {
     throw new Error(
-      "cliproxyapi: __AI_PROXY_CONFIG__ is unset; load the extension built by " +
+      "ai-proxy: __AI_PROXY_CONFIG__ is unset; load the extension built by " +
         "pi/ai-proxy.nix rather than this source file.",
     );
   }
@@ -44,22 +55,17 @@ function loadConfig(): AiProxyConfig {
 }
 
 const {
-  baseUrl: PROXY_BASE_URL,
-  apiKeyPath: API_KEY_PATH,
-  // The proxy is published on the public internet behind Cloudflare Access;
-  // without the service token every request stops at the 403 login page.
+  gateways: GATEWAYS,
+  // The gateways are published on the public internet behind Cloudflare
+  // Access; without the service token every request stops at the 403 login
+  // page.
   cfAccessIdPath: CF_ACCESS_ID_PATH,
   cfAccessSecretPath: CF_ACCESS_SECRET_PATH,
   cat: CAT,
-  codexVersion: CODEX_VERSION,
-  // Without any cliproxyapi model, pi starts on another provider's model
-  // instead, so an outage before the first successful discovery registers
-  // the models pi is configured to use.
-  fallbackModels: FALLBACK_MODELS,
 } = loadConfig();
 
-const BASE_URL = `${PROXY_BASE_URL}/v1`;
-const CACHE_PATH = join(getAgentDir(), "cache", "cliproxyapi-model-ids.json");
+const cachePath = (gateway: Gateway) =>
+  join(getAgentDir(), "cache", `${gateway.id}-model-ids.json`);
 
 // The subset of a Codex catalog record this extension registers.
 type ServedModel = {
@@ -72,14 +78,15 @@ type ServedModel = {
   reasoning?: boolean;
 };
 
-// CLIProxyAPI accepts every one of these formats for every model it serves,
+// The gateways accept every one of these formats for every model they serve,
 // so a catalog entry only decides which one fits the model best. Each value is
-// the base URL in the convention pi's client for that API expects.
-const PROXY_URLS: Partial<Record<Api, string>> = {
-  "openai-responses": BASE_URL,
-  "openai-completions": BASE_URL,
-  "anthropic-messages": PROXY_BASE_URL,
-  "google-generative-ai": `${PROXY_BASE_URL}/v1beta`,
+// the path under the gateway's base URL in the convention pi's client for
+// that API expects.
+const API_PATHS: Partial<Record<Api, string>> = {
+  "openai-responses": "/v1",
+  "openai-completions": "/v1",
+  "anthropic-messages": "",
+  "google-generative-ai": "/v1beta",
 };
 
 // Gateways in pi's catalog list the same model ID under their own API, so
@@ -90,7 +97,7 @@ function catalogEntry(id: string): Model<Api> | undefined {
   const others = getBuiltinProviders().filter((p) => !VENDORS.includes(p));
   for (const provider of [...VENDORS, ...others]) {
     const model = getBuiltinModels(provider as never).find(
-      (entry) => entry.id === id && entry.api in PROXY_URLS,
+      (entry) => entry.id === id && entry.api in API_PATHS,
     );
     if (model) return model;
   }
@@ -115,14 +122,14 @@ function thinkingLevelMap(
   for (const level of THINKING_LEVELS) {
     if (supported.has(level)) {
       // A borrowed string is the level's wire spelling; a borrowed null
-      // would veto a level CPA declares supported.
+      // would veto a level the gateway declares supported.
       if (map[level] == null) map[level] = level;
       continue;
     }
     map[level] = null;
   }
-  // Pi offers `off` by default, but CPA declares the support set: only an
-  // explicit "none"/"off" effort means thinking can be disabled.
+  // Pi offers `off` by default, but the gateway declares the support set:
+  // only an explicit "none"/"off" effort means thinking can be disabled.
   if (supported.has("none") || supported.has("off")) {
     if (map.off == null) map.off = supported.has("none") ? "none" : "off";
   } else {
@@ -131,19 +138,25 @@ function thinkingLevelMap(
   return map;
 }
 
-// A model takes its API (wire format) from pi's own catalog; its name,
-// limits, input modalities, and the reasoning levels it may use come from
-// the proxy's catalog. Models pi's catalog does not know use Chat
-// Completions with the defaults pi applies to custom models in models.json.
-// Extension-registered models get no such defaults, so they are spelled out
-// here.
-function toProxyModel(served: ServedModel): ProviderModelConfig {
-  const entry = catalogEntry(served.id);
+// A model takes its API (wire format) from the entry for its upstream ID in
+// pi's own catalog; its name, limits, input modalities, and the reasoning
+// levels it may use come from the gateway's catalog. Models pi's catalog does
+// not know use Chat Completions with the defaults pi applies to custom models
+// in models.json. Extension-registered models get no such defaults, so they
+// are spelled out here.
+function toProxyModel(
+  gateway: Gateway,
+  served: ServedModel,
+): ProviderModelConfig {
+  const upstream = gateway.qualifiedIds
+    ? served.id.slice(served.id.indexOf("/") + 1)
+    : served.id;
+  const entry = catalogEntry(upstream);
   if (!entry) {
     return {
       id: served.id,
-      // The proxy names what it serves: proxy-only models have no entry in
-      // pi's catalog, and gateways may relabel known ones.
+      // The gateway names what it serves: gateway-only models have no entry
+      // in pi's catalog, and gateways may relabel known ones.
       name: served.name,
       api: "openai-completions",
       reasoning: served.reasoning ?? false,
@@ -157,13 +170,14 @@ function toProxyModel(served: ServedModel): ProviderModelConfig {
   const { provider: _p, ...model } = entry;
   return {
     ...model,
+    id: served.id,
     name: served.name,
     reasoning: served.reasoning ?? model.reasoning,
     thinkingLevelMap: thinkingLevelMap(served, entry),
     contextWindow: served.contextWindow ?? model.contextWindow,
     maxTokens: served.maxTokens ?? model.maxTokens,
     input: served.input ?? model.input,
-    baseUrl: PROXY_URLS[entry.api],
+    baseUrl: `${gateway.baseUrl}${API_PATHS[entry.api]}`,
   };
 }
 
@@ -182,17 +196,17 @@ async function readSecret(path: string): Promise<string> {
   );
   const secret = stdout.trim();
   if (!secret) {
-    throw new Error(`cliproxyapi: secret is empty or unreadable: ${path}`);
+    throw new Error(`ai-proxy: secret is empty or unreadable: ${path}`);
   }
   return secret;
 }
 
 async function fetchServed(
+  gateway: Gateway,
   apiKey: string,
   cfAccess: Record<string, string>,
 ): Promise<ServedModel[]> {
-  const query = new URLSearchParams({ client_version: CODEX_VERSION });
-  const response = await fetch(`${BASE_URL}/models?${query}`, {
+  const response = await fetch(gateway.catalogUrl, {
     headers: { Authorization: `Bearer ${apiKey}`, ...cfAccess },
     // undici strips Authorization across origins but forwards custom headers,
     // so a redirect would hand the Cloudflare Access token to whatever origin
@@ -269,21 +283,25 @@ async function fetchServed(
   return served;
 }
 
-async function discoverServed(): Promise<ServedModel[]> {
+async function discoverServed(gateway: Gateway): Promise<ServedModel[]> {
   const [apiKey, cfAccessId, cfAccessSecret] = await Promise.all([
-    readSecret(API_KEY_PATH),
+    readSecret(gateway.apiKeyPath),
     readSecret(CF_ACCESS_ID_PATH),
     readSecret(CF_ACCESS_SECRET_PATH),
   ]);
-  return fetchServed(apiKey, {
+  return fetchServed(gateway, apiKey, {
     "CF-Access-Client-Id": cfAccessId,
     "CF-Access-Client-Secret": cfAccessSecret,
   });
 }
 
-async function readCached(): Promise<ServedModel[] | undefined> {
+async function readCached(
+  gateway: Gateway,
+): Promise<ServedModel[] | undefined> {
   try {
-    const cached = JSON.parse(await readFile(CACHE_PATH, "utf8")) as unknown;
+    const cached = JSON.parse(
+      await readFile(cachePath(gateway), "utf8"),
+    ) as unknown;
     if (Array.isArray(cached)) {
       // Caches written before display names hold bare IDs.
       if (cached.every((id) => typeof id === "string")) {
@@ -308,45 +326,61 @@ async function readCached(): Promise<ServedModel[] | undefined> {
 }
 
 // Concurrent pi processes each rename a complete file into place.
-async function writeCached(served: ServedModel[]): Promise<void> {
-  await mkdir(dirname(CACHE_PATH), { recursive: true });
-  const temporaryPath = `${CACHE_PATH}.${process.pid}.tmp`;
+async function writeCached(
+  gateway: Gateway,
+  served: ServedModel[],
+): Promise<void> {
+  const path = cachePath(gateway);
+  await mkdir(dirname(path), { recursive: true });
+  const temporaryPath = `${path}.${process.pid}.tmp`;
   await writeFile(temporaryPath, `${JSON.stringify(served)}\n`, "utf8");
-  await rename(temporaryPath, CACHE_PATH);
+  await rename(temporaryPath, path);
 }
 
-export default async function (pi: ExtensionAPI) {
+async function registerGateway(
+  pi: ExtensionAPI,
+  gateway: Gateway,
+): Promise<void> {
   let served: ServedModel[];
   try {
-    served = await discoverServed();
+    served = await discoverServed(gateway);
     // A cache that cannot be written only costs the next outage its list.
-    await writeCached(served).catch(() => {});
+    await writeCached(gateway, served).catch(() => {});
   } catch (error) {
-    // Pi exits when an extension fails to load, so a brief proxy outage
+    // Pi exits when an extension fails to load, so a brief gateway outage
     // must fall back instead of throwing.
-    const cached = await readCached();
-    served = cached ?? FALLBACK_MODELS.map((id) => ({ id, name: id }));
+    const cached = await readCached(gateway);
+    served = cached ?? gateway.fallbackModels.map((id) => ({ id, name: id }));
     const reason = error instanceof Error ? error.message : String(error);
     const notice =
-      `CLIProxyAPI model list unavailable (${reason}); using ` +
-      (cached ? "the last list it served" : "the configured default models");
+      `${gateway.name} model list unavailable (${reason}); ` +
+      (cached
+        ? "using the last list it served"
+        : served.length > 0
+          ? "using the configured default models"
+          : "none of its models are available");
     const unsubscribe = pi.on("session_start", (_event, ctx) => {
       unsubscribe();
       if (ctx.hasUI) ctx.ui.notify(notice, "warning");
     });
   }
+  if (served.length === 0) return;
 
-  pi.registerProvider("cliproxyapi", {
-    name: "CLIProxyAPI",
-    baseUrl: BASE_URL,
+  pi.registerProvider(gateway.id, {
+    name: gateway.name,
+    baseUrl: `${gateway.baseUrl}/v1`,
     // pi runs `!` values through a shell and resolves them per request, so
     // the agenix path expands and a re-decrypted token is picked up without
     // restarting the session. The double quotes are what make it expand.
-    apiKey: `!${CAT} "${API_KEY_PATH}"`,
+    apiKey: `!${CAT} "${gateway.apiKeyPath}"`,
     headers: {
       "CF-Access-Client-Id": `!${CAT} "${CF_ACCESS_ID_PATH}"`,
       "CF-Access-Client-Secret": `!${CAT} "${CF_ACCESS_SECRET_PATH}"`,
     },
-    models: served.map(toProxyModel),
+    models: served.map((model) => toProxyModel(gateway, model)),
   });
+}
+
+export default async function (pi: ExtensionAPI) {
+  await Promise.all(GATEWAYS.map((gateway) => registerGateway(pi, gateway)));
 }

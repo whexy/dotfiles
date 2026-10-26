@@ -1,32 +1,32 @@
-// OpenCode plugin: the CLIProxyAPI provider, with the proxy's live model list.
+// OpenCode plugin: a provider per model gateway (CLIProxyAPI and magpie),
+// each with the gateway's live model list.
 //
-// The model list comes from the proxy's Codex model catalog
-// (`/v1/models?client_version=<Codex version>`), whose records carry the
-// display names and limits the OpenAI-shaped list omits. Every listed model
-// is registered and refreshed while OpenCode runs, so models the proxy drops
-// disappear without a restart. A model takes its package (wire format) from
-// the entry with the same ID in OpenCode's own catalog, vendors first; its
-// name, limits, input modalities, reasoning efforts, and effort-update
-// support come from the proxy's catalog, because requests must follow what
-// the proxy declares it supports. Models
-// neither catalog knows use OpenCode's model defaults. GPT IDs always use
-// Responses over WebSocket; other unknown IDs use the OpenAI-compatible HTTP
+// A gateway's model list comes from its Codex model catalog (`catalogUrl`),
+// whose records carry the display names and limits the OpenAI-shaped list
+// omits. Every listed model is registered and refreshed while OpenCode runs,
+// so models the gateway drops disappear without a restart. A model takes its
+// package (wire format) from the entry with the same upstream ID in
+// OpenCode's own catalog, vendors first; its name, limits, input modalities,
+// reasoning efforts, and effort-update support come from the gateway's
+// catalog, because requests must follow what the gateway declares it
+// supports. Models neither catalog knows use OpenCode's model defaults. GPT
+// IDs always use Responses; other unknown IDs use the OpenAI-compatible HTTP
 // package.
 //
 // OpenCode decodes and replays provider-hosted web search but never declares
-// the tool, so it is added on the wire when the model's proxy route
-// (`owned_by` in the OpenAI-shaped list) hands it to a provider that runs it.
-// Every other model gets OpenCode's own `websearch` tool, backed by the
-// cluster's SearXNG behind the proxy's Cloudflare Access service token.
+// the tool, so it is added on the wire when the model's route hands it to a
+// provider that runs it: on CLIProxyAPI the route is `owned_by` in the
+// OpenAI-shaped list, and magpie searches for every model on Responses and
+// Messages. Every other model gets OpenCode's own `websearch` tool, backed by
+// the cluster's SearXNG behind the gateways' Cloudflare Access service token.
 import { execFile } from "node:child_process";
 import { promisify } from "node:util";
 
-const PROVIDER = "cliproxyapi";
 const REFRESH_MS = 60_000;
 // Gateways list the same model ID under their own package, so the model's
 // vendor is consulted before them.
 const VENDORS = ["anthropic", "openai", "google", "xai", "meta"];
-// CLIProxyAPI accepts each package's wire format for every model it serves.
+// The gateways accept each package's wire format for every model they serve.
 // Each value is the API path in the convention that package appends to.
 const PATHS = {
   "@opencode/ai/providers/openai": "/v1",
@@ -38,10 +38,14 @@ const PATHS = {
   "@opencode/ai/providers/openai-compatible": "/v1",
 };
 const FALLBACK = "@opencode/ai/providers/openai-compatible";
-// Routes whose executor passes a hosted search tool to a provider that runs
-// it. Antigravity drops the tool, and Chat Completions upstreams turn a
-// Messages search tool into a client function OpenCode cannot run.
-const SEARCH_ROUTES = new Set(["openai", "anthropic", "xai", "meta"]);
+// Packages whose requests the hooks below add a hosted search tool to, for a
+// gateway that searches on every route.
+const SEARCH_PACKAGES = new Set([
+  "@opencode/ai/providers/openai/responses",
+  "@opencode/ai/providers/anthropic",
+  "@opencode/ai/providers/xai",
+  "@opencode/ai/providers/meta/responses",
+]);
 // Codex's live mode; its cached mode (`false`) searches only OpenAI's index.
 const RESPONSES_SEARCH = { type: "web_search", external_web_access: true };
 const MESSAGES_SEARCH = { type: "web_search_20250305", name: "web_search" };
@@ -55,13 +59,13 @@ const execFileAsync = promisify(execFile);
 async function readSecret(cat, path) {
   const { stdout } = await execFileAsync("/bin/sh", ["-c", `${cat} "${path}"`]);
   const secret = stdout.trim();
-  if (!secret) throw new Error(`cliproxyapi: secret is empty: ${path}`);
+  if (!secret) throw new Error(`dotfiles.proxy: secret is empty: ${path}`);
   return secret;
 }
 
-async function readCredentials(options) {
+async function readCredentials(options, gateway) {
   const [apiKey, id, secret] = await Promise.all([
-    readSecret(options.cat, options.apiKeyPath),
+    readSecret(options.cat, gateway.apiKeyPath),
     readSecret(options.cat, options.cfAccessIdPath),
     readSecret(options.cat, options.cfAccessSecretPath),
   ]);
@@ -71,8 +75,8 @@ async function readCredentials(options) {
   };
 }
 
-async function fetchModels(baseUrl, credentials, query = "") {
-  const response = await fetch(`${baseUrl}/v1/models${query}`, {
+async function fetchJson(gateway, url, credentials) {
+  const response = await fetch(url, {
     headers: {
       Authorization: `Bearer ${credentials.apiKey}`,
       ...credentials.headers,
@@ -82,15 +86,21 @@ async function fetchModels(baseUrl, credentials, query = "") {
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    throw new Error(`CLIProxyAPI model discovery failed: ${response.status}`);
+    throw new Error(
+      `${gateway.name} model discovery failed: ${response.status}`,
+    );
   }
   return response.json();
 }
 
-async function fetchOwners(baseUrl, credentials) {
-  const payload = await fetchModels(baseUrl, credentials);
+async function fetchOwners(gateway, credentials) {
+  const payload = await fetchJson(
+    gateway,
+    `${gateway.baseUrl}/v1/models`,
+    credentials,
+  );
   if (!Array.isArray(payload?.data)) {
-    throw new Error("CLIProxyAPI model discovery returned no model owners");
+    throw new Error(`${gateway.name} model discovery returned no model owners`);
   }
   return new Map(
     payload.data.flatMap((record) =>
@@ -101,11 +111,10 @@ async function fetchOwners(baseUrl, credentials) {
   );
 }
 
-async function fetchServed(baseUrl, credentials, codexVersion) {
-  const query = new URLSearchParams({ client_version: codexVersion });
-  const payload = await fetchModels(baseUrl, credentials, `?${query}`);
+async function fetchServed(gateway, credentials) {
+  const payload = await fetchJson(gateway, gateway.catalogUrl, credentials);
   if (!Array.isArray(payload?.models)) {
-    throw new Error("CLIProxyAPI model discovery returned no model list");
+    throw new Error(`${gateway.name} model discovery returned no model list`);
   }
   const seen = new Set();
   const served = [];
@@ -165,8 +174,8 @@ async function fetchServed(baseUrl, credentials, codexVersion) {
   return served.sort((a, b) => a.id.localeCompare(b.id));
 }
 
-function catalogEntry(editor, id) {
-  const records = editor.list().filter((r) => r.provider.id !== PROVIDER);
+function catalogEntry(editor, gatewayIds, id) {
+  const records = editor.list().filter((r) => !gatewayIds.has(r.provider.id));
   const rank = (r) => {
     const index = VENDORS.indexOf(r.provider.id);
     return index < 0 ? VENDORS.length : index;
@@ -217,10 +226,16 @@ function effortVariant(entry, pkg, effort) {
   }
 }
 
-function proxyModel(editor, baseUrl, served) {
+// The ID the model's upstream knows it by.
+function upstreamId(gateway, id) {
+  return gateway.qualifiedIds ? id.slice(id.indexOf("/") + 1) : id;
+}
+
+function proxyModel(editor, gatewayIds, gateway, served) {
   const id = served.id;
-  const match = catalogEntry(editor, id);
-  const chatgpt = id.startsWith("gpt-");
+  const upstream = upstreamId(gateway, id);
+  const match = catalogEntry(editor, gatewayIds, upstream);
+  const chatgpt = upstream.startsWith("gpt-");
   const pkg = chatgpt
     ? "@opencode/ai/providers/openai/responses"
     : (match?.pkg ?? FALLBACK);
@@ -256,7 +271,7 @@ function proxyModel(editor, baseUrl, served) {
     !modelEfforts.includes(served.defaultEffort)
   ) {
     console.warn(
-      `cliproxyapi: default reasoning effort ${served.defaultEffort} for ${id} is not in CPA's effort list`,
+      `${gateway.id}: default reasoning effort ${served.defaultEffort} for ${id} is not in ${gateway.name}'s effort list`,
     );
   }
   if (
@@ -273,10 +288,11 @@ function proxyModel(editor, baseUrl, served) {
     ...deepClone(model),
     id,
     modelID: id,
-    providerID: PROVIDER,
+    providerID: gateway.id,
     package: pkg,
-    // The proxy, not OpenCode's catalog, names what it serves: proxy-only
-    // models have no catalog entry, and gateways may relabel known ones.
+    // The gateway, not OpenCode's catalog, names what it serves:
+    // gateway-only models have no catalog entry, and gateways may relabel
+    // known ones.
     name: served.name,
     capabilities: {
       ...(model.capabilities ?? {
@@ -300,7 +316,7 @@ function proxyModel(editor, baseUrl, served) {
     settings: {
       ...settings,
       ...defaultSettings,
-      baseURL: `${baseUrl}${PATHS[pkg]}`,
+      baseURL: `${gateway.baseUrl}${PATHS[pkg]}`,
     },
   };
 }
@@ -349,132 +365,157 @@ function addSearch(body, tool) {
   return true;
 }
 
+async function setupGateway(ctx, options, gatewayIds, gateway) {
+  const state = {
+    credentials: undefined,
+    served: [],
+    owners: new Map(),
+    packages: new Map(),
+  };
+  const routes = gateway.searchRoutes && new Set(gateway.searchRoutes);
+
+  const refresh = async () => {
+    const credentials = await readCredentials(options, gateway);
+    const [served, owners] = await Promise.all([
+      fetchServed(gateway, credentials),
+      routes ? fetchOwners(gateway, credentials) : new Map(),
+    ]);
+    const changed =
+      JSON.stringify(served) !== JSON.stringify(state.served) ||
+      JSON.stringify(credentials) !== JSON.stringify(state.credentials);
+    state.credentials = credentials;
+    state.served = served;
+    // Owners only gate search per request, so they need no provider reload.
+    state.owners = owners;
+    return changed;
+  };
+
+  // Keep the last successful list through transient outages.
+  await refresh().catch((error) => console.error(error));
+
+  await ctx.provider.transform((editor) => {
+    if (!state.credentials) return;
+    editor.remove(gateway.id);
+    const models = state.served.map((served) =>
+      proxyModel(editor, gatewayIds, gateway, served),
+    );
+    state.packages = new Map(models.map((model) => [model.id, model.package]));
+    editor.add({
+      info: {
+        id: gateway.id,
+        name: gateway.name,
+        activation: "enabled",
+        package: FALLBACK,
+        settings: {
+          baseURL: `${gateway.baseUrl}/v1`,
+          apiKey: state.credentials.apiKey,
+          // OpenCode selects session transport from the provider, not the
+          // model. Only WebSocket-capable Responses adapters consume it;
+          // Messages and Chat Completions adapters keep using HTTP.
+          ...(gateway.websockets ? { transport: "websocket" } : {}),
+        },
+        headers: state.credentials.headers,
+      },
+      models,
+    });
+  });
+
+  const hosted = (model) =>
+    routes
+      ? routes.has(state.owners.get(model.id))
+      : SEARCH_PACKAGES.has(state.packages.get(model.id));
+  // A model with hosted search keeps only that one.
+  for (const name of ["context", "compaction"]) {
+    await ctx.session.hook(
+      name,
+      (event) => {
+        if (hosted(event.model)) delete event.tools.websearch;
+      },
+      { providerID: gateway.id },
+    );
+  }
+  // Compaction keeps the agent turn's tools to reuse its prompt cache;
+  // titles carry none.
+  const searches = (event) =>
+    (event.kind === "primary" || event.kind === "compaction") &&
+    hosted(event.model);
+  await ctx.session.hook(
+    "experimental.ws.send",
+    (event) => {
+      if (!searches(event)) return;
+      const frame = JSON.parse(event.frame);
+      if (
+        frame.type === "response.create" &&
+        addSearch(frame, RESPONSES_SEARCH)
+      )
+        event.frame = JSON.stringify(frame);
+    },
+    { providerID: gateway.id },
+  );
+  await ctx.session.hook(
+    "http.request",
+    async (event) => {
+      if (!searches(event) || event.request.method !== "POST") return;
+      const path = new URL(event.request.url).pathname;
+      const tool = path.endsWith("/responses")
+        ? RESPONSES_SEARCH
+        : path.endsWith("/messages")
+          ? MESSAGES_SEARCH
+          : undefined;
+      if (!tool) return;
+      const body = await event.request.clone().json();
+      if (!addSearch(body, tool)) return;
+      const headers = new Headers(event.request.headers);
+      headers.delete("content-length");
+      event.request = new Request(event.request, {
+        headers,
+        body: JSON.stringify(body),
+      });
+    },
+    { providerID: gateway.id },
+  );
+
+  const timer = setInterval(() => {
+    refresh()
+      .then((changed) => changed && ctx.provider.reload())
+      .catch((error) => console.error(error));
+  }, REFRESH_MS);
+  return { state, stop: () => clearInterval(timer) };
+}
+
 export default {
-  id: "dotfiles.cliproxyapi",
+  id: "dotfiles.proxy",
   setup: async (ctx) => {
     const options = ctx.options;
-    const baseUrl = options.baseUrl.replace(/\/+$/, "");
-    const state = { credentials: undefined, served: [], owners: new Map() };
-
-    const refresh = async () => {
-      const credentials = await readCredentials(options);
-      const [served, owners] = await Promise.all([
-        fetchServed(baseUrl, credentials, options.codexVersion),
-        fetchOwners(baseUrl, credentials),
-      ]);
-      const changed =
-        JSON.stringify(served) !== JSON.stringify(state.served) ||
-        JSON.stringify(credentials) !== JSON.stringify(state.credentials);
-      state.credentials = credentials;
-      state.served = served;
-      // Owners only gate search per request, so they need no provider reload.
-      state.owners = owners;
-      return changed;
-    };
-
-    // Keep the last successful list through transient outages.
-    await refresh().catch((error) => console.error(error));
-
-    await ctx.provider.transform((editor) => {
-      if (!state.credentials) return;
-      editor.remove(PROVIDER);
-      editor.add({
-        info: {
-          id: PROVIDER,
-          name: "CLIProxyAPI",
-          activation: "enabled",
-          package: FALLBACK,
-          settings: {
-            baseURL: `${baseUrl}/v1`,
-            apiKey: state.credentials.apiKey,
-            // OpenCode selects session transport from the provider, not the
-            // model. Only WebSocket-capable Responses adapters consume it;
-            // Messages and Chat Completions adapters keep using HTTP.
-            transport: "websocket",
-          },
-          headers: state.credentials.headers,
-        },
-        models: state.served.map((served) =>
-          proxyModel(editor, baseUrl, served),
-        ),
-      });
-    });
+    const gateways = options.gateways.map((gateway) => ({
+      ...gateway,
+      baseUrl: gateway.baseUrl.replace(/\/+$/, ""),
+    }));
+    const gatewayIds = new Set(gateways.map((gateway) => gateway.id));
+    const running = await Promise.all(
+      gateways.map((gateway) =>
+        setupGateway(ctx, options, gatewayIds, gateway),
+      ),
+    );
 
     await ctx.websearch.transform((editor) => {
       editor.add({
         id: "searxng",
         name: "SearXNG",
         execute: async ({ query }, { signal }) => {
-          if (!state.credentials) {
-            throw new Error("cliproxyapi: Cloudflare Access token not loaded");
+          // Every gateway presents the same service token.
+          const headers = running.find(({ state }) => state.credentials)?.state
+            .credentials.headers;
+          if (!headers) {
+            throw new Error(
+              "dotfiles.proxy: Cloudflare Access token not loaded",
+            );
           }
-          return searxng(
-            options.searchUrl,
-            state.credentials.headers,
-            query,
-            signal,
-          );
+          return searxng(options.searchUrl, headers, query, signal);
         },
       });
     });
 
-    const hosted = (model) => SEARCH_ROUTES.has(state.owners.get(model.id));
-    // A model with hosted search keeps only that one.
-    for (const name of ["context", "compaction"]) {
-      await ctx.session.hook(
-        name,
-        (event) => {
-          if (hosted(event.model)) delete event.tools.websearch;
-        },
-        { providerID: PROVIDER },
-      );
-    }
-    // Compaction keeps the agent turn's tools to reuse its prompt cache;
-    // titles carry none.
-    const searches = (event) =>
-      (event.kind === "primary" || event.kind === "compaction") &&
-      hosted(event.model);
-    await ctx.session.hook(
-      "experimental.ws.send",
-      (event) => {
-        if (!searches(event)) return;
-        const frame = JSON.parse(event.frame);
-        if (
-          frame.type === "response.create" &&
-          addSearch(frame, RESPONSES_SEARCH)
-        )
-          event.frame = JSON.stringify(frame);
-      },
-      { providerID: PROVIDER },
-    );
-    await ctx.session.hook(
-      "http.request",
-      async (event) => {
-        if (!searches(event) || event.request.method !== "POST") return;
-        const path = new URL(event.request.url).pathname;
-        const tool = path.endsWith("/responses")
-          ? RESPONSES_SEARCH
-          : path.endsWith("/messages")
-            ? MESSAGES_SEARCH
-            : undefined;
-        if (!tool) return;
-        const body = await event.request.clone().json();
-        if (!addSearch(body, tool)) return;
-        const headers = new Headers(event.request.headers);
-        headers.delete("content-length");
-        event.request = new Request(event.request, {
-          headers,
-          body: JSON.stringify(body),
-        });
-      },
-      { providerID: PROVIDER },
-    );
-
-    const timer = setInterval(() => {
-      refresh()
-        .then((changed) => changed && ctx.provider.reload())
-        .catch((error) => console.error(error));
-    }, REFRESH_MS);
-    return () => clearInterval(timer);
+    return () => running.forEach(({ stop }) => stop());
   },
 };

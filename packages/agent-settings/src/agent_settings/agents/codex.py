@@ -20,7 +20,7 @@ class CodexAgent(Agent):
 
     @override
     def maintained_settings(self, _selection: Entry | None = None) -> Table:
-        # Keep the live CLIProxyAPI provider definition available for saved selections.
+        # Keep every gateway's provider definition available for saved selections.
         selection = _selection
         desired = super().maintained_settings(selection)
         providers = child_table(desired, "model_providers")
