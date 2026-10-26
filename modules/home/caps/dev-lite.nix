@@ -1,7 +1,7 @@
 # dev-lite home cap preset: terminal UX, git, ssh, AI agents, and essential
 # CLI tools. Enables only the lightweight tooling bundles — language
 # toolchains and other heavy bundles stay in the "dev" cap.
-{ config, lib, ... }:
+{ lib, ... }:
 {
   dotfiles = {
     agents = {
@@ -36,9 +36,6 @@
       kube.enable = lib.mkDefault true;
     };
   };
-
-  # agenix identity (from the old secrets.nix)
-  age.identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
 
   services.gpg-agent = {
     enable = lib.mkDefault true;

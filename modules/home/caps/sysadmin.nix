@@ -1,5 +1,5 @@
 # sysadmin home cap preset: server inspection, network diagnostics, and agents.
-{ config, lib, ... }:
+{ lib, ... }:
 {
   dotfiles = {
     tooling = {
@@ -14,6 +14,4 @@
   };
 
   programs.nix-index-database.comma.enable = lib.mkDefault true;
-
-  age.identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
 }

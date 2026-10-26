@@ -34,9 +34,6 @@ in
     })
 
     (lib.mkIf cfg.beszel.enable {
-      # The universal token is an agenix secret (secrets/beszel-token.age,
-      # encrypted to the user age key, so use that key as the identity).
-      age.identityPaths = [ "/Users/${config.dotfiles.host.username}/.config/agenix/key.txt" ];
       age.secrets.beszel-token.file = ../../../secrets/beszel-token.age;
 
       # nix-darwin has no beszel module; run the agent as a root launchd daemon.

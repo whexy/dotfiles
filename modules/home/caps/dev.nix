@@ -1,12 +1,7 @@
 # dev home cap preset: full development environment.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with plain assignments.
-{
-  config,
-  lib,
-  pkgs,
-  ...
-}:
+{ lib, pkgs, ... }:
 {
   home.packages = [ pkgs.sd ];
 
@@ -66,9 +61,6 @@
       kube.enable = lib.mkDefault true;
     };
   };
-
-  # agenix identity (from the old secrets.nix)
-  age.identityPaths = [ "${config.home.homeDirectory}/.config/agenix/key.txt" ];
 
   services.gpg-agent = {
     enable = lib.mkDefault true;
