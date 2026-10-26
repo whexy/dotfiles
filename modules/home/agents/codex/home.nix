@@ -17,12 +17,7 @@ let
       "OPENAI_BASE_URL"
       "CODEX_API_KEY"
     ];
-    entries = import ./models.nix {
-      codexVersion = pkgs.llm-agents.codex.version;
-      inherit
-        proxy
-        ;
-    };
+    entries = import ./models.nix { inherit proxy; };
   };
 in
 {

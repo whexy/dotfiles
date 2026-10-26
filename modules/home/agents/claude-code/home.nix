@@ -31,12 +31,7 @@ let
       "CLAUDE_CODE_USE_VERTEX"
       "CLAUDE_CODE_USE_FOUNDRY"
     ];
-    entries = import ./models.nix {
-      inherit
-        pkgs
-        proxy
-        ;
-    };
+    entries = import ./models.nix { inherit proxy; };
   };
 in
 {

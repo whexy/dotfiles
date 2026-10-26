@@ -14,6 +14,13 @@ args@{
 }:
 let
   cfg = config.dotfiles.agents;
+  # Every agent is configured for both gateways; these pick the defaults.
+  gatewayType = lib.types.enum [
+    "cliproxyapi"
+    "magpie"
+  ];
+  # magpie serves the Claude subscription as its `claude` provider.
+  claudeModel = gateway: model: if gateway == "magpie" then "claude/${model}" else model;
 in
 {
   options.dotfiles.agents = {
@@ -147,24 +154,26 @@ in
     };
 
     defaultProvider = lib.mkOption {
-      type = lib.types.enum [ "cliproxyapi" ];
+      type = gatewayType;
       default = "cliproxyapi";
-      description = "Provider serving the default model.";
+      description = "Gateway serving the default model.";
     };
     defaultModel = lib.mkOption {
       type = lib.types.str;
-      default = "claude-opus-5-5";
+      default = claudeModel cfg.defaultProvider "claude-opus-5-5";
+      defaultText = lib.literalExpression ''if defaultProvider == "magpie" then "claude/claude-opus-5-5" else "claude-opus-5-5"'';
       description = "Model agents use unless told otherwise.";
     };
 
     defaultCheapProvider = lib.mkOption {
-      type = lib.types.enum [ "cliproxyapi" ];
+      type = gatewayType;
       default = "cliproxyapi";
-      description = "Provider serving the cheap model.";
+      description = "Gateway serving the cheap model.";
     };
     defaultCheapModel = lib.mkOption {
       type = lib.types.str;
-      default = "claude-sonnet-5-5";
+      default = claudeModel cfg.defaultCheapProvider "claude-sonnet-5-5";
+      defaultText = lib.literalExpression ''if defaultCheapProvider == "magpie" then "claude/claude-sonnet-5-5" else "claude-sonnet-5-5"'';
       description = "Model for bulk or low-stakes work.";
     };
   };
@@ -185,7 +194,10 @@ in
         inherit pkgs;
         agentSettings = perSystem.self.agent-settings;
       };
-      proxy = import ./proxy.nix { inherit config; };
+      proxy = import ./proxy.nix {
+        inherit config;
+        codexVersion = pkgs.llm-agents.codex.version;
+      };
       mkTunnel = import ./tunnel.nix { inherit pkgs config lib; };
       rea = import ./rea.nix {
         inherit pkgs lib perSystem;
@@ -415,7 +427,9 @@ in
       # generates, so no agent needs a hardcoded path.
       age.secrets = {
         ai-proxy-api-key.file = ../../../secrets/ai-proxy-api-key.age;
-        # The proxy is reachable from the public internet through
+        # A magpie gateway key, made under Gateway → Gateway keys in its web UI.
+        magpie-api-key.file = ../../../secrets/magpie-api-key.age;
+        # The gateways are reachable from the public internet through
         # Cloudflare Access; every agent must present the service token.
         cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
         cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;

@@ -1,10 +1,7 @@
 # claude-code provider/model entries for the fzf picker wrapper.
 # claude reads ANTHROPIC_MODEL and authenticates with ANTHROPIC_API_KEY.
 # Compatible providers additionally require ANTHROPIC_BASE_URL.
-{
-  pkgs,
-  proxy,
-}:
+{ proxy }:
 let
   roles = [
     {
@@ -28,46 +25,55 @@ let
       export = "ANTHROPIC_DEFAULT_HAIKU_MODEL";
     }
   ];
-  # CLIProxyAPI exposes an Anthropic-compatible endpoint
-  # serving its whole catalog; Claude Code appends /v1/messages to the
-  # base URL. It accepts the key in the x-api-key header.
+  # Both gateways expose an Anthropic-compatible endpoint serving their
+  # whole catalog; Claude Code appends /v1/messages to the base URL. They
+  # accept the key in the x-api-key header.
   #
-  # The endpoint sits behind Cloudflare Access, whose service token goes
+  # The endpoints sit behind Cloudflare Access, whose service token goes
   # in ANTHROPIC_CUSTOM_HEADERS: `Name: Value` pairs, newline-separated.
-  aiProxyDefault = {
-    label = "cliproxyapi (default models)";
-    env = {
-      ANTHROPIC_BASE_URL = proxy.baseUrl;
+  gatewayEntries =
+    id:
+    let
+      gateway = proxy.gateways.${id};
+    in
+    rec {
+      default = {
+        label = "${id} (default models)";
+        env = {
+          ANTHROPIC_BASE_URL = gateway.baseUrl;
+        };
+        secrets = proxy.cfAccessSecrets // {
+          ANTHROPIC_API_KEY = gateway.apiKeyPath;
+        };
+        secretHeaders = proxy.cfAccessHeaderEnv;
+      };
+      # One entry per model the gateway serves when the picker opens. The
+      # picked model fills every role, so Claude Code never falls back to a
+      # built-in role default the gateway may not serve.
+      models = default // {
+        label = id;
+        env = default.env // {
+          CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
+        };
+        discover = {
+          url = gateway.catalogUrl;
+          keyEnv = "ANTHROPIC_API_KEY";
+          modelEnv = [
+            "ANTHROPIC_MODEL"
+            "CLAUDE_CODE_SUBAGENT_MODEL"
+          ]
+          ++ map (role: role.export) roles;
+        };
+      };
     };
-    secrets = proxy.cfAccessSecrets // {
-      ANTHROPIC_API_KEY = proxy.apiKeyPath;
-    };
-    secretHeaders = proxy.cfAccessHeaderEnv;
-  };
-  # One entry per model the proxy serves when the picker opens. The picked
-  # model fills every role, so Claude Code never falls back to a built-in
-  # role default the proxy may not serve.
-  aiProxyModels = aiProxyDefault // {
-    label = "cliproxyapi";
-    env = aiProxyDefault.env // {
-      CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
-    };
-    discover = {
-      # The proxy's Codex catalog carries display names the /v1/models
-      # list omits.
-      url = "${proxy.baseUrl}/v1/models?client_version=${pkgs.llm-agents.codex.version}";
-      keyEnv = "ANTHROPIC_API_KEY";
-      modelEnv = [
-        "ANTHROPIC_MODEL"
-        "CLAUDE_CODE_SUBAGENT_MODEL"
-      ]
-      ++ map (role: role.export) roles;
-    };
-  };
+  cliproxyapi = gatewayEntries "cliproxyapi";
+  magpie = gatewayEntries "magpie";
 in
 [
-  aiProxyDefault
-  aiProxyModels
+  cliproxyapi.default
+  cliproxyapi.models
+  magpie.default
+  magpie.models
   # Fusion mode: the main pick fixes the provider (endpoint + key), and
   # each remaining role is then picked from that provider's models only.
   # Roles override the ANTHROPIC_DEFAULT_*_MODEL vars; the main model
@@ -76,10 +82,13 @@ in
     label = "fusion (one model per role)";
     fusion = {
       inherit roles;
-      candidates = [ aiProxyModels ];
+      candidates = [
+        cliproxyapi.models
+        magpie.models
+      ];
     };
   }
-  # Native claude.ai OAuth login: clears every proxy override. It stays
-  # after the proxy default, which removed selections migrate to.
+  # Native claude.ai OAuth login: clears every gateway override. It stays
+  # after the CLIProxyAPI default, which removed selections migrate to.
   { label = "default (claude.ai login)"; }
 ]

@@ -1,4 +1,4 @@
-# Stamp the proxy endpoint and agenix secret paths into the extension.
+# Stamp the gateway endpoints and agenix secret paths into the extension.
 #
 # The paths are only known to Home Manager, and the extension must not
 # guess them. Assigning through `globalThis` satisfies the `declare const`
@@ -10,23 +10,28 @@
   defaults,
 }:
 let
+  inherit (pkgs) lib;
   config = {
-    inherit (proxy)
-      baseUrl
-      apiKeyPath
-      cfAccessIdPath
-      cfAccessSecretPath
-      ;
+    inherit (proxy) cfAccessIdPath cfAccessSecretPath;
+    gateways = lib.mapAttrsToList (id: gateway: {
+      inherit id;
+      inherit (gateway)
+        name
+        baseUrl
+        apiKeyPath
+        catalogUrl
+        qualifiedIds
+        ;
+      # pi's default model and web-search's summary model, on the gateway
+      # serving each.
+      fallbackModels = lib.unique (
+        lib.optional (defaults.defaultProvider == id) defaults.defaultModel
+        ++ lib.optional (defaults.defaultCheapProvider == id) defaults.defaultCheapModel
+      );
+    }) proxy.gateways;
     # /bin/cat does not exist on NixOS, so the reader cannot rely on an
     # inherited PATH.
     cat = "${pkgs.coreutils}/bin/cat";
-    # The extension reads the proxy's Codex model catalog.
-    codexVersion = pkgs.llm-agents.codex.version;
-    # pi's default model and web-search's summary model.
-    fallbackModels = pkgs.lib.unique [
-      defaults.defaultModel
-      defaults.defaultCheapModel
-    ];
   };
 in
 pkgs.runCommand "pi-ai-proxy.ts"

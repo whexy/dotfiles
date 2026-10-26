@@ -42,7 +42,7 @@ in
     ".pi/agent/extensions/token-speed.ts".source = ./extensions/token-speed.ts;
   }
   // {
-    # Discover the CLIProxyAPI catalog and clone matching model metadata from pi.
+    # Discover each gateway's catalog and clone matching model metadata from pi.
     ".pi/agent/extensions/ai-proxy.ts".source = aiProxyExtension;
   };
 }
