@@ -50,9 +50,11 @@ tarball=$(sed -n 's/.*"storePath": *"\([^"]*\)".*/\1/p' <<<"$prefetch")
 # T3 downloads a pinned Chrome for Testing headless shell at runtime, which
 # cannot load its libraries on NixOS. The server source embedded in the
 # executable carries the pin, so read it from there to package the same build.
+# Builds since 0.1.3-nightly.20261026 open each bundled module with
+# `// <path>` instead of `//#region <path>`.
 browser_pins=$(
   tar -xzOf "$tarball" "t3-${version}-linux-x64/t3" |
-    LC_ALL=C sed -n '\#^//\#region src/preview/PreviewBrowser.ts$#,/chromePlatform = /p' |
+    LC_ALL=C sed -En '\%^//(#region)? src/preview/PreviewBrowser\.ts$%,/chromePlatform = /p' |
     LC_ALL=C awk '
       /VERSION = "/ { match($0, /"[^"]+"/); print "version", substr($0, RSTART + 1, RLENGTH - 2) }
       /^\t\t"?[a-z0-9-]+"?: \{/ { p = $1; gsub(/[":]/, "", p) }
