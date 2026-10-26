@@ -34,7 +34,7 @@ there are no separate `modules/nixos` or `modules/darwin` directories.
 Home features represent software, grouped when related. Examples:
 
 - `terminal` groups Ghostty, tmux, and zellij
-- `editor` groups Neovim and Neovide
+- `editor` groups Neovim, Neovide, and VS Code
 - `vcs` groups git and delta
 - `wm` groups niri and aerospace
 - `keyboard` groups fcitx5 and Karabiner

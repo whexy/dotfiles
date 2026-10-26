@@ -1,4 +1,4 @@
-# Editor group: Neovim, Neovide, and per-language editing support. Each
+# Editor group: Neovim, Neovide, VS Code, and per-language editing support. Each
 # `editor.<language>.enable` installs the language toolchain together with
 # its language servers and formatters.
 {
@@ -16,6 +16,7 @@
       nightly = lib.mkEnableOption "the nightly Neovim build from neovim-nightly-overlay";
     };
     neovide.enable = lib.mkEnableOption "Neovide (Neovim GUI)";
+    vscode.enable = lib.mkEnableOption "VS Code with Neovim as its editor";
 
     c.enable = lib.mkEnableOption "C/C++ editing support";
     config.enable = lib.mkEnableOption "config file (YAML/TOML/JSON) editing support";
@@ -37,6 +38,7 @@
     ./neovim.nix
     ./neovim-dev.nix
     ./neovide.nix
+    ./vscode.nix
     ./c.nix
     ./config.nix
     ./go.nix
