@@ -10,7 +10,10 @@
   ...
 }:
 let
-  platform = if pkgs.stdenv.hostPlatform.isDarwin then "darwin" else "linux";
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
+  platform = if isDarwin then "darwin" else "linux";
+  # Ghostty's and Neovide's paste key.
+  pasteKey = if isDarwin then "cmd+v" else "ctrl+shift+v";
 
   # The Nixvim profile's editing behavior and editing plugins, without its LSP,
   # completion, and UI plugins, which duplicate VS Code. The wrapper loads the
@@ -123,6 +126,24 @@ in
           ms-vscode-remote.remote-ssh
           ms-vscode-remote.remote-ssh-edit
           ms-vscode.remote-explorer
+        ];
+        # The paste key puts the system clipboard after the cursor, over the
+        # selection, or at the cursor in Insert mode, as in Ghostty and
+        # Neovide. VS Code's own paste would land before the cursor in Normal
+        # mode, and on Linux it is Ctrl+V, which vscode-neovim hands to Neovim
+        # as visual block.
+        keybindings = [
+          {
+            key = pasteKey;
+            command = "vscode-neovim.send";
+            args = ''"+p'';
+            when = "editorTextFocus && neovim.init && neovim.mode =~ /^(normal|visual)$/";
+          }
+          {
+            key = pasteKey;
+            command = "editor.action.clipboardPasteAction";
+            when = "editorTextFocus && neovim.mode == insert";
+          }
         ];
         userSettings = {
           # Copilot ships built in; these hide its chat, its sign-in prompts,
