@@ -10,6 +10,7 @@ pkgs.writers.writePython3Bin "motd"
   ''
     """Render a compact, responsive system dashboard for interactive shells."""
 
+    import argparse
     import fcntl
     import getpass
     import json
@@ -251,11 +252,8 @@ pkgs.writers.writePython3Bin "motd"
             return "unknown", None
 
 
-    def relative_age(timestamp: float) -> str:
-        seconds = max(0, int(datetime.now().timestamp() - timestamp))
-        if seconds < 90:
-            return "just now"
-
+    def span(seconds: float) -> str:
+        seconds = max(60, int(seconds))
         scale = (
             ("minute", 60, 3600),
             ("hour", 3600, 86400),
@@ -266,29 +264,98 @@ pkgs.writers.writePython3Bin "motd"
         )
         for unit, size, limit in scale:
             if limit is None or seconds < limit:
-                count = max(1, seconds // size)
-                return "%d %s%s ago" % (count, unit, "" if count == 1 else "s")
+                count = seconds // size
+                return "%d %s%s" % (count, unit, "" if count == 1 else "s")
 
 
-    def get_activation():
+    def relative_age(timestamp: float) -> str:
+        seconds = datetime.now().timestamp() - timestamp
+        return "just now" if seconds < 90 else span(seconds) + " ago"
+
+
+    def activated_at(profile: str):
         # The profile symlink is replaced on every switch, so its own mtime is the
         # activation time; the generation it points at may be much older on rollback.
         # Home Manager keeps its profile in the first of these two directories
         # that exists, so a home without the XDG one uses the global per-user one.
-        state_home = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
-        for label, path in (
-            ("system", "/nix/var/nix/profiles/system"),
-            ("system", "/run/current-system"),
-            ("home-manager", os.path.join(state_home, "nix/profiles/home-manager")),
-            ("home-manager", "/nix/var/nix/profiles/per-user/%s/home-manager" % getpass.getuser()),
-        ):
+        if profile == "system":
+            paths = ("/nix/var/nix/profiles/system", "/run/current-system")
+        else:
+            state_home = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
+            paths = (
+                os.path.join(state_home, "nix/profiles/home-manager"),
+                "/nix/var/nix/profiles/per-user/%s/home-manager" % getpass.getuser(),
+            )
+        for path in paths:
             if not os.path.islink(path):
                 continue
             try:
-                return "%s · %s" % (relative_age(os.lstat(path).st_mtime), label)
+                return os.lstat(path).st_mtime
             except Exception:
                 pass
-        return "unavailable"
+        return None
+
+
+    def get_activation(profile: str) -> str:
+        activated = activated_at(profile)
+        return "unavailable" if activated is None else "%s · %s" % (relative_age(activated), profile)
+
+
+    def timestamp(value):
+        return datetime.fromisoformat(value).timestamp() if value else None
+
+
+    def update_row(state: str, color: str, detail: str = "") -> str:
+        return paint(state, color) + (paint(" " + detail, DIM) if detail else "")
+
+
+    def describe_update(status, activated):
+        now = datetime.now().timestamp()
+        phase = status.get("phase")
+        since = timestamp(status.get("phaseSince"))
+        next_check = timestamp(status.get("nextCheck"))
+        switched = timestamp(status.get("lastSuccessAt"))
+        tip = (status.get("tipSha") or "")[:7]
+
+        # The daemon is overdue to rewrite its status when it has stopped, or
+        # when the host has just woken and it has yet to catch up.
+        if next_check is not None and now > next_check + 300:
+            return update_row("last checked " + relative_age(timestamp(status["lastCheck"])), YELLOW), 1
+        if phase == "up-to-date":
+            # A switch the daemon did not run replaces the profile after the
+            # daemon's last success; it stands until the next commit lands.
+            if activated is not None and switched is not None and activated > switched:
+                return update_row("manual switch", BLUE, relative_age(activated)), 0
+            # The tip has not moved since the daemon applied it, so the host has
+            # been current ever since.
+            return update_row("up to date", GREEN, "for " + span(now - switched) if switched else ""), 0
+        if phase == "awaiting-ci":
+            return update_row("waiting on CI", BLUE, "for " + span(now - since)), 0
+        if phase == "switching":
+            return update_row("switching", BLUE, "for " + span(now - since)), 0
+        if phase == "retrying":
+            return update_row("switch failed,", YELLOW, "retrying in " + span(next_check - now)), 1
+        if phase == "check-failed":
+            return update_row("check failing", YELLOW, "for " + span(now - since)), 1
+        if phase == "ci-failed":
+            return update_row("CI failed", YELLOW, "on " + tip), 1
+        if phase == "ci-timed-out":
+            return update_row("CI timed out", YELLOW, "on " + tip), 1
+        if phase == "switch-failed":
+            return update_row("switch failed", RED, "on " + tip), 2
+        return "unavailable", 0
+
+
+    def get_updates(status_path: str, profile: str):
+        """Return the updater's state and how urgent it is (0 to 2)."""
+        try:
+            with open(status_path, encoding="utf-8") as file:
+                return describe_update(json.load(file), activated_at(profile))
+        except FileNotFoundError:
+            # The daemon first writes its status once its first check completes.
+            return update_row("never checked", YELLOW), 1
+        except Exception:
+            return "unavailable", 0
 
 
     def nix_store_cache_fresh(cache_path: str) -> bool:
@@ -499,6 +566,20 @@ pkgs.writers.writePython3Bin "motd"
 
 
     def main():
+        parser = argparse.ArgumentParser(description=__doc__)
+        parser.add_argument(
+            "--profile",
+            choices=("system", "home-manager"),
+            help="profile this host's switches replace (default: system, if there is one)",
+        )
+        parser.add_argument(
+            "--updater-status",
+            metavar="FILE",
+            help="status.json of the dotfiles-upgraded daemon; shows its state instead of the last activation",
+        )
+        args = parser.parse_args()
+        profile = args.profile or ("system" if activated_at("system") is not None else "home-manager")
+
         # Probes can each wait out a subprocess timeout; run them together so
         # the slowest one, not their sum, delays the shell.
         uptime = background(get_uptime)
@@ -512,6 +593,11 @@ pkgs.writers.writePython3Bin "motd"
         load, load_pct = get_load()
         memory, memory_pct = memory_usage()
         root_disk, root_pct = get_root_disk()
+        if args.updater_status:
+            update_label = "Updates"
+            update, update_level = get_updates(args.updater_status, profile)
+        else:
+            update_label, update, update_level = "Activated", get_activation(profile), 0
 
         try:
             terminal_width = int(os.environ.get("MOTD_COLUMNS", ""))
@@ -532,7 +618,7 @@ pkgs.writers.writePython3Bin "motd"
             ("Memory", memory),
             ("Root", root_disk),
             ("Nix store", get_nix_store()),
-            ("Activated", get_activation()),
+            (update_label, update),
         ]
         connectivity = [
             ("Local IPv4", get_ipv4()),
@@ -568,16 +654,20 @@ pkgs.writers.writePython3Bin "motd"
 
         pressures = [value for value in (load_pct, memory_pct, root_pct) if value is not None]
         peak = max(pressures, default=0.0)
+        concerns = [(0, "systems are operating normally")]
         if peak >= 90:
-            status = paint("● ATTENTION", RED, BOLD)
-            message = paint("resource pressure is high", DIM)
+            concerns.append((2, "resource pressure is high"))
         elif peak >= 75:
-            status = paint("● WATCH", YELLOW, BOLD)
-            message = paint("resource pressure is elevated", DIM)
-        else:
-            status = paint("● NOMINAL", GREEN, BOLD)
-            message = paint("systems are operating normally", DIM)
-        print("\n  %s  %s\n" % (status, message))
+            concerns.append((1, "resource pressure is elevated"))
+        if update_level:
+            concerns.append((update_level, "updates are failing" if update_level == 2 else "updates are delayed"))
+        level, message = max(concerns, key=lambda concern: concern[0])
+        status = (
+            paint("● NOMINAL", GREEN, BOLD),
+            paint("● WATCH", YELLOW, BOLD),
+            paint("● ATTENTION", RED, BOLD),
+        )[level]
+        print("\n  %s  %s\n" % (status, paint(message, DIM)))
 
 
     if __name__ == "__main__":

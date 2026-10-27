@@ -14,7 +14,7 @@
 # On headless servers the user manager stops when its user logs out, which
 # takes this daemon down with it and silently strands the host on its current
 # generation, so activation turns on lingering for the user. Check
-# convergence in "$XDG_STATE_HOME/dotfiles-upgraded/status.json".
+# convergence in "<stateDir>/status.json".
 {
   config,
   flake,
@@ -78,6 +78,14 @@ in
         and raises the floor when GitHub asks it to.
       '';
       example = "30m";
+    };
+
+    stateDir = lib.mkOption {
+      type = lib.types.str;
+      default = "${config.xdg.stateHome}/dotfiles-upgraded";
+      defaultText = lib.literalExpression ''"''${config.xdg.stateHome}/dotfiles-upgraded"'';
+      readOnly = true;
+      description = "Where the daemon keeps its state and publishes its health signal, status.json.";
     };
 
     maxAttempts = lib.mkOption {
@@ -181,7 +189,7 @@ in
           "--exit-after-switch"
           "--configuration=${configuration}"
           "--flake=${upstreamRef}"
-          "--state-dir=${config.xdg.stateHome}/dotfiles-upgraded"
+          "--state-dir=${cfg.stateDir}"
           "--poll-interval=${cfg.pollInterval}"
           "--max-attempts=${toString cfg.maxAttempts}"
           "--require-ci-pass=${lib.boolToString cfg.requireCiPass}"
