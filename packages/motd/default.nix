@@ -152,7 +152,7 @@ pkgs.writers.writePython3Bin "motd"
             version = platform.mac_ver()[0]
             os_name = "macOS " + version if version else "macOS"
 
-        kernel = "%s %s · %s" % (system, platform.release(), platform.machine())
+        kernel = "%s %s %s" % (system, platform.release(), platform.machine())
         return socket.gethostname().split(".")[0], os_name, kernel
 
 
@@ -298,7 +298,7 @@ pkgs.writers.writePython3Bin "motd"
 
     def get_activation(profile: str) -> str:
         activated = activated_at(profile)
-        return "unavailable" if activated is None else "%s · %s" % (relative_age(activated), profile)
+        return "unavailable" if activated is None else "%s %s" % (profile, relative_age(activated))
 
 
     def timestamp(value):
@@ -415,7 +415,7 @@ pkgs.writers.writePython3Bin "motd"
                     refresh_nix_store(cache_path)
                 with open(cache_path, encoding="utf-8") as file:
                     size = file.read().strip()
-                return "%s · shared with /" % size if size else "shared with /"
+                return "%s, shared with /" % size if size else "shared with /"
 
             refresh_nix_store(cache_path)
             return "shared with /"
@@ -484,7 +484,7 @@ pkgs.writers.writePython3Bin "motd"
             if len(parts) < 2:
                 continue
             origin = parts[-1].strip("()") if len(parts) >= 5 and parts[-1].startswith("(") else ""
-            sessions.append("%s@%s%s" % (parts[0], parts[1], " · " + origin if origin else ""))
+            sessions.append("%s@%s%s" % (parts[0], parts[1], " (%s)" % origin if origin else ""))
         return ", ".join(sessions) if sessions else "none"
 
 
@@ -501,7 +501,7 @@ pkgs.writers.writePython3Bin "motd"
             name, windows, state = parts
             state_color = GREEN if state == "attached" else GRAY
             sessions.append("%s %sw %s" % (paint(name, BOLD), windows, paint(state, state_color)))
-        return " · ".join(sessions) if sessions else paint("inactive", DIM)
+        return ", ".join(sessions) if sessions else paint("inactive", DIM)
 
 
     def get_zellij_info():
@@ -519,7 +519,7 @@ pkgs.writers.writePython3Bin "motd"
             else:
                 state = paint("detached", GRAY)
             sessions.append("%s %s" % (paint(name, BOLD), state))
-        return " · ".join(sessions) if sessions else paint("inactive", DIM)
+        return ", ".join(sessions) if sessions else paint("inactive", DIM)
 
 
     def card(title: str, rows, width: int):
@@ -541,7 +541,7 @@ pkgs.writers.writePython3Bin "motd"
         inner_width = width - 4
         title = paint("●", GREEN) + " " + paint(hostname.upper(), BOLD, CYAN)
         subtitle = paint(os_name, WHITE) + paint("  //  " + kernel, DIM)
-        timestamp = datetime.now().astimezone().strftime("%A, %d %B · %H:%M %Z")
+        timestamp = datetime.now().astimezone().strftime("%A, %d %B %H:%M %Z")
         eyebrow = paint(" NIX // SYSTEM STATUS ", BOLD, MAGENTA)
         top = paint("╭", GRAY) + eyebrow + paint("─" * max(0, width - 2 - visible_len(eyebrow)), GRAY) + paint("╮", GRAY)
         return [
