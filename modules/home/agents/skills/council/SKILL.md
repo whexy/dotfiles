@@ -15,8 +15,9 @@ through that provider's own harness:
 - GPT Sol, through Codex
 - Muse Wonder Full, through OpenCode
 
-Codex and OpenCode also list other vendors' models; take each member from the
-harness named for it.
+Codex and OpenCode also list other vendors' models. Take each member from its
+family's harness, including members the user names: Claude Code for Claude,
+Codex for GPT, OpenCode for every other model.
 
 In T3 Code, use `orchestrator_capabilities` to resolve each member to its
 provider instance and current model ID (pass `search` when one is not listed),
