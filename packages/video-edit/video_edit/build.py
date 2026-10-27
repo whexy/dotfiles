@@ -4,7 +4,7 @@ import hashlib
 import shutil
 
 from . import resolve_scripts, silence, timeline
-from .common import UsageError, exec_line, write_json
+from .common import UsageError, exec_line, resolve_path, write_json
 from .context import Edit
 from .media import frames_of
 from .slots import all_definitions, passing_output
@@ -104,16 +104,16 @@ def run_build(root, section=None, version=None, no_camera=False):
     errors, placed = timeline.place_overlays(inside, assembled, fps, total)
     warnings += [f"{e}; not placed in this build" for e in errors]
     definitions = all_definitions(edit, validation)
-    windows = {"main": edit.main["windows_path"]}
+    paths = {"main": resolve_path(edit.main["path"])}
     if camera:
-        windows["camera"] = camera["windows_path"]
+        paths["camera"] = resolve_path(camera["path"])
     v3, markers, pending = [], [], {}
     for o in placed:
         slot_dir = root / "slots" / o["slot"]
         sig = definitions[o["slot"]]["signature"]
         done, why = passing_output(slot_dir, o["slot"], sig)
         if done:
-            windows[o["slot"]] = root.windows(done)
+            paths[o["slot"]] = root.resolve_path(done)
             v3.append(
                 {
                     "source": "broll",
@@ -155,14 +155,14 @@ def run_build(root, section=None, version=None, no_camera=False):
         "sources": {
             "main": {
                 "path": edit.main["path"],
-                "windows_path": edit.main["windows_path"],
+                "resolve_path": paths["main"],
                 "file_name": edit.main["file_name"],
             },
             **(
                 {
                     "camera": {
                         "path": camera["path"],
-                        "windows_path": camera["windows_path"],
+                        "resolve_path": paths["camera"],
                         "file_name": camera["file_name"],
                         "offset_frames": camera["offset_frames"],
                         "offset_changes": camera.get("offset_changes") or [],
@@ -196,10 +196,10 @@ def run_build(root, section=None, version=None, no_camera=False):
     }
     plan_path = root / "resolve" / f"plan_v{version}.json"
     script_path = root / "resolve" / f"build_v{version}.py"
-    run = exec_line(root.windows(script_path))
+    run = exec_line(root.resolve_path(script_path))
     write_json(plan_path, plan)
     script_path.write_text(
-        resolve_scripts.build_script(plan, windows, run), encoding="ascii"
+        resolve_scripts.build_script(plan, paths, run), encoding="ascii"
     )
     return 0, {
         "ok": True,
@@ -221,9 +221,9 @@ def run_readback_script(root, version=None):
     otio = root / "verify" / f"readback_v{plan['version']}.otio"
     otio.parent.mkdir(parents=True, exist_ok=True)
     script_path = root / "resolve" / f"readback_v{plan['version']}.py"
-    run = exec_line(root.windows(script_path))
+    run = exec_line(root.resolve_path(script_path))
     script_path.write_text(
-        resolve_scripts.readback_script(plan, root.windows(otio), run),
+        resolve_scripts.readback_script(plan, root.resolve_path(otio), run),
         encoding="ascii",
     )
     return 0, {

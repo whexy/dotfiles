@@ -6,9 +6,11 @@ description: Edit a recorded talking-head video into a new DaVinci Resolve timel
 # Video edit
 
 The user records a screen recording with their voice (the main source) and
-a separate face-camera file, both 4K60 with audio, on a Windows drive such
-as `/mnt/d/Records`. You deliver a new Resolve timeline and an SRT; the user
-finishes the edit in DaVinci Resolve Studio on Windows.
+a separate face-camera file, both 4K60 with audio. You deliver a new Resolve
+timeline and an SRT; the user finishes the edit in DaVinci Resolve Studio.
+Under WSL, Resolve runs on Windows, so the footage sits on a Windows drive
+such as `/mnt/d/Records`; on macOS it runs beside you and opens the footage
+where it is. The examples below call the footage folder `$FOOTAGE`.
 
 `video-edit` does every deterministic step: it validates cuts, does all
 frame math, writes the Python that Resolve runs, defines B-roll slots,
@@ -38,9 +40,9 @@ without asking.
 ### 1. Set up and transcribe
 
 ```sh
-video-edit init /mnt/d/Records/talk.mkv --camera /mnt/d/Records/cam.mkv --name "AI Workflow"
-cd "/mnt/d/Records/edit/AI Workflow"
-transcribe /mnt/d/Records/talk.mkv --format json -o transcripts/talk.json
+video-edit init "$FOOTAGE/talk.mkv" --camera "$FOOTAGE/cam.mkv" --name "AI Workflow"
+cd "$FOOTAGE/edit/AI Workflow"
+transcribe "$FOOTAGE/talk.mkv" --format json -o transcripts/talk.json
 video-edit silences
 ```
 
@@ -184,16 +186,16 @@ Do not ask questions. Decide, and note your assumptions in report.md.
 
 ## Commands
 
-| Command                                                                               | Does                                                           |
-| ------------------------------------------------------------------------------------- | -------------------------------------------------------------- |
-| `init MAIN --name NAME [--camera CAM]`                                                | creates the edit root, `sources.json`, `spec.json`, `style/`   |
-| `silences [--refresh]`                                                                | detects pauses at the noise floor + 9 dB                       |
-| `snap [--dry-run]`                                                                    | moves range edges into silences                                |
-| `sync-script` / `set-offset N [--at S]`                                               | camera alignment                                               |
-| `build [--section S] [--version N] [--no-camera]`                                     | plan and build script                                          |
-| `slots`                                                                               | `slots/<id>/slot.json` per overlay                             |
-| `finalize RAW --slot DIR [--footage] [--input-matrix auto\|bt601\|bt709] [--dry-run]` | NVENC encode to `out/<id>_vN.mp4`; `--footage` trims and crops |
-| `check FILE --slot DIR [--draft]`                                                     | spec check plus contact sheet                                  |
-| `strip VIDEO START END` / `strip --cut K`                                             | filmstrip and waveform PNG                                     |
-| `words [--section S]` / `srt CUES [-o FILE] [--start-tc TC]`                          | subtitles                                                      |
-| `readback-script` / `verify-timeline` / `verify-audio`                                | verification                                                   |
+| Command                                                                               | Does                                                         |
+| ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
+| `init MAIN --name NAME [--camera CAM]`                                                | creates the edit root, `sources.json`, `spec.json`, `style/` |
+| `silences [--refresh]`                                                                | detects pauses at the noise floor + 9 dB                     |
+| `snap [--dry-run]`                                                                    | moves range edges into silences                              |
+| `sync-script` / `set-offset N [--at S]`                                               | camera alignment                                             |
+| `build [--section S] [--version N] [--no-camera]`                                     | plan and build script                                        |
+| `slots`                                                                               | `slots/<id>/slot.json` per overlay                           |
+| `finalize RAW --slot DIR [--footage] [--input-matrix auto\|bt601\|bt709] [--dry-run]` | GPU encode to `out/<id>_vN.mp4`; `--footage` trims and crops |
+| `check FILE --slot DIR [--draft]`                                                     | spec check plus contact sheet                                |
+| `strip VIDEO START END` / `strip --cut K`                                             | filmstrip and waveform PNG                                   |
+| `words [--section S]` / `srt CUES [-o FILE] [--start-tc TC]`                          | subtitles                                                    |
+| `readback-script` / `verify-timeline` / `verify-audio`                                | verification                                                 |

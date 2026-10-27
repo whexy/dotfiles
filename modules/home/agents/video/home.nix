@@ -1,6 +1,6 @@
 # Video-editing toolkit. Agents cut a DaVinci Resolve timeline through
-# Resolve Studio's own MCP server, which runs on the Windows host, and
-# render B-roll with HyperFrames or ManimGX.
+# Resolve Studio's own MCP server, which runs beside them on macOS and on
+# the Windows host under WSL, and render B-roll with HyperFrames or ManimGX.
 { pkgs, perSystem }:
 let
   inherit (perSystem.self) hyperframes manimgx;

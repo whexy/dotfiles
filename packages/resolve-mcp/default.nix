@@ -1,18 +1,41 @@
 { pkgs }:
 
-# DaVinci Resolve Studio's built-in MCP server, run from WSL through interop.
+# DaVinci Resolve Studio's built-in MCP server: the macOS app's own, or on
+# WSL the Windows program, run through interop.
 #
-# ResolveMCP.exe finds ResolvePython\ and Resolve.exe beside itself, so it is
-# run in place rather than copied. The lookup follows Blackmagic's own
-# launcher: the RESOLVE_MCP_PATH override, the default install, then the
-# install registered for .drp files.
+# The server finds ResolvePython and Resolve beside itself, so it is run in
+# place rather than copied. The lookup follows Blackmagic's own launcher: the
+# RESOLVE_MCP_PATH override, the default install, then the registered install
+# (the app for the bundle id on macOS, the one for .drp files on Windows).
 #
 # stdout is the MCP channel from the first byte, so every lookup is captured
 # and every message goes to stderr.
-pkgs.writeShellApplication {
-  name = "resolve-mcp";
+let
+  darwin = ''
+    default="/Applications/DaVinci Resolve/DaVinci Resolve.app"
+    tool=Contents/Applications/ResolveMCP
 
-  text = ''
+    if [[ -n "''${RESOLVE_MCP_PATH:-}" ]]; then
+      exe=$RESOLVE_MCP_PATH
+    elif [[ -x "$default/$tool" ]]; then
+      exe=$default/$tool
+    elif app=$(/usr/bin/mdfind "kMDItemCFBundleIdentifier == 'com.blackmagic-design.DaVinciResolve'" 2>/dev/null | head -n 1) &&
+      [[ -n "$app" ]]; then
+      exe=$app/$tool
+    else
+      exe=""
+    fi
+
+    if [[ -z "$exe" || ! -x "$exe" ]]; then
+      echo "resolve-mcp: ResolveMCP not found''${exe:+ at $exe}." >&2
+      echo "  Install DaVinci Resolve Studio, or set RESOLVE_MCP_PATH to its ResolveMCP." >&2
+      exit 1
+    fi
+
+    exec "$exe" "$@"
+  '';
+
+  wsl = ''
     # shellcheck source=/dev/null
     source ${../../lib/wsl-interop.bash}
 
@@ -44,9 +67,14 @@ pkgs.writeShellApplication {
 
     exec "$exe" "$@"
   '';
+in
+pkgs.writeShellApplication {
+  name = "resolve-mcp";
+
+  text = if pkgs.stdenv.hostPlatform.isDarwin then darwin else wsl;
 
   meta = {
-    description = "DaVinci Resolve Studio's MCP server, launched from WSL";
-    platforms = pkgs.lib.platforms.linux;
+    description = "DaVinci Resolve Studio's MCP server, launched from macOS or WSL";
+    platforms = pkgs.lib.platforms.linux ++ pkgs.lib.platforms.darwin;
   };
 }

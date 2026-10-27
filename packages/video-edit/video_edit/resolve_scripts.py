@@ -261,18 +261,18 @@ def sync_script(name, main_path, camera_path, run_line):
     return _header("sync-script", run_line) + data + PRELUDE + SYNC_MAIN + EPILOGUE
 
 
-def build_script(plan, windows, run_line):
-    """`windows` maps "main", "camera" and slot ids to Windows paths."""
+def build_script(plan, paths, run_line):
+    """`paths` maps "main", "camera" and slot ids to the paths Resolve opens."""
     tracks = plan["tracks"]
     v3 = [(item["slot"], item["rec_in"]) for item in tracks.get("V3", [])]
     data = (
         _assign("TIMELINE", plan["timeline"])
         + _assign("FPS", float(plan["fps"]))
         + _assign("TOTAL", plan["duration_frames"])
-        + _assign("MAIN", windows["main"])
-        + _assign("CAMERA", windows.get("camera") if tracks.get("V2") else None)
+        + _assign("MAIN", paths["main"])
+        + _assign("CAMERA", paths.get("camera") if tracks.get("V2") else None)
         + _assign("BROLL_BIN", f"{plan['name']} B-roll")
-        + _assign("BROLL", {slot: windows[slot] for slot, _ in v3})
+        + _assign("BROLL", {slot: paths[slot] for slot, _ in v3})
         + _assign("TRACK_NAMES", ((1, "Main"), (2, "Camera"), (3, "B-roll")))
         + _assign_rows(
             "V1", [(i["src_in"], i["src_out"], i["rec_in"]) for i in tracks["V1"]]
@@ -299,8 +299,8 @@ def build_script(plan, windows, run_line):
     )
 
 
-def readback_script(plan, otio_windows_path, run_line):
-    data = _assign("TIMELINE", plan["timeline"]) + _assign("PATH", otio_windows_path)
+def readback_script(plan, otio_path, run_line):
+    data = _assign("TIMELINE", plan["timeline"]) + _assign("PATH", otio_path)
     return (
         _header(f"readback-script v{plan['version']}", run_line)
         + data
