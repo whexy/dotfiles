@@ -48,6 +48,21 @@ My skills hold rules you cannot reconstruct from memory: `git-commit`,
 read it before you start. If a skill you need is not available in this session,
 ask me instead of guessing.
 
+### Choosing a harness
+
+Codex, OpenCode, and Claude Code each list other vendors' models. When you
+start a delegate, subagent, or thread for a model, run it in the harness for
+its family, not whichever harness lists it:
+
+- Claude: Claude Code, Anthropic's own harness.
+- GPT: Codex, OpenAI's own harness.
+- Muse: OpenCode. Meta's own Muse Code cannot use the model gateways. Through
+  Codex, Muse cannot call any MCP tool, T3 Code's included, so a Muse
+  coordinator there cannot delegate: Meta returns namespaced tool calls in a
+  form Codex rejects as `unsupported call`.
+
+If asked to run Muse on Codex anyway, say so before you launch it.
+
 ### Coding
 
 **Comments**
