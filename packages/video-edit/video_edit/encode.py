@@ -1,4 +1,4 @@
-"""`finalize` (NVENC encode to the slot spec) and `check` (verify a render)."""
+"""`finalize` (GPU encode to the slot spec) and `check` (verify a render)."""
 
 from fractions import Fraction
 import os
@@ -21,6 +21,7 @@ COLORSPACE_NAME = {"bt709": "bt709", "bt601": "bt470bg"}
 OUT_TAGS = "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv"
 SCALE_FLAGS = "flags=lanczos+accurate_rnd+full_chroma_int"
 MANIMGX = "manimgx"
+GPU_ENCODERS = ("nvenc", "videotoolbox")
 
 
 def raw_timing(info):
@@ -139,6 +140,12 @@ def encode_args(spec, fps, frames, encoder):
             "-c:v", encoder, "-preset", nv["preset"], "-tune", nv["tune"],
             "-rc", "vbr", "-cq", str(nv["cq"]), "-b:v", "0",
             "-maxrate", nv["maxrate"], "-bufsize", nv["bufsize"],
+            "-profile:v", spec["final"]["profile"], "-g", str(fps), "-bf", "2",
+        ]
+    elif encoder.endswith("_videotoolbox"):
+        vt = spec["final"]["videotoolbox"]
+        codec = [
+            "-c:v", encoder, "-q:v", str(vt["quality"]), "-prio_speed", "0",
             "-profile:v", spec["final"]["profile"], "-g", str(fps), "-bf", "2",
         ]
     else:
@@ -394,10 +401,10 @@ def run_check(root, file, slot_arg, draft=False):
         cpu = [e for e in ("libx264", "libx265") if e in tag or e == sniffed]
         if cpu:
             problems.append(
-                f"encoded with {cpu[0]} on the CPU, not NVENC; run `video-edit finalize`"
+                f"encoded with {cpu[0]} on the CPU, not the GPU; run `video-edit finalize`"
             )
-        elif "nvenc" not in tag and "nvenc" not in sniffed:
-            problems.append(f"cannot confirm an NVENC encoder (tag {tag or 'none'})")
+        elif not any(gpu in tag or gpu in sniffed for gpu in GPU_ENCODERS):
+            problems.append(f"cannot confirm a GPU encoder (tag {tag or 'none'})")
         if info["pix_fmt"] != final["pix_fmt"]:
             problems.append(f"pix_fmt {info['pix_fmt']}, want {final['pix_fmt']}")
         colour = final["color"]

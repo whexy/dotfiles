@@ -6,12 +6,13 @@ import shutil
 
 from . import resolve_scripts, silence, timeline
 from .common import (
+    MACOS,
     Root,
     UsageError,
     exec_line,
     read_json,
+    resolve_path,
     safe_name,
-    to_windows,
     write_json,
 )
 from .media import probe_source
@@ -28,7 +29,25 @@ GLOSSARY = {
 }
 
 
+def gpu_encoder():
+    """The HEVC encoder for this machine's GPU, with its settings."""
+    if MACOS:
+        # VideoToolbox drops its quality target and settles near a fixed
+        # rate once given a maxrate, so it encodes by quality alone.
+        return "hevc_videotoolbox", {"videotoolbox": {"quality": 75}}
+    return "hevc_nvenc", {
+        "nvenc": {
+            "preset": "p5",
+            "tune": "hq",
+            "cq": 16,
+            "maxrate": "200M",
+            "bufsize": "400M",
+        }
+    }
+
+
 def default_spec(name, main):
+    encoder, settings = gpu_encoder()
     return {
         "version": 1,
         "name": name,
@@ -40,7 +59,7 @@ def default_spec(name, main):
         },
         "final": {
             "codec": "hevc",
-            "encoder": "hevc_nvenc",
+            "encoder": encoder,
             "profile": "main",
             "pix_fmt": "yuv420p",
             "color": {
@@ -49,13 +68,7 @@ def default_spec(name, main):
                 "matrix": "bt709",
                 "range": "tv",
             },
-            "nvenc": {
-                "preset": "p5",
-                "tune": "hq",
-                "cq": 16,
-                "maxrate": "200M",
-                "bufsize": "400M",
-            },
+            **settings,
         },
         "draft": {"width": 1920, "height": 1080, "fps": 30},
         "rules": {"text": False, "textWhitelist": []},
@@ -72,19 +85,13 @@ def default_spec(name, main):
     }
 
 
-def _source(path):
-    info = probe_source(path)
-    info["windows_path"] = to_windows(path)
-    return info
-
-
 def run_init(main, camera, name):
     main = Path(main).absolute()
     if not main.is_file():
         raise UsageError(f"not a file: {main}")
     root = Root(main.parent / "edit" / safe_name(name))
     warnings = []
-    sources = {"version": 1, "main": _source(main)}
+    sources = {"version": 1, "main": probe_source(main)}
     if not sources["main"]["has_audio"]:
         warnings.append("main source has no audio: transcribe and sync need it")
     if sources["main"]["vfr"]:
@@ -100,7 +107,7 @@ def run_init(main, camera, name):
             f"{root.path} already belongs to {old['main']['path']}; pick another --name"
         )
     if camera:
-        cam = _source(Path(camera).absolute())
+        cam = probe_source(Path(camera).absolute())
         previous = (old or {}).get("camera") or {}
         same = previous.get("path") == cam["path"]
         cam["offset_frames"] = previous.get("offset_frames") if same else None
@@ -151,10 +158,13 @@ def run_sync_script(root):
         raise UsageError("no camera in sources.json: run init with --camera")
     name = root.spec()["name"]
     path = root / "resolve" / "sync.py"
-    run = exec_line(root.windows(path))
+    run = exec_line(root.resolve_path(path))
     path.write_text(
         resolve_scripts.sync_script(
-            name, sources["main"]["windows_path"], camera["windows_path"], run
+            name,
+            resolve_path(sources["main"]["path"]),
+            resolve_path(camera["path"]),
+            run,
         ),
         encoding="ascii",
     )

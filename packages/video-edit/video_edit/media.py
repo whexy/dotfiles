@@ -169,6 +169,8 @@ def sniff_encoder(path, limit=8 * 1024 * 1024):
         (b"hevc_nvenc", "hevc_nvenc"),
         (b"h264_nvenc", "h264_nvenc"),
         (b"av1_nvenc", "av1_nvenc"),
+        (b"hevc_videotoolbox", "hevc_videotoolbox"),
+        (b"h264_videotoolbox", "h264_videotoolbox"),
     ):
         if marker in head:
             return name

@@ -12,10 +12,8 @@
 #   npm install --package-lock-only --ignore-scripts
 let
   inherit (pkgs) lib;
+  inherit (pkgs.stdenv.hostPlatform) isLinux;
   version = "0.8.157";
-
-  # The Chrome HyperFrames downloads cannot find its libraries on NixOS.
-  inherit (perSystem.self.t3code-nightly) browser;
 
   # The init templates load this GSAP from a CDN, which makes every render
   # fetch it. Compositions copy this file instead and render offline.
@@ -34,6 +32,44 @@ let
     sparseCheckout = [ "skills" ];
     hash = "sha256-Qn2pPu97qToIG9xHTBG7kmoNXVRHDbmmwfrfdnxQtts=";
   };
+
+  # A caller's own settings still win. The switches stop HyperFrames from
+  # installing skills into every agent's global directories, phoning home,
+  # and npm-installing optional packages into ~/.cache at run time.
+  #
+  # The Chrome HyperFrames downloads cannot find its libraries on NixOS, so
+  # Linux renders with T3 Code's patched copy; Darwin keeps HyperFrames' own
+  # download, which runs as is. /usr/lib/wsl/lib holds the WSL NVIDIA driver;
+  # without it `render --gpu` silently falls back to libx264.
+  wrapperArgs = [
+    "--set-default"
+    "HYPERFRAMES_SKIP_SKILLS"
+    "1"
+    "--set-default"
+    "HYPERFRAMES_NO_TELEMETRY"
+    "1"
+    "--set-default"
+    "HYPERFRAMES_NO_UPDATE_CHECK"
+    "1"
+    "--set-default"
+    "HYPERFRAMES_NO_AUTO_INSTALL"
+    "1"
+    "--set-default"
+    "HYPERFRAMES_FFMPEG_PATH"
+    (lib.getExe' pkgs.ffmpeg "ffmpeg")
+    "--set-default"
+    "HYPERFRAMES_FFPROBE_PATH"
+    (lib.getExe' pkgs.ffmpeg "ffprobe")
+  ]
+  ++ lib.optionals isLinux [
+    "--set-default"
+    "HYPERFRAMES_BROWSER_PATH"
+    "${perSystem.self.t3code-nightly.browser}/chrome-headless-shell"
+    "--prefix"
+    "LD_LIBRARY_PATH"
+    ":"
+    "/usr/lib/wsl/lib"
+  ];
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "hyperframes";
@@ -90,22 +126,9 @@ pkgs.buildNpmPackage (finalAttrs: {
     cp -R ${skills}/skills/*/ $out/share/hyperframes/skills/
   '';
 
-  # A caller's own settings still win. The switches stop HyperFrames from
-  # installing skills into every agent's global directories, phoning home,
-  # and npm-installing optional packages into ~/.cache at run time.
-  # /usr/lib/wsl/lib holds the WSL NVIDIA driver; without it `render --gpu`
-  # silently falls back to libx264.
   postFixup = ''
     for program in hyperframes hyperframes-localize-fonts; do
-      wrapProgram $out/bin/$program \
-        --set-default HYPERFRAMES_SKIP_SKILLS 1 \
-        --set-default HYPERFRAMES_NO_TELEMETRY 1 \
-        --set-default HYPERFRAMES_NO_UPDATE_CHECK 1 \
-        --set-default HYPERFRAMES_NO_AUTO_INSTALL 1 \
-        --set-default HYPERFRAMES_BROWSER_PATH ${browser}/chrome-headless-shell \
-        --set-default HYPERFRAMES_FFMPEG_PATH ${lib.getExe' pkgs.ffmpeg "ffmpeg"} \
-        --set-default HYPERFRAMES_FFPROBE_PATH ${lib.getExe' pkgs.ffmpeg "ffprobe"} \
-        --prefix LD_LIBRARY_PATH : /usr/lib/wsl/lib
+      wrapProgram $out/bin/$program ${lib.escapeShellArgs wrapperArgs}
     done
   '';
 
@@ -130,6 +153,7 @@ pkgs.buildNpmPackage (finalAttrs: {
     platforms = [
       "x86_64-linux"
       "aarch64-linux"
+      "aarch64-darwin"
     ];
   };
 })

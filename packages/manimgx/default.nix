@@ -4,10 +4,11 @@
 # and math and x264 encodes the MP4 inside the engine, so it needs neither
 # LaTeX nor ffmpeg.
 #
-# Installed from PyPI's manylinux wheel: the source build's Cargo scripts
-# download x264, FFmpeg and NASM themselves.
+# Installed from PyPI's wheels: the source build's Cargo scripts download
+# x264, FFmpeg and NASM themselves.
 let
   inherit (pkgs) lib python3;
+  inherit (pkgs.stdenv.hostPlatform) isLinux;
   version = "0.1.1";
 
   wheels = {
@@ -18,6 +19,10 @@ let
     aarch64-linux = {
       platform = "manylinux_2_28_aarch64";
       hash = "sha256-Juy9uvmdNapi5KNj/GRonItAODzJi24xu/rAW9t0lXw=";
+    };
+    aarch64-darwin = {
+      platform = "macosx_11_0_arm64";
+      hash = "sha256-Taf91+ciN8+MH1G+aDjRuyeW93RwL4XpRtL2Aza4e1g=";
     };
   };
   wheel =
@@ -78,8 +83,8 @@ python3.pkgs.buildPythonApplication {
     abi = "abi3";
   };
 
-  nativeBuildInputs = [ pkgs.autoPatchelfHook ];
-  buildInputs = [ pkgs.stdenv.cc.cc.lib ];
+  nativeBuildInputs = lib.optionals isLinux [ pkgs.autoPatchelfHook ];
+  buildInputs = lib.optionals isLinux [ pkgs.stdenv.cc.cc.lib ];
 
   dependencies = with python3.pkgs; [
     (fonts "manimgx-fonts" "sha256-5eIReCY93sPu+UFNK1KhyQrAEGLT6QZ0YPM1n4VMPhc=")
@@ -97,13 +102,14 @@ python3.pkgs.buildPythonApplication {
   # nixpkgs' typer trails the floor manimgx declares.
   pythonRelaxDeps = [ "typer" ];
 
-  # wgpu dlopens Vulkan's loader, which finds Mesa's drivers through
-  # /run/opengl-driver. wgpu refuses the stock Dozen there, WSL's only GPU
-  # driver, so the engine would draw with llvmpipe on the CPU; the patched
-  # Dozen is added beside it (it loads libd3d12 from /usr/lib/wsl/lib, and
-  # finds no adapter off WSL). The engine knowingly runs on a non-conformant
-  # driver, so Mesa's warning about one is silenced.
-  makeWrapperArgs = [
+  # On Linux, wgpu dlopens Vulkan's loader, which finds Mesa's drivers
+  # through /run/opengl-driver. wgpu refuses the stock Dozen there, WSL's
+  # only GPU driver, so the engine would draw with llvmpipe on the CPU; the
+  # patched Dozen is added beside it (it loads libd3d12 from
+  # /usr/lib/wsl/lib, and finds no adapter off WSL). The engine knowingly
+  # runs on a non-conformant driver, so Mesa's warning about one is silenced.
+  # On macOS wgpu draws through Metal and needs none of this.
+  makeWrapperArgs = lib.optionals isLinux [
     "--prefix"
     "LD_LIBRARY_PATH"
     ":"

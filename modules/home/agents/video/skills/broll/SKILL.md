@@ -36,8 +36,8 @@ footage, generate it with Studio instead; see
   `hyperframes-animation/SKILL.md` in `~/.local/share/video-edit/docs/hyperframes/`.
   Skip the `hyperframes` entry skill; its interview, usage and upgrade steps
   are for interactive sessions. Where the docs say `npx hyperframes` or
-  `npm run`, run `hyperframes` itself: `npx` fetches a copy whose Chrome cannot
-  start here.
+  `npm run`, run `hyperframes` itself: `npx` fetches another version, and on
+  Linux a Chrome that cannot start.
 - ManimGX: `manimgx` is ManimGX 0.1.1, Manim CE's API (`import manimgx as m`)
   on a GPU renderer. Typst sets `Tex` and `MathTex`; there is no LaTeX. In
   `~/.local/share/video-edit/docs/manimgx/`, read `SKILL.md` and

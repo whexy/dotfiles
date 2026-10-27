@@ -1,4 +1,4 @@
-"""Edit-root files, JSON I/O, errors and Windows path mapping."""
+"""Edit-root files, JSON I/O, errors and the paths Resolve opens."""
 
 import json
 import os
@@ -9,6 +9,8 @@ import subprocess
 import sys
 
 EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_MEDIA, EXIT_TRANSCRIBE, EXIT_NOKEY = range(6)
+
+MACOS = sys.platform == "darwin"
 
 
 class ToolError(Exception):
@@ -63,9 +65,15 @@ def safe_name(name):
     return cleaned
 
 
-def to_windows(path):
-    """Windows path for a WSL path: `wslpath -w`, else the /mnt/<drive> rule."""
+def resolve_path(path):
+    """The path Resolve opens a file by.
+
+    Resolve runs beside this tool on macOS. Under WSL it is the Windows app,
+    so the path is Windows': `wslpath -w`, else the /mnt/<drive> rule.
+    """
     path = os.path.abspath(str(path))
+    if MACOS:
+        return path
     # Agents under systemd user services lack /bin on PATH, so try the
     # interop binary by absolute path first.
     for exe in ("/bin/wslpath", shutil.which("wslpath")):
@@ -89,9 +97,9 @@ def mnt_to_windows(path):
     return match.group(1).upper() + ":" + rest
 
 
-def exec_line(windows_path):
+def exec_line(path):
     """The one-line run_script_unsafe body that runs a generated script."""
-    return f"exec(open({ascii(windows_path)}, encoding='utf-8').read())"
+    return f"exec(open({ascii(path)}, encoding='utf-8').read())"
 
 
 class Root:
@@ -99,7 +107,7 @@ class Root:
 
     def __init__(self, path):
         self.path = Path(path).absolute()
-        self._windows = None
+        self._resolve_path = None
 
     def __truediv__(self, rel):
         return self.path / rel
@@ -134,12 +142,13 @@ class Root:
         except ValueError:
             return str(path)
 
-    def windows(self, path):
-        """Windows path of a file inside the root, from one wslpath call."""
-        if self._windows is None:
-            self._windows = to_windows(self.path)
+    def resolve_path(self, path):
+        """Resolve's path of a file inside the root, from one wslpath call."""
+        if self._resolve_path is None:
+            self._resolve_path = resolve_path(self.path)
         rel = Path(path).absolute().relative_to(self.path)
-        return self._windows.rstrip("\\") + "\\" + "\\".join(rel.parts)
+        sep = "/" if MACOS else "\\"
+        return self._resolve_path.rstrip(sep) + sep + sep.join(rel.parts)
 
     def plan_versions(self):
         found = []

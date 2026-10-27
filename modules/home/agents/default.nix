@@ -62,7 +62,7 @@ in
       };
     };
 
-    video.enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio (WSL only for now)";
+    video.enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio on macOS or from WSL";
 
     studio.enable = lib.mkOption {
       type = lib.types.bool;
@@ -361,10 +361,12 @@ in
     {
       assertions = [
         {
-          # Resolve's MCP server is a Windows program reached through WSL
-          # interop. Standalone homes have no osConfig to say this is WSL.
-          assertion = cfg.video.enable -> args.osConfig.dotfiles.host.wsl or false;
-          message = "dotfiles.agents.video.enable requires a WSL host.";
+          # Resolve's MCP server is the macOS app's own, or a Windows program
+          # reached through WSL interop. Standalone homes have no osConfig to
+          # say this is WSL.
+          assertion =
+            cfg.video.enable -> pkgs.stdenv.hostPlatform.isDarwin || args.osConfig.dotfiles.host.wsl or false;
+          message = "dotfiles.agents.video.enable requires a macOS or WSL host.";
         }
         {
           assertion =

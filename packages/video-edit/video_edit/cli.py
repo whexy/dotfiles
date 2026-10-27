@@ -53,7 +53,7 @@ def parser():
 
     cmd("slots", "write slots/<id>/slot.json for every overlay")
 
-    p = cmd("finalize", "encode a raw render to the slot's final spec (NVENC)")
+    p = cmd("finalize", "encode a raw render to the slot's final spec on the GPU")
     p.add_argument("raw", help="raw render (any format ffmpeg reads)")
     p.add_argument("--slot", required=True, help="slots/<id> directory")
     p.add_argument("--input-matrix", choices=["auto", "bt601", "bt709"], default="auto",
