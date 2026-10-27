@@ -62,11 +62,11 @@ stopped counting while it was suspended.
 
 `--state-dir` holds three files:
 
-| File          | Purpose                                         |
-| ------------- | ----------------------------------------------- |
-| `state.json`  | ETag, last successfully applied SHA, ignore set |
-| `status.json` | health signal, rewritten after every cycle      |
-| `lock`        | exclusive lock held during a rebuild            |
+| File          | Purpose                                                            |
+| ------------- | ------------------------------------------------------------------ |
+| `state.json`  | ETag, last successfully applied SHA, ignore set and its reasons    |
+| `status.json` | health signal, rewritten after every cycle and around each attempt |
+| `lock`        | exclusive lock held during a rebuild                               |
 
 A missing or corrupt `state.json` starts fresh with a logged warning; refusing
 to start would strand the host permanently. Both files are written through a
@@ -79,6 +79,10 @@ temporary file and renamed, so a crash mid-write cannot truncate them.
 ```json
 {
   "lastCheck": "2026-09-17T04:12:03Z",
+  "phase": "up-to-date",
+  "phaseSince": "2026-09-17T04:12:03Z",
+  "tipSha": "…",
+  "nextCheck": "2026-09-17T04:22:41Z",
   "lastSuccessSha": "…",
   "lastSuccessAt": "2026-09-17T04:12:03Z",
   "lastError": null,
@@ -86,6 +90,29 @@ temporary file and renamed, so a crash mid-write cannot truncate them.
   "ignoredShas": []
 }
 ```
+
+`phase` says what the daemon is doing about `tipSha`, the tip of the tracked
+branch, and `phaseSince` when it started:
+
+| Phase           | Meaning                                                  |
+| --------------- | -------------------------------------------------------- |
+| `up-to-date`    | the tip is applied                                       |
+| `awaiting-ci`   | the tip has no CI verdict yet                            |
+| `switching`     | a rebuild of the tip is running                          |
+| `retrying`      | a rebuild failed; the next attempt starts at `nextCheck` |
+| `check-failed`  | GitHub could not be asked about the tip                  |
+| `ci-failed`     | CI rejected the tip                                      |
+| `ci-timed-out`  | CI stayed pending past `--pending-timeout`               |
+| `switch-failed` | every rebuild attempt failed                             |
+
+The last three ignore the tip, so the host stays where it is until a newer
+commit lands. The reason is persisted with the ignore set, so a restarted
+daemon still reports it.
+
+`nextCheck` is when the daemon next acts, and is null while a rebuild runs. A
+`nextCheck` well in the past means the daemon has stopped, or the host has just
+woken and the daemon has yet to catch up. The login banner (`packages/motd`)
+shows this state on every host whose auto-upgrade is enabled.
 
 Inspect it with:
 
