@@ -4,5 +4,6 @@
 
   dotfiles = {
     wm.darwin.windowManager = "aerospace";
+    agents.video.enable = true;
   };
 }
