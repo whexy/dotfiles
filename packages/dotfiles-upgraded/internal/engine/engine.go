@@ -82,6 +82,8 @@ type Engine struct {
 	pendingSince    map[string]time.Time
 	consecutiveFail int
 	lastError       *string
+	phase           state.Phase
+	phaseSince      time.Time
 	// serverInterval holds an x-poll-interval floor requested by GitHub.
 	serverInterval time.Duration
 }
@@ -121,7 +123,8 @@ func (e *Engine) Run(ctx context.Context) {
 // RunOnce performs one cycle and returns how long to wait before the next.
 func (e *Engine) RunOnce(ctx context.Context) time.Duration {
 	wait := e.cycle(ctx)
-	e.writeStatus()
+	next := e.Clock.Now().Add(wait)
+	e.writeStatus(&next)
 	return wait
 }
 
@@ -130,6 +133,7 @@ func (e *Engine) RunOnce(ctx context.Context) time.Duration {
 func (e *Engine) cycle(ctx context.Context) time.Duration {
 	head, err := e.Refs.Head(ctx, e.Config.Ref, e.st.ETag)
 	if err != nil {
+		e.setPhase(state.PhaseCheckFailed)
 		var rl *github.RateLimitError
 		if errors.As(err, &rl) {
 			e.recordFailure(fmt.Sprintf("rate limited: %v", err))
@@ -175,6 +179,7 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 
 	if sha == e.st.LastSuccessSha {
 		e.clearFailures()
+		e.setPhase(state.PhaseUpToDate)
 		return e.nextInterval()
 	}
 	// From here the host is short of the tip, so the failure state stands
@@ -182,12 +187,14 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 	// behind an ignored commit look healthy.
 	if e.st.Ignored(sha) {
 		e.Log.Debug("sha ignored", "sha", sha)
+		e.setPhase(e.st.IgnoreReasons[sha])
 		return e.nextInterval()
 	}
 
 	if e.Config.RequireCIPass {
 		ciState, err := e.Refs.CombinedStatus(ctx, sha)
 		if err != nil {
+			e.setPhase(state.PhaseCheckFailed)
 			var rl *github.RateLimitError
 			if errors.As(err, &rl) {
 				e.recordFailure(fmt.Sprintf("rate limited: %v", err))
@@ -207,14 +214,15 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 			delete(e.pendingSince, sha)
 		case github.StateFailure:
 			e.Log.Info("ci failed, ignoring sha", "sha", sha)
-			e.ignore(sha)
+			e.ignore(sha, state.PhaseCIFailed)
 			return e.nextInterval()
 		default:
 			if e.pendingTooLong(sha) {
 				e.Log.Warn("ci stayed pending, ignoring sha", "sha", sha)
-				e.ignore(sha)
+				e.ignore(sha, state.PhaseCITimedOut)
 			} else {
 				e.Log.Info("ci pending", "sha", sha)
+				e.setPhase(state.PhaseAwaitingCI)
 			}
 			return e.nextInterval()
 		}
@@ -235,15 +243,18 @@ func (e *Engine) attemptSwitch(ctx context.Context, sha string) {
 	}
 
 	for attempt := 1; attempt <= attempts; attempt++ {
+		e.setPhase(state.PhaseSwitching)
+		e.writeStatus(nil)
 		err := e.Switcher.Switch(ctx, sha)
 		if err == nil {
 			now := e.Clock.Now()
 			e.st.LastSuccessSha = sha
 			e.st.LastSuccessAt = &now
-			e.st.IgnoredShas = nil
+			e.st.ClearIgnored()
 			e.persist()
 			e.consecutiveFail = 0
 			e.lastError = nil
+			e.setPhase(state.PhaseUpToDate)
 			e.Log.Info("switched", "sha", sha)
 			return
 		}
@@ -254,18 +265,21 @@ func (e *Engine) attemptSwitch(ctx context.Context, sha string) {
 
 		e.recordFailure(fmt.Sprintf("switch attempt %d/%d failed: %v", attempt, attempts, err))
 		e.Log.Warn("switch failed", "sha", sha, "attempt", attempt, "attempts", attempts, "error", err)
-		e.writeStatus()
 
 		if attempt == attempts {
 			break
 		}
-		if !e.Clock.Sleep(ctx, Backoff(attempt)) {
+		wait := Backoff(attempt)
+		next := e.Clock.Now().Add(wait)
+		e.setPhase(state.PhaseRetrying)
+		e.writeStatus(&next)
+		if !e.Clock.Sleep(ctx, wait) {
 			return
 		}
 	}
 
 	e.Log.Warn("giving up on sha", "sha", sha, "attempts", attempts)
-	e.ignore(sha)
+	e.ignore(sha, state.PhaseSwitchFailed)
 }
 
 // Backoff returns the delay after a given attempt number (1-based), doubling
@@ -294,10 +308,20 @@ func (e *Engine) pendingTooLong(sha string) bool {
 	return e.Config.PendingTimeout > 0 && now.Sub(first) >= e.Config.PendingTimeout
 }
 
-func (e *Engine) ignore(sha string) {
-	e.st.Ignore(sha)
+func (e *Engine) ignore(sha string, reason state.Phase) {
+	e.st.Ignore(sha, reason)
+	e.setPhase(reason)
 	delete(e.pendingSince, sha)
 	e.persist()
+}
+
+// setPhase restarts phaseSince only on a change, so it measures how long the
+// host has been in the phase rather than since the last poll.
+func (e *Engine) setPhase(phase state.Phase) {
+	if phase != e.phase {
+		e.phase = phase
+		e.phaseSince = e.Clock.Now()
+	}
 }
 
 func (e *Engine) persist() {
@@ -316,9 +340,13 @@ func (e *Engine) recordFailure(msg string) {
 	e.lastError = &msg
 }
 
-func (e *Engine) writeStatus() {
+func (e *Engine) writeStatus(nextCheck *time.Time) {
 	st := state.Status{
 		LastCheck:           e.Clock.Now(),
+		Phase:               e.phase,
+		PhaseSince:          e.phaseSince,
+		TipSha:              e.st.LastSeenSha,
+		NextCheck:           nextCheck,
 		LastSuccessSha:      e.st.LastSuccessSha,
 		LastSuccessAt:       e.st.LastSuccessAt,
 		LastError:           e.lastError,

@@ -23,6 +23,22 @@ const (
 	lockFile   = "lock"
 )
 
+// Phase is what the daemon is doing about the tip of the tracked branch.
+type Phase string
+
+const (
+	PhaseUpToDate    Phase = "up-to-date"   // the tip is applied
+	PhaseAwaitingCI  Phase = "awaiting-ci"  // the tip has no CI verdict yet
+	PhaseSwitching   Phase = "switching"    // a rebuild of the tip is running
+	PhaseRetrying    Phase = "retrying"     // a rebuild failed; the next attempt waits out a backoff
+	PhaseCheckFailed Phase = "check-failed" // GitHub could not be asked about the tip
+
+	// The tip was given up on, so the host stays put until a newer commit.
+	PhaseCIFailed     Phase = "ci-failed"
+	PhaseCITimedOut   Phase = "ci-timed-out"
+	PhaseSwitchFailed Phase = "switch-failed"
+)
+
 // State is the daemon's private memory. LastSuccessSha is the last
 // successfully *applied* commit, never the last seen one, so an interrupted or
 // failed switch never looks converged.
@@ -32,6 +48,9 @@ type State struct {
 	LastSuccessSha string     `json:"lastSuccessSha"`
 	LastSuccessAt  *time.Time `json:"lastSuccessAt"`
 	IgnoredShas    []string   `json:"ignoredShas"`
+	// IgnoreReasons keeps the phase each ignored SHA was given up in, so a
+	// restarted daemon still reports why the host is held back.
+	IgnoreReasons map[string]Phase `json:"ignoreReasons"`
 }
 
 // Ignored reports whether sha was given up on.
@@ -44,21 +63,43 @@ func (s *State) Ignored(sha string) bool {
 	return false
 }
 
-// Ignore appends sha, dropping the oldest entry beyond MaxIgnored.
-func (s *State) Ignore(sha string) {
+// Ignore appends sha with the phase it was given up in, dropping the oldest
+// entry beyond MaxIgnored.
+func (s *State) Ignore(sha string, reason Phase) {
+	if s.IgnoreReasons == nil {
+		s.IgnoreReasons = map[string]Phase{}
+	}
+	s.IgnoreReasons[sha] = reason
 	if s.Ignored(sha) {
 		return
 	}
 	s.IgnoredShas = append(s.IgnoredShas, sha)
 	if len(s.IgnoredShas) > MaxIgnored {
-		s.IgnoredShas = s.IgnoredShas[len(s.IgnoredShas)-MaxIgnored:]
+		dropped := len(s.IgnoredShas) - MaxIgnored
+		for _, old := range s.IgnoredShas[:dropped] {
+			delete(s.IgnoreReasons, old)
+		}
+		s.IgnoredShas = s.IgnoredShas[dropped:]
 	}
+}
+
+// ClearIgnored forgets every ignored SHA.
+func (s *State) ClearIgnored() {
+	s.IgnoredShas = nil
+	s.IgnoreReasons = nil
 }
 
 // Status is the health file described by the design: the only externally
 // visible signal that an unattended host is still converging.
 type Status struct {
-	LastCheck           time.Time  `json:"lastCheck"`
+	LastCheck  time.Time `json:"lastCheck"`
+	Phase      Phase     `json:"phase"`
+	PhaseSince time.Time `json:"phaseSince"`
+	TipSha     string    `json:"tipSha"`
+	// NextCheck is when the daemon next acts; null while a switch runs. One
+	// well in the past means the daemon has stopped, or the host has just
+	// woken and the daemon has yet to catch up.
+	NextCheck           *time.Time `json:"nextCheck"`
 	LastSuccessSha      string     `json:"lastSuccessSha"`
 	LastSuccessAt       *time.Time `json:"lastSuccessAt"`
 	LastError           *string    `json:"lastError"`
