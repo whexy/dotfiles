@@ -69,7 +69,7 @@ in
             "--exit-after-switch"
             "--configuration=${cfg.autoUpgrade.configuration}"
             "--flake=${flake.lib.upstreamRef}"
-            "--state-dir=/var/lib/dotfiles-upgraded"
+            "--state-dir=${cfg.autoUpgrade.stateDir}"
             "--poll-interval=${cfg.autoUpgrade.pollInterval}"
             "--max-attempts=${toString cfg.autoUpgrade.maxAttempts}"
             "--require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}"

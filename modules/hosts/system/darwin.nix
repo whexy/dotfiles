@@ -27,7 +27,7 @@ let
       --exit-after-switch \
       --configuration=${lib.escapeShellArg cfg.autoUpgrade.configuration} \
       --flake=${lib.escapeShellArg flake.lib.upstreamRef} \
-      --state-dir=/var/lib/dotfiles-upgraded \
+      --state-dir=${lib.escapeShellArg cfg.autoUpgrade.stateDir} \
       --poll-interval=${lib.escapeShellArg cfg.autoUpgrade.pollInterval} \
       --max-attempts=${toString cfg.autoUpgrade.maxAttempts} \
       --require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}

@@ -35,6 +35,16 @@ in
         example = "30m";
       };
 
+      stateDir = lib.mkOption {
+        type = lib.types.str;
+        default = "/var/lib/dotfiles-upgraded";
+        readOnly = true;
+        description = ''
+          Where the daemon keeps its state and publishes its health signal,
+          status.json. Fixed because NixOS's StateDirectory= creates it.
+        '';
+      };
+
       maxAttempts = lib.mkOption {
         type = lib.types.int;
         default = 3;
