@@ -24,6 +24,22 @@ let
       "niri"
     else
       "auto";
+
+  # Every home in this flake installs xterm-rex (base cap), so Rex terminals
+  # keep it for these destinations. Other hosts get xterm-256color, unless
+  # `rex terminfo host` recorded them, the same rule as Rex's own guard.
+  flakeHosts =
+    lib.concatMap
+      (host: [
+        host
+        "${host}.at-basking.ts.net"
+      ])
+      (lib.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir ../../../hosts)))
+    ++ [
+      "mars.cs.northwestern.edu"
+      "venus.cs.northwestern.edu"
+    ];
+  rexTerminfoHosts = "${config.xdg.configHome}/rex/terminfo-hosts";
 in
 {
   imports = [
@@ -75,6 +91,11 @@ in
             "venus" = {
               HostName = "venus.cs.northwestern.edu";
               User = "wenxuan";
+            };
+
+            rex-terminfo = {
+              header = "Match !host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ] && ! grep -qxF -- %h ${rexTerminfoHosts} 2>/dev/null'\"";
+              SetEnv.TERM = "xterm-256color";
             };
           };
         };
