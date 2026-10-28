@@ -180,6 +180,37 @@ steps:
         git commit -m "chore: update nightly agent packages" -m "$report" -m "[skip ci]"
       - *check
       - *push
+  # Publish the cluster's MCP hub image (packages/t3code-hub-image) at the T3
+  # version the hosts pin, right after the nightly lane moves that pin. A
+  # version already in GHCR is left alone. argocd-image-updater rolls the hub
+  # (clusters-work gitops/apps/t3code-hub).
+  publish-t3code-hub:
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
+    when:
+      - event: cron
+        cron: nightly
+      - event: manual
+      - event: push
+        branch: master
+        path: ["packages/t3code-hub-image/**", "packages/t3code-nightly/**"]
+    backend_options: *k8s_heavy
+    environment:
+      <<: *ci_cache
+      GHCR_TOKEN:
+        from_secret: ghcr_token
+    commands:
+      - |
+        version=$(nix eval --raw --file packages/t3code-nightly/metadata.nix version)
+        ref="docker://ghcr.io/whexy/t3code-hub:$version"
+        skopeo() { nix shell --inputs-from . nixpkgs#skopeo -c skopeo "$@"; }
+        if skopeo inspect --creds "whexy:$GHCR_TOKEN" "$ref" >/dev/null 2>&1; then
+          echo "OK - t3code-hub $version is already published"
+          exit 0
+        fi
+        stream=$(nix build --accept-flake-config .#t3code-hub-image --no-link --print-out-paths)
+        "$stream" >/tmp/t3code-hub.tar
+        skopeo copy --dest-creds "whexy:$GHCR_TOKEN" docker-archive:/tmp/t3code-hub.tar "$ref"
+        echo "OK - published t3code-hub $version"
   check:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
