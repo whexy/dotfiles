@@ -181,9 +181,10 @@ steps:
       - *check
       - *push
   # Publish the cluster's MCP hub image (packages/t3code-hub-image) at the T3
-  # version the hosts pin, right after the nightly lane moves that pin. A
-  # version already in GHCR is left alone. argocd-image-updater rolls the hub
-  # (clusters-work gitops/apps/t3code-hub).
+  # version the hosts pin, right after the nightly lane moves that pin, and
+  # whenever the image, the package or this step changes. A version already in
+  # GHCR is left alone. argocd-image-updater rolls the hub (clusters-work
+  # gitops/apps/t3code-hub).
   publish-t3code-hub:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     when:
@@ -192,7 +193,12 @@ steps:
       - event: manual
       - event: push
         branch: master
-        path: ["packages/t3code-hub-image/**", "packages/t3code-nightly/**"]
+        path:
+          [
+            ".woodpecker.yml",
+            "packages/t3code-hub-image/**",
+            "packages/t3code-nightly/**",
+          ]
     backend_options: *k8s_heavy
     environment:
       <<: *ci_cache
