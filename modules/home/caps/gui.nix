@@ -44,6 +44,7 @@ in
         // lib.optionalAttrs isDarwin {
           # macOS desktop
           wm.darwin.enable = lib.mkDefault true;
+          terminal.rex.enable = lib.mkDefault true;
           keyboard.karabiner.enable = lib.mkDefault true;
           panel.sketchybar.enable = lib.mkDefault true;
         }
