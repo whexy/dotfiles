@@ -9,6 +9,7 @@ let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.terminal;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  style = import ./style.nix;
 in
 {
   config = lib.mkIf cfg.ghostty.enable (
@@ -22,13 +23,11 @@ in
       # ghostty-toggle-theme script rewrites before asking Ghostty to reload
       # its config. A keybind types that command into the shell, giving a
       # keyboard-driven, OS-independent theme toggle.
-      darkTheme = "Gruvbox Dark";
-      # lightTheme = "Catppuccin Latte";
-      lightTheme = "Gruvbox Light";
+      inherit (style) darkTheme lightTheme;
       themeFile = "${config.xdg.configHome}/ghostty/theme.conf";
       modeFile = "${config.xdg.configHome}/ghostty/mode.conf";
       nostalgiaModeFile = "${config.xdg.stateHome}/dotfiles/nostalgia";
-      modernFont = "FiraCode Nerd Font";
+      modernFont = style.font;
       nostalgiaFont = "Perfect DOS VGA 437 Nerd Font";
 
       reloadGhostty = ''
@@ -129,7 +128,7 @@ in
             themeFile
             modeFile
           ];
-          font-size = if macbookScreen then 16 else 14;
+          font-size = style.fontSize macbookScreen;
           background-opacity = 0.90;
           background-blur = true;
 
