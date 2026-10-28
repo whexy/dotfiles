@@ -207,6 +207,34 @@ let
       replace "$state" "$(${jq} -n --argjson models "$models" '{ownedClaudeModels: [$models[].slug]}')"
     '';
 
+  # Linked environments is a Labs setting, off by default, and a server with it
+  # off refuses links. Every server turns it on so the cluster's MCP hub
+  # (clusters-work gitops/apps/t3code-hub) can link to it. The running server
+  # reloads settings.json when it changes.
+  linkedEnvironments =
+    let
+      jq = lib.getExe pkgs.jq;
+    in
+    pkgs.writeShellScriptBin "t3-linked-environments" ''
+      set -eo pipefail
+      userdata=${lib.escapeShellArg "${config.home.homeDirectory}/.t3/userdata"}
+      settings="$userdata/settings.json"
+      if ${jq} -e '.linkedEnvironmentsEnabled == true' "$settings" >/dev/null 2>&1; then
+        exit 0
+      fi
+      if [ ! -e "$settings" ]; then
+        after='{"linkedEnvironmentsEnabled": true}'
+      elif ! after=$(${jq} '.linkedEnvironmentsEnabled = true' "$settings"); then
+        echo "t3-linked-environments: could not update $settings; leaving it unchanged" >&2
+        exit 0
+      fi
+      mkdir -p "$userdata"
+      temporary=$(mktemp "$userdata/.settings.json.XXXXXX")
+      printf '%s\n' "$after" >"$temporary"
+      chmod 644 "$temporary"
+      mv "$temporary" "$settings"
+    '';
+
 in
 {
   packages = [
@@ -224,6 +252,11 @@ in
   activation = {
     t3codeClaudeModels = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
       run ${lib.getExe claudeModels}
+    '';
+  }
+  // lib.optionalAttrs cfg.server.enable {
+    t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
+      run ${lib.getExe linkedEnvironments}
     '';
   }
   # A server that ran before this link existed left its own download here,
