@@ -9,7 +9,7 @@
   lib,
   rea,
   video,
-  iphoneUse,
+  iphoneWda,
 }:
 let
   cfg = config.dotfiles.agents;
@@ -126,8 +126,8 @@ in
       };
     }
     // lib.optionalAttrs cfg.iphoneUse.enable {
-      # The wrapper supplies the Python, Node and git the setup worker calls;
-      # WDA itself is fetched and built into the user's state directory.
-      iphone_use.command = lib.getExe iphoneUse;
+      # iPhone Use behind a per-session phone choice; the tool names stay
+      # iPhone Use's, so its usage skill applies unchanged.
+      iphone_use.command = "${iphoneWda}/bin/iphone-use-select";
     };
 }

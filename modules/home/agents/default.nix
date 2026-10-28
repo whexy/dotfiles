@@ -28,7 +28,49 @@ in
 
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
-    iphoneUse.enable = lib.mkEnableOption "the iPhone Use MCP server, which drives a USB-connected iPhone through WebDriverAgent";
+    iphoneUse = {
+      enable = lib.mkEnableOption ''
+        iPhone Use for every agent: its tools drive one of `phones`, chosen
+        by the user per session, through the WebDriverAgent each phone runs
+        on its Tailscale address
+      '';
+      phones = lib.mkOption {
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options = {
+              host = lib.mkOption {
+                type = lib.types.str;
+                description = "The phone's MagicDNS name.";
+              };
+              deviceName = lib.mkOption {
+                type = lib.types.str;
+                description = "The name set on the phone, which `iphone-wda` finds it by on a paired Mac.";
+              };
+              description = lib.mkOption {
+                type = lib.types.str;
+                default = "";
+                description = "What the agent shows the user when asking which phone to use.";
+              };
+            };
+          }
+        );
+        default = import ./iphone/phones.nix;
+        defaultText = lib.literalExpression "import ./iphone/phones.nix";
+        description = "The iPhones agents can drive, by the name the agent shows.";
+      };
+      wda = {
+        teamId = lib.mkOption {
+          type = lib.types.str;
+          default = "26DMRHRW6Z";
+          description = "Apple development team that signs WebDriverAgent.";
+        };
+        bundleId = lib.mkOption {
+          type = lib.types.str;
+          default = "dev.whexy.iphoneuse.wda";
+          description = "WebDriverAgent's bundle ID; the runner installs as `<bundleId>.xctrunner`.";
+        };
+      };
+    };
 
     tldraw.enable = lib.mkOption {
       type = lib.types.bool;
@@ -212,8 +254,8 @@ in
           lib
           rea
           video
-          iphoneUse
           ;
+        iphoneWda = perSystem.self.iphone-wda;
       };
       # Agents commit as the user but did not write the code, so they leave
       # commits and tags unsigned while the user's own git keeps signing. The
@@ -254,7 +296,10 @@ in
         // lib.optionalAttrs cfg.video.enable video.skills
         // lib.optionalAttrs cfg.iphoneUse.enable {
           iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
-          iphone-use-setup = "${iphoneUse}/share/iphone-use/skills/iphone-use-setup";
+          # Upstream's setup skill builds and starts WebDriverAgent with
+          # xcodebuild on one USB phone; here phones run it on their own and
+          # are chosen per session. The usage skill links to it by this name.
+          iphone-use-setup = ./iphone/iphone-use-setup;
         }
         # The search-and-read part of `spark skill` from Spark 1.4.1; compare
         # against a newer CLI's output when its commands change.
@@ -356,7 +401,13 @@ in
             defaults
             ;
         })
-      ];
+      ]
+      ++ lib.optional cfg.iphoneUse.enable (
+        import ./iphone/home.nix {
+          inherit perSystem;
+          cfg = cfg.iphoneUse;
+        }
+      );
     in
     {
       assertions = [
