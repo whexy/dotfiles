@@ -54,10 +54,13 @@ let
   );
   luaStringList = lib.concatMapStringsSep ", " (s: ''"${s}"'');
 
-  # The terminal-spawn binding is SSH-context aware when multiplexing is on:
-  # `ssh-window launch` clones the focused window's SSH destination.
+  # The terminal-spawn binding opens Rex when it is enabled. Otherwise it is
+  # SSH-context aware when multiplexing is on: `ssh-window launch` clones the
+  # focused window's SSH destination, which works only for Ghostty windows.
   terminalLaunch =
-    if config.programs.ssh-window.enable then
+    if config.dotfiles.terminal.rex.enable then
+      "/usr/bin/env -i /usr/bin/open -a 'Rex Beta'"
+    else if config.programs.ssh-window.enable then
       "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &"
     else
       "/usr/bin/env -i /usr/bin/open -a Ghostty";

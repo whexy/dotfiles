@@ -127,7 +127,10 @@ in
           cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
           cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
           cmd-alt-ctrl-shift-t =
-            if config.programs.ssh-window.enable then
+            # Rex takes the key over ssh-window, which only clones Ghostty windows.
+            if config.dotfiles.terminal.rex.enable then
+              "exec-and-forget open -a 'Rex Beta'"
+            else if config.programs.ssh-window.enable then
               # SSH-context aware: clones the focused window's ssh destination.
               "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch"
             else
