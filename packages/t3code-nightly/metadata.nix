@@ -7,6 +7,11 @@
     linux-x64 = "sha256-ipo3VGCOgUgwuwWQByVDyyg1go/9wa6URT160V+y5+Y=";
   };
 
+  desktop.hashes = {
+    linux-arm64 = "sha512-O9R7pC3BBnLxo3aatL/jP2W9pIaYtzMPL8lH2sCtmku2V7JEffSrd3nDCTsns21xKiisYwuMQqwBoXCGGjjHgQ==";
+    linux-x64 = "sha512-UTnkyDsSlkUop3Bx8hBcil2uGSGWoKu4uBAGMC+vk4fAXPPw6707++5pYlpCORSltCfEkTRhx7RCn96eViEcBQ==";
+  };
+
   browser = {
     version = "156.0.8078.70";
     hashes = {

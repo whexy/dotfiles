@@ -207,33 +207,88 @@ let
       replace "$state" "$(${jq} -n --argjson models "$models" '{ownedClaudeModels: [$models[].slug]}')"
     '';
 
+  # Sets one key of a JSON document in T3's userdata, keeping the keys T3
+  # wrote there.
+  userdataSetting =
+    {
+      name,
+      file,
+      key,
+      value,
+    }:
+    let
+      jq = lib.getExe pkgs.jq;
+      json = lib.escapeShellArg (builtins.toJSON value);
+    in
+    pkgs.writeShellScriptBin name ''
+      set -eo pipefail
+      userdata=${lib.escapeShellArg "${config.home.homeDirectory}/.t3/userdata"}
+      document="$userdata/${file}"
+      if ${jq} -e --argjson value ${json} '.${key} == $value' "$document" >/dev/null 2>&1; then
+        exit 0
+      fi
+      if [ ! -e "$document" ]; then
+        after=$(${jq} -n --argjson value ${json} '{${key}: $value}')
+      elif ! after=$(${jq} --argjson value ${json} '.${key} = $value' "$document"); then
+        echo "${name}: could not update $document; leaving it unchanged" >&2
+        exit 0
+      fi
+      mkdir -p "$userdata"
+      temporary=$(mktemp "$userdata/.${file}.XXXXXX")
+      printf '%s\n' "$after" >"$temporary"
+      chmod 644 "$temporary"
+      mv "$temporary" "$document"
+    '';
+
   # Linked environments is a Labs setting, off by default, and a server with it
   # off refuses links. Every server turns it on so the cluster's MCP hub
   # (clusters-work gitops/apps/t3code-hub) can link to it. The running server
   # reloads settings.json when it changes.
-  linkedEnvironments =
+  linkedEnvironments = userdataSetting {
+    name = "t3-linked-environments";
+    file = "settings.json";
+    key = "linkedEnvironmentsEnabled";
+    value = true;
+  };
+
+  # The desktop app's own server needs ~/.t3/userdata to itself, and the app
+  # quits when the server service already holds it. Where the service runs,
+  # the app starts no local environment and is a client of that server
+  # instead, paired with t3-pair.
+  desktopClientOnly = userdataSetting {
+    name = "t3-desktop-client-only";
+    file = "desktop-settings.json";
+    key = "localEnvironmentEnabled";
+    value = false;
+  };
+
+  # T3's updater replaces the macOS app itself, so activation installs it only
+  # when it is missing, at the nightly the server runs. Installing as the user
+  # lets the updater run without an admin prompt.
+  desktopApp = "/Applications/T3 Code (Nightly).app";
+  installDesktopApp =
     let
-      jq = lib.getExe pkgs.jq;
+      inherit (perSystem.self.t3code-nightly) version;
     in
-    pkgs.writeShellScriptBin "t3-linked-environments" ''
-      set -eo pipefail
-      userdata=${lib.escapeShellArg "${config.home.homeDirectory}/.t3/userdata"}
-      settings="$userdata/settings.json"
-      if ${jq} -e '.linkedEnvironmentsEnabled == true' "$settings" >/dev/null 2>&1; then
-        exit 0
-      fi
-      if [ ! -e "$settings" ]; then
-        after='{"linkedEnvironmentsEnabled": true}'
-      elif ! after=$(${jq} '.linkedEnvironmentsEnabled = true' "$settings"); then
-        echo "t3-linked-environments: could not update $settings; leaving it unchanged" >&2
-        exit 0
-      fi
-      mkdir -p "$userdata"
-      temporary=$(mktemp "$userdata/.settings.json.XXXXXX")
-      printf '%s\n' "$after" >"$temporary"
-      chmod 644 "$temporary"
-      mv "$temporary" "$settings"
-    '';
+    pkgs.writeShellApplication {
+      name = "t3code-desktop-install";
+      text = ''
+        tmp=$(mktemp -d)
+        trap 'rm -rf "$tmp"' EXIT
+
+        /usr/bin/curl -fsSL --retry 3 --connect-timeout 30 --speed-limit 10240 --speed-time 60 \
+          -o "$tmp/T3.zip" \
+          https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-arm64.zip
+        /usr/bin/ditto -x -k "$tmp/T3.zip" "$tmp"
+
+        # Nothing pins the archive's hash, so only T3 Tools' Developer ID
+        # vouches for what gets installed.
+        /usr/bin/codesign --verify --deep --strict \
+          -R='anchor apple generic and identifier "com.t3tools.t3code" and certificate leaf[subject.OU] = "ARK85ZXQ4Z"' \
+          "$tmp/T3 Code (Nightly).app"
+        mv "$tmp/T3 Code (Nightly).app" ${lib.escapeShellArg desktopApp}
+      '';
+    };
 
 in
 {
@@ -241,7 +296,8 @@ in
     t3code
     claudeModels
   ]
-  ++ lib.optional cfg.pair.enable perSystem.self.t3-pair;
+  ++ lib.optional cfg.pair.enable perSystem.self.t3-pair
+  ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly;
 
   sessionVariables = privacyEnv;
 
@@ -257,6 +313,18 @@ in
   // lib.optionalAttrs cfg.server.enable {
     t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
       run ${lib.getExe linkedEnvironments}
+    '';
+  }
+  // lib.optionalAttrs (cfg.desktop.enable && cfg.server.enable) {
+    t3codeDesktopClientOnly = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      run ${lib.getExe desktopClientOnly}
+    '';
+  }
+  // lib.optionalAttrs (cfg.desktop.enable && isDarwin) {
+    t3codeDesktopApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+      if [ ! -e ${lib.escapeShellArg desktopApp} ]; then
+        run ${lib.getExe installDesktopApp} || warnEcho "T3 Code was not installed; the next activation retries"
+      fi
     '';
   }
   # A server that ran before this link existed left its own download here,
