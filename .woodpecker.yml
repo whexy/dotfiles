@@ -209,7 +209,8 @@ steps:
         fi
         stream=$(nix build --accept-flake-config .#t3code-hub-image --no-link --print-out-paths)
         "$stream" >/tmp/t3code-hub.tar
-        skopeo copy --dest-creds "whexy:$GHCR_TOKEN" docker-archive:/tmp/t3code-hub.tar "$ref"
+        # The CI image has no containers policy.json, which skopeo needs to copy.
+        skopeo --insecure-policy copy --dest-creds "whexy:$GHCR_TOKEN" docker-archive:/tmp/t3code-hub.tar "$ref"
         echo "OK - published t3code-hub $version"
   check:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
