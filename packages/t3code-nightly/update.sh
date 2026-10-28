@@ -43,6 +43,24 @@ for platform in linux-x64 linux-arm64 darwin-arm64; do
   hashes+=("$(nix hash convert --hash-algo sha256 --to sri "$hash")")
 done
 
+# SHA256SUMS lists only the CLI archives. The desktop AppImages are pinned
+# from the electron-updater manifests of the same release, which carry their
+# SHA-512.
+linux_manifest=$(curl -fsSL --retry 3 "$release_base/nightly-linux.yml")
+linux_arm64_manifest=$(curl -fsSL --retry 3 "$release_base/nightly-linux-arm64.yml")
+appimage_hash() {
+  awk -v file="T3-Code-${version}-$2.AppImage" '
+    $1 == "-" && $2 == "url:" { url = $3 }
+    $1 == "sha512:" && url == file { print "sha512-" $2; exit }
+  ' <<<"$1"
+}
+desktop_linux_x64=$(appimage_hash "$linux_manifest" x86_64)
+desktop_linux_arm64=$(appimage_hash "$linux_arm64_manifest" arm64)
+if [ -z "$desktop_linux_x64" ] || [ -z "$desktop_linux_arm64" ]; then
+  echo "t3code-nightly: could not read the desktop AppImage hashes from $release_base" >&2
+  exit 1
+fi
+
 url="$release_base/t3-${version}-linux-x64.tar.gz"
 prefetch=$(nix store prefetch-file --json --hash-type sha256 --expected-hash "${hashes[0]}" "$url")
 tarball=$(sed -n 's/.*"storePath": *"\([^"]*\)".*/\1/p' <<<"$prefetch")
@@ -84,6 +102,11 @@ cat >"$tmp" <<EOF
     darwin-arm64 = "${hashes[2]}";
     linux-arm64 = "${hashes[1]}";
     linux-x64 = "${hashes[0]}";
+  };
+
+  desktop.hashes = {
+    linux-arm64 = "$desktop_linux_arm64";
+    linux-x64 = "$desktop_linux_x64";
   };
 
   browser = {

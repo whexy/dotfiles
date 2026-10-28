@@ -207,6 +207,21 @@ default.
 Custom models added in T3 itself survive a refresh: `dotfiles-settings.json`
 beside T3's settings records the models `t3-claude-models` wrote.
 
+### Desktop app
+
+The `gui` cap installs the T3 Code desktop app
+(`dotfiles.agents.t3code.desktop.enable`). On Linux it is
+`t3code-desktop-nightly`, pinned with the server, with its own updater off. On
+macOS, activation installs `/Applications/T3 Code (Nightly).app` only when it
+is missing, and the app updates itself.
+
+The app's bundled server needs `~/.t3/userdata` to itself; while the server
+service holds it, the app reports "This T3 home is unavailable" and quits.
+Wherever the service runs, activation therefore turns off the app's local
+environment (`localEnvironmentEnabled` in `desktop-settings.json`), and the app
+is a client of that server. Pair it once: run `t3-pair` and paste the link
+under Settings → Connections → Add environment.
+
 ## Spark MCP server
 
 `packages/spark-mcp` serves the email-reading tools of Spark Desktop's stdio
