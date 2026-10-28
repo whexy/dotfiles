@@ -1,10 +1,10 @@
 {
-  version = "0.1.3-nightly.20261027.3754";
+  version = "0.1.4-nightly.20261027.3796";
 
   hashes = {
-    darwin-arm64 = "sha256-l7maUx9hP6x/xisRlOofiQ3zoAcGmmTl05pBP03xlU4=";
-    linux-arm64 = "sha256-fMDHIWmyY3tbXvDq0E7QnaEdwiQBUTGZfWsqVX6dM80=";
-    linux-x64 = "sha256-rJfcoPpG46VYW9+UfDFSxt1VrEEOX3CUdLvEYNk2qs8=";
+    darwin-arm64 = "sha256-is3Y/X37ymr++F3SQgWy5aFo2Dy+Z2gZrp2MwDZXik4=";
+    linux-arm64 = "sha256-7+9lWL0K9a0qAa26/T3eBCA4fpDcrVTpBj2+x0D0QBg=";
+    linux-x64 = "sha256-ipo3VGCOgUgwuwWQByVDyyg1go/9wa6URT160V+y5+Y=";
   };
 
   browser = {
