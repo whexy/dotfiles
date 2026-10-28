@@ -66,10 +66,19 @@
         calc(-1 * var(--urlbar-joint-background-shadow-margin))
     ) !important;
   }
+  /* Firefox 159 renamed --urlbarView-* to --urlbarview-*. An undefined name
+     collapses this background to zero height, so the clip hides it entirely.
+     Drop the fallbacks once no host runs Firefox 158. */
   #urlbar > .urlbarView > .urlbarView-background {
-    inset-block: calc(-1 * var(--urlbarView-joint-background-outset-block))
+    inset-block: calc(
+        -1 *
+          var(
+            --urlbarview-joint-background-outset-block,
+            var(--urlbarView-joint-background-outset-block)
+          )
+      )
       calc(
-        -1 * var(--urlbarView-margin-block) -
+        -1 * var(--urlbarview-margin-block, var(--urlbarView-margin-block)) -
           var(--urlbar-joint-background-overlap)
       ) !important;
     border-start-start-radius: var(
