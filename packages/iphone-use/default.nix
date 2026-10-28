@@ -50,10 +50,12 @@ pkgs.stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Drive a USB-connected iPhone through a local WebDriverAgent";
+    description = "Drive an iPhone through WebDriverAgent";
     homepage = "https://github.com/zhongerxin/iPhone-use";
     license = lib.licenses.mit;
-    platforms = lib.platforms.darwin;
+    # Its setup tools need Xcode, but its phone tools need only a reachable
+    # WebDriverAgent, which iphone-use-select provides on Linux too.
+    platforms = lib.platforms.unix;
     mainProgram = "iphone-use-mcp";
   };
 }

@@ -252,6 +252,53 @@ URL back. T3 Code's sessions use the same token stores. Each agent registers
 its own loopback callback with Access, so the Access application needs no
 redirect URIs for them.
 
+## iPhone automation
+
+`dotfiles.agents.iphoneUse` (golf, mudd, deimos, sheridan) gives every agent
+iPhone Use's tools for the phones in `modules/home/agents/iphone/phones.nix`.
+
+Each phone runs WebDriverAgent on its own: it is launched as an installed app,
+not by xcodebuild, so it keeps serving after the launcher exits and with no
+computer attached. It listens only on the phone's Tailscale address
+(`USE_IP`), and it has no authentication, so the tailnet ACL is the only gate:
+whoever reaches port 8100 controls the unlocked phone. Its screen stream on
+port 9100 ignores `USE_IP` and stays open on every network the phone joins.
+
+Agents reach a phone through `iphone-use-select`, an MCP proxy in front of
+iPhone Use:
+
+- A session starts with no phone; the agent asks the user which one to use.
+- The proxy forwards a loopback port to that phone, because iPhone Use talks
+  only to loopback.
+- iPhone Use's xcodebuild setup tools are hidden.
+- Two agents on one phone end each other's sessions, because WebDriverAgent
+  keeps only one.
+
+`iphone-wda` launches the runner. It needs a host that reaches the phone's
+developer services, today a Mac paired with the phone (golf, over Wi-Fi). Run
+it after the phone restarts, with the phone unlocked:
+
+```sh
+iphone-wda launch iphone-17-pro
+```
+
+On iOS 27 the runner must start in the background, through CoreDevice process
+control with `ActivateSuspended`; `devicectl` cannot launch it. pymobiledevice3,
+which does this, comes from PyPI, hash-pinned in
+`packages/iphone-wda/requirements.txt`: nixpkgs' copy does not evaluate on
+Darwin.
+
+To add a phone:
+
+1. On the phone, turn on Developer Mode and Settings → Developer → Enable UI
+   Automation, install Tailscale, and pair it with a Mac in Xcode. Let the
+   agent hosts reach it on TCP 8100 in the tailnet ACL.
+2. Add it to `phones.nix` (`iphone-wda devices` on the Mac shows its device
+   name) and switch.
+3. In a terminal on that Mac, run `iphone-wda build --register <phone>`, then
+   `iphone-wda install <phone>` and `iphone-wda launch <phone>`. Over SSH the
+   build cannot sign: those sessions see the login keychain as locked.
+
 ## Public tunnels
 
 Each service a host publishes on the public internet gets its own Cloudflare
