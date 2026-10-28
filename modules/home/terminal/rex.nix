@@ -1,6 +1,6 @@
-# Rex terminal multiplexer: the Rex Beta app (macOS) and the xterm-rex
-# terminfo entry its terminals announce.
-{
+# Rex terminal multiplexer: the Rex Beta app (macOS) with Ghostty's font and
+# themes, and the xterm-rex terminfo entry its terminals announce.
+args@{
   config,
   lib,
   pkgs,
@@ -8,9 +8,45 @@
   ...
 }:
 let
+  osConfig = args.osConfig or null;
   cfg = config.dotfiles.terminal;
   app = "/Applications/Rex Beta.app";
   terminfo = perSystem.self.rex-terminfo;
+  style = import ./style.nix;
+  domain = "com.superlogical.rex";
+
+  # Rex names custom themes custom-<UUID>. Deriving the UUID from the theme
+  # name keeps the ID stable across activations.
+  themeId =
+    name:
+    let
+      h = lib.toUpper (builtins.hashString "sha256" name);
+      part = start: len: lib.substring start len h;
+    in
+    "custom-${part 0 8}-${part 8 4}-${part 12 4}-${part 16 4}-${part 20 12}";
+
+  themes =
+    pkgs.runCommand "rex-themes.json"
+      {
+        nativeBuildInputs = [ pkgs.python3 ];
+        specs = builtins.toJSON [
+          {
+            id = themeId style.darkTheme;
+            name = style.darkTheme;
+            appearance = "dark";
+          }
+          {
+            id = themeId style.lightTheme;
+            name = style.lightTheme;
+            appearance = "light";
+          }
+        ];
+      }
+      ''
+        python3 ${./rex-themes.py} \
+          ${pkgs.ghostty-bin}/Applications/Ghostty.app/Contents/Resources/ghostty/themes \
+          "$specs" > $out
+      '';
 
   install = pkgs.writeShellApplication {
     name = "rex-app-install";
@@ -58,6 +94,31 @@ in
           fi
         ''
       );
+
+      # init.lua only binds keys and defines actions and hosts; the app keeps
+      # its look in its defaults domain, under the keys its Settings window
+      # writes. Rex reads them at launch.
+      targets.darwin.defaults.${domain} = {
+        "Workspace.terminalFontName" = style.font;
+        "Workspace.terminalFontPointSize" = style.fontSize (
+          osConfig.dotfiles.hardware.display.macbookScreen or false
+        );
+        "Workspace.appearance" = "dark";
+        "Workspace.darkThemeID" = themeId style.darkTheme;
+        "Workspace.lightThemeID" = themeId style.lightTheme;
+        # The window around the panes takes the terminal theme's colors, as
+        # Ghostty's titlebar does.
+        "Workspace.interfaceStyle" = "useTheme";
+        "Workspace.terminalOptionKeyBehavior" = "actsAsAlt";
+      };
+
+      # Rex stores its custom themes as JSON in a data value, which
+      # targets.darwin.defaults cannot write. This replaces any theme added in
+      # Rex's Settings.
+      home.activation.rexThemes = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+        run /usr/bin/defaults write ${domain} Workspace.customThemes \
+          -data "$(/usr/bin/xxd -p ${themes} | /usr/bin/tr -d '\n')"
+      '';
     })
 
     (lib.mkIf cfg.rex.terminfo.enable {
