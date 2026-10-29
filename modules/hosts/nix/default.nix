@@ -28,6 +28,10 @@ in
         only on the tailnet.
       '';
     };
+    rexNetrc.enable = lib.mkEnableOption ''
+      Rex's testing token in Nix's netrc, which fetching this flake's `rex`
+      input needs until Rex's first release
+    '';
     pinRegistry.enable = lib.mkEnableOption "pinning the `nixpkgs` flake reference to this system's nixpkgs";
     gc.enable = lib.mkEnableOption "weekly garbage collection of system profile generations older than 14 days";
     optimise.enable = lib.mkEnableOption "automatic nix store optimisation";
@@ -59,6 +63,16 @@ in
 
     (lib.mkIf cfg.ciCache.enable {
       nix.settings = import ../../../lib/ci-cache-settings.nix;
+    })
+
+    (lib.mkIf cfg.rexNetrc.enable {
+      # Nix fetches flake inputs in the evaluating process, so the netrc must
+      # be readable by the primary user's evaluations as well as root's.
+      age.secrets.rex-package-netrc = {
+        file = ../../../secrets/rex-package-netrc.age;
+        owner = config.dotfiles.host.username;
+      };
+      nix.settings.netrc-file = config.age.secrets.rex-package-netrc.path;
     })
 
     (lib.mkIf cfg.pinRegistry.enable {

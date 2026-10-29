@@ -24,7 +24,8 @@ variables:
       from_secret: ci_cache_secret_key
     NIX_CACHE_SIGNING_KEY:
       from_secret: nix_cache_signing_key
-  # GitHub App credentials and the build cache both update lanes need.
+  # GitHub App credentials, the build cache and Rex's token, which both update
+  # lanes need.
   - &github_app
     <<: *ci_cache
     GITHUB_APP_ID:
@@ -33,6 +34,16 @@ variables:
       from_secret: github_app_installation_id
     GITHUB_APP_PRIVATE_KEY:
       from_secret: github_app_private_key
+    REX_PACKAGE_TOKEN:
+      from_secret: rex_package_token
+  # pkgs.superlogical.com serves the rex input only with Rex's testing token.
+  # A pull-request step goes without it and substitutes the input from the CI
+  # cache, where every check on master archives it.
+  - &rex_netrc |
+    netrc=$(mktemp)
+    printf 'machine pkgs.superlogical.com login rex password %s\n' "$REX_PACKAGE_TOKEN" >"$netrc"
+    export NIX_CONFIG="$NIX_CONFIG
+    netrc-file = $netrc"
   # Lint, then evaluate one configuration of each kind without building it.
   # `nix flake check --all-systems` is too memory-heavy for this repo after
   # Blueprint host discovery. A tree that passes is recorded in the CI cache,
@@ -117,6 +128,7 @@ steps:
     backend_options: *k8s_heavy
     environment: *github_app
     commands:
+      - *rex_netrc
       - cp flake.lock /tmp/flake.lock.old
       - nix flake update
       # Commit flake.lock, check it, and push it directly to the repository's
@@ -148,6 +160,7 @@ steps:
     backend_options: *k8s_heavy
     environment: *github_app
     commands:
+      - *rex_netrc
       - cp flake.lock /tmp/flake.lock.old
       - cp packages/t3code-nightly/metadata.nix /tmp/t3code-metadata.old.nix
       - nix flake update llm-agents
@@ -222,7 +235,21 @@ steps:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
     when:
-      event: [push, pull_request]
+      event: push
+    environment:
+      <<: *ci_cache
+      REX_PACKAGE_TOKEN:
+        from_secret: rex_package_token
+    commands:
+      - *rex_netrc
+      - *check
+  # Woodpecker fails a step that names a secret its event may not use, so pull
+  # requests check in their own step, without Rex's token.
+  check-pr:
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
+    backend_options: *k8s_heavy
+    when:
+      event: pull_request
     environment: *ci_cache
     commands:
       - *check

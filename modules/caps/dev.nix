@@ -34,9 +34,14 @@ in
       passwordlessSudo.enable = lib.mkDefault true;
     };
     network = {
-      tailscale.enable = lib.mkDefault true;
-      # The home T3 Code server publishes itself with `tailscale serve`.
-      tailscale.userOperator = lib.mkDefault true;
+      tailscale = {
+        enable = lib.mkDefault true;
+        # The home T3 Code server publishes itself with `tailscale serve`.
+        userOperator = lib.mkDefault true;
+        # Rex's login server on the tailnet. On Darwin the Rex app is the
+        # server, which the gui cap publishes.
+        rex.enable = lib.mkIf (!isDarwin) (lib.mkDefault true);
+      };
       networkmanager.enable = lib.mkDefault true;
     };
     # Keeps user services such as the T3 Code server up on headless hosts.

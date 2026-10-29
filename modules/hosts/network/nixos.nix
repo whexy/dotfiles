@@ -1,5 +1,6 @@
 {
   config,
+  inputs,
   lib,
   pkgs,
   ...
@@ -11,6 +12,8 @@ let
   inherit (config.dotfiles.host) wsl;
 in
 {
+  imports = [ inputs.rex.nixosModules.default ];
+
   config = lib.mkMerge [
     {
       networking = {
@@ -43,6 +46,19 @@ in
 
     (lib.mkIf (cfg.tailscale.enable && wsl) {
       environment.systemPackages = [ pkgs.tailscale-wsl ];
+    })
+
+    # The login server learns each caller's Tailscale login from tailscaled,
+    # which the Windows client on WSL cannot provide.
+    (lib.mkIf (cfg.tailscale.enable && cfg.tailscale.rex.enable && !wsl) {
+      services.rex.loginServer = {
+        enable = true;
+        accounts.${config.dotfiles.host.username}.principals = [ "tailscale:whexy@github" ];
+        tailscaleServe = {
+          enable = true;
+          httpsPort = cfg.tailscale.rex.port;
+        };
+      };
     })
   ];
 }

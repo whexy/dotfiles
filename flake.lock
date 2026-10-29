@@ -823,6 +823,23 @@
         "type": "github"
       }
     },
+    "rex": {
+      "inputs": {
+        "nixpkgs": [
+          "nixpkgs"
+        ]
+      },
+      "locked": {
+        "lastModified": 1793311550,
+        "narHash": "sha256-nkLkheEVUEUsdlPC5aTG+cbphqXgP7qXWh3CM2hSKNY=",
+        "type": "tarball",
+        "url": "https://pkgs.superlogical.com/rex/nix/preview/0.1.0-preview.11.tar.gz"
+      },
+      "original": {
+        "type": "tarball",
+        "url": "https://pkgs.superlogical.com/rex/nix/preview.tar.gz"
+      }
+    },
     "root": {
       "inputs": {
         "agenix": "agenix",
@@ -844,6 +861,7 @@
         "oh-my-ghostty": "oh-my-ghostty",
         "paneru": "paneru",
         "pwndbg": "pwndbg",
+        "rex": "rex",
         "treefmt-nix": "treefmt-nix_2",
         "vicinae-extensions": "vicinae-extensions"
       }

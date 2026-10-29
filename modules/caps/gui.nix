@@ -5,9 +5,9 @@
     network.tailscale = {
       # The home t3-pair client finds T3 Code servers on the tailnet.
       enable = lib.mkDefault true;
-      # The Rex app's server on the tailnet; only has an effect on Darwin,
-      # where the home gui cap installs the app.
-      rex.enable = lib.mkDefault true;
+      # The Rex app's server on the tailnet, on Darwin, where the home gui cap
+      # installs the app. The dev cap covers NixOS.
+      rex.enable = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.mkDefault true);
     };
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
