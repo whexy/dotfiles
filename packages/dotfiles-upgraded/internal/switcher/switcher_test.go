@@ -23,9 +23,7 @@ func TestRebuildFixture(t *testing.T) {
 		return
 	}
 	if mode == "stopped" {
-		if mode != "graceful" {
-			signal.Ignore(syscall.SIGTERM)
-		}
+		signal.Ignore(syscall.SIGTERM)
 		if err := os.WriteFile(os.Getenv("SWITCHER_PID"), []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
 			os.Exit(2)
 		}
@@ -260,7 +258,9 @@ func TestCallerCancellationKillsGroup(t *testing.T) {
 	if processRunning(pid) {
 		t.Fatal("descendant survived caller cancellation")
 	}
-	unlock, err := lock(context.Background(), e.LockPath)
+	lockCtx, cancelLock := context.WithTimeout(context.Background(), time.Second)
+	defer cancelLock()
+	unlock, err := lock(lockCtx, e.LockPath)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -271,4 +271,43 @@ func TestWaitForExitRejectsNonChild(t *testing.T) {
 	if err := waitForExit(1 << 30); !errors.Is(err, syscall.ECHILD) {
 		t.Fatalf("got %v, want ECHILD", err)
 	}
+}
+
+func TestExitObservationLosesChildOwnership(t *testing.T) {
+	var output bytes.Buffer
+	e := fixtureExec(t, "orphan", &output)
+	e.observeExit = func(pid int) error {
+		var status syscall.WaitStatus
+		if _, err := syscall.Wait4(pid, &status, 0, nil); err != nil {
+			return err
+		}
+		return waitForExit(pid)
+	}
+	started := time.Now()
+	switchErr := e.Switch(context.Background(), "sha")
+	raw, err := os.ReadFile(os.Getenv("SWITCHER_PID"))
+	if err != nil {
+		t.Fatal(err)
+	}
+	pid, err := strconv.Atoi(string(raw))
+	if err != nil {
+		t.Fatal(err)
+	}
+	t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })
+	if !errors.Is(switchErr, syscall.ECHILD) {
+		t.Fatalf("got %v, want lost child ownership", switchErr)
+	}
+	if time.Since(started) > 3*time.Second {
+		t.Fatal("lost ownership did not stop escalation promptly")
+	}
+	if !processRunning(pid) {
+		t.Fatal("group was signaled after losing leader ownership")
+	}
+	ctx, cancel := context.WithTimeout(context.Background(), time.Second)
+	defer cancel()
+	unlock, err := lock(ctx, e.LockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlock()
 }
