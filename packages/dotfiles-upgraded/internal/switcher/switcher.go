@@ -104,6 +104,9 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 
 	e.Log.Info("switch starting", "sha", sha, "command", argv)
 	started := time.Now()
+	if err := ctx.Err(); err != nil {
+		return err
+	}
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start %s: %w", argv[0], err)
 	}
