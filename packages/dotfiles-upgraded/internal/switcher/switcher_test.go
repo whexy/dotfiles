@@ -158,3 +158,16 @@ func processRunning(pid int) bool {
 	}
 	return true
 }
+
+func TestCanceledContextDoesNotStartRebuild(t *testing.T) {
+	var output bytes.Buffer
+	e := fixtureExec(t, "stubborn", &output)
+	ctx, cancel := context.WithCancel(context.Background())
+	cancel()
+	if err := e.Switch(ctx, "sha"); !errors.Is(err, context.Canceled) {
+		t.Fatalf("got %v, want cancellation", err)
+	}
+	if _, err := os.Stat(os.Getenv("SWITCHER_PID")); !errors.Is(err, os.ErrNotExist) {
+		t.Fatalf("rebuild started with canceled context: %v", err)
+	}
+}
