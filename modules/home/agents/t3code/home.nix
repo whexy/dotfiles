@@ -29,44 +29,46 @@ let
 
   # Service managers start with a bare environment; source the same session
   # variables and profile PATH a login shell would get.
+  launchEnvironment = ''
+    export PATH=${
+      lib.concatStringsSep ":" [
+        "${config.home.profileDirectory}/bin"
+        "/run/wrappers/bin"
+        "/run/current-system/sw/bin"
+        "/nix/var/nix/profiles/default/bin"
+        "/usr/bin"
+        "/bin"
+        "/usr/sbin"
+        "/sbin"
+      ]
+    }
+    . ${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh
+    # T3 sessions have no forwarded SSH signing agent.
+    export GIT_CONFIG_GLOBAL=${gitConfig}
+    cd ${lib.escapeShellArg config.home.homeDirectory}
+  '';
+
   serve = pkgs.writeShellScript "t3-serve" (
+    launchEnvironment
+    + ''
+      exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port 35338"}
     ''
+  );
+
+  # Keep T3's Serve flag for dynamic environment discovery. Its initial setup
+  # may fail while Tailscale is offline; this independent service repairs only
+  # T3's HTTPS root handler, preserving other ports and paths.
+  tailnet = pkgs.writeShellScript "t3-tailnet" (
+    launchEnvironment
+    + ''
       export PATH=${
-        lib.concatStringsSep ":" [
-          "${config.home.profileDirectory}/bin"
-          "/run/wrappers/bin"
-          "/run/current-system/sw/bin"
-          "/nix/var/nix/profiles/default/bin"
-          "/usr/bin"
-          "/bin"
-          "/usr/sbin"
-          "/sbin"
+        lib.makeBinPath [
+          pkgs.coreutils
+          pkgs.jq
         ]
-      }
-      . ${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh
-      # T3 sessions arrive without SSH, so no forwarded signing agent ever
-      # reaches its git actions or terminal panel; commit unsigned as agents do.
-      export GIT_CONFIG_GLOBAL=${gitConfig}
-      cd ${lib.escapeShellArg config.home.homeDirectory}
+      }:"$PATH"
     ''
-    + (
-      if cfg.server.tailnet.enable then
-        ''
-          # A new host starts this service before anyone logs in to the tailnet, and
-          # t3 only warns when `tailscale serve` fails, leaving the server
-          # unreachable.
-          until [ "$(tailscale status --json 2>/dev/null | ${lib.getExe pkgs.jq} -r .BackendState)" = Running ]; do
-            sleep 10
-          done
-          exec ${t3} serve \
-            --host 127.0.0.1 --port ${toString port} \
-            --tailscale-serve --tailscale-serve-port 35338 --no-browser
-        ''
-      else
-        ''
-          exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser
-        ''
-    )
+    + builtins.readFile ./tailnet.sh
   );
 
   tunnel =
@@ -350,6 +352,17 @@ in
         Install.WantedBy = [ "default.target" ];
       };
     }
+    // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable && !isDarwin) {
+      t3code-tailnet = {
+        Unit.Description = "T3 Code Tailscale route";
+        Service = {
+          ExecStart = "${tailnet}";
+          Restart = "on-failure";
+          RestartSec = 10;
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
+    }
     // lib.optionalAttrs cfg.server.tunnel.enable tunnel.systemdUserServices;
 
   launchdAgents =
@@ -362,6 +375,18 @@ in
           KeepAlive.SuccessfulExit = false;
           StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
           StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
+        };
+      };
+    }
+    // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable && isDarwin) {
+      t3code-tailnet = {
+        enable = true;
+        config = {
+          ProgramArguments = [ "${tailnet}" ];
+          RunAtLoad = true;
+          KeepAlive.SuccessfulExit = false;
+          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code-tailnet.log";
+          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code-tailnet.log";
         };
       };
     }
