@@ -10,6 +10,7 @@ import yaml
 pipeline = yaml.safe_load(Path(sys.argv[1]).read_text())
 assert {"event": "push", "branch": "master"} in pipeline["when"]
 assert "push" in pipeline["steps"]["check"]["when"]["event"]
+assert ".#packages.$system.dotfiles-upgraded" in pipeline["steps"]["check"]["commands"][0]
 assert ".#checks.$system.bot-update-rollout" in pipeline["steps"]["check"]["commands"][0]
 
 
