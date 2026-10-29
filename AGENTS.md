@@ -222,6 +222,25 @@ environment (`localEnvironmentEnabled` in `desktop-settings.json`), and the app
 is a client of that server. Pair it once: run `t3-pair` and paste the link
 under Settings → Connections → Add environment.
 
+## Rex remote access
+
+On Macs, Tailscale Serve publishes the Rex app's server at
+`https://<MagicDNS name>:7297` (`dotfiles.network.tailscale.rex`, on the `gui`
+cap). Rex clients try that port for a bare host name, so a client adds the Mac
+by its MagicDNS name alone.
+
+Rex has no authentication, and this route keeps it from identifying callers:
+
+- The app fixes its server's command line, listening only on its Unix socket,
+  so the route forwards to that socket. Rex treats a caller there as the user,
+  so the tailnet ACL is the only gate: every device it lets reach the Mac on
+  that port gets a shell.
+- tailscaled serves a Unix socket only for root, so system activation sets the
+  route, and removes it once the option is off.
+
+There is no public tunnel: without authentication in Rex, one would give anyone
+a shell.
+
 ## Spark MCP server
 
 `packages/spark-mcp` serves the email-reading tools of Spark Desktop's stdio
