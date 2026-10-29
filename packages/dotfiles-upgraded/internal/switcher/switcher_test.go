@@ -24,6 +24,13 @@ func TestRebuildFixture(t *testing.T) {
 	}
 	if os.Getenv("SWITCHER_CHILD") == "1" {
 		signal.Ignore(syscall.SIGTERM)
+		if mode == "close-pipes" {
+			go func() {
+				time.Sleep(3 * time.Second)
+				os.Stdout.Close()
+				os.Stderr.Close()
+			}()
+		}
 		if err := os.WriteFile(os.Getenv("SWITCHER_PID"), []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
 			os.Exit(2)
 		}
@@ -41,6 +48,9 @@ func TestRebuildFixture(t *testing.T) {
 	signal.Ignore(syscall.SIGTERM)
 	child := exec.Command(os.Args[0], "-test.run=^TestRebuildFixture$")
 	child.Env = append(os.Environ(), "SWITCHER_CHILD=1")
+	if mode == "escaped" {
+		child.SysProcAttr = &syscall.SysProcAttr{Setsid: true}
+	}
 	child.Stdout, child.Stderr = os.Stdout, os.Stderr
 	if err := child.Start(); err != nil {
 		os.Exit(2)
@@ -51,7 +61,7 @@ func TestRebuildFixture(t *testing.T) {
 		}
 		time.Sleep(time.Millisecond)
 	}
-	if mode == "orphan" {
+	if mode == "orphan" || mode == "close-pipes" || mode == "escaped" {
 		os.Exit(0)
 	}
 	_ = child.Wait()
@@ -97,11 +107,11 @@ func TestNormalOutputCollection(t *testing.T) {
 }
 
 func TestTimeoutKillsProcessGroupAndReleasesLock(t *testing.T) {
-	for _, mode := range []string{"stubborn", "orphan"} {
+	for _, mode := range []string{"stubborn", "orphan", "close-pipes", "escaped"} {
 		t.Run(mode, func(t *testing.T) {
 			var output bytes.Buffer
 			e := fixtureExec(t, mode, &output)
-			e.Timeout = 500 * time.Millisecond
+			e.Timeout = 2 * time.Second
 			// This process is outside the rebuild's group and must survive cancellation.
 			unrelated := exec.Command("sleep", "60")
 			if err := unrelated.Start(); err != nil {
@@ -109,13 +119,7 @@ func TestTimeoutKillsProcessGroupAndReleasesLock(t *testing.T) {
 			}
 			defer func() { _ = unrelated.Process.Kill(); _ = unrelated.Wait() }()
 			started := time.Now()
-			err := e.Switch(context.Background(), "sha")
-			if !errors.Is(err, context.DeadlineExceeded) {
-				t.Fatalf("got %v, want deadline error", err)
-			}
-			if elapsed := time.Since(started); elapsed > e.Timeout+terminationGrace+3*time.Second {
-				t.Fatalf("timeout took %s", elapsed)
-			}
+			switchErr := e.Switch(context.Background(), "sha")
 			raw, err := os.ReadFile(os.Getenv("SWITCHER_PID"))
 			if err != nil {
 				t.Fatal(err)
@@ -125,12 +129,24 @@ func TestTimeoutKillsProcessGroupAndReleasesLock(t *testing.T) {
 				t.Fatal(err)
 			}
 			t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })
-			deadline := time.Now().Add(2 * time.Second)
-			for processRunning(pid) {
-				if time.Now().After(deadline) {
-					t.Fatalf("descendant %d survived", pid)
+			if !errors.Is(switchErr, context.DeadlineExceeded) {
+				t.Fatalf("got %v, want deadline error", switchErr)
+			}
+			if elapsed := time.Since(started); elapsed > e.Timeout+terminationGrace+3*time.Second {
+				t.Fatalf("timeout took %s", elapsed)
+			}
+			if mode == "escaped" {
+				if !processRunning(pid) {
+					t.Fatal("escaped process was signaled outside the rebuild group")
 				}
-				time.Sleep(10 * time.Millisecond)
+			} else {
+				deadline := time.Now().Add(2 * time.Second)
+				for processRunning(pid) {
+					if time.Now().After(deadline) {
+						t.Fatalf("descendant %d survived", pid)
+					}
+					time.Sleep(10 * time.Millisecond)
+				}
 			}
 			if err := unrelated.Process.Signal(syscall.Signal(0)); err != nil {
 				t.Fatalf("unrelated process was killed: %v", err)
@@ -169,5 +185,20 @@ func TestCanceledContextDoesNotStartRebuild(t *testing.T) {
 	}
 	if _, err := os.Stat(os.Getenv("SWITCHER_PID")); !errors.Is(err, os.ErrNotExist) {
 		t.Fatalf("rebuild started with canceled context: %v", err)
+	}
+}
+
+func TestWaitForExitDoesNotReapLeader(t *testing.T) {
+	cmd := exec.Command("sh", "-c", "exit 7")
+	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
+	if err := cmd.Start(); err != nil {
+		t.Fatal(err)
+	}
+	defer func() { _ = cmd.Process.Kill(); _ = cmd.Wait() }()
+	if err := waitForExit(cmd.Process.Pid); err != nil {
+		t.Fatal(err)
+	}
+	if err := cmd.Wait(); err == nil || cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != 7 {
+		t.Fatalf("leader was reaped before final Wait: %v", err)
 	}
 }
