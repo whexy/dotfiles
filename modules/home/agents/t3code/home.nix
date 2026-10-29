@@ -26,6 +26,7 @@ let
 
   # Tailscale Serve and the Cloudflare tunnel both proxy to this loopback port.
   port = 3773;
+  tailnetPort = 35338;
 
   # Service managers start with a bare environment; source the same session
   # variables and profile PATH a login shell would get.
@@ -43,7 +44,8 @@ let
       ]
     }
     . ${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh
-    # T3 sessions have no forwarded SSH signing agent.
+    # T3 sessions arrive without SSH, so no forwarded signing agent ever
+    # reaches its git actions or terminal panel; commit unsigned as agents do.
     export GIT_CONFIG_GLOBAL=${gitConfig}
     cd ${lib.escapeShellArg config.home.homeDirectory}
   '';
@@ -51,7 +53,7 @@ let
   serve = pkgs.writeShellScript "t3-serve" (
     launchEnvironment
     + ''
-      exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port 35338"}
+      exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port ${toString tailnetPort}"}
     ''
   );
 
@@ -67,6 +69,10 @@ let
           pkgs.jq
         ]
       }:"$PATH"
+    ''
+    + ''
+      backend=http://127.0.0.1:${toString port}
+      serve_port=${toString tailnetPort}
     ''
     + builtins.readFile ./tailnet.sh
   );
