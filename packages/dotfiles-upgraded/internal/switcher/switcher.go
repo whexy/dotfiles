@@ -81,23 +81,26 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 	}
 	defer unlock()
 
-	cmd := exec.CommandContext(ctx, argv[0], argv[1:]...)
+	cmd := exec.Command(argv[0], argv[1:]...)
 	// A rebuild forks nix and activation scripts; killing only the direct
 	// child would leave them running (and holding our pipes), so the whole
 	// process group is signalled on cancellation.
 	cmd.SysProcAttr = &syscall.SysProcAttr{Setpgid: true}
-	cmd.Cancel = func() error {
-		return syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-	}
-	cmd.WaitDelay = 10 * time.Second
-	stdout, err := cmd.StdoutPipe()
+	// Own the pipes: exec.Cmd.Wait must reap the leader without closing output
+	// that its descendants are still writing.
+	stdout, stdoutWriter, err := os.Pipe()
 	if err != nil {
 		return err
 	}
-	stderr, err := cmd.StderrPipe()
+	defer stdout.Close()
+	defer stdoutWriter.Close()
+	stderr, stderrWriter, err := os.Pipe()
 	if err != nil {
 		return err
 	}
+	defer stderr.Close()
+	defer stderrWriter.Close()
+	cmd.Stdout, cmd.Stderr = stdoutWriter, stderrWriter
 
 	e.Log.Info("switch starting", "sha", sha, "command", argv)
 	started := time.Now()
@@ -105,20 +108,61 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 		return fmt.Errorf("start %s: %w", argv[0], err)
 	}
 
-	done := make(chan struct{}, 2)
-	go func() { e.stream(stdout, "stdout"); done <- struct{}{} }()
-	go func() { e.stream(stderr, "stderr"); done <- struct{}{} }()
-	<-done
-	<-done
+	stdoutWriter.Close()
+	stderrWriter.Close()
+	outputDone := make(chan struct{})
+	go func() {
+		done := make(chan struct{}, 2)
+		go func() { e.stream(stdout, "stdout"); done <- struct{}{} }()
+		go func() { e.stream(stderr, "stderr"); done <- struct{}{} }()
+		<-done
+		<-done
+		close(outputDone)
+	}()
+	waitDone := make(chan error, 1)
+	go func() { waitDone <- cmd.Wait() }()
 
-	if err := cmd.Wait(); err != nil {
-		if ctxErr := ctx.Err(); errors.Is(ctxErr, context.DeadlineExceeded) {
-			return fmt.Errorf("switch timed out after %s", e.Timeout)
-		} else if ctxErr != nil {
-			return ctxErr
+	// Keep cancellation active until both the leader and its output finish.
+	// A leader can exit while a descendant keeps the pipes and group alive.
+	ctxDone := ctx.Done()
+	var grace <-chan time.Time
+	var timer *time.Timer
+	defer func() {
+		if timer != nil {
+			timer.Stop()
 		}
-		return fmt.Errorf("switch failed after %s: %w", time.Since(started).Round(time.Second), err)
+	}()
+	var waitErr, cancelErr error
+	for waitDone != nil || outputDone != nil {
+		select {
+		case waitErr = <-waitDone:
+			waitDone = nil
+		case <-outputDone:
+			outputDone = nil
+		case <-ctxDone:
+			cancelErr = ctx.Err()
+			ctxDone = nil
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+			timer = time.NewTimer(terminationGrace)
+			grace = timer.C
+		case <-grace:
+			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
+			// An escaped descendant must not retain the daemon's readers.
+			stdout.Close()
+			stderr.Close()
+			grace = nil
+		}
 	}
+	if cancelErr != nil {
+		if errors.Is(cancelErr, context.DeadlineExceeded) {
+			return fmt.Errorf("switch timed out after %s: %w", e.Timeout, cancelErr)
+		}
+		return cancelErr
+	}
+	if waitErr != nil {
+		return fmt.Errorf("switch failed after %s: %w", time.Since(started).Round(time.Second), waitErr)
+	}
+
 	e.Log.Info("switch finished", "sha", sha, "duration", time.Since(started).Round(time.Second).String())
 	return nil
 }
@@ -137,6 +181,9 @@ func (e *Exec) stream(r io.Reader, stream string) {
 		io.Copy(io.Discard, r)
 	}
 }
+
+// terminationGrace lets activation scripts exit before killing the rebuild group.
+const terminationGrace = 10 * time.Second
 
 // lockPollInterval bounds how long a cancellation waits behind a held lock.
 const lockPollInterval = time.Second
