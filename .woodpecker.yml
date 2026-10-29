@@ -67,6 +67,7 @@ variables:
           builtins.match "docs/.*|.*[.]md|modules/home/agents/skills/.*" f != null
           && builtins.pathExists (./. + ("/" + f))
         ) files' 2>/dev/null) || docs_only=false
+      nix build --accept-flake-config ".#checks.$system.t3-tailnet" -L --no-link
       if [ "$docs_only" = true ]; then
         echo "OK - only docs, markdown and skills changed"
       else
