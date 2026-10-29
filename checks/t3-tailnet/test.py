@@ -175,6 +175,7 @@ def actual(binary, fixture_bin):
                 sock.bind(("127.0.0.1", 0))
                 return sock.getsockname()[1]
         port = unused_port()
+        (root / "openssl.cnf").write_text("")
         subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(root / "key.pem"), "-out", str(root / "cert.pem"), "-days", "1", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost"], check=True, capture_output=True)
 
         class Proxy(BaseHTTPRequestHandler):
@@ -195,7 +196,7 @@ def actual(binary, fixture_bin):
         context.load_cert_chain(root / "cert.pem", root / "key.pem")
         proxy.socket = context.wrap_socket(proxy.socket, server_side=True)
         # Start the TLS route only after T3 has already started offline.
-        env = dict(os.environ, HOME=directory, T3_TEST_ROOT=directory, PATH=f"{fixture_bin}:{os.environ['PATH']}", NODE_EXTRA_CA_CERTS=str(root / "cert.pem"), T3CODE_TELEMETRY_ENABLED="false", T3CODE_OTEL_SDK_DISABLED="true")
+        env = dict(os.environ, HOME=directory, T3_TEST_ROOT=directory, PATH=f"{fixture_bin}:{os.environ['PATH']}", NODE_EXTRA_CA_CERTS=str(root / "cert.pem"), T3CODE_TELEMETRY_ENABLED="false", T3CODE_OTEL_SDK_DISABLED="true", OPENSSL_CONF=str(root / "openssl.cnf"))
         log = (root / "server.log").open("w+")
         process = subprocess.Popen([binary, "serve", "--base-dir", str(root / "data"), "--host", "127.0.0.1", "--port", str(port), "--tailscale-serve", "--tailscale-serve-port", str(proxy.server_port), "--no-browser"], env=env, cwd=directory, stdout=log, stderr=log, start_new_session=True)
         try:
@@ -237,12 +238,16 @@ def actual(binary, fixture_bin):
             assert process.poll() is None
             print("pinned T3 executable: offline startup and dynamic tailnet discovery passed")
         finally:
-            os.killpg(process.pid, signal.SIGTERM)
-            try:
-                process.wait(timeout=5)
-            except subprocess.TimeoutExpired:
-                os.killpg(process.pid, signal.SIGKILL)
-                process.wait(timeout=3)
+            if process.poll() is None:
+                try:
+                    os.killpg(process.pid, signal.SIGTERM)
+                except ProcessLookupError:
+                    pass
+                try:
+                    process.wait(timeout=5)
+                except subprocess.TimeoutExpired:
+                    os.killpg(process.pid, signal.SIGKILL)
+                    process.wait(timeout=3)
             proxy.server_close()
             log.close()
 

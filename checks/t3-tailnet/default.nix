@@ -64,6 +64,8 @@ pkgs.runCommand "t3-tailnet"
   }
   ''
     python ${fixture} test ${server} ${route}
-    python ${fixture} actual ${pkgs.lib.getExe perSystem.self.t3code-nightly} ${profile}/bin
+    ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
+      python ${fixture} actual ${pkgs.lib.getExe perSystem.self.t3code-nightly} ${profile}/bin
+    ''}
     touch "$out"
   ''
