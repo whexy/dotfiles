@@ -46,7 +46,7 @@ variables:
       echo "OK - tree $tree already passed"
     else
       system=$(nix eval --raw --impure --expr builtins.currentSystem)
-      nix build --accept-flake-config ".#checks.$system.pre-commit" -L --no-link
+      nix build --accept-flake-config ".#checks.$system.pre-commit" ".#checks.$system.bot-update-rollout" -L --no-link
 
       # Nix passes agent skills through as paths and reads markdown only as
       # text, so editing them can break evaluation only by removing a file.
