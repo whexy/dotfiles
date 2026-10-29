@@ -133,8 +133,8 @@ steps:
         # The package report is informational; a failure must not block the update.
         report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
           report="Package report unavailable; see the CI log."
-        # The commit is checked here before it is pushed, so its push skips CI.
-        git commit -m "chore: update flake inputs" -m "$report" -m "[skip ci]"
+        # The push records a rollout status; the tree cache reuses this check.
+        git commit -m "chore: update flake inputs" -m "$report"
       - *check
       - *push
   # Update the fast-moving agent packages (nightly cron). The T3 pin lives in
@@ -176,8 +176,8 @@ steps:
         if [ "$t3_old" != "$t3_new" ]; then
           report=$(printf '%s\n\nT3 Code:\n  t3code-nightly  %s -> %s' "$report" "$t3_old" "$t3_new")
         fi
-        # The commit is checked here before it is pushed, so its push skips CI.
-        git commit -m "chore: update nightly agent packages" -m "$report" -m "[skip ci]"
+        # The push records a rollout status; the tree cache reuses this check.
+        git commit -m "chore: update nightly agent packages" -m "$report"
       - *check
       - *push
   # Publish the cluster's MCP hub image (packages/t3code-hub-image) at the T3
