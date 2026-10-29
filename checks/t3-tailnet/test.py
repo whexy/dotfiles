@@ -34,6 +34,10 @@ def tailscale(args):
         print(json.dumps({"BackendState": "Running", "Self": {"DNSName": "localhost." if (root / "actual-dns").exists() else "fixture.ts.net."}}))
     elif args == ["serve", "status", "--json"]:
         print(config.read_text())
+    elif args == ["serve", "--https=35338", "--set-path=/", "off"]:
+        routes = read(config, {})
+        del routes["Web"]["fixture.ts.net:35338"]["Handlers"]["/"]
+        write(config, routes)
     else:
         assert args == ["serve", "--bg", "--https=35338", "http://127.0.0.1:3773"], args
         if (root / "fail-serve").exists():
@@ -135,11 +139,26 @@ def test(server_script, route_script):
             write(root / "routes.json", unrelated)
             wait_for(lambda: len((root / "writes").read_text()) > len(writes))
             assert discovery(port)["pid"] == initial["pid"]
-            print("offline loopback/public backend, route retries/recovery, discovery flag, Linux/Darwin parity, unrelated routes: passed")
+            os.killpg(route.pid, signal.SIGTERM)
+            route.wait(timeout=3)
+            remaining = read(root / "routes.json", {})
+            assert remaining == unrelated, remaining
+            # A replaced handler belongs to its new owner and must survive cleanup.
+            route = subprocess.Popen([route_script], env=env, start_new_session=True)
+            wait_for(lambda: read(root / "routes.json", {}).get("Web", {}).get("fixture.ts.net:35338", {}).get("Handlers", {}).get("/", {}).get("Proxy") == "http://127.0.0.1:3773")
+            replacement = read(root / "routes.json", {})
+            replacement["Web"]["fixture.ts.net:35338"]["Handlers"]["/"] = {"Proxy": "http://127.0.0.1:9997"}
+            write(root / "routes.json", replacement)
+            os.killpg(route.pid, signal.SIGTERM)
+            route.wait(timeout=3)
+            assert read(root / "routes.json", {}) == replacement
+            print("offline loopback/public backend, recovery/discovery, route ownership and cleanup, Linux/Darwin parity: passed")
         finally:
             if proxy:
                 proxy.shutdown()
             for process in (server, route):
+                if process.poll() is not None:
+                    continue
                 os.killpg(process.pid, signal.SIGTERM)
                 try:
                     process.wait(timeout=3)
