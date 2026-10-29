@@ -2,8 +2,13 @@
 { lib, pkgs, ... }: {
   dotfiles = {
     desktop.enable = lib.mkDefault true;
-    # The home t3-pair client finds T3 Code servers on the tailnet.
-    network.tailscale.enable = lib.mkDefault true;
+    network.tailscale = {
+      # The home t3-pair client finds T3 Code servers on the tailnet.
+      enable = lib.mkDefault true;
+      # The Rex app's server on the tailnet; only has an effect on Darwin,
+      # where the home gui cap installs the app.
+      rex.enable = lib.mkDefault true;
+    };
     fonts.enable = lib.mkDefault true;
     # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
     # Firefox is installed by the home browser group).

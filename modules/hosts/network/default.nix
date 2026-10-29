@@ -37,6 +37,23 @@
           (Incus guests on one host) must give each node a distinct value.
         '';
       };
+      rex = {
+        enable = lib.mkEnableOption ''
+          Tailscale Serve for the primary user's Rex app server, at
+          `https://<MagicDNS name>:<port>` (macOS only). Rex cannot tell callers
+          apart on this route, so every tailnet device the ACL lets reach this
+          host gets a shell as that user
+        '';
+        port = lib.mkOption {
+          type = lib.types.port;
+          default = 7297;
+          description = ''
+            HTTPS port of the Rex route. Rex clients try HTTPS on 7297 for a
+            bare host name, so with this port a client adds the host by its
+            MagicDNS name alone.
+          '';
+        };
+      };
     };
     macAddresses = lib.mkOption {
       type = lib.types.attrsOf (lib.types.strMatching "([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}");

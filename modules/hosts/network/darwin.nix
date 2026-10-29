@@ -46,6 +46,44 @@ in
               || echo "warning: could not make ${config.dotfiles.host.username} the Tailscale operator" >&2
           '';
         })
+
+        # tailscaled serves a Unix socket only for root, so activation sets the
+        # Rex route instead of the user's Home Manager. tailscaled keeps routes
+        # across restarts, so a route this config no longer wants, which would
+        # keep serving a shell, is removed.
+        {
+          system.activationScripts.postActivation.text =
+            let
+              tailscale = lib.getExe' config.services.tailscale.package "tailscale";
+              # The Rex app fixes its server's command line: it listens only on
+              # this socket, never on Rex's tailnet-serve listener, which
+              # identifies callers.
+              target = "unix:${
+                config.users.users.${config.dotfiles.host.username}.home
+              }/Library/Application Support/rex/server.sock";
+              port = toString cfg.tailscale.rex.port;
+            in
+            ''
+              if rexPorts=$(${tailscale} serve status --json | ${lib.getExe pkgs.jq} -r --arg target ${lib.escapeShellArg target} '
+                (.Web // {}) | to_entries[]
+                | select(any(.value.Handlers[]?; .Proxy == $target))
+                | .key | sub(".*:"; "")
+              '); then
+                for rexPort in $rexPorts; do
+                  if [ "$rexPort" != "${lib.optionalString cfg.tailscale.rex.enable port}" ]; then
+                    ${tailscale} serve --https="$rexPort" off >/dev/null \
+                      || echo "warning: could not remove the Rex route on Tailscale port $rexPort" >&2
+                  fi
+                done
+              else
+                echo "warning: could not read Tailscale Serve routes; Rex routes are unchanged" >&2
+              fi
+            ''
+            + lib.optionalString cfg.tailscale.rex.enable ''
+              ${tailscale} serve --bg --https=${port} ${lib.escapeShellArg target} >/dev/null \
+                || echo "warning: could not publish Rex on Tailscale port ${port}; the next activation retries" >&2
+            '';
+        }
       ]
     ))
 
