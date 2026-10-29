@@ -20,6 +20,7 @@
         '';
       };
     };
+    appStoreConnect.enable = lib.mkEnableOption "my App Store Connect API key for Apple's tools and API scripts";
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
       server = lib.mkOption {
@@ -31,6 +32,7 @@
   };
 
   imports = [
+    ./app-store-connect.nix
     ./cli.nix
     ./debug.nix
     ./extras.nix
