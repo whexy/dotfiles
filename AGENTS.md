@@ -226,8 +226,9 @@ under Settings → Connections → Add environment.
 
 On Macs, Tailscale Serve publishes the Rex app's server at
 `https://<MagicDNS name>:7297` (`dotfiles.network.tailscale.rex`, on the `gui`
-cap). Rex clients try that port for a bare host name, so a client adds the Mac
-by its MagicDNS name alone.
+cap). Rex clients try that port for a bare host name. Rex for iOS still asks
+for an account on this route, so add the Mac as `<user>@<MagicDNS name>`; Rex
+ignores the name.
 
 Rex has no authentication, and this route keeps it from identifying callers:
 
