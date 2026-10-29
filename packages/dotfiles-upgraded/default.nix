@@ -7,6 +7,7 @@ pkgs.buildGoModule {
   # The daemon is the one component whose failure cannot be repaired by
   # pushing a commit, so it stays on the standard library.
   vendorHash = null;
+  __darwinAllowLocalNetworking = true;
 
   meta = {
     description = "Polls the upstream dotfiles repo and switches this host once CI passes";

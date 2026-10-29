@@ -36,7 +36,7 @@ func TestBotRolloutRequiresSuccessfulPush(t *testing.T) {
 	const sha = "1234567890123456789012345678901234567890"
 	for _, verdict := range []string{"success", "failure", "error", "pending"} {
 		t.Run(verdict, func(t *testing.T) {
-			statuses := `{"statuses":[{"context":"ci/woodpecker/cron/check","state":"success"}]}`
+			statuses := `{"statuses":[{"context":"ci/woodpecker/cron/woodpecker","state":"success"}]}`
 			server := httptest.NewServer(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 				if r.URL.Path == "/repos/whexy/dotfiles/commits/"+sha+"/status" {
 					fmt.Fprint(w, statuses)
@@ -54,7 +54,7 @@ func TestBotRolloutRequiresSuccessfulPush(t *testing.T) {
 			if len(sw.shas) != 0 {
 				t.Fatal("cron status allowed rollout without push status")
 			}
-			statuses = fmt.Sprintf(`{"statuses":[{"context":"ci/woodpecker/push/check","state":%q}]}`, verdict)
+			statuses = fmt.Sprintf(`{"statuses":[{"context":"ci/woodpecker/push/woodpecker","state":%q}]}`, verdict)
 			e.RunOnce(context.Background())
 			if got, want := len(sw.shas), map[bool]int{true: 1, false: 0}[verdict == "success"]; got != want {
 				t.Fatalf("switches = %d, want %d", got, want)
