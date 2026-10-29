@@ -10,8 +10,12 @@ import yaml
 pipeline = yaml.safe_load(Path(sys.argv[1]).read_text())
 assert {"event": "push", "branch": "master"} in pipeline["when"]
 assert "push" in pipeline["steps"]["check"]["when"]["event"]
-assert ".#packages.$system.dotfiles-upgraded" in pipeline["steps"]["check"]["commands"][0]
-assert ".#checks.$system.bot-update-rollout" in pipeline["steps"]["check"]["commands"][0]
+check = next(
+    c
+    for c in pipeline["steps"]["check"]["commands"]
+    if ".#checks.$system.bot-update-rollout" in c
+)
+assert ".#packages.$system.dotfiles-upgraded" in check
 
 
 def run(script, cwd, env):
@@ -70,7 +74,6 @@ for lane in ("update-flake", "update-nightly-agents"):
         assert result.returncode == 0, result.stderr
         message = run("git log -1 --format=%B", root, env).stdout.lower()
         assert "[skip ci]" not in message and "[ci skip]" not in message, message
-        check = pipeline["steps"]["check"]["commands"][0]
         assert check in commands
         assert commands.index(check) < len(commands) - 1  # check before push
         for hit, passes, expected in (("1", "0", 0), ("0", "1", 0), ("0", "0", 1)):
