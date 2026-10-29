@@ -9,6 +9,7 @@
       caches.enable = lib.mkDefault true;
       pinRegistry.enable = lib.mkDefault true;
       gc.enable = lib.mkDefault true;
+      rexNetrc.enable = lib.mkDefault true;
     };
     shell.zsh.enable = lib.mkDefault true;
     # No-op on Darwin: the compat group only ships a nixos.nix.

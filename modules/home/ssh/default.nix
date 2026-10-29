@@ -97,6 +97,14 @@ in
               header = "Match !host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ] && ! grep -qxF -- %h ${rexTerminfoHosts} 2>/dev/null'\"";
               SetEnv.TERM = "xterm-256color";
             };
+
+            # Hosts that run Rex's login server also have its guard in
+            # /etc/ssh/ssh_config, which would downgrade the flake hosts too.
+            # ssh keeps the first SetEnv it reads, and this file comes first.
+            rex-terminfo-flake = {
+              header = "Match host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ]'\"";
+              SetEnv.TERM = "xterm-rex";
+            };
           };
         };
       }

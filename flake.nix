@@ -120,6 +120,14 @@
       url = "github:numtide/treefmt-nix";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Rex's prebuilt server and its NixOS module. The channel has no stable
+    # release yet, and until one exists pkgs.superlogical.com serves the flake
+    # only with the testing token (dotfiles.nix.rexNetrc).
+    rex = {
+      url = "https://pkgs.superlogical.com/rex/nix/preview.tar.gz";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

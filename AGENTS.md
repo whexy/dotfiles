@@ -224,13 +224,12 @@ under Settings → Connections → Add environment.
 
 ## Rex remote access
 
-On Macs, Tailscale Serve publishes the Rex app's server at
-`https://<MagicDNS name>:7297` (`dotfiles.network.tailscale.rex`, on the `gui`
-cap). Rex clients try that port for a bare host name. Rex for iOS still asks
-for an account on this route, so add the Mac as `<user>@<MagicDNS name>`; Rex
-ignores the name.
+Rex clients reach a host at `https://<MagicDNS name>:7297`
+(`dotfiles.network.tailscale.rex`), the port they try for a bare host name. Rex
+for iOS still asks for an account, so add a host as `<user>@<MagicDNS name>`.
 
-Rex has no authentication, and this route keeps it from identifying callers:
+On Macs (the `gui` cap), Tailscale Serve forwards to the Rex app's server. Rex
+has no authentication, and this route keeps it from identifying callers:
 
 - The app fixes its server's command line, listening only on its Unix socket,
   so the route forwards to that socket. Rex treats a caller there as the user,
@@ -239,8 +238,26 @@ Rex has no authentication, and this route keeps it from identifying callers:
 - tailscaled serves a Unix socket only for root, so system activation sets the
   route, and removes it once the option is off.
 
+On NixOS (the `dev` cap), Rex's login server serves the route. It learns each
+caller's Tailscale login from tailscaled and admits only `whexy@github`, as the
+primary user. WSL has no server: the Windows client there cannot name callers.
+
 There is no public tunnel: without authentication in Rex, one would give anyone
 a shell.
+
+### The rex input
+
+The login server comes from the `rex` flake input, which pkgs.superlogical.com
+serves only with Rex's testing token until Rex's first release. Every NixOS
+evaluation imports Rex's module, so every system host decrypts the token into
+Nix's netrc (`dotfiles.nix.rexNetrc`, on the `base` cap); homes never fetch the
+input.
+
+In CI, the update lanes and the check on master read the token from the
+Woodpecker secret `rex_package_token`. A pull-request check has no token and
+substitutes the input from the CI cache, so a pull request that moves the `rex`
+lock fails its check. A new token goes into both `rex-package-netrc.age` and
+that secret.
 
 ## Spark MCP server
 

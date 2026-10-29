@@ -39,10 +39,12 @@
       };
       rex = {
         enable = lib.mkEnableOption ''
-          Tailscale Serve for the primary user's Rex app server, at
-          `https://<MagicDNS name>:<port>` (macOS only). Rex cannot tell callers
-          apart on this route, so every tailnet device the ACL lets reach this
-          host gets a shell as that user
+          Rex for the primary user on the tailnet, at
+          `https://<MagicDNS name>:<port>`. On macOS, Tailscale Serve forwards
+          to the Rex app's server, which cannot tell callers apart, so every
+          tailnet device the ACL lets reach this host gets a shell as that
+          user. On NixOS, Rex's login server serves the route and admits only
+          the tailnet owner's login, as that user (not on WSL)
         '';
         port = lib.mkOption {
           type = lib.types.port;

@@ -51,6 +51,7 @@ let
 in
 {
   "beszel-token.age".publicKeys = to hosts;
+  "rex-package-netrc.age".publicKeys = to hosts;
 
   "ai-proxy-api-key.age".publicKeys = to homes;
   "cf-access-dotfiles-id.age".publicKeys = to homes;
