@@ -60,6 +60,7 @@ type Exec struct {
 	LockPath      string
 	Timeout       time.Duration
 	Log           *slog.Logger
+	observeExit   func(int) error
 }
 
 // Switch builds and activates sha's configuration.
@@ -123,7 +124,11 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 		close(outputDone)
 	}()
 	waitDone := make(chan error, 1)
-	go func() { waitDone <- waitForExit(cmd.Process.Pid) }()
+	observeExit := e.observeExit
+	if observeExit == nil {
+		observeExit = waitForExit
+	}
+	go func() { waitDone <- observeExit(cmd.Process.Pid) }()
 
 	// Keep cancellation active until both the leader and its output finish.
 	// A leader can exit while a descendant keeps the pipes and group alive.
@@ -149,7 +154,20 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 		select {
 		case exitErr := <-waitDone:
 			waitDone = nil
-			if exitErr != nil && cancelErr == nil {
+			if errors.Is(exitErr, syscall.ECHILD) {
+				// Another reaper invalidated PID ownership; further group signals
+				// could reach a recycled ID, so only our pipe handles are closed.
+				if cancelErr == nil {
+					cancelErr = fmt.Errorf("observe rebuild exit: %w", exitErr)
+				}
+				ctxDone = nil
+				if timer != nil {
+					timer.Stop()
+				}
+				grace = nil
+				stdout.Close()
+				stderr.Close()
+			} else if exitErr != nil && cancelErr == nil {
 				startCancellation(fmt.Errorf("observe rebuild exit: %w", exitErr))
 			}
 		case <-outputDone:
