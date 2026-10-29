@@ -22,8 +22,24 @@ func TestRebuildFixture(t *testing.T) {
 	if mode == "" {
 		return
 	}
+	if mode == "stopped" {
+		if mode != "graceful" {
+			signal.Ignore(syscall.SIGTERM)
+		}
+		if err := os.WriteFile(os.Getenv("SWITCHER_PID"), []byte(strconv.Itoa(os.Getpid())), 0600); err != nil {
+			os.Exit(2)
+		}
+		os.Stdout.Close()
+		os.Stderr.Close()
+		_ = syscall.Kill(os.Getpid(), syscall.SIGSTOP)
+		for {
+			time.Sleep(time.Hour)
+		}
+	}
 	if os.Getenv("SWITCHER_CHILD") == "1" {
-		signal.Ignore(syscall.SIGTERM)
+		if mode != "graceful" {
+			signal.Ignore(syscall.SIGTERM)
+		}
 		if mode == "close-pipes" {
 			go func() {
 				time.Sleep(3 * time.Second)
@@ -45,7 +61,9 @@ func TestRebuildFixture(t *testing.T) {
 		}
 		os.Exit(0)
 	}
-	signal.Ignore(syscall.SIGTERM)
+	if mode != "graceful" {
+		signal.Ignore(syscall.SIGTERM)
+	}
 	child := exec.Command(os.Args[0], "-test.run=^TestRebuildFixture$")
 	child.Env = append(os.Environ(), "SWITCHER_CHILD=1")
 	if mode == "escaped" {
@@ -107,7 +125,7 @@ func TestNormalOutputCollection(t *testing.T) {
 }
 
 func TestTimeoutKillsProcessGroupAndReleasesLock(t *testing.T) {
-	for _, mode := range []string{"stubborn", "orphan", "close-pipes", "escaped"} {
+	for _, mode := range []string{"stubborn", "orphan", "close-pipes", "escaped", "graceful", "stopped"} {
 		t.Run(mode, func(t *testing.T) {
 			var output bytes.Buffer
 			e := fixtureExec(t, mode, &output)
@@ -134,6 +152,9 @@ func TestTimeoutKillsProcessGroupAndReleasesLock(t *testing.T) {
 			}
 			if elapsed := time.Since(started); elapsed > e.Timeout+terminationGrace+3*time.Second {
 				t.Fatalf("timeout took %s", elapsed)
+			}
+			if mode == "graceful" && time.Since(started) < e.Timeout+terminationGrace {
+				t.Fatal("cancellation skipped the fixed grace")
 			}
 			if mode == "escaped" {
 				if !processRunning(pid) {
@@ -200,5 +221,54 @@ func TestWaitForExitDoesNotReapLeader(t *testing.T) {
 	}
 	if err := cmd.Wait(); err == nil || cmd.ProcessState == nil || cmd.ProcessState.ExitCode() != 7 {
 		t.Fatalf("leader was reaped before final Wait: %v", err)
+	}
+}
+
+func TestCallerCancellationKillsGroup(t *testing.T) {
+	var output bytes.Buffer
+	e := fixtureExec(t, "stubborn", &output)
+	ctx, cancel := context.WithCancel(context.Background())
+	defer cancel()
+	done := make(chan error, 1)
+	go func() { done <- e.Switch(ctx, "sha") }()
+	readiness := time.NewTimer(10 * time.Second)
+	defer readiness.Stop()
+	var pid int
+	for pid == 0 {
+		if raw, err := os.ReadFile(os.Getenv("SWITCHER_PID")); err == nil {
+			pid, _ = strconv.Atoi(string(raw))
+		}
+		select {
+		case err := <-done:
+			t.Fatalf("switch ended before cancellation: %v", err)
+		case <-readiness.C:
+			t.Fatal("fixture did not become ready")
+		default:
+			time.Sleep(10 * time.Millisecond)
+		}
+	}
+	t.Cleanup(func() { _ = syscall.Kill(pid, syscall.SIGKILL) })
+	cancel()
+	select {
+	case err := <-done:
+		if !errors.Is(err, context.Canceled) {
+			t.Fatalf("got %v, want caller cancellation", err)
+		}
+	case <-time.After(terminationGrace + 3*time.Second):
+		t.Fatal("caller cancellation did not return")
+	}
+	if processRunning(pid) {
+		t.Fatal("descendant survived caller cancellation")
+	}
+	unlock, err := lock(context.Background(), e.LockPath)
+	if err != nil {
+		t.Fatal(err)
+	}
+	unlock()
+}
+
+func TestWaitForExitRejectsNonChild(t *testing.T) {
+	if err := waitForExit(1 << 30); !errors.Is(err, syscall.ECHILD) {
+		t.Fatalf("got %v, want ECHILD", err)
 	}
 }

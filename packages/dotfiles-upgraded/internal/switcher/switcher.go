@@ -127,6 +127,8 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 
 	// Keep cancellation active until both the leader and its output finish.
 	// A leader can exit while a descendant keeps the pipes and group alive.
+	// Cancellation always runs the full grace: EOF does not prove that every
+	// descendant exited, and the reserved zombie leader keeps the group present.
 	ctxDone := ctx.Done()
 	var grace <-chan time.Time
 	var timer *time.Timer
@@ -161,12 +163,7 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 			stderr.Close()
 			grace = nil
 		}
-		// EOF does not prove descendants exited: they can close their output
-		// while ignoring TERM. Retain escalation while the group still exists.
-		if grace != nil && errors.Is(syscall.Kill(-cmd.Process.Pid, 0), syscall.ESRCH) {
-			timer.Stop()
-			grace = nil
-		}
+
 	}
 	// Reap only after the last possible group signal. The unreaped leader
 	// reserves its PID even if every pipe holder escaped the process group.
