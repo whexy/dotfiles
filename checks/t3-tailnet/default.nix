@@ -56,6 +56,7 @@ assert !(moduleFor false true false).systemdUserServices ? t3code-tailnet;
 assert !(moduleFor true false true).launchdAgents ? t3code-tailnet;
 pkgs.runCommand "t3-tailnet"
   {
+    __darwinAllowLocalNetworking = true;
     nativeBuildInputs = [
       python
       pkgs.openssl
