@@ -102,11 +102,11 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 	defer stderrWriter.Close()
 	cmd.Stdout, cmd.Stderr = stdoutWriter, stderrWriter
 
-	e.Log.Info("switch starting", "sha", sha, "command", argv)
-	started := time.Now()
 	if err := ctx.Err(); err != nil {
 		return err
 	}
+	e.Log.Info("switch starting", "sha", sha, "command", argv)
+	started := time.Now()
 	if err := cmd.Start(); err != nil {
 		return fmt.Errorf("start %s: %w", argv[0], err)
 	}
@@ -123,7 +123,7 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 		close(outputDone)
 	}()
 	waitDone := make(chan error, 1)
-	go func() { waitDone <- cmd.Wait() }()
+	go func() { waitDone <- waitForExit(cmd.Process.Pid) }()
 
 	// Keep cancellation active until both the leader and its output finish.
 	// A leader can exit while a descendant keeps the pipes and group alive.
@@ -135,19 +135,25 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 			timer.Stop()
 		}
 	}()
-	var waitErr, cancelErr error
-	for waitDone != nil || outputDone != nil {
+	var cancelErr error
+	startCancellation := func(err error) {
+		cancelErr = err
+		ctxDone = nil
+		_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
+		timer = time.NewTimer(terminationGrace)
+		grace = timer.C
+	}
+	for waitDone != nil || outputDone != nil || grace != nil {
 		select {
-		case waitErr = <-waitDone:
+		case exitErr := <-waitDone:
 			waitDone = nil
+			if exitErr != nil && cancelErr == nil {
+				startCancellation(fmt.Errorf("observe rebuild exit: %w", exitErr))
+			}
 		case <-outputDone:
 			outputDone = nil
 		case <-ctxDone:
-			cancelErr = ctx.Err()
-			ctxDone = nil
-			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGTERM)
-			timer = time.NewTimer(terminationGrace)
-			grace = timer.C
+			startCancellation(ctx.Err())
 		case <-grace:
 			_ = syscall.Kill(-cmd.Process.Pid, syscall.SIGKILL)
 			// An escaped descendant must not retain the daemon's readers.
@@ -155,7 +161,16 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 			stderr.Close()
 			grace = nil
 		}
+		// EOF does not prove descendants exited: they can close their output
+		// while ignoring TERM. Retain escalation while the group still exists.
+		if grace != nil && errors.Is(syscall.Kill(-cmd.Process.Pid, 0), syscall.ESRCH) {
+			timer.Stop()
+			grace = nil
+		}
 	}
+	// Reap only after the last possible group signal. The unreaped leader
+	// reserves its PID even if every pipe holder escaped the process group.
+	waitErr := cmd.Wait()
 	if cancelErr != nil {
 		if errors.Is(cancelErr, context.DeadlineExceeded) {
 			return fmt.Errorf("switch timed out after %s: %w", e.Timeout, cancelErr)
