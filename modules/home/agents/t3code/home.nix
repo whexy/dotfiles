@@ -363,6 +363,7 @@ in
         Unit.Description = "T3 Code Tailscale route";
         Service = {
           ExecStart = "${tailnet}";
+          TimeoutStopSec = 30;
           Restart = "on-failure";
           RestartSec = 10;
         };
@@ -389,6 +390,7 @@ in
         enable = true;
         config = {
           ProgramArguments = [ "${tailnet}" ];
+          ExitTimeOut = 30;
           RunAtLoad = true;
           KeepAlive.SuccessfulExit = false;
           StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code-tailnet.log";
