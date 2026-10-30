@@ -44,6 +44,8 @@ class Agent(ABC):
     config_name: ClassVar[str]
     extra_managed_env: ClassVar[frozenset[str]] = frozenset()
     """Variables this agent's selection logic sets beyond the catalog's."""
+    config_subdir: ClassVar[str] = ""
+    """Named configs hold the root this far below their container directory."""
 
     manifest: Manifest
     catalog: Catalog
@@ -57,12 +59,25 @@ class Agent(ABC):
     def __init__(self, manifest: Manifest) -> None:
         self.manifest = manifest
         self.catalog = Catalog.from_choices(manifest["entries"])
-        default_root = Path.home() / f".{self.name}"
-        self.root = Path(os.environ.get(self.home_env, default_root)).expanduser().absolute()
+        self.root = self.initial_root()
         self.set_root(self.root)
         self.session_env = f"DOTFILES_{self.name.upper()}_SESSION"
         self.managed_env = (
             set(manifest["resetEnv"]) | self.catalog.provided_env() | self.extra_managed_env
+        )
+
+    def default_root(self) -> Path:
+        return Path.home() / f".{self.name}"
+
+    def initial_root(self) -> Path:
+        return Path(os.environ.get(self.home_env, self.default_root())).expanduser().absolute()
+
+    def _profiles(self) -> Profiles:
+        return Profiles(
+            self.name,
+            config_name=self.config_name,
+            default=self.default_root(),
+            subdir=self.config_subdir,
         )
 
     # Agent-specific steps.
@@ -151,7 +166,7 @@ class Agent(ABC):
         """Ask for an entry, offering the saved selection first."""
         from agent_settings.picker import DELETE, FORK, SWITCH, ask, pick
 
-        profiles = Profiles(self.name)
+        profiles = self._profiles()
         root = self.root
         choices, notice = self.live_entries(self.catalog.choices)
         while True:
@@ -182,7 +197,7 @@ class Agent(ABC):
                         profiles.fork(self.root, name, self.manifest.get("managedLinks", []))
                     )
                 else:
-                    if self.root == profiles.default or self.root.parent != profiles.directory:
+                    if not profiles.is_managed(self.root):
                         raise SettingsError("the default and external configs cannot be deleted")
                     name = profiles.name(self.root)
                     confirmation = ask(
@@ -218,7 +233,7 @@ class Agent(ABC):
         """Reconcile every profile and migrate removed selections to the default."""
         previous = self.root
         try:
-            for name, root in Profiles(self.name).configurations().items():
+            for name, root in self._profiles().configurations().items():
                 self.set_root(root)
                 try:
                     saved = read_document(self.state_file).get("selection")
@@ -241,7 +256,7 @@ class Agent(ABC):
             self.set_root(previous)
 
     def export_root(self, env: MutableMapping[str, str]) -> None:
-        if self.root == Profiles(self.name).default:
+        if self.root == self._profiles().default:
             env.pop(self.home_env, None)
         else:
             env[self.home_env] = str(self.root)
