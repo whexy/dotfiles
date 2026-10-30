@@ -35,6 +35,9 @@ def served_models(template: Entry, discover: Discover) -> list[tuple[str, str]]:
             payload = cast(object, json.load(response))
     except (OSError, ValueError) as error:
         raise SettingsError(f"{template['label']}: model discovery failed: {error}") from error
+    owner = discover.get("owner")
+    if owner is not None:
+        return _owned_models(template, payload, owner)
     models = payload.get("models") if is_table(payload) else None
     if not is_list(models):
         raise SettingsError(f"{template['label']}: model discovery returned no model list")
@@ -48,3 +51,18 @@ def served_models(template: Entry, discover: Discover) -> list[tuple[str, str]]:
         if isinstance(slug, str) and slug and model.get("visibility") != "hide":
             served.setdefault(slug, name if isinstance(name, str) and name else slug)
     return sorted(served.items())
+
+
+def _owned_models(template: Entry, payload: object, owner: str) -> list[tuple[str, str]]:
+    """IDs of an OpenAI model list's models that `owner` serves; the list has no names."""
+    models = payload.get("data") if is_table(payload) else None
+    if not is_list(models):
+        raise SettingsError(f"{template['label']}: model discovery returned no model list")
+    served: set[str] = set()
+    for model in models:
+        if not is_table(model) or model.get("owned_by") != owner:
+            continue
+        model_id = model.get("id")
+        if isinstance(model_id, str) and model_id:
+            served.add(model_id)
+    return [(model, model) for model in sorted(served)]

@@ -376,6 +376,16 @@ in
             prelude
             ;
         })
+        (import ./muse-code/home.nix {
+          inherit
+            lib
+            perSystem
+            proxy
+            withModelPicker
+            mcp
+            prelude
+            ;
+        })
         (import ./t3code/home.nix {
           inherit
             pkgs
@@ -454,6 +464,7 @@ in
         # a new directory under ./skills, never a change here.
         // mkSkillLinks ".agents/skills"
         // mkSkillLinks ".claude/skills"
+        // mkSkillLinks ".config/muse/skills"
         // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents)
         // lib.optionalAttrs cfg.video.enable video.homeFiles;
 

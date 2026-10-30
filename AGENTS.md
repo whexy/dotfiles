@@ -222,6 +222,21 @@ environment (`localEnvironmentEnabled` in `desktop-settings.json`), and the app
 is a client of that server. Pair it once: run `t3-pair` and paste the link
 under Settings → Connections → Add environment.
 
+## Muse Code
+
+Muse Code runs on the Meta subscription CLIProxyAPI holds, so no host signs in
+to Meta. Muse only speaks to its Meta provider, which agent-settings points at
+`https://llm.clusters.work/v1`; `muse-select` lists the subscription's models,
+and activation saves the default wherever no selection exists.
+
+- Muse will not start until `{origin}/muse-code/models` answers. CLIProxyAPI
+  has no such path, so the clusters-work route for `llm.clusters.work` rewrites
+  it to `/v1/models`. Requests for Meta's other services, such as its web
+  search (`/muse-code/search`), get the gateway's 404.
+- Muse's tools inherit its environment, so its credentials never go there:
+  activation stores the CLIProxyAPI key with `muse auth set` and writes the
+  Cloudflare Access headers into `~/.config/muse/settings.json`.
+
 ## Rex remote access
 
 Rex clients reach a host at `https://<MagicDNS name>:7297`
@@ -298,9 +313,10 @@ the owner in itself, once per machine:
 - Claude Code: `claude mcp login studio`
 - Codex: `codex mcp login studio`
 - OpenCode: `opencode mcp auth studio`
+- Muse Code: `muse mcp login studio`
 
-Over SSH, pass `--no-browser` to Claude Code or Codex and paste the redirect
-URL back. T3 Code's sessions use the same token stores. Each agent registers
+Over SSH, pass `--no-browser` to Claude Code or Codex (`--headless` to Muse
+Code) and paste the redirect URL back. T3 Code's sessions use the same token stores. Each agent registers
 its own loopback callback with Access, so the Access application needs no
 redirect URIs for them.
 

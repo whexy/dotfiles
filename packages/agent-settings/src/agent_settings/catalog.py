@@ -25,11 +25,15 @@ class Discover(TypedDict):
     """Stand for one entry per model a live model list serves."""
 
     url: str
-    """A Codex model catalog endpoint (`/v1/models?client_version=...`)."""
+    """A Codex model catalog endpoint (`/v1/models?client_version=...`), or
+    an OpenAI model list (`/v1/models`) when `owner` is set."""
     keyEnv: str
     """Secret variable holding the bearer token for `url`."""
     modelEnv: list[str]
     """Variables that receive the model ID."""
+    owner: NotRequired[str]
+    """Keep only the models of this upstream route (`owned_by`), which only
+    the OpenAI model list names."""
 
 
 class Entry(TypedDict):
