@@ -42,6 +42,12 @@ store's own locking serialises the builds. The lock wait obeys the switch
 timeout and SIGTERM, and cancellation signals the rebuild's whole process group. Child stdout and stderr are folded into the
 daemon's structured log, which is where an unattended failure leaves its trace.
 
+The Linux units restart the daemon behind the same lock when a switch changes
+them (`upgraderReload` in `lib/default.nix`), so a new build replaces the daemon
+only after the rebuild that delivered it has finished. SIGTERM only cancels the
+daemon's context, so a restart that arrives as the lock is released still lets
+it record that rebuild.
+
 ## Rate limits
 
 Conditional requests are used whether or not a credential is present.

@@ -28,14 +28,10 @@ in
         wants = [ "network-online.target" ];
         after = [ "network-online.target" ];
 
-        # Activation would otherwise restart the daemon that started it, killing
-        # the rebuild that is switching this very unit. nixos-rebuild insulates
-        # switch-to-configuration with `systemd-run --collect`, so activation
-        # itself survives; the daemon still records its own result only if it
-        # outlives the switch. The new binary takes over through
-        # --exit-after-switch: the daemon exits once the switch is recorded,
-        # and Restart= starts it from the unit file activation reloaded.
-        restartIfChanged = false;
+        # The daemon is usually what runs the switch that changes this unit, so
+        # the switch reloads it, and the reload restarts the daemon once that
+        # switch has finished (flake.lib.upgraderReload).
+        reloadIfChanged = true;
 
         # Mirrors the path nixos-upgrade.service gets: nixos-rebuild shells out
         # to git for the flake fetch and to tar/xz/gzip for substituted paths.
@@ -66,7 +62,6 @@ in
           ExecStart = lib.escapeShellArgs [
             (lib.getExe perSystem.self.dotfiles-upgraded)
             "--mode=nixos"
-            "--exit-after-switch"
             "--configuration=${cfg.autoUpgrade.configuration}"
             "--flake=${flake.lib.upstreamRef}"
             "--state-dir=${cfg.autoUpgrade.stateDir}"
@@ -74,6 +69,12 @@ in
             "--max-attempts=${toString cfg.autoUpgrade.maxAttempts}"
             "--require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}"
           ];
+          ExecReload = flake.lib.upgraderReload {
+            systemd = config.systemd.package;
+            inherit (pkgs) util-linux;
+            inherit (cfg.autoUpgrade) stateDir;
+            user = false;
+          };
           Restart = "always";
           RestartSec = 30;
           StateDirectory = "dotfiles-upgraded";

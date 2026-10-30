@@ -144,13 +144,11 @@ in
     systemd.user.services.dotfiles-upgraded = {
       Unit = {
         Description = "Auto-upgrade Home Manager from ${upstreamRef}";
-        # A switch performed by this daemon would otherwise restart the daemon
-        # mid-`nh`, killing the switch it is running. Unlike nixos-rebuild,
-        # nothing here insulates activation from the calling unit. The new
-        # version takes over through --exit-after-switch instead: the daemon
-        # exits once the switch is recorded, and Restart= starts it from the
-        # unit file sd-switch reloaded.
-        X-SwitchMethod = "keep-old";
+        # sd-switch runs inside the daemon's `nh`, so restarting the daemon
+        # during its own switch would kill that switch. A switch that changes
+        # this unit reloads it instead, and the reload restarts the daemon
+        # once that switch has finished (flake.lib.upgraderReload).
+        X-SwitchMethod = "reload";
       };
       Service = {
         Type = "simple";
@@ -186,7 +184,6 @@ in
         ExecStart = lib.escapeShellArgs [
           (lib.getExe perSystem.self.dotfiles-upgraded)
           "--mode=home-manager"
-          "--exit-after-switch"
           "--configuration=${configuration}"
           "--flake=${upstreamRef}"
           "--state-dir=${cfg.stateDir}"
@@ -194,6 +191,11 @@ in
           "--max-attempts=${toString cfg.maxAttempts}"
           "--require-ci-pass=${lib.boolToString cfg.requireCiPass}"
         ];
+        ExecReload = flake.lib.upgraderReload {
+          inherit (pkgs) systemd util-linux;
+          inherit (cfg) stateDir;
+          user = true;
+        };
         Restart = "always";
         RestartSec = 30;
 
