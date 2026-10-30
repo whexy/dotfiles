@@ -65,9 +65,10 @@ for lane in ("update-flake", "update-nightly-agents"):
         (root / "flake.lock").write_text("before")
         assert run("git add . && git commit -qm initial", root, env).returncode == 0
         (root / "flake.lock").write_text("after")
-        metadata = root / "packages/t3code-nightly/metadata.nix"
-        metadata.parent.mkdir(parents=True)
-        metadata.write_text("{}")
+        for pin in ("t3code-nightly", "muse-code"):
+            metadata = root / "packages" / pin / "metadata.nix"
+            metadata.parent.mkdir(parents=True)
+            metadata.write_text("{}")
         commands = pipeline["steps"][lane]["commands"]
         commit = next(c for c in commands if "git commit -m" in c)
         result = run(commit, root, env)
