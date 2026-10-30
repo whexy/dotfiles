@@ -14,6 +14,43 @@ let
   # only `*.<zone>`.
   publicHost = service: host: "${host}-${service}.clusters.work";
 
+  # ExecReload of the Linux dotfiles-upgraded units, which a switch reloads
+  # when it changes them. That switch is usually the daemon's own, and
+  # restarting the daemon during it would kill the rebuild before the daemon
+  # records the result. The reload instead queues a restart behind the lock the
+  # daemon holds for the whole rebuild, in a transient unit so the restart does
+  # not stop the waiter along with the daemon. A failure to queue it must not
+  # fail the switch, hence the "-".
+  upgraderReload =
+    {
+      systemd,
+      util-linux,
+      stateDir,
+      user,
+    }:
+    let
+      scope = lib.optional user "--user";
+    in
+    "-"
+    + lib.escapeShellArgs (
+      [ "${systemd}/bin/systemd-run" ]
+      ++ scope
+      ++ [
+        "--no-block"
+        "--collect"
+        "--quiet"
+        "--unit=dotfiles-upgraded-restart"
+        "${util-linux}/bin/flock"
+        "${stateDir}/lock"
+        "${systemd}/bin/systemctl"
+      ]
+      ++ scope
+      ++ [
+        "try-restart"
+        "dotfiles-upgraded.service"
+      ]
+    );
+
   overlays = {
     container-darwin = import ../overlays/container-darwin.nix;
     direnv-darwin = import ../overlays/direnv-darwin.nix;
@@ -75,6 +112,7 @@ in
   inherit
     upstreamRef
     publicHost
+    upgraderReload
     overlays
     capsModules
     homeCapsModules
