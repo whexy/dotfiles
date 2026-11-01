@@ -1,8 +1,8 @@
-{ pkgs }:
+{ pkgs, flake }:
 
-pkgs.stdenvNoCC.mkDerivation {
+pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "perfect-dos-vga-437-nerd-font";
-  version = "2025-04-16";
+  version = "0-unstable-2018-09-18";
 
   src = pkgs.fetchFromGitHub {
     owner = "CP437";
@@ -34,10 +34,17 @@ pkgs.stdenvNoCC.mkDerivation {
     runHook postInstall
   '';
 
+  # The repository has no releases; follow its default branch.
+  passthru.updater = flake.lib.updater {
+    kind = "nix-update";
+    args = [ "--version=branch" ];
+  };
+
   meta = {
     description = "Perfect DOS VGA 437 Win patched with Nerd Fonts glyphs";
     homepage = "https://github.com/CP437/PerfectDOSVGA437";
+    changelog = "https://github.com/CP437/PerfectDOSVGA437/commits/${finalAttrs.src.rev}";
     license = pkgs.lib.licenses.free;
     platforms = pkgs.lib.platforms.all;
   };
-}
+})
