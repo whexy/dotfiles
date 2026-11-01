@@ -5,15 +5,22 @@
   perSystem,
   pkgs,
   inputs,
+  osConfig ? null,
   ...
 }:
 let
   cfg = config.dotfiles.nix;
   tokenFile = "${config.xdg.configHome}/nix/gh-token.conf";
-  gcArgs = [
-    "--delete-older-than"
-    "30d"
-  ];
+  autoUpgrade =
+    if osConfig != null then
+      osConfig.dotfiles.system.autoUpgrade.enable
+    else
+      config.dotfiles.autoUpgrade.enable;
+  cleanup = lib.getExe (
+    pkgs.callPackage ../../../packages/nix-cleanup {
+      nixPackage = lib.defaultTo pkgs.nix config.nix.package;
+    }
+  );
 in
 {
   imports = [ ./nh.nix ];
@@ -41,7 +48,12 @@ in
       and only a user the daemon trusts can add a substituter
     '';
     pinRegistry.enable = lib.mkEnableOption "pinning the user nixpkgs registry and search path";
-    gc.enable = lib.mkEnableOption "weekly garbage collection of this user's profile generations older than 30 days";
+    gc.enable =
+      lib.mkEnableOption "daily generation retention (5 recent, 4 weekly, 3 monthly) and garbage collection"
+      // {
+        default = autoUpgrade;
+        defaultText = lib.literalExpression "if osConfig != null then osConfig.dotfiles.system.autoUpgrade.enable else config.dotfiles.autoUpgrade.enable";
+      };
 
     ghTokenFlakes = {
       enable = lib.mkEnableOption "using the gh CLI token for private `github:` flake fetches";
@@ -65,6 +77,14 @@ in
   };
 
   config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = autoUpgrade -> cfg.gc.enable;
+          message = "Auto-updating homes must enable dotfiles.nix.gc.enable.";
+        }
+      ];
+    }
     (lib.mkIf (cfg.caches.enable || cfg.ciCache.enable || cfg.ghTokenFlakes.enable) {
       # Home Manager uses this package to validate nix.conf, not to manage the daemon.
       nix.package = lib.mkDefault pkgs.nix;
@@ -99,16 +119,12 @@ in
     (lib.mkIf cfg.gc.enable {
       nix.gc = {
         automatic = true;
-        dates = "weekly";
+        dates = "daily";
         randomizedDelaySec = "2h";
-        options = lib.escapeShellArgs gcArgs;
       };
 
-      # Home Manager's agent passes `options` as a single argument, which
-      # nix-collect-garbage rejects as an unrecognised flag.
-      launchd.agents.nix-gc.config.ProgramArguments = lib.mkForce (
-        [ (lib.getExe' (lib.defaultTo pkgs.nix config.nix.package) "nix-collect-garbage") ] ++ gcArgs
-      );
+      systemd.user.services.nix-gc.Service.ExecStart = lib.mkForce cleanup;
+      launchd.agents.nix-gc.config.ProgramArguments = lib.mkForce [ cleanup ];
     })
     (lib.mkIf cfg.ghTokenFlakes.enable {
       nix.extraOptions = ''
