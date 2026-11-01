@@ -22,6 +22,13 @@
         the primary user as Tailscale operator, so user services can change
         tailscaled state (e.g. `tailscale serve`) without root
       '';
+      ssh.enable = lib.mkEnableOption ''
+        Tailscale SSH: tailscaled answers port 22 on this host's tailnet
+        addresses and admits only connections the tailnet policy's `ssh`
+        rules allow, so OpenSSH is no longer reachable over the tailnet. Off
+        turns a previously enabled server off (not on WSL, where the Windows
+        client cannot run one)
+      '';
       port = lib.mkOption {
         type = lib.types.port;
         default = 41641;

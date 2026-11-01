@@ -47,6 +47,15 @@ in
           '';
         })
 
+        # Set either way, so turning the option off stops a server tailscaled
+        # would otherwise keep across restarts.
+        {
+          system.activationScripts.postActivation.text = ''
+            ${lib.getExe' config.services.tailscale.package "tailscale"} set --ssh=${lib.boolToString cfg.tailscale.ssh.enable} \
+              || echo "warning: could not set Tailscale SSH; the next activation retries" >&2
+          '';
+        }
+
         # tailscaled serves a Unix socket only for root, so activation sets the
         # Rex route instead of the user's Home Manager. tailscaled keeps routes
         # across restarts, so a route this config no longer wants, which would

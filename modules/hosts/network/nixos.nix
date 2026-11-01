@@ -40,6 +40,12 @@ in
       networking.firewall.trustedInterfaces = [ "tailscale0" ];
     })
 
+    # Set either way, so turning the option off stops a server tailscaled
+    # would otherwise keep across restarts.
+    (lib.mkIf (cfg.tailscale.enable && !wsl) {
+      services.tailscale.extraSetFlags = [ "--ssh=${lib.boolToString cfg.tailscale.ssh.enable}" ];
+    })
+
     (lib.mkIf (cfg.tailscale.enable && cfg.tailscale.userOperator && !wsl) {
       services.tailscale.extraSetFlags = [ "--operator=${config.dotfiles.host.username}" ];
     })
