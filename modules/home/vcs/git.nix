@@ -34,7 +34,6 @@ in
 
         # Agent scratch directories are per-machine and never belong to a repo.
         ignores = [
-          ".pi/"
           ".claude/"
         ];
 

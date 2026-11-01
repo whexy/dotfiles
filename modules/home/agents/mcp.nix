@@ -1,7 +1,7 @@
 # MCP servers shared by every agent.
 #
 # Single source of truth for server definitions; each agent folder renders
-# them into its own config format (JSON for pi, claude, and opencode, inline
+# them into its own config format (JSON for claude and opencode, inline
 # TOML for codex), because no two of them read the same file.
 {
   pkgs,
