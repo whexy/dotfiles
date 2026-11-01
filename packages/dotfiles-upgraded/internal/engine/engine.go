@@ -34,6 +34,12 @@ type Switcher interface {
 	Switch(ctx context.Context, sha string) error
 }
 
+// Reporter delivers a commit this host gave up on. An error whose Permanent
+// method reports true drops the report; any other error retries it next cycle.
+type Reporter interface {
+	Report(ctx context.Context, f state.Failure) error
+}
+
 // Config holds the tuning the module surface exposes.
 type Config struct {
 	// ExitAfterSwitch lets a stable supervisor reload the newly activated binary.
@@ -75,6 +81,9 @@ type Engine struct {
 	Store    Store
 	Clock    Clock
 	Log      *slog.Logger
+	// Reporter is optional; without one, failures stay in the log and
+	// status.json.
+	Reporter Reporter
 
 	st state.State
 	// pendingSince tracks how long the current candidate has sat in CI, so a
@@ -131,6 +140,8 @@ func (e *Engine) RunOnce(ctx context.Context) time.Duration {
 // cycle is one pass of the state machine; the returned duration is the delay
 // before the next poll.
 func (e *Engine) cycle(ctx context.Context) time.Duration {
+	e.deliverFailure(ctx)
+
 	head, err := e.Refs.Head(ctx, e.Config.Ref, e.st.ETag)
 	if err != nil {
 		e.setPhase(state.PhaseCheckFailed)
@@ -242,10 +253,11 @@ func (e *Engine) attemptSwitch(ctx context.Context, sha string) {
 		attempts = 1
 	}
 
+	var err error
 	for attempt := 1; attempt <= attempts; attempt++ {
 		e.setPhase(state.PhaseSwitching)
 		e.writeStatus(nil)
-		err := e.Switcher.Switch(ctx, sha)
+		err = e.Switcher.Switch(ctx, sha)
 		if err == nil {
 			now := e.Clock.Now()
 			e.st.LastSuccessSha = sha
@@ -279,7 +291,44 @@ func (e *Engine) attemptSwitch(ctx context.Context, sha string) {
 	}
 
 	e.Log.Warn("giving up on sha", "sha", sha, "attempts", attempts)
+	if e.Reporter != nil {
+		failure := &state.Failure{
+			Sha:      sha,
+			Attempts: attempts,
+			Error:    err.Error(),
+			FailedAt: e.Clock.Now(),
+		}
+		var output interface{ RebuildOutput() []string }
+		if errors.As(err, &output) {
+			failure.Output = output.RebuildOutput()
+		}
+		e.st.PendingFailure = failure
+	}
 	e.ignore(sha, state.PhaseSwitchFailed)
+	e.deliverFailure(ctx)
+}
+
+// deliverFailure sends the pending failure report, keeping it for the next
+// cycle when the webhook cannot be reached. Only the latest failure is kept: an
+// older one was about a commit this host has since moved past or given up on.
+func (e *Engine) deliverFailure(ctx context.Context) {
+	failure := e.st.PendingFailure
+	if failure == nil || e.Reporter == nil {
+		return
+	}
+	err := e.Reporter.Report(ctx, *failure)
+	var permanent interface{ Permanent() bool }
+	switch {
+	case err == nil:
+		e.Log.Info("reported switch failure", "sha", failure.Sha)
+	case errors.As(err, &permanent) && permanent.Permanent():
+		e.Log.Warn("dropping switch failure report", "sha", failure.Sha, "error", err)
+	default:
+		e.Log.Warn("could not report switch failure, retrying next cycle", "sha", failure.Sha, "error", err)
+		return
+	}
+	e.st.PendingFailure = nil
+	e.persist()
 }
 
 // Backoff returns the delay after a given attempt number (1-based), doubling

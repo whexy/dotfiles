@@ -59,6 +59,13 @@ func TestRebuildFixture(t *testing.T) {
 		}
 		os.Exit(0)
 	}
+	if mode == "failing" {
+		for i := 0; i < 100; i++ {
+			fmt.Fprintf(os.Stderr, "build-%d\n", i)
+		}
+		fmt.Fprintln(os.Stderr, "error: builder failed")
+		os.Exit(1)
+	}
 	if mode != "graceful" {
 		signal.Ignore(syscall.SIGTERM)
 	}
@@ -119,6 +126,21 @@ func TestNormalOutputCollection(t *testing.T) {
 				t.Fatalf("missing %s-%d", stream, i)
 			}
 		}
+	}
+}
+
+func TestFailureCarriesOutputTail(t *testing.T) {
+	var output bytes.Buffer
+	e := fixtureExec(t, "failing", &output)
+	e.Timeout = 10 * time.Second
+	err := e.Switch(context.Background(), "sha")
+	var failed *OutputError
+	if !errors.As(err, &failed) {
+		t.Fatalf("err = %v, want OutputError", err)
+	}
+	lines := failed.RebuildOutput()
+	if len(lines) != tailLines || lines[len(lines)-1] != "error: builder failed" || lines[0] != fmt.Sprintf("build-%d", 101-tailLines) {
+		t.Fatalf("tail = %q", lines)
 	}
 }
 

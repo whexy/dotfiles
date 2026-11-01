@@ -8,6 +8,12 @@ let
   # location means changing it here.
   upstreamRef = "github:whexy/dotfiles";
 
+  # n8n workflow (packages/dotfiles-upgraded/n8n/failure-report.json) that
+  # files each switch a dotfiles-upgraded daemon gives up on as a GitHub
+  # issue. It holds the GitHub credential, so hosts carry only its token,
+  # secrets/upgrade-webhook-token.age.
+  upgradeFailureWebhook = "https://n8n.clusters.work/webhook/dotfiles-upgrade-failure";
+
   # Public name of a service a host publishes through its own Cloudflare
   # tunnel; the tunnel services and t3-pair all derive names from here.
   # Keep it one label below the zone: Cloudflare's free certificate covers
@@ -110,6 +116,7 @@ in
 {
   inherit
     upstreamRef
+    upgradeFailureWebhook
     publicHost
     upgraderReload
     overlays

@@ -12,6 +12,8 @@ import (
 	"log/slog"
 	"os"
 	"os/exec"
+	"strings"
+	"sync"
 	"syscall"
 	"time"
 )
@@ -114,11 +116,12 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 
 	stdoutWriter.Close()
 	stderrWriter.Close()
+	output := &tail{}
 	outputDone := make(chan struct{})
 	go func() {
 		done := make(chan struct{}, 2)
-		go func() { e.stream(stdout, "stdout"); done <- struct{}{} }()
-		go func() { e.stream(stderr, "stderr"); done <- struct{}{} }()
+		go func() { e.stream(stdout, "stdout", output); done <- struct{}{} }()
+		go func() { e.stream(stderr, "stderr", output); done <- struct{}{} }()
 		<-done
 		<-done
 		close(outputDone)
@@ -188,12 +191,15 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 	waitErr := cmd.Wait()
 	if cancelErr != nil {
 		if errors.Is(cancelErr, context.DeadlineExceeded) {
-			return fmt.Errorf("switch timed out after %s: %w", e.Timeout, cancelErr)
+			cancelErr = fmt.Errorf("switch timed out after %s: %w", e.Timeout, cancelErr)
 		}
-		return cancelErr
+		return &OutputError{Err: cancelErr, Output: output.snapshot()}
 	}
 	if waitErr != nil {
-		return fmt.Errorf("switch failed after %s: %w", time.Since(started).Round(time.Second), waitErr)
+		return &OutputError{
+			Err:    fmt.Errorf("switch failed after %s: %w", time.Since(started).Round(time.Second), waitErr),
+			Output: output.snapshot(),
+		}
 	}
 
 	e.Log.Info("switch finished", "sha", sha, "duration", time.Since(started).Round(time.Second).String())
@@ -203,16 +209,62 @@ func (e *Exec) Switch(ctx context.Context, sha string) error {
 // stream folds child output into the daemon's structured log so an unattended
 // failure leaves a readable trace in the journal. The reader is always drained
 // to EOF: a child blocked on a full pipe could never be reaped.
-func (e *Exec) stream(r io.Reader, stream string) {
+func (e *Exec) stream(r io.Reader, stream string, output *tail) {
 	scanner := bufio.NewScanner(r)
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for scanner.Scan() {
 		e.Log.Info("switch output", "stream", stream, "line", scanner.Text())
+		output.add(scanner.Text())
 	}
 	if err := scanner.Err(); err != nil {
 		e.Log.Warn("switch output truncated", "stream", stream, "error", err)
 		io.Copy(io.Discard, r)
 	}
+}
+
+// OutputError is a rebuild that ran and failed, with the end of what it
+// printed.
+type OutputError struct {
+	Err    error
+	Output []string
+}
+
+func (e *OutputError) Error() string { return e.Err.Error() }
+func (e *OutputError) Unwrap() error { return e.Err }
+
+// RebuildOutput returns the last lines the rebuild printed.
+func (e *OutputError) RebuildOutput() []string { return e.Output }
+
+const (
+	// Nix prints a failed build's log tail and the error itself last, so the
+	// end of the output is enough to diagnose a failure.
+	tailLines = 40
+	// tailLineBytes keeps a single runaway line from crowding out the rest.
+	tailLineBytes = 512
+)
+
+// tail keeps the last lines of a rebuild's interleaved stdout and stderr.
+type tail struct {
+	mu    sync.Mutex
+	lines []string
+}
+
+func (t *tail) add(line string) {
+	if len(line) > tailLineBytes {
+		line = strings.ToValidUTF8(line[:tailLineBytes], "") + "…"
+	}
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	t.lines = append(t.lines, line)
+	if len(t.lines) > tailLines {
+		t.lines = t.lines[len(t.lines)-tailLines:]
+	}
+}
+
+func (t *tail) snapshot() []string {
+	t.mu.Lock()
+	defer t.mu.Unlock()
+	return append([]string(nil), t.lines...)
 }
 
 // terminationGrace lets activation scripts exit before killing the rebuild group.

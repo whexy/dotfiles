@@ -15,6 +15,7 @@ import (
 
 	"dotfiles-upgraded/internal/engine"
 	"dotfiles-upgraded/internal/github"
+	"dotfiles-upgraded/internal/report"
 	"dotfiles-upgraded/internal/state"
 	"dotfiles-upgraded/internal/switcher"
 )
@@ -39,6 +40,8 @@ type options struct {
 	requireCIPass   bool
 	switchTimeout   time.Duration
 	pendingTimeout  time.Duration
+	failureWebhook  string
+	webhookToken    string
 }
 
 func run() error {
@@ -54,6 +57,8 @@ func run() error {
 	flag.BoolVar(&opt.requireCIPass, "require-ci-pass", true, "only switch to commits whose GitHub commit status is success")
 	flag.DurationVar(&opt.switchTimeout, "switch-timeout", 6*time.Hour, "hard limit on a single rebuild")
 	flag.DurationVar(&opt.pendingTimeout, "pending-timeout", 2*time.Hour, "give up on a commit whose CI stays pending this long")
+	flag.StringVar(&opt.failureWebhook, "failure-webhook", "", "URL to POST a commit this host gave up switching to")
+	flag.StringVar(&opt.webhookToken, "failure-webhook-token-file", "", "file holding the failure webhook's bearer token")
 	flag.BoolVar(&opt.exitAfterSwitch, "exit-after-switch", false, "exit after a successful switch so a stable supervisor can reload the active binary")
 	flag.Parse()
 
@@ -108,6 +113,15 @@ func run() error {
 		PendingTimeout:  opt.pendingTimeout,
 		JitterSeed:      hostname + "/" + opt.configuration,
 	}, client, sw, store, realClock{}, log)
+	if opt.failureWebhook != "" {
+		eng.Reporter = &report.Webhook{
+			URL:           opt.failureWebhook,
+			TokenFile:     opt.webhookToken,
+			Host:          hostname,
+			Configuration: opt.configuration,
+			Mode:          string(mode),
+		}
+	}
 
 	ctx, stop := signal.NotifyContext(context.Background(), syscall.SIGINT, syscall.SIGTERM)
 	defer stop()
@@ -119,6 +133,7 @@ func run() error {
 		"ref", opt.ref,
 		"pollInterval", opt.pollInterval.String(),
 		"authenticated", os.Getenv("GITHUB_TOKEN") != "",
+		"failureWebhook", opt.failureWebhook,
 		"statusFile", store.StatusPath(),
 	)
 

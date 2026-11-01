@@ -51,6 +51,21 @@ type State struct {
 	// IgnoreReasons keeps the phase each ignored SHA was given up in, so a
 	// restarted daemon still reports why the host is held back.
 	IgnoreReasons map[string]Phase `json:"ignoreReasons"`
+	// PendingFailure is a given-up switch not yet delivered to the failure
+	// webhook. It is persisted because the fault that broke the switch, or a
+	// restart, can also stop the delivery.
+	PendingFailure *Failure `json:"pendingFailure,omitempty"`
+}
+
+// Failure describes a commit this host gave up switching to.
+type Failure struct {
+	Sha      string    `json:"sha"`
+	Attempts int       `json:"attempts"`
+	Error    string    `json:"error"`
+	FailedAt time.Time `json:"failedAt"`
+	// Output is the end of the last attempt's rebuild output, where Nix and
+	// activation state the cause.
+	Output []string `json:"output"`
 }
 
 // Ignored reports whether sha was given up on.

@@ -65,6 +65,17 @@ in
         '';
       };
 
+      reportFailures = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Post each commit the daemon gives up switching to, with the end of
+          the rebuild output, to the fleet's failure webhook
+          (flake.lib.upgradeFailureWebhook), which opens a GitHub issue for
+          the commit or adds this host to the open one.
+        '';
+      };
+
       maxJobs = lib.mkOption {
         type = lib.types.ints.positive;
         default = 2;

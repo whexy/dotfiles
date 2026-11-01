@@ -108,6 +108,17 @@ in
       '';
     };
 
+    reportFailures = lib.mkOption {
+      type = lib.types.bool;
+      default = true;
+      description = ''
+        Post each commit the daemon gives up switching to, with the end of
+        the rebuild output, to the fleet's failure webhook
+        (flake.lib.upgradeFailureWebhook), which opens a GitHub issue for
+        the commit or adds this host to the open one.
+      '';
+    };
+
     maxJobs = lib.mkOption {
       type = lib.types.ints.positive;
       default = 2;
@@ -132,6 +143,10 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    age.secrets.upgrade-webhook-token = lib.mkIf cfg.reportFailures {
+      file = ../../../secrets/upgrade-webhook-token.age;
+    };
+
     # logind's polkit policy lets any user linger without authentication; a
     # host that tightens it needs `sudo loginctl enable-linger <user>` once.
     home.activation.enableLinger = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
@@ -181,16 +196,24 @@ in
           # input would need a token here.
           ''"NIX_CONFIG=max-jobs = ${toString cfg.maxJobs}\ncores = ${toString cfg.cores}\naccess-tokens ="''
         ];
-        ExecStart = lib.escapeShellArgs [
-          (lib.getExe perSystem.self.dotfiles-upgraded)
-          "--mode=home-manager"
-          "--configuration=${configuration}"
-          "--flake=${upstreamRef}"
-          "--state-dir=${cfg.stateDir}"
-          "--poll-interval=${cfg.pollInterval}"
-          "--max-attempts=${toString cfg.maxAttempts}"
-          "--require-ci-pass=${lib.boolToString cfg.requireCiPass}"
-        ];
+        # On Linux the token's path holds a literal ${XDG_RUNTIME_DIR}, which
+        # systemd expands, quoted or not, from the user manager's environment.
+        ExecStart = lib.escapeShellArgs (
+          [
+            (lib.getExe perSystem.self.dotfiles-upgraded)
+            "--mode=home-manager"
+            "--configuration=${configuration}"
+            "--flake=${upstreamRef}"
+            "--state-dir=${cfg.stateDir}"
+            "--poll-interval=${cfg.pollInterval}"
+            "--max-attempts=${toString cfg.maxAttempts}"
+            "--require-ci-pass=${lib.boolToString cfg.requireCiPass}"
+          ]
+          ++ lib.optionals cfg.reportFailures [
+            "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
+            "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"
+          ]
+        );
         ExecReload = flake.lib.upgraderReload {
           inherit (pkgs) systemd util-linux;
           inherit (cfg) stateDir;
