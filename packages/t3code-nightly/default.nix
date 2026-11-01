@@ -1,10 +1,11 @@
 {
   pkgs,
+  flake,
 }:
 
 let
   inherit (pkgs) lib;
-  metadata = import ./metadata.nix;
+  sources = lib.importJSON ./sources.json;
   platform =
     {
       aarch64-darwin = "darwin-arm64";
@@ -21,7 +22,7 @@ let
   # Darwin keeps T3's own download, which runs as is.
   browser = pkgs.stdenvNoCC.mkDerivation (browserAttrs: {
     pname = "t3code-chrome-headless-shell";
-    inherit (metadata.browser) version;
+    inherit (sources.browser) version;
 
     passthru.platform =
       {
@@ -32,7 +33,7 @@ let
 
     src = pkgs.fetchurl {
       url = "https://storage.googleapis.com/chrome-for-testing-public/${browserAttrs.version}/${browserAttrs.passthru.platform}/chrome-headless-shell-${browserAttrs.passthru.platform}.zip";
-      hash = metadata.browser.hashes.${browserAttrs.passthru.platform};
+      hash = sources.browser.hashes.${browserAttrs.passthru.platform};
     };
 
     sourceRoot = "chrome-headless-shell-${browserAttrs.passthru.platform}";
@@ -86,13 +87,13 @@ let
 in
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "t3code-nightly";
-  inherit (metadata) version;
+  inherit (sources) version;
 
   # The `t3` npm package no longer carries per-platform builds; it downloads
   # this archive from the GitHub Release, so fetch it there directly.
   src = pkgs.fetchurl {
     url = "https://github.com/pingdotgg/t3code/releases/download/v${finalAttrs.version}/t3-${finalAttrs.version}-${platform}.tar.gz";
-    hash = metadata.hashes.${platform};
+    hash = sources.hashes.${platform};
   };
 
   sourceRoot = "t3-${finalAttrs.version}-${platform}";
@@ -128,7 +129,19 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  passthru = lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux { inherit browser; };
+  passthru = {
+    # update.py also pins the desktop app and the browser, which
+    # t3code-desktop-nightly and the hub image read from sources.json.
+    updater = flake.lib.updater {
+      kind = "script";
+      alsoBuild = [
+        "t3code-nightly.browser"
+        "t3code-desktop-nightly"
+        "t3code-hub-image"
+      ];
+    };
+  }
+  // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux { inherit browser; };
 
   nativeInstallCheckInputs = [ pkgs.versionCheckHook ];
   doInstallCheck = true;

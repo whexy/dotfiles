@@ -371,7 +371,7 @@ evaluation imports Rex's module, so every system host decrypts the token into
 Nix's netrc (`dotfiles.nix.rexNetrc`, on the `base` cap); homes never fetch the
 input.
 
-In CI, the update lanes and the check on master read the token from the
+In CI, the update lane and the check on master read the token from the
 Woodpecker secret `rex_package_token`. A pull-request check has no token and
 substitutes the input from the CI cache, so a pull request that moves the `rex`
 lock fails its check. A new token goes into both `rex-package-netrc.age` and
@@ -486,14 +486,56 @@ DNS name at it, and runs it. The cert can create tunnels and edit every DNS
 record in the zone, so only homes that run a tunnel can decrypt it (see
 [Secrets](#secrets)).
 
+## Package updates
+
+A package that fetches an upstream release declares how it is updated, as
+data in `passthru.updater`, built with `flake.lib.updater` (`lib/updater.nix`,
+which rejects a missing or unknown field at evaluation). A package that stays
+frozen sets `passthru.updater = null;` with a comment saying why. Updatable
+packages set `meta.changelog`, which their update commits link to.
+
+The kinds, cheapest first:
+
+- `nix-update`: runs `nix-update --flake <name>` with the package's `args`.
+  Pins stay inline.
+- `npm`: an npm registry tarball. Bumps it with nix-update, regenerates the
+  vendored package-lock.json from package.json after `lockfileFilter`, the
+  jq filter the package's `postPatch` also applies, and re-pins `npmDepsHash`.
+- `platform-binaries`: one prebuilt archive per platform, from
+  `versionSource`, `urlTemplate` and `platforms`; downloads each to hash it.
+- `manifest-checksums`: per-platform binaries whose hashes the vendor's
+  manifest lists, so nothing is downloaded.
+- `script`: the package's own `update.py`, written with the `updater` library
+  in `packages/update`.
+
+The last three write `sources.json`, which the package reads with
+`lib.importJSON`. Any kind can also take `subpackages` (passthru fetchers
+whose hash follows the version), `followBranch` (passthru git fetchers that
+move to their default branch's head with the package), `alsoBuild` (packages
+that read this one's pins) and `allowDowngrade`.
+
+`nix run .#update` updates every such package; name packages to update only
+those, and `--list` shows them. The driver builds each updated package and
+its `alsoBuild` on this system and evaluates them on the others. A package
+that fails is restored and reported, the rest continue, and the run exits
+non-zero. To test an updater, downgrade the package's pin and run it:
+
+```sh
+nix run .#update -- muse-code
+```
+
+The nightly `update` step in `.woodpecker.yml` runs `nix flake update`, then
+`nix run .#update -- --commit`, which commits each package as
+`chore(<name>): <old> -> <new>`, and pushes after the shared check.
+
 ## CI repair
 
-When a pipeline on master fails (a push's check, an update lane, or the T3 hub
-publish), its last step, `report-failure`, posts the failure to a webhook task
-on mudd's T3 Code server, "Repair a failed dotfiles pipeline". The task starts
-an agent run in the Dotfiles project that reruns a transient failure, or ships
-a fix as a rebase-merged pull request and reruns the lane whose pins it held
-back. Pull requests are not reported.
+When a pipeline on master fails (a push's check, the update lane, or the T3
+hub publish), its last step, `report-failure`, posts the failure to a webhook
+task on mudd's T3 Code server, "Repair a failed dotfiles pipeline". The task
+starts an agent run in the Dotfiles project that reruns a transient failure,
+or ships a fix as a rebase-merged pull request and reruns the update lane, so
+the packages it reverted update. Pull requests are not reported.
 
 - The task's webhook URL is the Woodpecker secret `t3_repair_webhook`, open
   to push, cron and manual events. It takes no image filter: Woodpecker

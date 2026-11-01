@@ -126,6 +126,8 @@ in
 
   importDir = import ./importDir.nix { inherit lib; };
 
+  updater = import ./updater.nix { inherit lib; };
+
   nixosHost =
     {
       system,
