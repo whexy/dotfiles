@@ -38,6 +38,7 @@ in
         enable = lib.mkDefault true;
         # The home T3 Code server publishes itself with `tailscale serve`.
         userOperator = lib.mkDefault true;
+        ssh.enable = lib.mkDefault true;
         # Rex's login server on the tailnet. On Darwin the Rex app is the
         # server, which the gui cap publishes.
         rex.enable = lib.mkIf (!isDarwin) (lib.mkDefault true);
