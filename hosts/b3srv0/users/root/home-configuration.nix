@@ -11,7 +11,6 @@
   nixpkgs.config.allowUnfree = true;
   nixpkgs.overlays = [
     inputs.self.lib.overlays.unstable
-    inputs.self.lib.overlays.cloudflared-security
     inputs.self.lib.overlays.llm-tools
   ];
   dotfiles = {

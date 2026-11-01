@@ -61,7 +61,6 @@ let
     tailscale-wsl = import ../overlays/tailscale-wsl.nix;
     unstable = import ../overlays/unstable.nix { inherit (inputs) nixpkgs-unstable; };
     tailscale-security = import ../overlays/tailscale-security.nix;
-    cloudflared-security = import ../overlays/cloudflared-security.nix;
     llm-tools = import ../overlays/llm-tools.nix { inherit (inputs) llm-agents; };
   };
 
