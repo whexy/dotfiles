@@ -33,7 +33,12 @@ in
       input needs until Rex's first release
     '';
     pinRegistry.enable = lib.mkEnableOption "pinning the `nixpkgs` flake reference to this system's nixpkgs";
-    gc.enable = lib.mkEnableOption "weekly garbage collection of system profile generations older than 14 days";
+    gc.enable =
+      lib.mkEnableOption "daily generation retention (5 recent, 4 weekly, 3 monthly) and garbage collection"
+      // {
+        default = config.dotfiles.system.autoUpgrade.enable;
+        defaultText = lib.literalExpression "config.dotfiles.system.autoUpgrade.enable";
+      };
     optimise.enable = lib.mkEnableOption "automatic nix store optimisation";
     linuxBuilder.enable = lib.mkOption {
       type = lib.types.bool;
@@ -54,6 +59,14 @@ in
   };
 
   config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = config.dotfiles.system.autoUpgrade.enable -> cfg.gc.enable;
+          message = "Auto-updating systems must enable dotfiles.nix.gc.enable.";
+        }
+      ];
+    }
     (lib.mkIf cfg.caches.enable {
       # nixpkgs.config.allowUnfree is set at the blueprint level in flake.nix;
       # setting it here would trip the "nixpkgs.config with nixpkgs.pkgs" assertion
@@ -103,7 +116,6 @@ in
     (lib.mkIf cfg.gc.enable {
       nix.gc = {
         automatic = true;
-        options = "--delete-older-than 14d";
       };
     })
 

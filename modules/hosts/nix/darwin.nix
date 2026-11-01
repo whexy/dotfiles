@@ -6,6 +6,7 @@
 }:
 let
   cfg = config.dotfiles.nix;
+  cleanup = pkgs.callPackage ../../../packages/nix-cleanup { nixPackage = config.nix.package; };
 in
 {
   config = lib.mkMerge [
@@ -50,9 +51,15 @@ in
     # launchd has no randomized delay, so the job draws the same 2h window
     # NixOS gets from its timer.
     (lib.mkIf cfg.gc.enable {
+      nix.gc.interval = [
+        {
+          Hour = 3;
+          Minute = 15;
+        }
+      ];
       launchd.daemons.nix-gc.command = lib.mkForce "${pkgs.writeShellScript "nix-gc" ''
         sleep $((RANDOM % 7200))
-        exec ${config.nix.package}/bin/nix-collect-garbage ${config.nix.gc.options}
+        exec ${lib.getExe cleanup} --system
       ''}";
     })
   ];
