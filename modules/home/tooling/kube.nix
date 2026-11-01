@@ -56,7 +56,11 @@ let
       }'); then
       run mkdir -p ${lib.escapeShellArg (dirOf (clusterPath name))}
       if [ "$cluster_config" != "$(cat ${lib.escapeShellArg (clusterPath name)} 2>/dev/null)" ]; then
-        run install -m 600 /dev/stdin ${lib.escapeShellArg (clusterPath name)} <<<"$cluster_config"
+        # coreutils install rejects /dev/stdin as a source on Darwin.
+        cluster_tmp=$(mktemp)
+        printf '%s\n' "$cluster_config" >"$cluster_tmp"
+        run install -m 600 "$cluster_tmp" ${lib.escapeShellArg (clusterPath name)}
+        rm -f "$cluster_tmp"
       fi
     else
       warnEcho "Could not load the kubeconfig of ${name} from 1Password; keeping the last one"
