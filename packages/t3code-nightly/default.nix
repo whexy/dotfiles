@@ -106,6 +106,10 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     pkgs.stdenv.cc.cc.lib
   ];
 
+  # Native addons ship musl prebuilds beside the glibc ones and load them only
+  # on a musl libc, so their libc never has to resolve here.
+  autoPatchelfIgnoreMissingDeps = [ "libc.musl-*.so.1" ];
+
   # The executable is a Node single-executable with an embedded runtime
   # payload; stripping it removes data that the runtime needs at startup.
   dontStrip = true;
