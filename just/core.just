@@ -2,15 +2,16 @@
 default:
     @just --list
 
-# Update flake inputs (all or specific input)
-update *INPUT:
-    @if [ -z "{{INPUT}}" ]; then \
-        echo "Updating all flake inputs..."; \
-        nix flake update; \
-    else \
-        echo "Updating {{INPUT}}..."; \
-        nix flake update {{INPUT}}; \
-    fi
+# Update every flake input, then every package that pins an upstream release
+update: update-inputs update-packages
+
+# Update flake inputs (all or the named ones)
+update-inputs *INPUT:
+    nix flake update {{INPUT}}
+
+# Update packages' upstream pins (all or the named ones)
+update-packages *PACKAGE:
+    nix run .#update -- {{PACKAGE}}
 
 # Run format + lint pre-commit checks (treefmt + statix + nil + deadnix)
 check:

@@ -7,7 +7,8 @@
 # the same t3code-nightly build the hosts run, so the hub and the machines it
 # links to move to each nightly together. It runs no agents of its own; MCP
 # clients sign in to it, and it acts on the hosts through linked environments.
-# The Woodpecker nightly lane publishes it as ghcr.io/whexy/t3code-hub:<version>.
+# Woodpecker's publish-t3code-hub step publishes it as
+# ghcr.io/whexy/t3code-hub:<version>.
 let
   inherit (pkgs) lib;
   t3 = perSystem.self.t3code-nightly;

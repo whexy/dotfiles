@@ -24,8 +24,8 @@ variables:
       from_secret: ci_cache_secret_key
     NIX_CACHE_SIGNING_KEY:
       from_secret: nix_cache_signing_key
-  # GitHub App credentials, the build cache and Rex's token, which both update
-  # lanes need.
+  # GitHub App credentials, the build cache and Rex's token, which the update
+  # lane needs.
   - &github_app
     <<: *ci_cache
     GITHUB_APP_ID:
@@ -90,8 +90,8 @@ variables:
         rm -f "$keyfile"
       fi
     fi
-  # Push the update lanes' checked commit to the primary branch as the GitHub
-  # App, retrying a failed push 3 times.
+  # Push the update lane's checked commits to the primary branch as the
+  # GitHub App, retrying a failed push 3 times.
   - &push |
     GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
     origin_url="$(git remote get-url origin)"
@@ -109,7 +109,7 @@ when:
     branch: master
   - event: [pull_request, manual]
   - event: cron
-    cron: [nightly, weekly]
+    cron: nightly
 labels:
   platform: linux/amd64
 clone:
@@ -119,93 +119,50 @@ clone:
     image: woodpeckerci/plugin-git
     backend_options: *k8s_heavy
 steps:
-  # Update every flake input (weekly cron, or a manual run)
-  update-flake:
+  # Update every flake input and every package that pins an upstream release
+  # (nightly cron, or a manual run), one commit each, then check the commits
+  # and push them directly to the repository's primary branch.
+  update:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     when:
       - event: cron
-        cron: weekly
+        cron: nightly
       - event: manual
     backend_options: *k8s_heavy
     environment: *github_app
     commands:
       - *rex_netrc
+      - git config user.name "whexy-bot[bot]"
+      - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
+      - start=$(git rev-parse HEAD)
       - cp flake.lock /tmp/flake.lock.old
       - nix flake update
-      # Commit flake.lock, check it, and push it directly to the repository's
-      # primary branch. No-op (exit 0) when flake.lock is unchanged.
       - |
         if git diff --quiet -- flake.lock; then
           echo "No changes to flake.lock"
-          exit 0
+        else
+          git add flake.lock
+          # The package report is informational; a failure must not block the update.
+          report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
+            report="Package report unavailable; see the CI log."
+          # The push records a rollout status; the tree cache reuses this check.
+          git commit -m "chore: update flake inputs" -m "$report"
         fi
-
-        git config user.name "whexy-bot[bot]"
-        git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
-        git add flake.lock
-        # The package report is informational; a failure must not block the update.
-        report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
-          report="Package report unavailable; see the CI log."
-        # The push records a rollout status; the tree cache reuses this check.
-        git commit -m "chore: update flake inputs" -m "$report"
+      # The driver reverts a package it cannot update and exits non-zero at
+      # the end, so the other updates are still checked and pushed before the
+      # step fails and report-failure runs.
+      - updated=0
+      - nix run --accept-flake-config .#update -- --commit || updated=$?
+      - |
+        if [ "$(git rev-parse HEAD)" = "$start" ]; then
+          echo "Nothing to update"
+          exit "$updated"
+        fi
       - *check
       - *push
-  # Update the fast-moving agent packages (nightly cron). The T3 and Muse
-  # pins live in package metadata rather than flake.lock, so this lane updates
-  # every pin in one serialized commit.
-  update-nightly-agents:
-    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
-    when:
-      event: cron
-      cron: nightly
-    backend_options: *k8s_heavy
-    environment: *github_app
-    commands:
-      - *rex_netrc
-      - cp flake.lock /tmp/flake.lock.old
-      - cp packages/t3code-nightly/metadata.nix /tmp/t3code-metadata.old.nix
-      - cp packages/muse-code/metadata.nix /tmp/muse-code-metadata.old.nix
-      - nix flake update llm-agents
-      - ./packages/t3code-nightly/update.sh
-      - ./packages/muse-code/update.sh
-      - |
-        system=$(nix eval --raw --impure --expr 'builtins.currentSystem')
-        t3code=$(nix build ".#packages.$system.t3code-nightly" --no-link --print-out-paths)
-        "$t3code/bin/t3" --version
-        muse=$(nix build ".#packages.$system.muse-code" --no-link --print-out-paths)
-        "$muse/bin/muse" --version
-      # Commit the nightly pins, check them, and push them directly to the
-      # repository's primary branch. No-op (exit 0) when no pin changed.
-      - |
-        if git diff --quiet -- flake.lock packages/t3code-nightly/metadata.nix packages/muse-code/metadata.nix; then
-          echo "No nightly package changes"
-          exit 0
-        fi
-
-        git config user.name "whexy-bot[bot]"
-        git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
-        git add flake.lock packages/t3code-nightly/metadata.nix packages/muse-code/metadata.nix
-        # The package report is informational; a failure must not block the update.
-        report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
-          report="Package report unavailable; see the CI log."
-        # The report compares flake.lock only, so it never sees the T3 or Muse
-        # pin move.
-        t3_old=$(nix eval --raw --file /tmp/t3code-metadata.old.nix version)
-        t3_new=$(nix eval --raw --file packages/t3code-nightly/metadata.nix version)
-        if [ "$t3_old" != "$t3_new" ]; then
-          report=$(printf '%s\n\nT3 Code:\n  t3code-nightly  %s -> %s' "$report" "$t3_old" "$t3_new")
-        fi
-        muse_old=$(nix eval --raw --file /tmp/muse-code-metadata.old.nix version)
-        muse_new=$(nix eval --raw --file packages/muse-code/metadata.nix version)
-        if [ "$muse_old" != "$muse_new" ]; then
-          report=$(printf '%s\n\nMuse Code:\n  muse-code  %s -> %s' "$report" "$muse_old" "$muse_new")
-        fi
-        # The push records a rollout status; the tree cache reuses this check.
-        git commit -m "chore: update nightly agent packages" -m "$report"
-      - *check
-      - *push
+      - exit "$updated"
   # Publish the cluster's MCP hub image (packages/t3code-hub-image) at the T3
-  # version the hosts pin, right after the nightly lane moves that pin, and
+  # version the hosts pin, right after the update lane moves that pin, and
   # whenever the image, the package or this step changes. A version already in
   # GHCR is left alone. argocd-image-updater rolls the hub (clusters-work
   # gitops/apps/t3code-hub).
@@ -230,7 +187,7 @@ steps:
         from_secret: ghcr_token
     commands:
       - |
-        version=$(nix eval --raw --file packages/t3code-nightly/metadata.nix version)
+        version=$(nix eval --raw --impure --expr '(builtins.fromJSON (builtins.readFile ./packages/t3code-nightly/sources.json)).version')
         ref="docker://ghcr.io/whexy/t3code-hub:$version"
         skopeo() { nix shell --inputs-from . nixpkgs#skopeo -c skopeo "$@"; }
         if skopeo inspect --creds "whexy:$GHCR_TOKEN" "$ref" >/dev/null 2>&1; then

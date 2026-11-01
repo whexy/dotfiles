@@ -7,8 +7,8 @@
 # (modules/home/agents/t3code).
 let
   inherit (pkgs) lib;
-  metadata = import ../t3code-nightly/metadata.nix;
-  inherit (metadata) version;
+  sources = lib.importJSON ../t3code-nightly/sources.json;
+  inherit (sources) version;
   inherit (pkgs.stdenv.hostPlatform) system;
 
   pname = "t3code-desktop";
@@ -27,7 +27,7 @@ let
 
   src = pkgs.fetchurl {
     url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-${platform.arch}.AppImage";
-    hash = metadata.desktop.hashes.${platform.name};
+    hash = sources.desktop.hashes.${platform.name};
   };
 
   contents = pkgs.appimageTools.extract { inherit pname version src; };
@@ -51,6 +51,9 @@ pkgs.appimageTools.wrapAppImage {
       --set T3CODE_DISABLE_AUTO_UPDATE true \
       --set T3CODE_DESKTOP_LAUNCHER_PATH $out/bin/${pname}
   '';
+
+  # t3code-nightly's updater pins this app and builds it.
+  passthru.updater = null;
 
   meta = {
     description = "Nightly T3 Code desktop app";
