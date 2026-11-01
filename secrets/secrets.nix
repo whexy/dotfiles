@@ -67,7 +67,7 @@ in
     ]
   );
   "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
-  # Homes that enable tooling.appStoreConnect: the Macs, which run Xcode.
+  # Homes that enable tooling.appStoreConnect.apiKey: the Macs, which run Xcode.
   "app-store-connect-api-key.age".publicKeys = to {
     inherit (users) "whexy@golf" "whexy@sheridan";
   };

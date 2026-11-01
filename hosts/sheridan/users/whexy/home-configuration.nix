@@ -4,7 +4,7 @@
 
   dotfiles = {
     wm.darwin.windowManager = "aerospace";
-    tooling.appStoreConnect.enable = true;
+    tooling.appStoreConnect.apiKey.enable = true;
     agents = {
       iphoneUse.enable = true;
       spark = {
