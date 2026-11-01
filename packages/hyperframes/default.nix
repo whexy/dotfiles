@@ -1,5 +1,6 @@
 {
   pkgs,
+  flake,
   perSystem,
 }:
 
@@ -7,16 +8,20 @@
 # frame-exact, through a headless Chrome.
 #
 # The npm tarball already ships the compiled `dist/`, so nothing is built
-# here. It carries no lockfile; package-lock.json is generated from the
-# tarball's package.json after the postPatch edit below, with
-#   npm install --package-lock-only --ignore-scripts
+# here. It carries no lockfile; packages/update generates package-lock.json
+# from the tarball's package.json after `lockfileFilter`.
 let
   inherit (pkgs) lib;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
   version = "0.8.157";
 
+  # devDependencies only serve upstream's monorepo; its `workspace:*` ones
+  # cannot be resolved from the registry, and dist/ already bundles them.
+  lockfileFilter = "del(.devDependencies)";
+
   # The init templates load this GSAP from a CDN, which makes every render
   # fetch it. Compositions copy this file instead and render offline.
+  # update.py keeps it at the version the templates name.
   gsap = pkgs.fetchurl {
     url = "https://registry.npmjs.org/gsap/-/gsap-3.14.2.tgz";
     hash = "sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==";
@@ -83,22 +88,22 @@ pkgs.buildNpmPackage (finalAttrs: {
   nodejs = pkgs.nodejs_22;
   npmDepsHash = "sha256-ZdB1PxMiM1kRGVGBF5dgIPBFunU8zW01MGAmTpKEMIM=";
 
-  # devDependencies only serve upstream's monorepo; its `workspace:*` ones
-  # cannot be resolved from the registry, and dist/ already bundles them.
-  #
   # `init` copies its templates out of the store with their read-only modes,
   # then fails to rewrite them; the copies get their owner write bit back.
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
-    ${lib.getExe pkgs.jq} 'del(.devDependencies)' package.json > package.json.new
+    ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
     mv package.json.new package.json
 
-    substituteInPlace dist/init-BQYTOLTG.js \
+    # The module's file name changes with every release.
+    init=$(grep -l 'cpSync(templateDir, destDir, { recursive: true });' dist/init-*.js)
+    [ "$(printf '%s\n' "$init" | wc -l)" -eq 1 ]
+    substituteInPlace "$init" \
       --replace-fail 'cpSync(templateDir, destDir, { recursive: true });' \
         'cpSync(templateDir, destDir, { recursive: true }); makeCopyWritable(templateDir, destDir);' \
       --replace-fail 'copyFileSync(src, dest);' \
         'copyFileSync(src, dest); makeCopyWritable(src, dest);'
-    cat >> dist/init-BQYTOLTG.js <<'EOF'
+    cat >> "$init" <<'EOF'
     function makeCopyWritable(src, dest) {
       const fs = require("node:fs");
       const path = require("node:path");
@@ -135,11 +140,19 @@ pkgs.buildNpmPackage (finalAttrs: {
   passthru = {
     gsap = "${finalAttrs.finalPackage}/share/hyperframes/vendor/gsap.min.js";
     skills = "${finalAttrs.finalPackage}/share/hyperframes/skills";
+    gsapTarball = gsap;
+    skillsSrc = skills;
+    updater = flake.lib.updater {
+      kind = "script";
+      settings = { inherit lockfileFilter; };
+      subpackages = [ "skillsSrc" ];
+    };
   };
 
   meta = {
     description = "Render HTML/CSS/GSAP video compositions frame-exact";
     homepage = "https://github.com/heygen-com/hyperframes";
+    changelog = "https://github.com/heygen-com/hyperframes/releases/tag/v${finalAttrs.version}";
     license = [
       lib.licenses.asl20
       # The vendored GSAP build.

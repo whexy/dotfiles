@@ -2,6 +2,7 @@
 
 from __future__ import annotations
 
+import json
 import os
 from dataclasses import dataclass, field
 from pathlib import Path
@@ -38,9 +39,12 @@ class Package:
             system = os.environ["UPDATE_SYSTEM"]
             root = Path(os.environ["UPDATE_ROOT"])
             version = os.environ["UPDATE_VERSION"]
+            updater = json.loads(os.environ["UPDATE_CONFIG"])
         except KeyError as error:
             raise UpdateError(f"update.py runs under the driver ({error} unset)") from error
-        return cls(name=name, version=version, system=system, root=root, pname=name)
+        return cls(
+            name=name, version=version, system=system, root=root, pname=name, updater=updater
+        )
 
     def _file_containing(self, text: str) -> Path:
         files = [
