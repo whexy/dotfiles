@@ -3,7 +3,7 @@
 # Tool-specific config lives in each tool's folder, which exports a common
 # contract: packages, homeFiles, shellAliases, activation, and the
 # systemdUserServices/launchdAgents it runs. This module keeps only shared
-# concerns: options, the global AGENTS.md, agenix secrets, and merging.
+# concerns: options, the global AGENTS.md, secrets, and merging.
 args@{
   pkgs,
   config,
@@ -277,7 +277,7 @@ in
       # whisper-1 needs an OpenAI key in the environment of this process
       # alone; the store and the agent that runs it never see the key.
       transcribe = pkgs.writeShellScriptBin "transcribe" ''
-        if secret=$(${pkgs.coreutils}/bin/cat "${config.age.secrets.openai-api-key.path}" 2>/dev/null); then
+        if secret=$(${lib.getExe config.dotfiles.onepassword.package} openai-api-key); then
           export OPENAI_API_KEY="$secret"
         fi
         exec ${lib.getExe perSystem.self.transcribe} "$@"
@@ -308,7 +308,7 @@ in
         // lib.optionalAttrs config.dotfiles.tooling.appStoreConnect.enable { asc = ./asc/skill; }
         # Cloudflare's skill for cf, whose install and sign-in steps would
         # have agents run `npm install --global cf` and `cf auth login`; here
-        # Nix installs cf and it signs in with the agenix token.
+        # Nix installs cf and it signs in with the 1Password token.
         // lib.optionalAttrs config.dotfiles.tooling.cloudflare.cli.enable {
           cf-cli = pkgs.applyPatches {
             name = "cf-cli-skill";
@@ -471,22 +471,7 @@ in
       systemd.user.services = lib.mergeAttrsList (map (a: a.systemdUserServices or { }) agents);
       launchd.agents = lib.mergeAttrsList (map (a: a.launchdAgents or { }) agents);
 
-      # Secrets stay at agenix's default runtime location. Every consumer
-      # reads `config.age.secrets.*.path` through a shell, which is what
-      # expands the `${XDG_RUNTIME_DIR}` / `$(getconf ...)` fragment agenix
-      # generates, so no agent needs a hardcoded path.
-      age.secrets = {
-        ai-proxy-api-key.file = ../../../secrets/ai-proxy-api-key.age;
-        # A magpie gateway key, made under Gateway → Gateway keys in its web UI.
-        magpie-api-key.file = ../../../secrets/magpie-api-key.age;
-        # The gateways are reachable from the public internet through
-        # Cloudflare Access; every agent must present the service token.
-        cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
-        cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
-        # whisper-1 for `transcribe`; a key restricted to the Audio API.
-        openai-api-key.file = ../../../secrets/openai-api-key.age;
-      }
-      // lib.optionalAttrs (cfg.t3code.server.tunnel.enable || cfg.spark.server.enable) {
+      age.secrets = lib.mkIf (cfg.t3code.server.tunnel.enable || cfg.spark.server.enable) {
         # `cloudflared tunnel login` cert for the tunnels' zone: it creates
         # tunnels and edits any DNS record in that zone.
         cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;

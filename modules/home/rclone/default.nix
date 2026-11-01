@@ -18,21 +18,17 @@
 # Cloudflare Access "Service Auth" policy. Requests must carry two HTTP
 # headers:
 #
-#     CF-Access-Client-Id:     <from secrets/cf-access-dotfiles-id.age>
-#     CF-Access-Client-Secret: <from secrets/cf-access-dotfiles-secret.age>
+#     CF-Access-Client-Id:     <1Password secret cf-access-dotfiles-id>
+#     CF-Access-Client-Secret: <1Password secret cf-access-dotfiles-secret>
 #
 # rclone takes the nas remote's `headers` option from the environment
-# (`RCLONE_CONFIG_NAS_HEADERS`), but neither systemd nor launchd can
-# interpolate environment values from on-disk files. So the per-mount unit's
-# command is wrapped in a tiny shell script (`cfAccessWrapper`) that:
+# (`RCLONE_CONFIG_NAS_HEADERS`), which neither systemd nor launchd can load
+# from 1Password. So the per-mount unit's command is wrapped in a tiny shell
+# script (`cfAccessWrapper`) that:
 #
-#   1. reads both secret files at runtime, and
+#   1. loads both values from 1Password when the mount starts, and
 #   2. exports `RCLONE_CONFIG_NAS_HEADERS`, then `exec`s rclone with the
 #      original args.
-#
-# This is symmetrical to how `programs.rclone.remotes.*.secrets` already
-# handles the WebDAV password (via `rclone config update`), except the one
-# `headers` value combines two secret files.
 {
   config,
   lib,
@@ -266,30 +262,17 @@ in
     let
       homeDir = config.home.homeDirectory;
 
-      cfIdPath = config.age.secrets.cf-access-dotfiles-id.path;
-      cfSecretPath = config.age.secrets.cf-access-dotfiles-secret.path;
+      opSecret = lib.getExe config.dotfiles.onepassword.package;
 
-      # Wrapper: reads CF Access secrets from disk, sets
+      # Wrapper: loads the CF Access token from 1Password, sets
       # RCLONE_CONFIG_NAS_HEADERS, exec's whatever command (with args) it was
       # given. Usage:
       #   cfAccessWrapper /path/to/rclone mount ...
       cfAccessWrapper = pkgs.writeShellScript "rclone-nas-cf-access-wrapper" ''
         set -euo pipefail
 
-        if [[ ! -r "${cfIdPath}" ]]; then
-          echo "rclone-nas-cf-access-wrapper: missing ${cfIdPath}" >&2
-          exit 1
-        fi
-        if [[ ! -r "${cfSecretPath}" ]]; then
-          echo "rclone-nas-cf-access-wrapper: missing ${cfSecretPath}" >&2
-          exit 1
-        fi
-
-        # Use bash's `$(<file)` builtin instead of `cat` to avoid depending on
-        # PATH at runtime — the systemd unit's Environment override below
-        # sanitizes PATH and `cat` isn't available in `/usr/bin` on NixOS.
-        cf_id=$(<"${cfIdPath}")
-        cf_secret=$(<"${cfSecretPath}")
+        cf_id=$(${opSecret} cf-access-dotfiles-id)
+        cf_secret=$(${opSecret} cf-access-dotfiles-secret)
 
         # The environment, unlike argv, is private to the mount process. The
         # option is a CSV list of name,value pairs, so quote every field.
@@ -345,8 +328,6 @@ in
     {
       age.secrets = {
         nas-webdav-pass.file = ../../../secrets/nas-webdav-pass.age;
-        cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
-        cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
         b2-account.file = ../../../secrets/b2-account.age;
         b2-key.file = ../../../secrets/b2-key.age;
         b2-crypt-password.file = ../../../secrets/b2-crypt-password.age;

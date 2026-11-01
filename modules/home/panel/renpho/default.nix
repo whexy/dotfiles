@@ -7,18 +7,6 @@
 # shared CF Access service token (see modules/home/rclone for the header
 # mechanics).
 {
-  config,
-  lib,
-  ...
-}:
-{
-  config = lib.mkIf config.dotfiles.panel.renpho.enable {
-    age.secrets = {
-      cf-access-dotfiles-id.file = ../../../../secrets/cf-access-dotfiles-id.age;
-      cf-access-dotfiles-secret.file = ../../../../secrets/cf-access-dotfiles-secret.age;
-    };
-  };
-
   imports = [
     ./sketchybar.nix
     ./waybar.nix
