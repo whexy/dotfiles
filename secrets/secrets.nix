@@ -67,10 +67,8 @@ in
     ]
   );
   "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
-  # Homes that enable tooling.appStoreConnect.apiKey: the Macs, which run Xcode.
-  "app-store-connect-api-key.age".publicKeys = to {
-    inherit (users) "whexy@golf" "whexy@sheridan";
-  };
+  # Homes that enable tooling.appStoreConnect: the dev and dev-lite homes.
+  "app-store-connect-api-key.age".publicKeys = to users;
   # The Atuin module decrypts these during activation, not via age.secrets.
   "atuin-key.age".publicKeys = to users;
   "atuin-session.age".publicKeys = to users;
