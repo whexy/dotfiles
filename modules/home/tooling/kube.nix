@@ -15,7 +15,7 @@
 let
   cfg = config.dotfiles.tooling.kube;
   home = config.home.homeDirectory;
-  opSecret = lib.getExe config.dotfiles.onepassword.package;
+  opSa = lib.getExe config.dotfiles.onepassword.package;
   yq = lib.getExe pkgs.yq-go;
 
   # kubectl writes current-context to the first KUBECONFIG file, so it must
@@ -28,7 +28,7 @@ let
   # client certificate as an ExecCredential.
   credential = pkgs.writeShellScriptBin "kube-credential" ''
     set -euo pipefail
-    ${opSecret} "kube-$1" | CLUSTER=$1 ${yq} -o json '
+    ${opSa} read "kube-$1" | CLUSTER=$1 ${yq} -o json '
       .users[] | select(.name == strenv(CLUSTER)) | .user | {
         "apiVersion": "client.authentication.k8s.io/v1",
         "kind": "ExecCredential",
@@ -45,7 +45,7 @@ let
   # The cluster's kubeconfig with its user's credentials replaced by the
   # plugin. A cluster whose document cannot be loaded keeps its last file.
   writeClusters = lib.concatMapStrings (name: ''
-    if cluster_config=$(${opSecret} ${lib.escapeShellArg "kube-${name}"} | CLUSTER=${lib.escapeShellArg name} COMMAND=${lib.escapeShellArg credentialCommand} ${yq} '
+    if cluster_config=$(${opSa} read ${lib.escapeShellArg "kube-${name}"} | CLUSTER=${lib.escapeShellArg name} COMMAND=${lib.escapeShellArg credentialCommand} ${yq} '
       (.users[] | select(.name == strenv(CLUSTER))).user = {
         "exec": {
           "apiVersion": "client.authentication.k8s.io/v1",

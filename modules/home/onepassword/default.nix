@@ -23,31 +23,36 @@ let
   tokenFile = ../../../secrets + "/${tokenName}";
   hasToken = tokenName != null && builtins.pathExists tokenFile;
 
-  references = lib.concatStrings (
-    lib.mapAttrsToList (name: reference: ''
-      ${name}) reference=${lib.escapeShellArg reference} ;;
-    '') (import ./items.nix)
-  );
-
-  opSecret = pkgs.writeShellApplication {
-    name = "op-secret";
-    runtimeInputs = [ pkgs._1password-cli ];
-    text = ''
-      if [ "$#" -ne 1 ]; then
-        echo "usage: op-secret <name>" >&2
-        exit 2
-      fi
+  # `named <name>` prints the reference `items.nix` gives the name.
+  named = ''
+    named() {
       case "$1" in
-        ${references}
-        *)
-          echo "op-secret: no item named $1 in modules/home/onepassword/items.nix" >&2
-          exit 2
-          ;;
+        ${lib.concatStrings (
+          lib.mapAttrsToList (name: reference: ''
+            ${name}) echo ${lib.escapeShellArg reference} ;;
+          '') (import ./items.nix)
+        )}
+        *) return 1 ;;
       esac
-    ''
-    + (
+    }
+  '';
+
+  # The service account needs no desktop app. On WSL, pkgs' `op` is Windows'
+  # op.exe, which the token never reaches, so it would ask the app to unlock.
+  cli = pkgs._1password-cli.linux or pkgs._1password-cli;
+
+  opSa = pkgs.writeShellApplication {
+    name = "op-sa";
+    runtimeInputs = [
+      cli
+      pkgs.jq
+    ];
+    text =
       if hasToken then
         ''
+          vaults=(${lib.escapeShellArgs (lib.attrValues (import ./vaults.nix))})
+          ${named}
+          # `token` stays unexported: each op call gets it in its own environment.
           candidates=(${lib.escapeShellArgs config.age.identityPaths})
           identities=()
           for identity in "''${candidates[@]}"; do
@@ -55,20 +60,17 @@ let
               identities+=(-i "$identity")
             fi
           done
-          # Only op sees the token.
-          if ! OP_SERVICE_ACCOUNT_TOKEN=$(${lib.getExe config.age.package} --decrypt "''${identities[@]}" ${tokenFile}); then
-            echo "op-secret: could not decrypt this home's 1Password service-account token" >&2
+          if ! token=$(${lib.getExe config.age.package} --decrypt "''${identities[@]}" ${tokenFile}); then
+            echo "op-sa: could not decrypt this home's 1Password service-account token" >&2
             exit 1
           fi
-          export OP_SERVICE_ACCOUNT_TOKEN
-          exec op read --no-newline "$reference"
         ''
+        + builtins.readFile ./op-sa.sh
       else
         ''
-          echo "op-secret: this home has no 1Password service account (AGENTS.md, \"Secrets\")" >&2
+          echo "op-sa: this home has no 1Password service account (AGENTS.md, \"Secrets\")" >&2
           exit 1
-        ''
-    );
+        '';
   };
 in
 {
@@ -88,17 +90,19 @@ in
 
     package = lib.mkOption {
       type = lib.types.package;
-      default = opSecret;
+      default = opSa;
       readOnly = true;
       description = ''
-        `op-secret <name>`, which prints the secret `items.nix` names. Tools
-        call it when they need the secret.
+        `op-sa`, which tools run as `op-sa read <name>`, with a name from
+        `items.nix`, when they need the secret.
       '';
     };
   };
 
   config = lib.mkMerge [
-    { home.packages = [ opSecret ]; }
+    {
+      home.packages = [ opSa ];
+    }
 
     (lib.mkIf (!hasToken) {
       warnings = [

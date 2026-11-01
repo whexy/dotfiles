@@ -39,7 +39,7 @@ in
     {
       package = "${./plugins/proxy}";
       options = {
-        inherit (proxy) opSecret cfAccess;
+        inherit (proxy) opSa cfAccess;
         gateways = lib.mapAttrsToList (id: gateway: gateway // { inherit id; }) proxy.gateways;
         # The cluster's SearXNG, in the gateways' Cloudflare Access application.
         searchUrl = "https://search.clusters.work";

@@ -277,7 +277,7 @@ in
       # whisper-1 needs an OpenAI key in the environment of this process
       # alone; the store and the agent that runs it never see the key.
       transcribe = pkgs.writeShellScriptBin "transcribe" ''
-        if secret=$(${lib.getExe config.dotfiles.onepassword.package} openai-api-key); then
+        if secret=$(${lib.getExe config.dotfiles.onepassword.package} read openai-api-key); then
           export OPENAI_API_KEY="$secret"
         fi
         exec ${lib.getExe perSystem.self.transcribe} "$@"

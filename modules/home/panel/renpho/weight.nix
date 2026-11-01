@@ -18,7 +18,7 @@ let
   coreutils = "${pkgs.coreutils}/bin";
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
-  opSecret = lib.getExe config.dotfiles.onepassword.package;
+  opSa = lib.getExe config.dotfiles.onepassword.package;
   dataUrl = "https://zepbound.whexy.com/api/data.json";
 in
 pkgs.writeShellScript "renpho-weight" ''
@@ -35,7 +35,7 @@ pkgs.writeShellScript "renpho-weight" ''
       tmp="$(${coreutils}/mktemp "$dir/.data.XXXXXX")"
       # Headers go through stdin: argv is readable by every local user.
       if printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
-          "$(${opSecret} cf-access-dotfiles-id 2>/dev/null)" "$(${opSecret} cf-access-dotfiles-secret 2>/dev/null)" \
+          "$(${opSa} read cf-access-dotfiles-id 2>/dev/null)" "$(${opSa} read cf-access-dotfiles-secret 2>/dev/null)" \
         | ${curl} -fsS --max-time 15 -H @- -o "$tmp" "${dataUrl}" 2>/dev/null \
         && ${jq} -e '.measurements | length > 0' "$tmp" >/dev/null 2>&1; then
         ${coreutils}/mv -f "$tmp" "$cache"

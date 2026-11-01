@@ -21,7 +21,7 @@ let
   issuerId = "ef1c3fa8-e9ae-4581-b6c8-fea147b0786a";
 
   loadKey = ''
-    if ASC_PRIVATE_KEY=$(${lib.getExe config.dotfiles.onepassword.package} app-store-connect-api-key); then
+    if ASC_PRIVATE_KEY=$(${lib.getExe config.dotfiles.onepassword.package} read app-store-connect-api-key); then
       export ASC_PRIVATE_KEY ASC_KEY_ID=${keyId} ASC_ISSUER_ID=${issuerId}
     else
       unset ASC_PRIVATE_KEY

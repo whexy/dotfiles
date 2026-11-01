@@ -3,14 +3,15 @@
 # Both are published on the public internet behind one Cloudflare Access
 # application, so every request needs its service-token headers in addition
 # to the gateway's own API key. Each agent loads these from 1Password when it
-# starts, with `op-secret`, and maps them onto the headers with its own
+# starts, with `op-sa read`, and maps them onto the headers with its own
 # mechanism.
 { config, codexVersion }:
 let
-  opSecret = "${config.dotfiles.onepassword.package}/bin/op-secret";
+  opSa = "${config.dotfiles.onepassword.package}/bin/op-sa";
   # The command that prints a 1Password secret.
   secretCommand = name: [
-    opSecret
+    opSa
+    "read"
     name
   ];
   # 1Password secret names of the Access service token
@@ -20,7 +21,7 @@ let
   };
 in
 {
-  inherit opSecret secretCommand cfAccess;
+  inherit opSa secretCommand cfAccess;
 
   # env var -> command printing its value, for the launcher wrappers
   cfAccessSecrets = {

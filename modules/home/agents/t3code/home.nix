@@ -124,9 +124,9 @@ let
       state="$userdata/dotfiles-settings.json"
 
       # Credentials reach curl on stdin, never on its command line.
-      if ! key=$(${proxy.opSecret} ${gateway.apiKeySecret}) ||
-        ! accessId=$(${proxy.opSecret} ${proxy.cfAccess.id}) ||
-        ! accessSecret=$(${proxy.opSecret} ${proxy.cfAccess.secret}) ||
+      if ! key=$(${proxy.opSa} read ${gateway.apiKeySecret}) ||
+        ! accessId=$(${proxy.opSa} read ${proxy.cfAccess.id}) ||
+        ! accessSecret=$(${proxy.opSa} read ${proxy.cfAccess.secret}) ||
         ! catalog=$(
           printf 'Authorization: Bearer %s\nCF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
             "$key" "$accessId" "$accessSecret" |
