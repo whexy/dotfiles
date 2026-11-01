@@ -506,13 +506,17 @@ The kinds, cheapest first:
 - `manifest-checksums`: per-platform binaries whose hashes the vendor's
   manifest lists, so nothing is downloaded.
 - `script`: the package's own `update.py`, written with the `updater` library
-  in `packages/update`.
+  in `packages/update`; it reads its `settings` from the config.
 
 The last three write `sources.json`, which the package reads with
 `lib.importJSON`. Any kind can also take `subpackages` (passthru fetchers
 whose hash follows the version), `followBranch` (passthru git fetchers that
 move to their default branch's head with the package), `alsoBuild` (packages
 that read this one's pins) and `allowDowngrade`.
+
+`checks.<system>.package-updaters`, which CI and `just verify` build, fails
+when a package fetches an upstream source without a `passthru.updater`, or
+has an updater but no `meta.changelog`.
 
 `nix run .#update` updates every such package; name packages to update only
 those, and `--list` shows them. The driver builds each updated package and
