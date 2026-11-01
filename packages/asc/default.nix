@@ -1,4 +1,4 @@
-{ pkgs, ... }:
+{ pkgs, flake, ... }:
 
 # asc, the App Store Connect CLI. nixpkgs packages it as `asccli`, five
 # major versions behind upstream; `pkgs.asc` is an unrelated game.
@@ -56,6 +56,8 @@ pkgs.buildGo127Module (finalAttrs: {
   nativeInstallCheckInputs = [ pkgs.versionCheckHook ];
   versionCheckProgramArg = "version";
   doInstallCheck = true;
+
+  passthru.updater = flake.lib.updater { kind = "nix-update"; };
 
   meta = {
     description = "Scriptable CLI for the App Store Connect API";
