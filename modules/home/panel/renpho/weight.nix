@@ -6,7 +6,9 @@
 # newer data can exist, so the response is cached and the network is touched
 # only after that time. The bars still tick every few minutes; a tick before
 # then reads the cache. Several machines run this script at once, and the
-# Worker folds their simultaneous requests into one Renpho sync.
+# Worker folds their simultaneous requests into one Renpho sync. Each fetch
+# loads the Access token from 1Password, whose requests are rationed, so a
+# failed fetch waits 15 minutes before the next.
 {
   config,
   lib,
@@ -16,8 +18,7 @@ let
   coreutils = "${pkgs.coreutils}/bin";
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
-  cfIdFile = config.age.secrets.cf-access-dotfiles-id.path;
-  cfSecretFile = config.age.secrets.cf-access-dotfiles-secret.path;
+  opSecret = lib.getExe config.dotfiles.onepassword.package;
   dataUrl = "https://zepbound.whexy.com/api/data.json";
 in
 pkgs.writeShellScript "renpho-weight" ''
@@ -26,17 +27,24 @@ pkgs.writeShellScript "renpho-weight" ''
   ${coreutils}/mkdir -p "$dir"
 
   stale=0
+  failed="$dir/failed"
   if ! ${jq} -e '(.sync.next_check_at | fromdateiso8601) > now' "$cache" >/dev/null 2>&1; then
-    tmp="$(${coreutils}/mktemp "$dir/.data.XXXXXX")"
-    # Headers go through stdin: argv is readable by every local user.
-    if printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
-        "$(<"${cfIdFile}")" "$(<"${cfSecretFile}")" \
-      | ${curl} -fsS --max-time 15 -H @- -o "$tmp" "${dataUrl}" 2>/dev/null \
-      && ${jq} -e '.measurements | length > 0' "$tmp" >/dev/null 2>&1; then
-      ${coreutils}/mv -f "$tmp" "$cache"
-    else
-      ${coreutils}/rm -f "$tmp"
+    if [ -n "$(${pkgs.findutils}/bin/find "$failed" -mmin -15 2>/dev/null)" ]; then
       stale=1
+    else
+      tmp="$(${coreutils}/mktemp "$dir/.data.XXXXXX")"
+      # Headers go through stdin: argv is readable by every local user.
+      if printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
+          "$(${opSecret} cf-access-dotfiles-id 2>/dev/null)" "$(${opSecret} cf-access-dotfiles-secret 2>/dev/null)" \
+        | ${curl} -fsS --max-time 15 -H @- -o "$tmp" "${dataUrl}" 2>/dev/null \
+        && ${jq} -e '.measurements | length > 0' "$tmp" >/dev/null 2>&1; then
+        ${coreutils}/mv -f "$tmp" "$cache"
+        ${coreutils}/rm -f "$failed"
+      else
+        ${coreutils}/rm -f "$tmp"
+        ${coreutils}/touch "$failed"
+        stale=1
+      fi
     fi
   fi
 

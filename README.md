@@ -41,8 +41,9 @@ Feature modules are semantic groups: `default.nix` declares the options,
 
 ### Secrets and Remote access
 
-Secrets are age-encrypted with agenix and only decrypted on the hosts that need
-them.
+Secrets the system needs are age-encrypted with agenix and only decrypted on
+the hosts that need them. Tools load their API keys and tokens from 1Password
+when they run, each home through its own read-only service account.
 
 Tailscale on everything, so I can safely expose services in private network.
 

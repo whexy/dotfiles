@@ -20,7 +20,7 @@ let
   gateway = proxy.gateways.cliproxyapi;
   base = {
     secrets = proxy.cfAccessSecrets // {
-      META_API_KEY = gateway.apiKeyPath;
+      META_API_KEY = proxy.secretCommand gateway.apiKeySecret;
     };
     secretHeaders = proxy.cfAccessHeaderEnv;
     settings.endpoint_transport = {

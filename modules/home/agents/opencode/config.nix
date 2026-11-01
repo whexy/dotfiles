@@ -1,5 +1,4 @@
 {
-  pkgs,
   lib,
   proxy,
   defaults,
@@ -33,17 +32,15 @@ in
   update = "disable";
   share = "disabled";
   # The plugin registers a provider per gateway, each with the gateway's
-  # live model list from its Codex model catalog. It reads the agenix
-  # secrets itself because OpenCode's shared background server outlives the
+  # live model list from its Codex model catalog. It loads the keys from
+  # 1Password itself because OpenCode's shared background server outlives the
   # launch that started it.
   plugins = [
     {
       package = "${./plugins/proxy}";
       options = {
-        inherit (proxy) cfAccessIdPath cfAccessSecretPath;
+        inherit (proxy) opSecret cfAccess;
         gateways = lib.mapAttrsToList (id: gateway: gateway // { inherit id; }) proxy.gateways;
-        # /bin/cat does not exist on NixOS.
-        cat = "${pkgs.coreutils}/bin/cat";
         # The cluster's SearXNG, in the gateways' Cloudflare Access application.
         searchUrl = "https://search.clusters.work";
       };

@@ -16,7 +16,7 @@ let
     {
       label = "${id} (default models)";
       secrets = proxy.cfAccessSecrets // {
-        OPENAI_API_KEY = gateway.apiKeyPath;
+        OPENAI_API_KEY = proxy.secretCommand gateway.apiKeySecret;
       };
       settings = {
         model_provider = id;

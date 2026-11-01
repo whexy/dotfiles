@@ -2,21 +2,30 @@
 #
 # Both are published on the public internet behind one Cloudflare Access
 # application, so every request needs its service-token headers in addition
-# to the gateway's own API key. Agents cannot read agenix files themselves,
-# so each one is handed the secret paths and maps them onto the headers with
-# its own mechanism.
+# to the gateway's own API key. Each agent loads these from 1Password when it
+# starts, with `op-secret`, and maps them onto the headers with its own
+# mechanism.
 { config, codexVersion }:
 let
-  secretPath = name: config.age.secrets.${name}.path;
+  opSecret = "${config.dotfiles.onepassword.package}/bin/op-secret";
+  # The command that prints a 1Password secret.
+  secretCommand = name: [
+    opSecret
+    name
+  ];
+  # 1Password secret names of the Access service token
+  cfAccess = {
+    id = "cf-access-dotfiles-id";
+    secret = "cf-access-dotfiles-secret";
+  };
 in
 {
-  cfAccessIdPath = secretPath "cf-access-dotfiles-id";
-  cfAccessSecretPath = secretPath "cf-access-dotfiles-secret";
+  inherit opSecret secretCommand cfAccess;
 
-  # env var -> agenix secret file, for the launcher wrappers
+  # env var -> command printing its value, for the launcher wrappers
   cfAccessSecrets = {
-    CF_ACCESS_CLIENT_ID = secretPath "cf-access-dotfiles-id";
-    CF_ACCESS_CLIENT_SECRET = secretPath "cf-access-dotfiles-secret";
+    CF_ACCESS_CLIENT_ID = secretCommand cfAccess.id;
+    CF_ACCESS_CLIENT_SECRET = secretCommand cfAccess.secret;
   };
 
   # header -> env var holding its value
@@ -33,7 +42,7 @@ in
     cliproxyapi = rec {
       name = "CLIProxyAPI";
       baseUrl = "https://llm.clusters.work";
-      apiKeyPath = secretPath "ai-proxy-api-key";
+      apiKeySecret = "ai-proxy-api-key";
       # `client_version` selects the Codex catalog over OpenAI's list.
       catalogUrl = "${baseUrl}/v1/models?client_version=${codexVersion}";
       # Model IDs are the upstream's own.
@@ -53,7 +62,7 @@ in
     magpie = rec {
       name = "magpie";
       baseUrl = "https://magpie.clusters.work";
-      apiKeyPath = secretPath "magpie-api-key";
+      apiKeySecret = "magpie-api-key";
       # /v1/models ignores `client_version` and answers OpenAI's list.
       catalogUrl = "${baseUrl}/v1/codex/models";
       # Every model is `<magpie provider>/<model>`, such as

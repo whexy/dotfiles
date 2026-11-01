@@ -123,12 +123,10 @@ let
       settings="$userdata/settings.json"
       state="$userdata/dotfiles-settings.json"
 
-      # The agenix paths expand XDG_RUNTIME_DIR, which an activation outside
-      # the user's session lacks; the reads then fail and the list stays.
       # Credentials reach curl on stdin, never on its command line.
-      if ! key=$(<"${gateway.apiKeyPath}") ||
-        ! accessId=$(<"${proxy.cfAccessIdPath}") ||
-        ! accessSecret=$(<"${proxy.cfAccessSecretPath}") ||
+      if ! key=$(${proxy.opSecret} ${gateway.apiKeySecret}) ||
+        ! accessId=$(${proxy.opSecret} ${proxy.cfAccess.id}) ||
+        ! accessSecret=$(${proxy.opSecret} ${proxy.cfAccess.secret}) ||
         ! catalog=$(
           printf 'Authorization: Bearer %s\nCF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
             "$key" "$accessId" "$accessSecret" |

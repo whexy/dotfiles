@@ -44,8 +44,9 @@ class Entry(TypedDict):
     stay resolvable regardless of naming changes."""
     env: NotRequired[dict[str, str]]
     """Nonsecret environment, saved into the agent's native settings."""
-    secrets: NotRequired[dict[str, str]]
-    """Environment variable to credential file, read only at launch."""
+    secrets: NotRequired[dict[str, list[str]]]
+    """Environment variable to the command printing its credential, run only
+    at launch."""
     secretHeaders: NotRequired[dict[str, str]]
     """HTTP header to the secret environment variable holding its value."""
     settings: NotRequired[Table]

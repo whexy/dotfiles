@@ -1,8 +1,11 @@
 # Cluster access on every host without fetching kubeconfigs by hand.
 #
-# Each cluster's kubeconfig is its own agenix secret whose cluster, user,
-# and context are all named after the cluster, so the files merge through
+# Each cluster's kubeconfig is a 1Password document whose cluster, user, and
+# context are all named after the cluster, so the files merge through
 # KUBECONFIG without colliding and `kubectx <cluster>` switches between them.
+# The files on disk hold only the cluster's address and CA: kubectl loads the
+# client certificate from 1Password through a credential plugin, for each
+# command, into its own memory.
 {
   config,
   pkgs,
@@ -12,17 +15,61 @@
 let
   cfg = config.dotfiles.tooling.kube;
   home = config.home.homeDirectory;
+  opSecret = lib.getExe config.dotfiles.onepassword.package;
+  yq = lib.getExe pkgs.yq-go;
 
   # kubectl writes current-context to the first KUBECONFIG file, so it must
-  # be a writable file outside agenix's read-only, re-decrypted secrets.
+  # be a writable file of its own.
   stateConfig = "${home}/.kube/config";
   clusterPath = name: "${home}/.kube/clusters/${name}";
   kubeconfig = lib.concatStringsSep ":" ([ stateConfig ] ++ map clusterPath cfg.clusters);
+
+  # The plugin kubectl runs, `kube-credential <cluster>`, printing the
+  # client certificate as an ExecCredential.
+  credential = pkgs.writeShellScriptBin "kube-credential" ''
+    set -euo pipefail
+    ${opSecret} "kube-$1" | CLUSTER=$1 ${yq} -o json '
+      .users[] | select(.name == strenv(CLUSTER)) | .user | {
+        "apiVersion": "client.authentication.k8s.io/v1",
+        "kind": "ExecCredential",
+        "status": {
+          "clientCertificateData": (."client-certificate-data" | @base64d),
+          "clientKeyData": (."client-key-data" | @base64d)
+        }
+      }'
+  '';
+  # Named through the profile, not the store, so the files stay valid after
+  # the generation that wrote them is collected.
+  credentialCommand = "${config.home.profileDirectory}/bin/kube-credential";
+
+  # The cluster's kubeconfig with its user's credentials replaced by the
+  # plugin. A cluster whose document cannot be loaded keeps its last file.
+  writeClusters = lib.concatMapStrings (name: ''
+    if cluster_config=$(${opSecret} ${lib.escapeShellArg "kube-${name}"} | CLUSTER=${lib.escapeShellArg name} COMMAND=${lib.escapeShellArg credentialCommand} ${yq} '
+      (.users[] | select(.name == strenv(CLUSTER))).user = {
+        "exec": {
+          "apiVersion": "client.authentication.k8s.io/v1",
+          "command": strenv(COMMAND),
+          "args": [strenv(CLUSTER)],
+          "interactiveMode": "Never"
+        }
+      }'); then
+      run mkdir -p ${lib.escapeShellArg (dirOf (clusterPath name))}
+      if [ "$cluster_config" != "$(cat ${lib.escapeShellArg (clusterPath name)} 2>/dev/null)" ]; then
+        run install -m 600 /dev/stdin ${lib.escapeShellArg (clusterPath name)} <<<"$cluster_config"
+      fi
+    else
+      warnEcho "Could not load the kubeconfig of ${name} from 1Password; keeping the last one"
+    fi
+  '') cfg.clusters;
 in
 {
   config = lib.mkIf cfg.enable {
     home = {
-      packages = [ pkgs.kubectx ];
+      packages = [
+        pkgs.kubectx
+        credential
+      ];
 
       # kubectl falls back to the last KUBECONFIG file when none exist, and
       # kubectx cannot parse an empty one, so seed a minimal valid config.
@@ -33,6 +80,7 @@ in
             ${lib.escapeShellArg stateConfig}
         fi
       '';
+      activation.kubeClusters = lib.hm.dag.entryAfter [ "writeBoundary" ] writeClusters;
     };
 
     # Not home.sessionVariables: its script is skipped in any shell that
@@ -45,18 +93,5 @@ in
       '';
       nushell.environmentVariables.KUBECONFIG = lib.hm.nushell.mkNushellInline "$env.KUBECONFIG? | default --empty ${builtins.toJSON kubeconfig}";
     };
-
-    age.secrets = lib.listToAttrs (
-      map (name: {
-        name = "kube-${name}";
-        value = {
-          file = ../../../secrets/kube-${name}.age;
-          path = clusterPath name;
-          # kubectx opens every KUBECONFIG file read-write, even to only
-          # switch context. Its rewrites are lost on the next decryption.
-          mode = "0600";
-        };
-      }) cfg.clusters
-    );
   };
 }
