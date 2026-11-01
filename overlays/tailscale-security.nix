@@ -1,15 +1,16 @@
-# Self-expiring overlay: Tailscale < 1.102.1 has a security vulnerability,
-# but the pinned stable nixpkgs only ships 1.98.x, so pull tailscale from
-# nixpkgs-unstable until the stable channel catches up.
+# Self-expiring overlay: Tailscale < 1.104.4 has security vulnerabilities in
+# Tailscale SSH and Serve (TS-2026-014 through TS-2026-017). The NixOS stable
+# channel already ships the fix, but nixpkgs-darwin still has 1.98.x, so pull
+# tailscale from nixpkgs-unstable until that channel catches up.
 #
-# Once the stable channel ships tailscale >= 1.102.1 this overlay becomes a
-# no-op and emits a warning reminding to remove it.
+# On a channel that ships tailscale >= 1.104.4 this overlay is a no-op and
+# warns that it can be removed; remove it once Darwin evaluations warn too.
 #
 # Requires the `unstable` overlay (pkgs.unstable) to be applied before this
 # one in nixpkgs.overlays.
 _final: prev:
 let
-  fixedVersion = "1.102.1";
+  fixedVersion = "1.104.4";
   noOverride = prev.lib.versionAtLeast prev.tailscale.version fixedVersion;
 in
 {
