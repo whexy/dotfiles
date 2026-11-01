@@ -54,4 +54,7 @@ verify:
     @echo "Evaluating ellison..."
     nix eval .#nixosConfigurations.ellison.config.system.build.toplevel.drvPath --show-trace
     @echo "OK - ellison"
+    @echo "Checking package updaters..."
+    nix build ".#checks.$(nix eval --raw --impure --expr builtins.currentSystem).package-updaters" --no-link
+    @echo "OK - package updaters"
     @echo "SUCCESS - All primary configurations evaluate correctly"
