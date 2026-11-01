@@ -15,7 +15,7 @@ let
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
   witr-pkg = p.witr;
-  ghostty-pkg = if isDarwin then p.ghostty-bin else p.ghostty;
+  ghostty-pkg = if isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
   ghostty-terminfo = ghostty-pkg.terminfo;
 in
 {
