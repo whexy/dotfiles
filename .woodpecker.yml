@@ -295,4 +295,24 @@ steps:
       # wrangler is a docs devDependency, installed by build-docs.
       - npx wrangler deploy
       - echo "OK - deployed"
-    depends_on: [build-docs]
+  # Report a failure on master to the T3 Code task that repairs it (see
+  # AGENTS.md). It runs last and no step sets depends_on, so the steps run in
+  # order and a failure in any of them reaches this one.
+  report-failure:
+    image: curlimages/curl:8.19.0
+    when:
+      - event: [push, cron, manual]
+        branch: master
+        status: failure
+    environment:
+      T3_REPAIR_WEBHOOK:
+        from_secret: t3_repair_webhook
+    commands:
+      - |
+        # A cron pipeline's message is the cron's name.
+        cron=
+        if [ "$CI_PIPELINE_EVENT" = cron ]; then cron=$CI_COMMIT_MESSAGE; fi
+        body=$(printf '{"event":"%s","cron":"%s","branch":"%s","commit":"%s","pipeline":"%s","pipeline_url":"%s"}' \
+          "$CI_PIPELINE_EVENT" "$cron" "$CI_COMMIT_BRANCH" "$CI_COMMIT_SHA" "$CI_PIPELINE_NUMBER" "$CI_PIPELINE_URL")
+        curl -fsS -o /dev/null -D - -X POST -H 'content-type: application/json' \
+          --data "$body" "$T3_REPAIR_WEBHOOK" | grep -i '^x-t3-hook-outcome'

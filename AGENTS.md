@@ -481,6 +481,21 @@ DNS name at it, and runs it. The cert can create tunnels and edit every DNS
 record in the zone, so only homes that run a tunnel can decrypt it (see
 [Secrets](#secrets)).
 
+## CI repair
+
+When a pipeline on master fails (a push's check, an update lane, or the T3 hub
+publish), its last step, `report-failure`, posts the failure to a webhook task
+on mudd's T3 Code server, "Repair a failed dotfiles pipeline". The task starts
+an agent run in the Dotfiles project that reruns a transient failure, or ships
+a fix as a rebase-merged pull request and reruns the lane whose pins it held
+back. Pull requests are not reported.
+
+- The task's webhook URL is the Woodpecker secret `t3_repair_webhook`, open
+  only to the `curlimages/curl` image. A new task means a new URL in that
+  secret (see the `t3-setup` skill).
+- The task runs once per event, cron and commit, so a pipeline that fails
+  again on the same commit, such as a rerun, starts no second repair.
+
 ## Verification
 
 (Before verification, remember to use `git add` to add new files, as flake
