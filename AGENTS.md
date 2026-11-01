@@ -162,6 +162,45 @@ while the upgrade source and all its inputs stay public. Keep the fragment out
 of `nix.settings`/git, and refresh it by re-running activation after
 `gh auth login`.
 
+## Cloudflare CLI
+
+The `dev` and `dev-lite` caps install `cf`, Cloudflare's CLI
+(`packages/cf`, also run as `cloudflare`), and give every agent Cloudflare's
+`cf-cli` skill. No host runs `cf auth login`: `cf` signs in with one scoped API
+token, `secrets/cloudflare-api-token.age`
+(`dotfiles.tooling.cloudflare.apiToken`).
+
+- `cf`'s wrapper reads the token on each run and exports it, with the
+  token's account (`CLOUDFLARE_ACCOUNT_ID`), to that `cf` process alone. No
+  shell or agent environment holds it.
+- A token the caller brings wins: one already in the environment, or one in
+  the `.env` that `cf` reads from the current directory.
+- Until the secret exists, `cf` runs signed out and evaluation warns.
+
+Inside a project that depends on `cf`, the global command hands off to the
+project's npm-installed copy. On NixOS its prebuilt workerd (`cf dev`) runs
+through nix-ld, which the `dev` cap enables.
+
+### Provision the token
+
+1. In the Cloudflare dashboard, under Manage Account → Account API Tokens,
+   create a custom token for the account in `modules/home/tooling/cloudflare.nix`.
+   Grant only what agents should do; reading is enough to start:
+   Account Settings Read, Zone Read, DNS Read, and Workers Scripts Read, on
+   all zones in the account. Editing the token's permissions later keeps its
+   value, so the secret does not change.
+2. On mudd or sheridan, from `secrets/`, paste the token into the editor
+   that opens:
+
+   ```sh
+   agenix -e cloudflare-api-token.age -i ~/.ssh/agenix_ed25519
+   ```
+
+3. Commit the file and switch. `cf auth whoami` then reports
+   `"tokenValid": true`.
+
+To rotate, roll the token in the dashboard and repeat step 2.
+
 ## T3 Code server
 
 The server listens only on loopback, at port 3773. On tailnet hosts

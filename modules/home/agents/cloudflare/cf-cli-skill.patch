@@ -1,0 +1,38 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -28,26 +28,20 @@
+ | Environment variables | https://developers.cloudflare.com/cf/environment-variables/index.md |
+ | Find slow or expensive D1 databases and queries with `cf sql query` | https://developers.cloudflare.com/d1/observability/find-expensive-queries/index.md |
+ 
+-## FIRST: check installation and sign in
++## FIRST: check the installation and credentials
++
++Nix installs `cf` and its alias `cloudflare` on this machine; never install it with npm.
+ 
+ ```bash
+-npm install --global cf   # installs two equivalent commands: `cf` and `cloudflare`
+ cf --version
+-cf auth whoami
++cf auth whoami   # "tokenValid": true once the token works
+ ```
+ 
+-- Requires Node.js 22.18 or later. Bun is not supported.
+-- If another tool named `cf` is on your `PATH`, use `cloudflare` instead — the package installs both commands.
+-- `cf auth login` prints a link and a one-time code, then opens the browser. On a remote machine, over SSH, or in a container, add `--no-browser` so `cf` only prints the link; approve it from another device. Add `--force` to sign in again.
+-- `cf` keeps its own credentials and does not reuse a Wrangler login.
+-- Unattended agents and CI cannot complete `cf auth login` — set `CLOUDFLARE_API_TOKEN` instead (see https://developers.cloudflare.com/cf/ci/index.md).
+-
+-To make agents prefer `cf`, add this to the user-level `AGENTS.md`, `CLAUDE.md`, or equivalent:
+-
+-```md
+-When interacting with Cloudflare, use the `cf` CLI unless the project has a
+-Wrangler configuration file.
+-```
++- `cf` signs in with one scoped API token. Its wrapper reads the token from an encrypted secret on every run and passes it, with the token's account, to that `cf` process alone, so `CLOUDFLARE_API_TOKEN` is unset in your shell on purpose. Do not run `cf auth login`, `cf auth create`, or `cf auth activate`, and never read, print, or copy the token.
++- If `cf` says it has no token and runs signed out, or `cf auth whoami` reports `"authenticated": false`, this machine has no token yet. Tell the user; do not sign in another way.
++- The token grants only the permissions the user chose. When the API refuses a request for lack of permission, tell the user which permission the command needs; do not look for other credentials.
++- A project that brings its own token, in the environment or in a `.env` file in the current directory, uses that token and its account instead.
++- The token can change real resources. Preview each change with `--dry-run`, and get the user's approval before running a command that creates, changes, or deletes anything.
+ 
+ ## Find commands
+ 

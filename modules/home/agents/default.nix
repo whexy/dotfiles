@@ -311,7 +311,17 @@ in
         // lib.optionalAttrs cfg.spark.enable { spark = ./spark/skill; }
         # Points at the guides asc prints, which match the installed version,
         # instead of the skill pack `asc install-skills` would copy in.
-        // lib.optionalAttrs config.dotfiles.tooling.appStoreConnect.enable { asc = ./asc/skill; };
+        // lib.optionalAttrs config.dotfiles.tooling.appStoreConnect.enable { asc = ./asc/skill; }
+        # Cloudflare's skill for cf, whose install and sign-in steps would
+        # have agents run `npm install --global cf` and `cf auth login`; here
+        # Nix installs cf and it signs in with the agenix token.
+        // lib.optionalAttrs config.dotfiles.tooling.cloudflare.cli.enable {
+          cf-cli = pkgs.applyPatches {
+            name = "cf-cli-skill";
+            src = perSystem.self.cf.skill;
+            patches = [ ./cloudflare/cf-cli-skill.patch ];
+          };
+        };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
