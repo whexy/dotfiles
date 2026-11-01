@@ -1,0 +1,340 @@
+{
+  "name": "dotfiles-upgraded failure report",
+  "nodes": [
+    {
+      "parameters": {
+        "httpMethod": "POST",
+        "path": "dotfiles-upgrade-failure",
+        "authentication": "headerAuth",
+        "responseMode": "responseNode",
+        "options": {}
+      },
+      "name": "Switch failure",
+      "type": "n8n-nodes-base.webhook",
+      "typeVersion": 2,
+      "position": [0, 0],
+      "webhookId": "3a205d20-477c-593a-b866-b10fb28aa161",
+      "credentials": {
+        "httpHeaderAuth": {
+          "id": "WEBHOOK_CREDENTIAL_ID",
+          "name": "dotfiles-upgraded webhook token"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// Everything the host sent lands in code blocks or must match a strict\n// pattern, so a report cannot mention anyone or inject markdown.\nconst b = $input.first().json.body ?? {};\nconst reject = (reason) => [{ json: { valid: false, reason } }];\n\nconst sha = String(b.sha ?? '');\nif (!/^([0-9a-f]{40}|[0-9a-f]{64})$/.test(sha)) return reject('sha must be a full commit hash');\nconst configuration = String(b.configuration ?? '');\nif (!/^[A-Za-z0-9._@-]{1,64}$/.test(configuration)) return reject('configuration is missing or malformed');\nconst host = String(b.host ?? '');\nif (!/^[A-Za-z0-9._-]{0,253}$/.test(host)) return reject('host is malformed');\nconst mode = String(b.mode ?? '');\nif (!['nixos', 'darwin', 'home-manager'].includes(mode)) return reject('unknown mode');\n\nconst attempts = Number.isInteger(b.attempts) ? b.attempts : 0;\nconst error = String(b.error ?? '').slice(0, 2000);\nconst output = (Array.isArray(b.output) ? b.output : [])\n  .slice(-60)\n  .map((line) => String(line).replace(/\\x1b\\[[0-9;?]*[ -\\/]*[@-~]/g, '').slice(0, 1000));\n\nconst fence = (text) => {\n  const longest = Math.max(0, ...(text.match(/`+/g) ?? []).map((run) => run.length));\n  const f = '`'.repeat(Math.max(3, longest + 1));\n  return `${f}\\n${text}\\n${f}`;\n};\n\nconst who = host && host !== configuration\n  ? `\\`${configuration}\\` (${mode}, host \\`${host}\\`)`\n  : `\\`${configuration}\\` (${mode})`;\nconst plural = attempts === 1 ? '' : 's';\nconst details = [\n  `Last error, after ${attempts} attempt${plural}:`,\n  fence(error),\n  output.length\n    ? `<details><summary>Last ${output.length} lines of rebuild output</summary>\\n\\n${fence(output.join('\\n'))}\\n\\n</details>`\n    : '',\n].filter(Boolean).join('\\n\\n');\n\nconst marker = `<!-- dotfiles-upgraded sha=${sha} -->`;\nreturn [{\n  json: {\n    valid: true,\n    sha,\n    marker,\n    title: `Auto-upgrade cannot switch to ${sha.slice(0, 7)}`,\n    issueBody: [\n      marker,\n      `${who} gave up switching to ${sha}.`,\n      details,\n      'Every other host that gives up on this commit adds a comment here.',\n    ].join('\\n\\n'),\n    commentBody: [`+1 ${who} also gave up on this commit.`, details].join('\\n\\n'),\n  },\n}];\n"
+      },
+      "name": "Validate",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [220, 0]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "8e094131-4974-50ea-bee1-42f56d23f926",
+              "leftValue": "={{ $json.valid }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Valid?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [440, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { error: $json.reason } }}",
+        "options": {
+          "responseCode": 400
+        }
+      },
+      "name": "Reject",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [660, 200]
+    },
+    {
+      "parameters": {
+        "method": "GET",
+        "url": "https://api.github.com/repos/whexy/dotfiles/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubAppApi",
+        "options": {
+          "response": {
+            "response": {
+              "fullResponse": true
+            }
+          }
+        },
+        "sendQuery": true,
+        "queryParameters": {
+          "parameters": [
+            {
+              "name": "state",
+              "value": "open"
+            },
+            {
+              "name": "per_page",
+              "value": "100"
+            }
+          ]
+        }
+      },
+      "name": "Open issues",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [660, -100],
+      "credentials": {
+        "githubAppApi": {
+          "id": "GITHUB_APP_CREDENTIAL_ID",
+          "name": "GitHub Whexy Bot (whexy)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "// The marker in the body, not a label, identifies the issue: GitHub drops\n// labels it will not let the app set, and the marker cannot be edited away\n// by retitling the issue. GitHub's issue list shows a new issue only seconds\n// after it is opened, so issues this workflow opened in the last hour are\n// also remembered here.\nconst recent = ($getWorkflowStaticData('global').recent ??= {});\nconst now = Date.now();\nfor (const [sha, entry] of Object.entries(recent)) {\n  if (now - entry.at > 3600 * 1000) delete recent[sha];\n}\n\nconst report = $('Validate').first().json;\nconst issues = $input.first().json.body ?? [];\nconst listed = issues.find((i) => !i.pull_request && (i.body ?? '').includes(report.marker));\nreturn [{ json: { ...report, existing: listed?.number ?? recent[report.sha]?.number ?? null } }];\n"
+      },
+      "name": "Find issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [880, -100]
+    },
+    {
+      "parameters": {
+        "conditions": {
+          "options": {
+            "caseSensitive": true,
+            "leftValue": "",
+            "typeValidation": "loose",
+            "version": 2
+          },
+          "conditions": [
+            {
+              "id": "f806080e-073c-5032-8c01-977b794cb83f",
+              "leftValue": "={{ $json.existing !== null }}",
+              "rightValue": "",
+              "operator": {
+                "type": "boolean",
+                "operation": "true",
+                "singleValue": true
+              }
+            }
+          ],
+          "combinator": "and"
+        },
+        "looseTypeValidation": true,
+        "options": {}
+      },
+      "name": "Already filed?",
+      "type": "n8n-nodes-base.if",
+      "typeVersion": 2.2,
+      "position": [1100, -100]
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "=https://api.github.com/repos/whexy/dotfiles/issues/{{ $json.existing }}/comments",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubAppApi",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ body: $json.commentBody }) }}"
+      },
+      "name": "Add host",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, -200],
+      "credentials": {
+        "githubAppApi": {
+          "id": "GITHUB_APP_CREDENTIAL_ID",
+          "name": "GitHub Whexy Bot (whexy)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "method": "POST",
+        "url": "https://api.github.com/repos/whexy/dotfiles/issues",
+        "authentication": "predefinedCredentialType",
+        "nodeCredentialType": "githubAppApi",
+        "options": {},
+        "sendBody": true,
+        "specifyBody": "json",
+        "jsonBody": "={{ JSON.stringify({ title: $json.title, body: $json.issueBody, labels: ['auto-upgrade'] }) }}"
+      },
+      "name": "Open issue",
+      "type": "n8n-nodes-base.httpRequest",
+      "typeVersion": 4.2,
+      "position": [1320, 0],
+      "credentials": {
+        "githubAppApi": {
+          "id": "GITHUB_APP_CREDENTIAL_ID",
+          "name": "GitHub Whexy Bot (whexy)"
+        }
+      }
+    },
+    {
+      "parameters": {
+        "jsCode": "const issue = $input.first().json;\n$getWorkflowStaticData('global').recent[$('Find issue').first().json.sha] = {\n  number: issue.number,\n  at: Date.now(),\n};\nreturn [{ json: { html_url: issue.html_url } }];\n"
+      },
+      "name": "Remember issue",
+      "type": "n8n-nodes-base.code",
+      "typeVersion": 2,
+      "position": [1540, 0]
+    },
+    {
+      "parameters": {
+        "respondWith": "json",
+        "responseBody": "={{ { url: $json.html_url } }}",
+        "options": {
+          "responseCode": 200
+        }
+      },
+      "name": "Reported",
+      "type": "n8n-nodes-base.respondToWebhook",
+      "typeVersion": 1.5,
+      "position": [1760, -100]
+    }
+  ],
+  "connections": {
+    "Switch failure": {
+      "main": [
+        [
+          {
+            "node": "Validate",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Validate": {
+      "main": [
+        [
+          {
+            "node": "Valid?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Valid?": {
+      "main": [
+        [
+          {
+            "node": "Open issues",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Reject",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open issues": {
+      "main": [
+        [
+          {
+            "node": "Find issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Find issue": {
+      "main": [
+        [
+          {
+            "node": "Already filed?",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Already filed?": {
+      "main": [
+        [
+          {
+            "node": "Add host",
+            "type": "main",
+            "index": 0
+          }
+        ],
+        [
+          {
+            "node": "Open issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Add host": {
+      "main": [
+        [
+          {
+            "node": "Reported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Open issue": {
+      "main": [
+        [
+          {
+            "node": "Remember issue",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    },
+    "Remember issue": {
+      "main": [
+        [
+          {
+            "node": "Reported",
+            "type": "main",
+            "index": 0
+          }
+        ]
+      ]
+    }
+  },
+  "settings": {
+    "executionOrder": "v1"
+  }
+}

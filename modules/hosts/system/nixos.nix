@@ -22,6 +22,10 @@ in
     # It replaces the stock nixos-upgrade.timer rather than joining it: two
     # concurrent rebuilds would contend on the Nix store lock.
     (lib.mkIf cfg.autoUpgrade.enable {
+      age.secrets.upgrade-webhook-token = lib.mkIf cfg.autoUpgrade.reportFailures {
+        file = ../../../secrets/upgrade-webhook-token.age;
+      };
+
       systemd.services.dotfiles-upgraded = {
         description = "Auto-upgrade this host from ${flake.lib.upstreamRef}";
         wantedBy = [ "multi-user.target" ];
@@ -59,16 +63,22 @@ in
           // config.networking.proxy.envVars;
 
         serviceConfig = {
-          ExecStart = lib.escapeShellArgs [
-            (lib.getExe perSystem.self.dotfiles-upgraded)
-            "--mode=nixos"
-            "--configuration=${cfg.autoUpgrade.configuration}"
-            "--flake=${flake.lib.upstreamRef}"
-            "--state-dir=${cfg.autoUpgrade.stateDir}"
-            "--poll-interval=${cfg.autoUpgrade.pollInterval}"
-            "--max-attempts=${toString cfg.autoUpgrade.maxAttempts}"
-            "--require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}"
-          ];
+          ExecStart = lib.escapeShellArgs (
+            [
+              (lib.getExe perSystem.self.dotfiles-upgraded)
+              "--mode=nixos"
+              "--configuration=${cfg.autoUpgrade.configuration}"
+              "--flake=${flake.lib.upstreamRef}"
+              "--state-dir=${cfg.autoUpgrade.stateDir}"
+              "--poll-interval=${cfg.autoUpgrade.pollInterval}"
+              "--max-attempts=${toString cfg.autoUpgrade.maxAttempts}"
+              "--require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}"
+            ]
+            ++ lib.optionals cfg.autoUpgrade.reportFailures [
+              "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
+              "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"
+            ]
+          );
           ExecReload = flake.lib.upgraderReload {
             systemd = config.systemd.package;
             inherit (pkgs) util-linux;

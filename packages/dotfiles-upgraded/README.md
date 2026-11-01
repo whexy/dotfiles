@@ -68,11 +68,11 @@ stopped counting while it was suspended.
 
 `--state-dir` holds three files:
 
-| File          | Purpose                                                            |
-| ------------- | ------------------------------------------------------------------ |
-| `state.json`  | ETag, last successfully applied SHA, ignore set and its reasons    |
-| `status.json` | health signal, rewritten after every cycle and around each attempt |
-| `lock`        | exclusive lock held during a rebuild                               |
+| File          | Purpose                                                                    |
+| ------------- | -------------------------------------------------------------------------- |
+| `state.json`  | ETag, last applied SHA, ignore set and reasons, undelivered failure report |
+| `status.json` | health signal, rewritten after every cycle and around each attempt         |
+| `lock`        | exclusive lock held during a rebuild                                       |
 
 A missing or corrupt `state.json` starts fresh with a logged warning; refusing
 to start would strand the host permanently. Both files are written through a
@@ -132,21 +132,69 @@ worth alerting on. Both are kept in memory and cleared only when the host
 reaches the tip, so a host stranded behind an ignored commit keeps reporting
 the failure that stranded it.
 
+## Failure reports
+
+When the daemon gives up on a commit after `--max-attempts` failed rebuilds, it
+posts the commit, the last error, and the last 40 lines of rebuild output to
+`--failure-webhook`. The webhook is the n8n workflow in
+[`n8n/failure-report.json`](n8n/failure-report.json). It opens one GitHub issue
+per commit, as the Whexy Bot GitHub App, and every further host that gives up
+on the same commit adds a `+1` comment. The workflow finds the issue by a
+hidden `<!-- dotfiles-upgraded sha=… -->` marker in its body among the open
+issues. GitHub's issue list shows a new issue only seconds after it is opened,
+so the workflow also remembers the issues it opened in the last hour. Once
+that hour has passed, closing an issue lets a later failure on the same commit
+open a new one.
+
+Only rebuild failures are reported. A CI failure already shows on the commit,
+and every host would report it.
+
+Hosts carry the webhook's bearer token, `secrets/upgrade-webhook-token.age`,
+not a GitHub credential. The report is saved in `state.json` until the webhook
+accepts it, and delivery is retried every cycle. Only a `400`, `413` or `422`
+drops it, because those mean the request itself is malformed. A newer failure
+replaces an undelivered one.
+
+The report cannot notice a daemon that has stopped, or a host that never sees a
+new commit. `status.json` remains the signal for those.
+
+### Deploying the workflow
+
+The workflow references two n8n credentials by placeholder ID; replace them
+with real IDs when importing it on the tailnet editor
+(`https://n8n.at-basking.ts.net`):
+
+- `WEBHOOK_CREDENTIAL_ID`, a Header Auth credential named
+  `dotfiles-upgraded webhook token`: header `Authorization`, value
+  `Bearer <token>`, where `<token>` is the decrypted
+  `upgrade-webhook-token.age`.
+- `GITHUB_APP_CREDENTIAL_ID`, the GitHub App API credential
+  `GitHub Whexy Bot (whexy)`, which needs Issues: read and write on
+  `whexy/dotfiles`. Issues come from the app's bot account, so GitHub notifies
+  the repository's watchers; an issue opened with the owner's own token would
+  not.
+
+To rotate the token, re-encrypt the secret (`agenix -e
+upgrade-webhook-token.age`) and update the Header Auth credential. Until both
+match, reports wait in `state.json`.
+
 ## Flags
 
-| Flag                | Default                 | Meaning                                          |
-| ------------------- | ----------------------- | ------------------------------------------------ |
-| `--mode`            | required                | `nixos`, `darwin`, or `home-manager`             |
-| `--configuration`   | required                | flake output name, e.g. `mudd` or `wenxuan@mars` |
-| `--state-dir`       | required                | directory for the files above                    |
-| `--flake`           | `github:whexy/dotfiles` | flake reference to switch to                     |
-| `--repo`            | `whexy/dotfiles`        | GitHub owner/name for API queries                |
-| `--ref`             | `master`                | tracked branch                                   |
-| `--poll-interval`   | `10m`                   | base interval between ref checks                 |
-| `--max-attempts`    | `3`                     | switch attempts before a commit is ignored       |
-| `--require-ci-pass` | `true`                  | only switch to commits whose status is success   |
-| `--switch-timeout`  | `6h`                    | hard limit on a single rebuild                   |
-| `--pending-timeout` | `2h`                    | give up on a commit whose CI stays pending       |
+| Flag                           | Default                 | Meaning                                          |
+| ------------------------------ | ----------------------- | ------------------------------------------------ |
+| `--mode`                       | required                | `nixos`, `darwin`, or `home-manager`             |
+| `--configuration`              | required                | flake output name, e.g. `mudd` or `wenxuan@mars` |
+| `--state-dir`                  | required                | directory for the files above                    |
+| `--flake`                      | `github:whexy/dotfiles` | flake reference to switch to                     |
+| `--repo`                       | `whexy/dotfiles`        | GitHub owner/name for API queries                |
+| `--ref`                        | `master`                | tracked branch                                   |
+| `--poll-interval`              | `10m`                   | base interval between ref checks                 |
+| `--max-attempts`               | `3`                     | switch attempts before a commit is ignored       |
+| `--require-ci-pass`            | `true`                  | only switch to commits whose status is success   |
+| `--switch-timeout`             | `6h`                    | hard limit on a single rebuild                   |
+| `--pending-timeout`            | `2h`                    | give up on a commit whose CI stays pending       |
+| `--failure-webhook`            | none                    | URL to post a commit the host gave up on         |
+| `--failure-webhook-token-file` | none                    | file holding that webhook's bearer token         |
 
 The mode is configured rather than autodetected, so a misdetection cannot
 switch a host the wrong way. The flake ref is pinned to the gated commit so

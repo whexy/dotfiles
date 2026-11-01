@@ -30,7 +30,14 @@ let
       --state-dir=${lib.escapeShellArg cfg.autoUpgrade.stateDir} \
       --poll-interval=${lib.escapeShellArg cfg.autoUpgrade.pollInterval} \
       --max-attempts=${toString cfg.autoUpgrade.maxAttempts} \
-      --require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}
+      --require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass} ${
+        lib.optionalString cfg.autoUpgrade.reportFailures (
+          lib.escapeShellArgs [
+            "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
+            "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"
+          ]
+        )
+      }
   '';
 in
 {
@@ -41,6 +48,10 @@ in
 
     (lib.mkIf cfg.autoUpgrade.enable {
       environment.systemPackages = [ service ];
+
+      age.secrets.upgrade-webhook-token = lib.mkIf cfg.autoUpgrade.reportFailures {
+        file = ../../../secrets/upgrade-webhook-token.age;
+      };
 
       # No store paths in this plist: changing it during activation would
       # unload the daemon and kill the switch it is supervising. The signed

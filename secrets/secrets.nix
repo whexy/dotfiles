@@ -53,6 +53,21 @@ in
   "beszel-token.age".publicKeys = to hosts;
   "rex-package-netrc.age".publicKeys = to hosts;
 
+  # Bearer token of the auto-upgrade failure webhook, for every
+  # dotfiles-upgraded daemon: the system hosts' and those of the standalone
+  # homes that run their own.
+  "upgrade-webhook-token.age".publicKeys = to (
+    hosts
+    // {
+      inherit (homes)
+        "wenxuan@mars"
+        "wenxuan@venus"
+        "root@b3srv0"
+        "root@proxmox"
+        ;
+    }
+  );
+
   # Homes that run a public tunnel.
   "cloudflared-cert.age".publicKeys = to (
     removeAttrs homes [
