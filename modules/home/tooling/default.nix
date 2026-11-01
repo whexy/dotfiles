@@ -21,6 +21,10 @@
       };
     };
     appStoreConnect.enable = lib.mkEnableOption "asc, the App Store Connect CLI, with my API key for it and Apple's tools";
+    cloudflare = {
+      cli.enable = lib.mkEnableOption "cf, the Cloudflare CLI, and its agent skill";
+      apiToken.enable = lib.mkEnableOption "my scoped Cloudflare API token for cf, read from agenix on each run";
+    };
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
       server = lib.mkOption {
@@ -34,6 +38,7 @@
   imports = [
     ./app-store-connect.nix
     ./cli.nix
+    ./cloudflare.nix
     ./debug.nix
     ./extras.nix
     ./kube.nix
