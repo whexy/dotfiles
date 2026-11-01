@@ -228,12 +228,6 @@ in
   config = lib.mkIf cfg.enable (
     let
       defaults = {
-        inherit (cfg)
-          defaultProvider
-          defaultModel
-          defaultCheapProvider
-          defaultCheapModel
-          ;
         default = "${cfg.defaultProvider}/${cfg.defaultModel}";
         cheap = "${cfg.defaultCheapProvider}/${cfg.defaultCheapModel}";
       };
@@ -339,26 +333,7 @@ in
           run rm $VERBOSE_ARG "$HOME/.agents/skills"
         fi
       '';
-      # cmux wrote this pi extension outside Home Manager, so nothing else
-      # removes it now that cmux is gone; the marker keeps a hand-written file
-      # of the same name safe. Remove once every macOS host has activated this.
-      removeCmuxPiExtension = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        extension="$HOME/.pi/agent/extensions/cmux-session.ts"
-        if [ -f "$extension" ] && grep -q cmux-pi-session-extension-marker "$extension"; then
-          run rm $VERBOSE_ARG "$extension"
-        fi
-      '';
       agents = [
-        (import ./pi/home.nix {
-          inherit
-            pkgs
-            lib
-            proxy
-            defaults
-            mcp
-            prelude
-            ;
-        })
         (import ./opencode/home.nix {
           inherit
             pkgs
@@ -421,14 +396,6 @@ in
             ;
           hostName = args.osConfig.dotfiles.host.hostName or null;
         })
-        (import ./gcai/home.nix {
-          inherit
-            pkgs
-            lib
-            perSystem
-            defaults
-            ;
-        })
       ]
       ++ lib.optional cfg.iphoneUse.enable (
         import ./iphone/home.nix {
@@ -467,13 +434,13 @@ in
 
       home = {
         # Single source of truth for global agent rules; every agent reads it.
-        # pi and Claude Code get extra tool-specific guidance appended by
-        # their own home.nix.
+        # Claude Code gets extra tool-specific guidance appended by its own
+        # home.nix.
         file = {
           ".codex/AGENTS.md".source = ./AGENTS.md;
           ".config/opencode/AGENTS.md".source = ./AGENTS.md;
         }
-        # User-scope skill location for pi, codex, and opencode; adding a skill is
+        # User-scope skill location for codex and opencode; adding a skill is
         # a new directory under ./skills, never a change here.
         // mkSkillLinks ".agents/skills"
         // mkSkillLinks ".claude/skills"
@@ -497,7 +464,7 @@ in
           // lib.optionalAttrs cfg.rea.enable rea.sessionVariables;
 
         activation = lib.mergeAttrsList (map (a: a.activation or { }) agents) // {
-          inherit migrateSkillsDir removeCmuxPiExtension;
+          inherit migrateSkillsDir;
         };
       };
 
