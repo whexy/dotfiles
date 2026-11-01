@@ -26,6 +26,8 @@ in
 
   # Cloudflare API token (cf)
   cloudflare-api-token = "${dotfiles-dev}/faurdkxmf3cwer44d6etrs2i4y/credential";
+  # AWS dotfiles: credential_process JSON
+  aws-credentials = "${dotfiles-dev}/g2dbcf6dnknrvs76fmc2vuht5q/credential";
   # Woodpecker token
   woodpecker-token = "${dotfiles-dev}/3gy7xmof2jgpdbmunomo6kn7zm/credential";
   # App Store Connect API key

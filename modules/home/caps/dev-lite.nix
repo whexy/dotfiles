@@ -35,6 +35,7 @@
       network.enable = lib.mkDefault true;
       kube.enable = lib.mkDefault true;
       appStoreConnect.enable = lib.mkDefault true;
+      aws.enable = lib.mkDefault true;
       cloudflare = {
         cli.enable = lib.mkDefault true;
         apiToken.enable = lib.mkDefault true;

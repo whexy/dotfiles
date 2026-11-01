@@ -23,6 +23,7 @@
       };
     };
     appStoreConnect.enable = lib.mkEnableOption "asc, the App Store Connect CLI, with my API key";
+    aws.enable = lib.mkEnableOption "AWS CLI with my credentials from 1Password";
     cloudflare = {
       cli.enable = lib.mkEnableOption "cf, the Cloudflare CLI, and its agent skill";
       apiToken.enable = lib.mkEnableOption "my scoped Cloudflare API token for cf, read from 1Password";
@@ -39,6 +40,7 @@
 
   imports = [
     ./app-store-connect.nix
+    ./aws.nix
     ./cli.nix
     ./cloudflare.nix
     ./debug.nix
