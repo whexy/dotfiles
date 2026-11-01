@@ -20,10 +20,7 @@
         '';
       };
     };
-    appStoreConnect = {
-      cli.enable = lib.mkEnableOption "asc, the App Store Connect CLI";
-      apiKey.enable = lib.mkEnableOption "my App Store Connect API key for Apple's tools, asc, and API scripts";
-    };
+    appStoreConnect.enable = lib.mkEnableOption "asc, the App Store Connect CLI, with my API key for it and Apple's tools";
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
       server = lib.mkOption {
