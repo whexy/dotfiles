@@ -152,7 +152,7 @@ rotate the secret too. Then give the home a 1Password service account (below).
 
 ### 1Password
 
-A tool loads its key when it runs, with `op-secret <name>`, and passes it to
+A tool loads its key when it runs, with `op-sa read <name>`, and passes it to
 that one process; no copy is kept. `modules/home/onepassword/items.nix` maps
 each name to its 1Password item.
 
@@ -164,16 +164,21 @@ editors. Standalone homes name their account with
 `dotfiles.onepassword.serviceAccount`.
 
 All service accounts share the 1Password account's 1,000 requests a day, and
-each `op-secret` costs one: `items.nix` names vaults and items by ID, which
+each read of a name costs one: `items.nix` names vaults and items by ID, which
 1Password reads in one request instead of three. A tool that runs
 continuously loads its keys once, not on every use.
+
+`op-sa` also takes a pasted item ID for a one-off task, finding the vault
+itself, without printing the value: `show` lists its fields, `run` gives a
+command the secret in its environment and masks it in the output, and `read`
+prints it into a pipe or file. The `op-sa` skill teaches agents to use it.
 
 To rotate a credential, put the new value in its item. Each tool uses it from
 its next run.
 
 To add a credential, create its item in the vault of the homes that read it,
-add its reference to `items.nix`, and load it with `op-secret` where the tool
-starts.
+add its reference to `items.nix`, and load it with `op-sa read` where the
+tool starts.
 
 To give a home its service account, sign in with `eval $(op signin)` and run,
 from `secrets/` (a root home leaves out `dotfiles-dev`):

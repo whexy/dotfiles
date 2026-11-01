@@ -54,18 +54,18 @@ const SEARXNG_RESULTS = 8;
 
 const execFileAsync = promisify(execFile);
 
-async function readSecret(opSecret, name) {
-  const { stdout } = await execFileAsync(opSecret, [name]);
+async function readSecret(opSa, name) {
+  const { stdout } = await execFileAsync(opSa, ["read", name]);
   const secret = stdout.trim();
-  if (!secret) throw new Error(`dotfiles.proxy: secret is empty: ${path}`);
+  if (!secret) throw new Error(`dotfiles.proxy: secret is empty: ${name}`);
   return secret;
 }
 
 async function readCredentials(options, gateway) {
   const [apiKey, id, secret] = await Promise.all([
-    readSecret(options.opSecret, gateway.apiKeySecret),
-    readSecret(options.opSecret, options.cfAccess.id),
-    readSecret(options.opSecret, options.cfAccess.secret),
+    readSecret(options.opSa, gateway.apiKeySecret),
+    readSecret(options.opSa, options.cfAccess.id),
+    readSecret(options.opSa, options.cfAccess.secret),
   ]);
   return {
     apiKey,

@@ -26,7 +26,7 @@ let
   loadToken = ''
     if [ -z "''${CLOUDFLARE_API_TOKEN:-}" ] &&
       ! ${lib.getExe pkgs.gnugrep} -Eqs '^[[:space:]]*(export[[:space:]]+)?CLOUDFLARE_API_TOKEN[[:space:]]*=' .env; then
-      if CLOUDFLARE_API_TOKEN=$(${lib.getExe config.dotfiles.onepassword.package} cloudflare-api-token); then
+      if CLOUDFLARE_API_TOKEN=$(${lib.getExe config.dotfiles.onepassword.package} read cloudflare-api-token); then
         export CLOUDFLARE_API_TOKEN
         export CLOUDFLARE_ACCOUNT_ID="''${CLOUDFLARE_ACCOUNT_ID:-${accountId}}"
       else

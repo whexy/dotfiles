@@ -262,7 +262,7 @@ in
     let
       homeDir = config.home.homeDirectory;
 
-      opSecret = lib.getExe config.dotfiles.onepassword.package;
+      opSa = lib.getExe config.dotfiles.onepassword.package;
 
       # Wrapper: loads the CF Access token from 1Password, sets
       # RCLONE_CONFIG_NAS_HEADERS, exec's whatever command (with args) it was
@@ -271,8 +271,8 @@ in
       cfAccessWrapper = pkgs.writeShellScript "rclone-nas-cf-access-wrapper" ''
         set -euo pipefail
 
-        cf_id=$(${opSecret} cf-access-dotfiles-id)
-        cf_secret=$(${opSecret} cf-access-dotfiles-secret)
+        cf_id=$(${opSa} read cf-access-dotfiles-id)
+        cf_secret=$(${opSa} read cf-access-dotfiles-secret)
 
         # The environment, unlike argv, is private to the mount process. The
         # option is a CSV list of name,value pairs, so quote every field.

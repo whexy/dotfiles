@@ -1,14 +1,13 @@
-# The 1Password item behind each name `op-secret` takes.
+# The 1Password item behind each name `op-sa` takes.
 #
 # References name the vault and item by ID: a service account reads one of
 # those in one request, and one named by title in three. A vault's items are
 # readable by every home its vault lists; `op item list --vault <vault>
 # --format json` shows the IDs.
 let
-  # Every home.
-  dotfiles = "op://sp25orv5wmjphsx76pttewel7a";
-  # The homes of users, not root.
-  dotfiles-dev = "op://kvy3y5s5v6eivftbq3seir4hka";
+  vaults = import ./vaults.nix;
+  dotfiles = "op://${vaults.dotfiles}";
+  dotfiles-dev = "op://${vaults.dotfiles-dev}";
 in
 {
   # CLIProxyAPI gateway key

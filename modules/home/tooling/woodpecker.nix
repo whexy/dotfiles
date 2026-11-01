@@ -16,7 +16,7 @@ let
   wrapped = pkgs.writeShellScriptBin "woodpecker-cli" ''
     set -euo pipefail
 
-    if ! WOODPECKER_TOKEN=$(${lib.getExe config.dotfiles.onepassword.package} woodpecker-token); then
+    if ! WOODPECKER_TOKEN=$(${lib.getExe config.dotfiles.onepassword.package} read woodpecker-token); then
       echo "woodpecker-cli: could not load the Woodpecker token" >&2
       exit 1
     fi
