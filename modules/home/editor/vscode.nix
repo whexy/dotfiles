@@ -8,8 +8,10 @@
   pkgs,
   vimPkgs,
   ...
-}:
+}@args:
 let
+  osConfig = args.osConfig or null;
+  isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   platform = if isDarwin then "darwin" else "linux";
   # Ghostty's and Neovide's paste key.
@@ -111,60 +113,77 @@ let
     }).config.build.package;
 in
 {
-  config = lib.mkIf config.dotfiles.editor.vscode.enable {
-    programs.vscode = {
-      enable = true;
-      mutableExtensionsDir = false;
-      profiles.default = {
-        enableUpdateCheck = false;
-        enableExtensionUpdateCheck = false;
-        # Remote-SSH's extension pack (its config-file editing and Remote
-        # Explorer) is listed too: VS Code cannot install it into the
-        # read-only extensions directory.
-        extensions = with pkgs.vscode-extensions; [
-          asvetliakov.vscode-neovim
-          ms-vscode-remote.remote-ssh
-          ms-vscode-remote.remote-ssh-edit
-          ms-vscode.remote-explorer
-        ];
-        # The paste key puts the system clipboard after the cursor, over the
-        # selection, or at the cursor in Insert mode, as in Ghostty and
-        # Neovide. VS Code's own paste would land before the cursor in Normal
-        # mode, and on Linux it is Ctrl+V, which vscode-neovim hands to Neovim
-        # as visual block.
-        keybindings = [
-          {
-            key = pasteKey;
-            command = "vscode-neovim.send";
-            args = ''"+p'';
-            when = "editorTextFocus && neovim.init && neovim.mode =~ /^(normal|visual)$/";
-          }
-          {
-            key = pasteKey;
-            command = "editor.action.clipboardPasteAction";
-            when = "editorTextFocus && neovim.mode == insert";
-          }
-        ];
-        userSettings = {
-          # Copilot ships built in; these hide its chat, its sign-in prompts,
-          # the first-run sign-in modal, and the secondary side bar that would
-          # open empty without the chat.
-          "chat.disableAIFeatures" = true;
-          "workbench.welcomePage.experimentalOnboarding" = false;
-          "workbench.secondarySideBar.defaultVisibility" = "hidden";
-          "telemetry.telemetryLevel" = "off";
-          "extensions.ignoreRecommendations" = true;
-          "editor.lineNumbers" = "relative";
+  config = lib.mkMerge [
+    # Windows' VS Code runs vscode-neovim in its local extension host, also in
+    # Remote-SSH windows, and with `vscode-neovim.useWSL` it starts this Neovim
+    # through wsl.exe (`just vscode-windows` writes those settings). It calls
+    # `wslpath` from the WSL shell and from Neovim; NixOS-WSL links it only
+    # into /bin, which NixOS keeps off PATH.
+    (lib.mkIf (isWsl && config.dotfiles.editor.neovim.enable) {
+      home.packages = [
+        (pkgs.runCommand "nvim-vscode" { } ''
+          mkdir -p $out/bin
+          ln -s ${lib.getExe neovim} $out/bin/nvim-vscode
+          ln -s /init $out/bin/wslpath
+        '')
+      ];
+    })
 
-          "vscode-neovim.neovimExecutablePaths.${platform}" = lib.getExe neovim;
-          # vscode-neovim does not declare Restricted Mode support, so VS Code
-          # would disable it in every folder not yet trusted.
-          "extensions.supportUntrustedWorkspaces"."asvetliakov.vscode-neovim".supported = true;
-          # Its own extension host keeps Neovim's input handling from waiting
-          # behind other extensions.
-          "extensions.experimental.affinity"."asvetliakov.vscode-neovim" = 1;
+    (lib.mkIf config.dotfiles.editor.vscode.enable {
+      programs.vscode = {
+        enable = true;
+        mutableExtensionsDir = false;
+        profiles.default = {
+          enableUpdateCheck = false;
+          enableExtensionUpdateCheck = false;
+          # Remote-SSH's extension pack (its config-file editing and Remote
+          # Explorer) is listed too: VS Code cannot install it into the
+          # read-only extensions directory.
+          extensions = with pkgs.vscode-extensions; [
+            asvetliakov.vscode-neovim
+            ms-vscode-remote.remote-ssh
+            ms-vscode-remote.remote-ssh-edit
+            ms-vscode.remote-explorer
+          ];
+          # The paste key puts the system clipboard after the cursor, over the
+          # selection, or at the cursor in Insert mode, as in Ghostty and
+          # Neovide. VS Code's own paste would land before the cursor in Normal
+          # mode, and on Linux it is Ctrl+V, which vscode-neovim hands to Neovim
+          # as visual block.
+          keybindings = [
+            {
+              key = pasteKey;
+              command = "vscode-neovim.send";
+              args = ''"+p'';
+              when = "editorTextFocus && neovim.init && neovim.mode =~ /^(normal|visual)$/";
+            }
+            {
+              key = pasteKey;
+              command = "editor.action.clipboardPasteAction";
+              when = "editorTextFocus && neovim.mode == insert";
+            }
+          ];
+          userSettings = {
+            # Copilot ships built in; these hide its chat, its sign-in prompts,
+            # the first-run sign-in modal, and the secondary side bar that would
+            # open empty without the chat.
+            "chat.disableAIFeatures" = true;
+            "workbench.welcomePage.experimentalOnboarding" = false;
+            "workbench.secondarySideBar.defaultVisibility" = "hidden";
+            "telemetry.telemetryLevel" = "off";
+            "extensions.ignoreRecommendations" = true;
+            "editor.lineNumbers" = "relative";
+
+            "vscode-neovim.neovimExecutablePaths.${platform}" = lib.getExe neovim;
+            # vscode-neovim does not declare Restricted Mode support, so VS Code
+            # would disable it in every folder not yet trusted.
+            "extensions.supportUntrustedWorkspaces"."asvetliakov.vscode-neovim".supported = true;
+            # Its own extension host keeps Neovim's input handling from waiting
+            # behind other extensions.
+            "extensions.experimental.affinity"."asvetliakov.vscode-neovim" = 1;
+          };
         };
       };
-    };
-  };
+    })
+  ];
 }
