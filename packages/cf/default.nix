@@ -1,18 +1,20 @@
-{ pkgs, ... }:
+{ pkgs, flake, ... }:
 
 # cf, Cloudflare's unified CLI for its public API and Workers projects
 # (https://developers.cloudflare.com/cf/). nixpkgs' `cloudflare-cli` is an
 # unrelated community tool, and Wrangler and cloudflared are not this CLI.
 #
 # The npm tarball already ships the compiled `dist/`, so nothing is built
-# here. It carries no lockfile; package-lock.json is generated from the
-# tarball's package.json after the postPatch edit below, with
-#   npm install --package-lock-only --ignore-scripts
+# here. It carries no lockfile; packages/update generates package-lock.json
+# from the tarball's package.json after `lockfileFilter`.
 let
   inherit (pkgs) lib stdenv;
 
+  # devDependencies only serve upstream's monorepo, and dist/ bundles them.
+  lockfileFilter = "del(.devDependencies)";
+
   # Cloudflare's agent skill for cf. The skills repository has no releases;
-  # take the commit current when bumping cf.
+  # it moves to the default branch's head whenever cf moves.
   skills = pkgs.fetchFromGitHub {
     owner = "cloudflare";
     repo = "skills";
@@ -35,15 +37,13 @@ pkgs.buildNpmPackage (finalAttrs: {
   nodejs = pkgs.nodejs_22;
   npmDepsHash = "sha256-GkQpuyclr1Qmh0wm8ubWy5IiUcOf95SQzONTeLpiN5g=";
 
-  # devDependencies only serve upstream's monorepo, and dist/ bundles them.
-  #
   # Nix owns this copy, so the daily update notice, which tells the user to
   # `npm install --global cf@latest`, would only install a second one. The
   # check runs only in a terminal and has no switch; stubbing its module
   # turns it off. The module's file name changes with every release.
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
-    ${lib.getExe pkgs.jq} 'del(.devDependencies)' package.json > package.json.new
+    ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
     mv package.json.new package.json
 
     updateCheck=$(grep -l 'as maybeStartBackgroundUpdateCheck' dist/update-check-*.mjs)
@@ -89,12 +89,20 @@ pkgs.buildNpmPackage (finalAttrs: {
   nativeInstallCheckInputs = [ pkgs.versionCheckHook ];
   doInstallCheck = true;
 
-  passthru.skill = "${skills}/skills/cf-cli";
+  passthru = {
+    skill = "${skills}/skills/cf-cli";
+    inherit skills;
+    updater = flake.lib.updater {
+      kind = "npm";
+      inherit lockfileFilter;
+      followBranch = [ "skills" ];
+    };
+  };
 
   meta = {
     description = "Cloudflare's CLI for the Cloudflare API and Workers projects";
     homepage = "https://developers.cloudflare.com/cf/";
-    changelog = "https://github.com/cloudflare/cf/releases";
+    changelog = "https://github.com/cloudflare/cf/releases/tag/cf%40${finalAttrs.version}";
     license = with lib.licenses; [
       mit
       asl20

@@ -1,15 +1,15 @@
 {
   pkgs,
   inputs,
+  flake,
   system,
 }:
 
 # REA (Reverse Engineer Anything): a CLI and the stdio MCP server `rea mcp`.
 #
 # The npm tarball already ships the compiled `dist/`, so nothing is built
-# here. It carries no lockfile; package-lock.json is generated from the
-# tarball's package.json after the postPatch edit below, with
-#   npm install --package-lock-only --ignore-scripts
+# here. It carries no lockfile; packages/update generates package-lock.json
+# from the tarball's package.json after `lockfileFilter`.
 let
   inherit (pkgs) lib stdenv;
   unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
@@ -19,6 +19,10 @@ let
   # The JDK Ghidra itself runs on; REA also needs its javac to compile the
   # bridge.
   jdk = unstable.openjdk21;
+
+  # devDependencies only serve upstream's source checkout, and the vitepress
+  # override belongs to one of them.
+  lockfileFilter = "del(.devDependencies, .overrides)";
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "rea-agents";
@@ -32,11 +36,9 @@ pkgs.buildNpmPackage (finalAttrs: {
   nodejs = pkgs.nodejs_24;
   npmDepsHash = "sha256-aMD66LEDaVjyDrdaaSQA2FjdAUltdj+RZH8W8xNIdNo=";
 
-  # devDependencies only serve upstream's source checkout, and the vitepress
-  # override belongs to one of them.
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
-    ${lib.getExe pkgs.jq} 'del(.devDependencies, .overrides)' package.json > package.json.new
+    ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
     mv package.json.new package.json
   '';
 
@@ -70,9 +72,15 @@ pkgs.buildNpmPackage (finalAttrs: {
       done
     '';
 
+  passthru.updater = flake.lib.updater {
+    kind = "npm";
+    inherit lockfileFilter;
+  };
+
   meta = {
     description = "Reverse engineer anything with agents, from app behavior down to native binaries";
     homepage = "https://github.com/morluto/rea";
+    changelog = "https://github.com/morluto/rea/releases/tag/rea-agents-${finalAttrs.version}";
     license = lib.licenses.mit;
     mainProgram = "rea";
     platforms = [

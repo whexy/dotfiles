@@ -33,7 +33,9 @@ let
     };
     script = {
       required = [ ];
-      optional = [ ];
+      # Data the package's update.py reads, so it shares one value with the
+      # package's own expression.
+      optional = [ "settings" ];
     };
   };
 
