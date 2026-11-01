@@ -19,7 +19,6 @@ let
   '';
   settings = import ./config.nix {
     inherit
-      pkgs
       lib
       proxy
       defaults

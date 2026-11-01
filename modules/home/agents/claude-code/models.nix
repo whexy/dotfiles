@@ -47,7 +47,7 @@ let
           CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
         };
         secrets = proxy.cfAccessSecrets // {
-          ANTHROPIC_API_KEY = gateway.apiKeyPath;
+          ANTHROPIC_API_KEY = proxy.secretCommand gateway.apiKeySecret;
         };
         secretHeaders = proxy.cfAccessHeaderEnv;
       };

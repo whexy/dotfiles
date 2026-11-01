@@ -25,12 +25,11 @@ where words start and stop, not on perfect spelling.
 
 ## Setup
 
-`transcribe` reads its OpenAI key (one with the Audio scope) from the
-agenix secret `secrets/openai-api-key.age` itself; do not export
-`OPENAI_API_KEY`. If a command exits 5 (key missing) or 4
-with `HTTP 401` (key rejected), ask the user to set that secret with
-`agenix -e openai-api-key.age -i ~/.ssh/agenix_ed25519` (run in `secrets/`)
-and rebuild; do not invent a key. `transcribe --estimate FILE` prints duration and cost
+`transcribe` loads its OpenAI key (one with the Audio scope) from 1Password
+itself; do not export `OPENAI_API_KEY`. If a command exits 5 (key missing) or
+4 with `HTTP 401` (key rejected), tell the user what `transcribe` printed and
+ask them to check the item `OpenAI API key (transcribe)` in the 1Password
+vault `dotfiles`; do not invent a key. `transcribe --estimate FILE` prints duration and cost
 without a key or any API calls; run it first on long files.
 
 ## Usage

@@ -105,6 +105,16 @@ behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 
 ## Secrets
 
+A secret lives in agenix or in 1Password:
+
+- agenix holds what the system itself needs to boot, evaluate, or activate
+  (Rex's netrc, Beszel's token, the tunnels' cert), encryption keys such as
+  Atuin's, and each home's 1Password service-account token.
+- 1Password holds the credentials tools use: API keys, access tokens, and
+  client certificates. A tool loads them when it runs.
+
+### agenix
+
 agenix secrets live in `secrets/`, encrypted to one key per machine;
 `secrets/secrets.nix` lists each file's recipients. System secrets
 (`age.secrets` in NixOS and nix-darwin) decrypt with the host key,
@@ -117,7 +127,7 @@ The agenix CLI only looks for `~/.ssh/id_ed25519` and `~/.ssh/id_rsa`, so pass
 the identity to every command, run from `secrets/`:
 
 ```sh
-agenix -e openai-api-key.age -i ~/.ssh/agenix_ed25519
+agenix -e beszel-token.age -i ~/.ssh/agenix_ed25519
 ```
 
 To add a machine, generate its key there:
@@ -138,7 +148,47 @@ agenix -r -i ~/.ssh/agenix_ed25519
 ```
 
 Dropping a recipient does not revoke what that machine already decrypted;
-rotate the secret too.
+rotate the secret too. Then give the home a 1Password service account (below).
+
+### 1Password
+
+A tool loads its key when it runs, with `op-secret <name>`, and passes it to
+that one process; no copy is kept. `modules/home/onepassword/items.nix` maps
+each name to its 1Password item.
+
+The items live in two vaults, by who reads them: `dotfiles` for every home,
+`dotfiles-dev` for every home but root's. Each home signs in as its own
+service account, `dotfiles <user>@<host>`, which can only read those vaults.
+Its token is `secrets/onepassword-<user>-<host>.age`, for that home and the
+editors. Standalone homes name their account with
+`dotfiles.onepassword.serviceAccount`.
+
+All service accounts share the 1Password account's 1,000 requests a day, and
+each `op-secret` costs one: `items.nix` names vaults and items by ID, which
+1Password reads in one request instead of three. A tool that runs
+continuously loads its keys once, not on every use.
+
+To rotate a credential, put the new value in its item. Each tool uses it from
+its next run.
+
+To add a credential, create its item in the vault of the homes that read it,
+add its reference to `items.nix`, and load it with `op-secret` where the tool
+starts.
+
+To give a home its service account, sign in with `eval $(op signin)` and run,
+from `secrets/` (a root home leaves out `dotfiles-dev`):
+
+```sh
+token=$(op service-account create "dotfiles whexy@<host>" \
+  --vault dotfiles:read_items --vault dotfiles-dev:read_items --raw)
+printf %s "$token" | age -o onepassword-whexy-<host>.age -R <(
+  nix eval --raw -f secrets.nix '"onepassword-whexy-<host>.age".publicKeys' \
+    --apply 'builtins.concatStringsSep "\n"'
+)
+```
+
+To cut off a home, delete its service account on 1Password.com. It then reads
+nothing more, unlike a dropped agenix recipient.
 
 ## Private flake fetches
 
@@ -167,15 +217,15 @@ of `nix.settings`/git, and refresh it by re-running activation after
 The `dev` and `dev-lite` caps install `cf`, Cloudflare's CLI
 (`packages/cf`, also run as `cloudflare`), and give every agent Cloudflare's
 `cf-cli` skill. No host runs `cf auth login`: `cf` signs in with one scoped API
-token, `secrets/cloudflare-api-token.age`
+token, the 1Password item `cloudflare-api-token`
 (`dotfiles.tooling.cloudflare.apiToken`).
 
-- `cf`'s wrapper reads the token on each run and exports it, with the
+- `cf`'s wrapper loads the token on each run and exports it, with the
   token's account (`CLOUDFLARE_ACCOUNT_ID`), to that `cf` process alone. No
   shell or agent environment holds it.
 - A token the caller brings wins: one already in the environment, or one in
   the `.env` that `cf` reads from the current directory.
-- Until the secret exists, `cf` runs signed out and evaluation warns.
+- When the token cannot be loaded, `cf` runs signed out.
 
 Inside a project that depends on `cf`, the global command hands off to the
 project's npm-installed copy. On NixOS its prebuilt workerd (`cf dev`) runs
@@ -189,17 +239,11 @@ through nix-ld, which the `dev` cap enables.
    Account Settings Read, Zone Read, DNS Read, and Workers Scripts Read, on
    all zones in the account. Editing the token's permissions later keeps its
    value, so the secret does not change.
-2. On mudd or sheridan, from `secrets/`, paste the token into the editor
-   that opens:
+2. Paste it as the credential of the item `Cloudflare API token (cf)` in the
+   `dotfiles-dev` vault.
+3. `cf auth whoami` then reports `"tokenValid": true`.
 
-   ```sh
-   agenix -e cloudflare-api-token.age -i ~/.ssh/agenix_ed25519
-   ```
-
-3. Commit the file and switch. `cf auth whoami` then reports
-   `"tokenValid": true`.
-
-To rotate, roll the token in the dashboard and repeat step 2.
+To rotate, roll the token in the dashboard and repeat steps 2 and 3.
 
 ## T3 Code server
 

@@ -15,6 +15,7 @@
     inputs.self.lib.overlays.llm-tools
   ];
   dotfiles = {
+    onepassword.serviceAccount = "wenxuan@venus";
     autoUpgrade.enable = true;
     agents.t3code.pair.enable = false;
   };

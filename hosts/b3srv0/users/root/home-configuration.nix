@@ -15,6 +15,7 @@
     inputs.self.lib.overlays.llm-tools
   ];
   dotfiles = {
+    onepassword.serviceAccount = "root@b3srv0";
     autoUpgrade.enable = true;
     agents.t3code = {
       # Off the tailnet, so the tunnel is the server's only route.
