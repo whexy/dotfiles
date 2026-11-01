@@ -308,7 +308,10 @@ in
         }
         # The search-and-read part of `spark skill` from Spark 1.4.1; compare
         # against a newer CLI's output when its commands change.
-        // lib.optionalAttrs cfg.spark.enable { spark = ./spark/skill; };
+        // lib.optionalAttrs cfg.spark.enable { spark = ./spark/skill; }
+        # Points at the guides asc prints, which match the installed version,
+        # instead of the skill pack `asc install-skills` would copy in.
+        // lib.optionalAttrs config.dotfiles.tooling.appStoreConnect.enable { asc = ./asc/skill; };
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
       # for skills it downloads from the account, so every harness gets one
       # symlink per skill rather than a single directory symlink.
