@@ -1,17 +1,17 @@
-{ pkgs }:
+{ pkgs, flake }:
 let
   inherit (pkgs) lib;
 in
-pkgs.stdenv.mkDerivation {
+pkgs.stdenv.mkDerivation (finalAttrs: {
   pname = "iphone-use";
   version = "0.3.15";
 
-  # Release 0.3.15. Its setup pins the WebDriverAgent revision it fetches into
-  # the user's state directory, so the checkout stays a runtime concern.
+  # Its setup pins the WebDriverAgent revision it fetches into the user's
+  # state directory, so the checkout stays a runtime concern.
   src = pkgs.fetchFromGitHub {
     owner = "zhongerxin";
     repo = "iPhone-use";
-    rev = "80006885df81531ce7a874b3b0df65980e25e59b";
+    tag = "v${finalAttrs.version}";
     hash = "sha256-JwoDQ053h18A5NrOzrlvJiID7w/G+L4HMZ1hIOxbvf8=";
   };
 
@@ -49,13 +49,16 @@ pkgs.stdenv.mkDerivation {
     runHook postInstall
   '';
 
+  passthru.updater = flake.lib.updater { kind = "nix-update"; };
+
   meta = {
     description = "Drive an iPhone through WebDriverAgent";
     homepage = "https://github.com/zhongerxin/iPhone-use";
+    changelog = "https://github.com/zhongerxin/iPhone-use/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
     # Its setup tools need Xcode, but its phone tools need only a reachable
     # WebDriverAgent, which iphone-use-select provides on Linux too.
     platforms = lib.platforms.unix;
     mainProgram = "iphone-use-mcp";
   };
-}
+})
