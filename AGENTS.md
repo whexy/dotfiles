@@ -491,8 +491,9 @@ a fix as a rebase-merged pull request and reruns the lane whose pins it held
 back. Pull requests are not reported.
 
 - The task's webhook URL is the Woodpecker secret `t3_repair_webhook`, open
-  only to the `curlimages/curl` image. A new task means a new URL in that
-  secret (see the `t3-setup` skill).
+  to push, cron and manual events. It takes no image filter: Woodpecker
+  then gives it only to plugins, and `report-failure` is a plain step. A new
+  task means a new URL in that secret (see the `t3-setup` skill).
 - The task runs once per event, cron and commit, so a pipeline that fails
   again on the same commit, such as a rerun, starts no second repair.
 
