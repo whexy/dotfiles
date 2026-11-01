@@ -1,6 +1,7 @@
 # Renpho weight widget for Eww (Linux).
 #
-# One Eww poll fetches the latest measurement from the zepbound JSON cache.
+# One Eww poll runs the shared ./weight.nix script; the 300s tick reads its
+# cache until the server's next check time.
 args@{
   config,
   lib,
@@ -12,22 +13,11 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  curl = lib.getExe pkgs.curl;
-  cfIdFile = config.age.secrets.cf-access-dotfiles-id.path;
-  cfSecretFile = config.age.secrets.cf-access-dotfiles-secret.path;
-  dataUrl = "https://zepbound.whexy.com/api/data.json";
-  jq = lib.getExe pkgs.jq;
   icon = "󰓅";
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
 
-  # Headers go through stdin: argv is readable by every local user.
-  weightScript = pkgs.writeShellScript "eww-renpho" ''
-    printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
-      "$(<"${cfIdFile}")" "$(<"${cfSecretFile}")" \
-      | ${curl} -fsS --max-time 15 -H @- "${dataUrl}" 2>/dev/null \
-      | ${jq} -r '(.measurements | sort_by(.date) | last | .weight_kg) // empty' 2>/dev/null
-  '';
+  weightScript = import ./weight.nix { inherit config lib pkgs; };
 in
 {
   config = lib.mkIf enabled {

@@ -10,25 +10,21 @@ let
   cfg = config.dotfiles.panel;
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  curl = lib.getExe pkgs.curl;
-  cfIdFile = config.age.secrets.cf-access-dotfiles-id.path;
-  cfSecretFile = config.age.secrets.cf-access-dotfiles-secret.path;
-  dataUrl = "https://zepbound.whexy.com/api/data.json";
   jq = lib.getExe pkgs.jq;
   icon = "󰓅";
 
   enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
 
-  # Headers go through stdin: argv is readable by every local user.
+  weightScript = import ./weight.nix { inherit config lib pkgs; };
+
   pillScript = pkgs.writeShellScript "waybar-renpho" ''
-    weight="$(printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
-        "$(<"${cfIdFile}")" "$(<"${cfSecretFile}")" \
-      | ${curl} -fsS --max-time 15 -H @- "${dataUrl}" 2>/dev/null \
-      | ${jq} -r '(.measurements | sort_by(.date) | last | .weight_kg) // empty' 2>/dev/null)"
+    weight="$(${weightScript})"
+    stale=$?
     if [ -z "$weight" ]; then
       exec ${jq} -cn --arg icon '${icon}' '{text: ($icon + " …"), class: "stale"}'
     fi
-    exec ${jq} -cn --arg icon '${icon}' --arg weight "$weight" '{text: ($icon + " " + $weight + "kg")}'
+    exec ${jq} -cn --arg icon '${icon}' --arg weight "$weight" --argjson stale "$stale" \
+      '{text: ($icon + " " + $weight + "kg")} + (if $stale == 1 then {class: "stale"} else {} end)'
   '';
 in
 {

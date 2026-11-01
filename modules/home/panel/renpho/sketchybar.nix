@@ -8,32 +8,28 @@
 let
   cfg = config.dotfiles.panel;
 
-  curl = lib.getExe pkgs.curl;
-  cfIdFile = config.age.secrets.cf-access-dotfiles-id.path;
-  cfSecretFile = config.age.secrets.cf-access-dotfiles-secret.path;
-  dataUrl = "https://zepbound.whexy.com/api/data.json";
   sketchybar = lib.getExe pkgs.sketchybar;
-  jq = lib.getExe pkgs.jq;
 
   enabled = cfg.renpho.enable && cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin;
 
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
-    gray = "0xff98989d"; # systemGray, fetch error
+    gray = "0xff98989d"; # systemGray, stale or fetch error
     purple = "0xffbf5af2"; # systemPurple, neutral reading
   };
 
-  # Headers go through stdin: argv is readable by every local user.
+  weightScript = import ./weight.nix { inherit config lib pkgs; };
+
   pillPlugin = pkgs.writeShellScript "sketchybar-renpho" ''
-    weight="$(printf 'CF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
-        "$(<"${cfIdFile}")" "$(<"${cfSecretFile}")" \
-      | ${curl} -fsS --max-time 15 -H @- "${dataUrl}" 2>/dev/null \
-      | ${jq} -r '(.measurements | sort_by(.date) | last | .weight_kg) // empty' 2>/dev/null)"
+    weight="$(${weightScript})"
+    stale=$?
     if [ -z "$weight" ]; then
       ${sketchybar} --set "$NAME" icon.color=${colors.gray} label="…"
       exit 0
     fi
-    ${sketchybar} --set "$NAME" drawing=on icon.color=${colors.purple} label="$weight"kg
+    color=${colors.purple}
+    [ "$stale" -eq 0 ] || color=${colors.gray}
+    ${sketchybar} --set "$NAME" drawing=on icon.color="$color" label="$weight"kg
   '';
 
   pillItem = {
