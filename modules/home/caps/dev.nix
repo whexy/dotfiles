@@ -58,6 +58,7 @@
       debug.enable = lib.mkDefault true;
       woodpecker.enable = lib.mkDefault true;
       kube.enable = lib.mkDefault true;
+      appStoreConnect.cli.enable = lib.mkDefault true;
     };
   };
 
