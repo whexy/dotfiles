@@ -1,29 +1,29 @@
 {
   pkgs,
+  flake,
   ...
 }:
 
 let
-  platform =
-    {
-      aarch64-darwin = "darwin-arm64";
-      x86_64-linux = "linux-amd64";
-    }
-    .${pkgs.stdenv.hostPlatform.system}
-      or (throw "doordash-cli: unsupported system ${pkgs.stdenv.hostPlatform.system}");
-
-  hashes = {
-    darwin-arm64 = "sha256-TEZ81zquMZu9bZQOzta0gy2ZGThW6bAiFNXomJnM4A8=";
-    linux-amd64 = "sha256-G+gDmI5Bo/Twk9+A4OpQZZQN2oNDxWUoTiax1aj9KJw=";
+  inherit (pkgs) lib;
+  inherit (pkgs.stdenv.hostPlatform) system;
+  sources = lib.importJSON ./sources.json;
+  platforms = {
+    aarch64-darwin = "darwin-arm64";
+    x86_64-linux = "linux-amd64";
   };
+  platform = platforms.${system} or (throw "doordash-cli: unsupported system ${system}");
+  urlTemplate = "https://github.com/doordash-oss/doordash-cli/releases/download/v{version}/dd-cli-v{version}-{platform}.tar.gz";
 in
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "doordash-cli";
-  version = "0.2.2";
+  inherit (sources) version;
 
   src = pkgs.fetchurl {
-    url = "https://github.com/doordash-oss/doordash-cli/releases/download/v${finalAttrs.version}/dd-cli-v${finalAttrs.version}-${platform}.tar.gz";
-    hash = hashes.${platform};
+    url =
+      builtins.replaceStrings [ "{version}" "{platform}" ] [ finalAttrs.version platform ]
+        urlTemplate;
+    hash = sources.hashes.${system};
   };
 
   sourceRoot = "dd-cli-v${finalAttrs.version}-${platform}";
@@ -34,6 +34,16 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
+  passthru.updater = flake.lib.updater {
+    kind = "platform-binaries";
+    versionSource = {
+      type = "github";
+      owner = "doordash-oss";
+      repo = "doordash-cli";
+    };
+    inherit urlTemplate platforms;
+  };
+
   meta = with pkgs.lib; {
     description = "Terminal tool for ordering from DoorDash";
     longDescription = ''
@@ -43,12 +53,10 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     '';
     homepage = "https://github.com/doordash-oss/doordash-cli";
     downloadPage = "https://github.com/doordash-oss/doordash-cli/releases";
+    changelog = "https://github.com/doordash-oss/doordash-cli/releases/tag/v${finalAttrs.version}";
     license = licenses.unfree;
     mainProgram = "dd-cli";
-    platforms = [
-      "aarch64-darwin"
-      "x86_64-linux"
-    ];
+    platforms = lib.attrNames sources.hashes;
     sourceProvenance = [ sourceTypes.binaryNativeCode ];
   };
 })

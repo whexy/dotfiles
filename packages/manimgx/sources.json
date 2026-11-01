@@ -1,0 +1,21 @@
+{
+  "version": "0.1.1",
+  "hashes": {
+    "aarch64-darwin": "sha256-Taf91+ciN8+MH1G+aDjRuyeW93RwL4XpRtL2Aza4e1g=",
+    "aarch64-linux": "sha256-Juy9uvmdNapi5KNj/GRonItAODzJi24xu/rAW9t0lXw=",
+    "x86_64-linux": "sha256-GvvMtvXyf6jizifrLEbTZK+71VnzWuk9ELBvTy23R6c="
+  },
+  "fonts": {
+    "manimgx-fonts": {
+      "version": "2026.9.26.post1",
+      "hash": "sha256-5eIReCY93sPu+UFNK1KhyQrAEGLT6QZ0YPM1n4VMPhc="
+    },
+    "manimgx-fonts-cjk": {
+      "version": "2026.9.26.post1",
+      "hash": "sha256-BdVYTHOHfzdCfPDKgGf1us6itZbHvnnort1jS7nytmY="
+    }
+  },
+  "repo": {
+    "hash": "sha256-BWZHD1ZhNnr/R6DBgerqZw1XdNoRoPpdpAVUnXns0Gg="
+  }
+}

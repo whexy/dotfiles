@@ -1,4 +1,4 @@
-{ pkgs }:
+{ pkgs, flake }:
 
 # ManimGX: Manim CE's scene API on a Rust + wgpu renderer. Typst sets text
 # and math and x264 encodes the MP4 inside the engine, so it needs neither
@@ -8,37 +8,27 @@
 # x264, FFmpeg and NASM themselves.
 let
   inherit (pkgs) lib python3;
-  inherit (pkgs.stdenv.hostPlatform) isLinux;
-  version = "0.1.1";
+  inherit (pkgs.stdenv.hostPlatform) isLinux system;
+  sources = lib.importJSON ./sources.json;
+  inherit (sources) version;
 
-  wheels = {
-    x86_64-linux = {
-      platform = "manylinux_2_28_x86_64";
-      hash = "sha256-GvvMtvXyf6jizifrLEbTZK+71VnzWuk9ELBvTy23R6c=";
-    };
-    aarch64-linux = {
-      platform = "manylinux_2_28_aarch64";
-      hash = "sha256-Juy9uvmdNapi5KNj/GRonItAODzJi24xu/rAW9t0lXw=";
-    };
-    aarch64-darwin = {
-      platform = "macosx_11_0_arm64";
-      hash = "sha256-Taf91+ciN8+MH1G+aDjRuyeW93RwL4XpRtL2Aza4e1g=";
-    };
+  wheelPlatforms = {
+    x86_64-linux = "manylinux_2_28_x86_64";
+    aarch64-linux = "manylinux_2_28_aarch64";
+    aarch64-darwin = "macosx_11_0_arm64";
   };
-  wheel =
-    wheels.${pkgs.stdenv.hostPlatform.system}
-      or (throw "manimgx: no wheel for ${pkgs.stdenv.hostPlatform.system}");
 
   # The Noto fonts text is set in, which manimgx requires at exact versions.
   fonts =
-    pname: hash:
+    pname:
     python3.pkgs.buildPythonPackage rec {
       inherit pname;
-      version = "2026.9.26.post1";
+      inherit (sources.fonts.${pname}) version;
       format = "wheel";
       src = python3.pkgs.fetchPypi {
         pname = lib.replaceStrings [ "-" ] [ "_" ] pname;
-        inherit version hash;
+        inherit version;
+        inherit (sources.fonts.${pname}) hash;
         format = "wheel";
         dist = "py3";
         python = "py3";
@@ -54,7 +44,7 @@ let
       "docs/content/user-guide"
       "examples"
     ];
-    hash = "sha256-BWZHD1ZhNnr/R6DBgerqZw1XdNoRoPpdpAVUnXns0Gg=";
+    inherit (sources.repo) hash;
   };
 
   dzn = import ./dzn.nix { inherit pkgs; };
@@ -76,7 +66,8 @@ python3.pkgs.buildPythonApplication {
   src = python3.pkgs.fetchPypi {
     pname = "manimgx";
     inherit version;
-    inherit (wheel) platform hash;
+    platform = wheelPlatforms.${system} or (throw "manimgx: no wheel for ${system}");
+    hash = sources.hashes.${system};
     format = "wheel";
     dist = "cp313";
     python = "cp313";
@@ -87,8 +78,8 @@ python3.pkgs.buildPythonApplication {
   buildInputs = lib.optionals isLinux [ pkgs.stdenv.cc.cc.lib ];
 
   dependencies = with python3.pkgs; [
-    (fonts "manimgx-fonts" "sha256-5eIReCY93sPu+UFNK1KhyQrAEGLT6QZ0YPM1n4VMPhc=")
-    (fonts "manimgx-fonts-cjk" "sha256-BdVYTHOHfzdCfPDKgGf1us6itZbHvnnort1jS7nytmY=")
+    (fonts "manimgx-fonts")
+    (fonts "manimgx-fonts-cjk")
     isosurfaces
     networkx
     numpy
@@ -125,11 +116,20 @@ python3.pkgs.buildPythonApplication {
 
   pythonImportsCheck = [ "manimgx" ];
 
-  passthru = { inherit docs; };
+  passthru = {
+    inherit docs repo;
+    # update.py pins the wheels and fonts from PyPI's digests.
+    updater = flake.lib.updater {
+      kind = "script";
+      settings.platforms = wheelPlatforms;
+      subpackages = [ "repo" ];
+    };
+  };
 
   meta = {
     description = "Render Manim CE scenes to video on a Rust GPU engine";
     homepage = "https://github.com/academa-labs/manimgx";
+    changelog = "https://github.com/academa-labs/manimgx/releases/tag/v${version}";
     # MIT; the wheel bundles x264, which makes it GPL as a whole.
     license = [
       lib.licenses.mit
@@ -137,6 +137,6 @@ python3.pkgs.buildPythonApplication {
     ];
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     mainProgram = "manimgx";
-    platforms = lib.attrNames wheels;
+    platforms = lib.attrNames sources.hashes;
   };
 }
