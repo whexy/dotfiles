@@ -52,10 +52,9 @@ Tailscale on everything, so I can safely expose services in private network.
 Woodpecker CI runs the pre-commit checks (treefmt, statix, nil, deadnix) and
 evaluates configurations on every pull request and every push to master.
 
-Weekly, a GitHub App bot updates every `flake.lock` input when they drift.
-Nightly, the same bot refreshes only `numtide/llm-agents.nix` and the T3 Code
-nightly pin, whose releases move faster than the rest of the flake. The bot
-runs the same checks before it pushes.
+Nightly, a GitHub App bot updates every `flake.lock` input and every package
+that pins an upstream release, one commit each. The bot runs the same checks
+before it pushes.
 
 Servers and standalone Home Manager setups auto-upgrade daily from the flake, so
 the fleet stays near the same revision.

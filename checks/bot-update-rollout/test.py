@@ -1,9 +1,9 @@
 import os
-from pathlib import Path
-import subprocess
 import shutil
+import subprocess
 import sys
 import tempfile
+from pathlib import Path
 
 import yaml
 
@@ -17,6 +17,35 @@ check = next(
 )
 assert ".#packages.$system.dotfiles-upgraded" in check
 
+# An update lane is a step that runs the package updater.
+lanes = {
+    name: step["commands"]
+    for name, step in pipeline["steps"].items()
+    if any(".#update" in c for c in step.get("commands", []))
+}
+assert lanes, "no step runs .#update"
+
+STUB_NIX = """#!{bash}
+echo "nix $*" >> "$CALLS"
+case "$*" in
+"flake update"*) if [ "$FLAKE_CHANGES" = 1 ]; then echo after > flake.lock; fi; exit 0 ;;
+*".#update "*) exit "$UPDATE_STATUS" ;;
+*".#flake-lock-diff"*) echo "package report"; exit 0 ;;
+*".#github-app-token"*) echo token; exit 0 ;;
+esac
+case "$1" in
+eval) echo fixture ;;
+path-info) test "$CACHE_HIT" = 1 ;;
+build) test "$CHECK_PASS" = 1 ;;
+*) exit 0 ;;
+esac
+"""
+
+STUB_GIT = """#!{bash}
+if [ "$1" = push ]; then echo "git push" >> "$CALLS"; exit 0; fi
+exec {git} "$@"
+"""
+
 
 def run(script, cwd, env):
     return subprocess.run(
@@ -25,62 +54,72 @@ def run(script, cwd, env):
         env=env,
         text=True,
         capture_output=True,
-        timeout=10,
+        timeout=30,
     )
 
 
-for lane in ("update-flake", "update-nightly-agents"):
+def fixture(directory):
+    root = Path(directory)
+    bin_dir = root / "bin"
+    bin_dir.mkdir()
+    for name, stub in (("nix", STUB_NIX), ("git", STUB_GIT)):
+        path = bin_dir / name
+        path.write_text(stub.format(bash=shutil.which("bash"), git=shutil.which("git")))
+        path.chmod(0o755)
+    env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
+    env.update(
+        HOME=directory,
+        GIT_CONFIG_NOSYSTEM="1",
+        GIT_CONFIG_GLOBAL=str(root / "gitconfig"),
+        CALLS=str(root / "calls"),
+        CI_CACHE_ENDPOINT="https://cache.invalid",
+        CI_PIPELINE_FILES='["flake.lock"]',
+        NIX_CACHE_SIGNING_KEY="fixture",
+        NIX_CONFIG="",
+        REX_PACKAGE_TOKEN="fixture",
+        CACHE_HIT="1",
+        CHECK_PASS="0",
+    )
+    repo = root / "repo"
+    repo.mkdir()
+    setup = (
+        "git init -q && git config core.hooksPath /dev/null"
+        " && git config user.name fixture && git config user.email fixture@example.invalid"
+        " && git remote add origin https://example.invalid/repo.git"
+        " && echo before > flake.lock && git add . && git commit -qm initial"
+    )
+    assert run(setup, repo, env).returncode == 0
+    return root, repo, env
+
+
+for lane, commands in lanes.items():
+    assert check in commands
+    push = next(i for i, c in enumerate(commands) if "git push origin HEAD:master" in c)
+    assert commands.index(check) < push  # check before push
+    script = "\n".join(commands)
+
+    # Each failing package is reverted by the driver; the lane still pushes
+    # what did update, then fails so report-failure runs.
+    for flake_changes, status in (("1", "0"), ("1", "1"), ("0", "0"), ("0", "1")):
+        with tempfile.TemporaryDirectory() as directory:
+            root, repo, env = fixture(directory)
+            env.update(FLAKE_CHANGES=flake_changes, UPDATE_STATUS=status)
+            result = run(script, repo, env)
+            calls = (root / "calls").read_text()
+            assert (result.returncode == 0) == (status == "0"), (lane, result.stderr)
+            assert ("git push" in calls) == (flake_changes == "1"), (lane, calls)
+            assert ("nix path-info" in calls) == (flake_changes == "1"), (lane, calls)
+            if flake_changes == "1":
+                message = run("git log -1 --format=%B", repo, env).stdout.lower()
+                assert "[skip ci]" not in message and "[ci skip]" not in message, message
+                assert "package report" in message, message
+
     with tempfile.TemporaryDirectory() as directory:
-        root = Path(directory)
-        bin_dir = root / "bin"
-        bin_dir.mkdir()
-        nix = bin_dir / "nix"
-        nix.write_text(
-            f'#!{shutil.which("bash")}\n'
-            'echo "$*" >> "$CALLS"\n'
-            'case "$1" in\n'
-            'run) echo "package report" ;;\n'
-            'eval) echo "fixture" ;;\n'
-            'path-info) test "$CACHE_HIT" = 1 ;;\n'
-            'build) test "$CHECK_PASS" = 1 ;;\n'
-            '*) exit 0 ;;\n'
-            'esac\n'
-        )
-        nix.chmod(0o755)
-        env = dict(os.environ, PATH=f"{bin_dir}:{os.environ['PATH']}")
-        env.update(
-            HOME=directory,
-            GIT_CONFIG_NOSYSTEM="1",
-            GIT_CONFIG_GLOBAL="/dev/null",
-            GIT_AUTHOR_NAME="fixture",
-            GIT_AUTHOR_EMAIL="fixture@example.invalid",
-            GIT_COMMITTER_NAME="fixture",
-            GIT_COMMITTER_EMAIL="fixture@example.invalid",
-            CALLS=str(root / "calls"),
-            CI_CACHE_ENDPOINT="https://cache.invalid",
-            CI_PIPELINE_FILES='["flake.lock"]',
-            NIX_CACHE_SIGNING_KEY="fixture",
-        )
-        assert run("git init -q && git config core.hooksPath /dev/null", root, env).returncode == 0
-        (root / "flake.lock").write_text("before")
-        assert run("git add . && git commit -qm initial", root, env).returncode == 0
-        (root / "flake.lock").write_text("after")
-        for pin in ("t3code-nightly", "muse-code"):
-            metadata = root / "packages" / pin / "metadata.nix"
-            metadata.parent.mkdir(parents=True)
-            metadata.write_text("{}")
-        commands = pipeline["steps"][lane]["commands"]
-        commit = next(c for c in commands if "git commit -m" in c)
-        result = run(commit, root, env)
-        assert result.returncode == 0, result.stderr
-        message = run("git log -1 --format=%B", root, env).stdout.lower()
-        assert "[skip ci]" not in message and "[ci skip]" not in message, message
-        assert check in commands
-        assert commands.index(check) < len(commands) - 1  # check before push
+        root, repo, env = fixture(directory)
         for hit, passes, expected in (("1", "0", 0), ("0", "1", 0), ("0", "0", 1)):
             (root / "calls").write_text("")
-            result = run(check, root, dict(env, CACHE_HIT=hit, CHECK_PASS=passes))
+            result = run(check, repo, dict(env, CACHE_HIT=hit, CHECK_PASS=passes))
             assert (result.returncode == 0) == (expected == 0), result.stderr
             calls = (root / "calls").read_text()
             assert ("build " in calls) == (hit == "0"), calls
-        print(f"{lane}: push enabled, cached success reused, failed checks rejected")
+    print(f"{lane}: push enabled, failed updates still pushed, cached success reused, failed checks rejected")
