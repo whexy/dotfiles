@@ -1,15 +1,15 @@
 {
-  version = "0.1.7-nightly.20261031.4004";
+  version = "0.1.7-nightly.20261101.4016";
 
   hashes = {
-    darwin-arm64 = "sha256-2e8CrQjhRfCBpN4V+flOJKXNJvA6UxrAUeGgMQEhnKU=";
-    linux-arm64 = "sha256-zrjL6QU0n+x8oOZ4txzByIbN9pfhF1oO15nZoybLcfE=";
-    linux-x64 = "sha256-l+0XTMSHbmWcYC8WEnXOkym3ipw+fKOWdKz2JUepujg=";
+    darwin-arm64 = "sha256-jOEqx63Jjh1QWfA7FKuAufz8tiReEG4bCbICoGEsce0=";
+    linux-arm64 = "sha256-idc6IfFPDmRffVhM4xhbXzX/QSl8yuEIlhvpBrhtxAU=";
+    linux-x64 = "sha256-/D/jq6oa/yKE6fMUTfFQ1NFu8oQTTSR8790OJI/3ly0=";
   };
 
   desktop.hashes = {
-    linux-arm64 = "sha512-BQlMzz8ohZKDEnkJILcPQ7tQK/PuGV5ivaCWr46XNmNL+YSBrxN6cw3Pb040RJQRgzxmqxUYZnlunp2w8gdL0g==";
-    linux-x64 = "sha512-wmUulVbV35AOje9Cqed9J4YAMq23p0HP/XBsxVhoi6cnEfWwjLzSLcFI3fUm3MbpRL6OI/JX2gO7EazqwC99VA==";
+    linux-arm64 = "sha512-iOt28rEatDThh5zhsC5T1Wv0+16B8WqpT8axqRkVJ2OKe4ws8/JZkH3lzaKOiH4xXfrN8nW5F+Tzq2qXx6Sg/w==";
+    linux-x64 = "sha512-oLRq4Uc7GNlIzCCNvEhpHVyBTzEkknUpguUGZ3ONh7dogN6g441nSly0Qf5Km3k6pIkNgiedZWf4lMpupOGYdw==";
   };
 
   browser = {
