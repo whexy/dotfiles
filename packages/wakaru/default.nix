@@ -1,31 +1,27 @@
-{ pkgs }:
+{ pkgs, flake }:
 
 # Wakaru: JavaScript decompiler and unpacker, which REA drives to recover
 # modules from bundles. Upstream ships prebuilt Linux binaries only.
 let
   inherit (pkgs) lib stdenv;
-  version = "1.14.0";
-  assets = {
-    x86_64-linux = {
-      name = "wakaru-linux-x64.tar.gz";
-      hash = "sha256-2w5iADRyMZWrQm6U0A1V29j9AQapKK2iVj8RAxltCfo=";
-    };
-    aarch64-linux = {
-      name = "wakaru-linux-arm64.tar.gz";
-      hash = "sha256-coRWs6W4z0HHCwA8gWEkI1/+RpTZ7sYutONblJQzV6Q=";
-    };
+  inherit (stdenv.hostPlatform) system;
+  sources = lib.importJSON ./sources.json;
+  platforms = {
+    x86_64-linux = "linux-x64";
+    aarch64-linux = "linux-arm64";
   };
-  asset =
-    assets.${stdenv.hostPlatform.system}
-      or (throw "wakaru: no release binary for ${stdenv.hostPlatform.system}");
+  platform = platforms.${system} or (throw "wakaru: no release binary for ${system}");
+  urlTemplate = "https://github.com/pionxzh/wakaru/releases/download/v{version}/wakaru-{platform}.tar.gz";
 in
-stdenv.mkDerivation {
+stdenv.mkDerivation (finalAttrs: {
   pname = "wakaru";
-  inherit version;
+  inherit (sources) version;
 
   src = pkgs.fetchurl {
-    url = "https://github.com/pionxzh/wakaru/releases/download/v${version}/${asset.name}";
-    inherit (asset) hash;
+    url =
+      builtins.replaceStrings [ "{version}" "{platform}" ] [ finalAttrs.version platform ]
+        urlTemplate;
+    hash = sources.hashes.${system};
   };
   sourceRoot = ".";
 
@@ -38,12 +34,23 @@ stdenv.mkDerivation {
     runHook postInstall
   '';
 
+  passthru.updater = flake.lib.updater {
+    kind = "platform-binaries";
+    versionSource = {
+      type = "github";
+      owner = "pionxzh";
+      repo = "wakaru";
+    };
+    inherit urlTemplate platforms;
+  };
+
   meta = {
     description = "JavaScript decompiler and unpacker for bundled code";
     homepage = "https://github.com/pionxzh/wakaru";
+    changelog = "https://github.com/pionxzh/wakaru/releases/tag/v${finalAttrs.version}";
     license = lib.licenses.mit;
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     mainProgram = "wakaru";
-    platforms = lib.attrNames assets;
+    platforms = lib.attrNames sources.hashes;
   };
-}
+})
