@@ -9,6 +9,7 @@
       "https://vicinae.cachix.org"
       "https://pwndbg.cachix.org"
       "https://whexy.cachix.org"
+      "https://whexy-t3code.cachix.org"
     ];
     extra-trusted-public-keys = [
       "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
@@ -17,6 +18,7 @@
       "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
       "pwndbg.cachix.org-1:HhtIpP7j73SnuzLgobqqa8LVTng5Qi36sQtNt79cD3k="
       "whexy.cachix.org-1:XzmCWs+qh3vMtB4p1joLM+ajn5z/UYgZOyxykzEDV2o="
+      "whexy-t3code.cachix.org-1:/pDSZMaQ8YHPw/og8nsuwxiYCAAcRB8JYEcmNd2Czyg="
     ];
   };
 
@@ -109,11 +111,12 @@
     # prebuilt from pwndbg.cachix.org.
     pwndbg.url = "github:pwndbg/pwndbg/2026.09.15";
 
-    # whexy/t3code's T3 server (packages/t3code-fork), which reads
-    # T3CODE_DEV_MANAGED_POLICY_PATH. Not following our nixpkgs: Woodpecker
-    # pushes to ci-cache only the paths the fork's own lock builds.
-    # Pinned to a self-hosted-nightly commit the fork's CI built and cached,
-    # never to the branch itself, which the fork rebases onto upstream hourly.
+    # whexy/t3code's T3 server (packages/t3code-fork), which every host runs.
+    # Not following our nixpkgs: the fork's CI pushes to whexy-t3code.cachix.org
+    # only the paths its own lock builds. Pinned to a self-hosted-nightly
+    # commit the fork's CI built and cached, never to the branch, which the
+    # fork rebases onto each upstream nightly; Woodpecker's pin-t3code-fork
+    # step moves it.
     t3code-fork.url = "github:whexy/t3code/a61ef5cfd021ea047fc000aa39f38dda6b63c8cb";
 
     paneru = {

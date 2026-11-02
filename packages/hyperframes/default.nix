@@ -68,7 +68,7 @@ let
   ++ lib.optionals isLinux [
     "--set-default"
     "HYPERFRAMES_BROWSER_PATH"
-    "${perSystem.self.t3code-nightly.browser}/chrome-headless-shell"
+    "${perSystem.self.t3code-fork.browser}/chrome-headless-shell"
     "--prefix"
     "LD_LIBRARY_PATH"
     ":"

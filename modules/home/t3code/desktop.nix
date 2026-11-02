@@ -30,12 +30,12 @@ let
   };
 
   # T3's updater replaces the macOS app itself, so activation installs it only
-  # when it is missing, at the nightly the server runs. Installing as the user
+  # when it is missing, at the nightly the server builds. Installing as the user
   # lets the updater run without an admin prompt.
   desktopApp = "/Applications/T3 Code (Nightly).app";
   installDesktopApp =
     let
-      inherit (perSystem.self.t3code-nightly) version;
+      inherit (perSystem.self.t3code-fork) version;
     in
     pkgs.writeShellApplication {
       name = "t3code-desktop-install";

@@ -1,0 +1,7 @@
+{
+  "version": "0.1.7-nightly.20261102.4080",
+  "hashes": {
+    "linux-arm64": "sha512-HLVBH25RR3Z9zSEUTPyzAQaf8QtrGCgZWBTA0wx4J+EMIlpDFStl+G/2jAOe2oybO+jb2YrRCaRJxVqE3SnIEg==",
+    "linux-x64": "sha512-UInYJGnkfVX1Mk/un7EEjZOIwCdoStGh4DUaMvyJpG4Hdu3Cu8rA5YUqB8CuGDTg7Bmc/F35n2+8umuTShtp9A=="
+  }
+}

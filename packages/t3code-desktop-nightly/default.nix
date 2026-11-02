@@ -1,13 +1,15 @@
 {
   pkgs,
+  flake,
 }:
 
-# The T3 Code desktop app on Linux, at the nightly t3code-nightly pins. macOS
-# installs T3's signed app instead, which updates itself
-# (modules/home/t3code).
+# The T3 Code desktop app on Linux, at the upstream nightly whexy/t3code's
+# server (t3code-fork) builds; update.py follows that version, so the pin
+# moves only with the fork's. macOS installs T3's signed app instead, which
+# updates itself (modules/home/t3code).
 let
   inherit (pkgs) lib;
-  sources = lib.importJSON ../t3code-nightly/sources.json;
+  sources = lib.importJSON ./sources.json;
   inherit (sources) version;
   inherit (pkgs.stdenv.hostPlatform) system;
 
@@ -27,7 +29,7 @@ let
 
   src = pkgs.fetchurl {
     url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-${platform.arch}.AppImage";
-    hash = sources.desktop.hashes.${platform.name};
+    hash = sources.hashes.${platform.name};
   };
 
   contents = pkgs.appimageTools.extract { inherit pname version src; };
@@ -52,8 +54,7 @@ pkgs.appimageTools.wrapAppImage {
       --set T3CODE_DESKTOP_LAUNCHER_PATH $out/bin/${pname}
   '';
 
-  # t3code-nightly's updater pins this app and builds it.
-  passthru.updater = null;
+  passthru.updater = flake.lib.updater { kind = "script"; };
 
   meta = {
     description = "Nightly T3 Code desktop app";

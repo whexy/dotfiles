@@ -379,50 +379,50 @@ it first, so it stays on the tailnet where that works and falls back to the
 tunnel elsewhere. Paired over Tailscale, a client never learns the public URL,
 because servers report only their LAN and Tailscale addresses.
 
+### The server package
+
+Every host runs whexy/t3code's server, `packages/t3code-fork`: the
+`t3-server` output of the `t3code-fork` flake input (x86_64-linux and
+aarch64-darwin), its derivation unchanged, so hosts substitute the path the
+fork's CI pushed to `whexy-t3code.cachix.org`, a substituter every host
+trusts (`lib/nix-settings.nix`). The input does not follow our nixpkgs, which
+would change that path. A standalone home adds the substituter in its own
+`nix.conf`, which the daemon honours only for a user it trusts; a root home
+always is.
+
+`flake.nix` pins the input to a `self-hosted-nightly` commit, never to the
+branch, which the fork rebases onto each upstream nightly. The fork's CI
+starts the `pin-t3code-fork` step in `.woodpecker.yml` with that commit as
+`T3CODE_FORK_REV`. It pins a commit only while it is the fork's head and its
+server closure is in Cachix for both systems, and moves the companion pins in
+the same commit: the preview browser comes from the server source of the
+pinned commit itself, and `t3code-desktop-nightly`'s updater follows the
+version that commit builds. No T3 pin moves on its own.
+
 ### Managed policy
 
-`programs.t3code.policy` is T3's managed policy document as plain JSON,
-with setting paths as literal dotted keys (`settings."storageCleanup.logsAfterDays"`).
-Empty means no policy. The module renders it into the Nix store, runs the
-pinned `t3 policy check` on it at build time, and points the server service
-at that store path with `T3CODE_DEV_MANAGED_POLICY_PATH`. Agents run as the
-user and could edit a file in the home; the store path keeps the locks out
-of their reach. A new policy changes the unit, so switching restarts the
-server, which reads the policy only at startup. Each home renders its own,
-so users on one host keep separate policies.
+No policy lives in this repository. The server's wrapper runs
+`t3code-policy resolve` before each start, on Linux and macOS alike:
 
-A server package declares that it reads the variable with
-`passthru.honorsManagedPolicyPath`. Without it, the home renders no policy
-and sets no variable, so nothing looks applied that is not, and a policy set
-for that server warns.
+- It fetches `https://t3-policy.at-basking.ts.net/policy.json` from the
+  policy editor, retrying for up to 30 s (a boot can start the server before
+  Tailscale), and checks it with the `t3` about to run.
+- A valid policy replaces the last good copy in
+  `~/.local/state/t3code-policy/policy.json`, which the server then loads.
+  When the editor is unreachable or serves an invalid policy, the server
+  loads the last good copy, after checking it again.
+- With no valid policy at all, the wrapper names a file that cannot exist,
+  which T3 reads as no policy. It never leaves the variable unset: T3 would
+  then look for the machine's own policy.
+- Each start writes `status.json` beside it and logs one
+  `t3code-policy: state=...` line (the journal, or `~/Library/Logs/t3code.log`).
+  A change of state posts to the alert webhook, which reaches WeChat.
 
-Every server that applies one starts from a default policy in `modules/home/t3code`: linked
-environments and provider update checks are locked, telemetry is limited,
-and the rest are defaults the user's own choices override. A home
-replaces any key with a plain assignment. The policy never names a
-provider instance: `t3-claude-models` rewrites the Claude instance's models,
-and T3 locks an instance only as a whole. It never sets `limits.clients`,
-which would end pairing, the tunnel and the tailnet route.
-
-Upstream's prebuilt server (`t3code-nightly`) ignores the variable.
-`packages/t3code-fork` is whexy/t3code's server from the `t3code-fork` flake
-input, its derivation unchanged, so hosts substitute the path Woodpecker
-pushed to ci-cache; the input does not follow our nixpkgs, which would change
-that path. A home takes it with `dotfiles.t3code.fork.enable`, which the
-`dev` and `dev-lite` caps set on x86_64-linux homes that run the server, and
-proxmox sets itself. The option asserts x86_64-linux and ci-cache, so a host
-that would compile the fork fails to evaluate instead. b3srv0, which never
-joins the tailnet, mars and venus, which run no server, and the Macs keep
-upstream's build and no policy, and activation still writes
-`linkedEnvironmentsEnabled` there.
-
-`flake.nix` pins `t3code-fork` to a `self-hosted-nightly` commit the fork's
-CI built, never to the branch, which the fork rebases onto upstream every
-hour. To move it, pin a newer commit whose pipeline passed, then run
-`nix run .#update -- t3code-nightly`, which pins `sources.json` (the
-browser, the desktop app and the hub image's tag) to the nightly it builds.
-ci-cache keeps a path 48 hours, so a pinned commit older than that compiles
-from source on every host that switches to it.
+The server reads its policy only at startup, so a new policy applies at the
+next restart. `t3code-policy status` shows what the last start decided and
+what the running server loaded. The last good copy is user-writable, so an
+agent could replace it with another valid policy; the check on every start
+keeps it to valid ones.
 
 ### Gateway models for Claude
 
@@ -443,9 +443,10 @@ beside T3's settings records the models `t3-claude-models` wrote.
 
 The `gui` cap installs the T3 Code desktop app
 (`dotfiles.t3code.desktop.enable`). On Linux it is
-`t3code-desktop-nightly`, pinned with the server, with its own updater off. On
-macOS, activation installs `/Applications/T3 Code (Nightly).app` only when it
-is missing, and the app updates itself.
+`t3code-desktop-nightly`, at the upstream nightly the pinned server builds,
+with its own updater off. On macOS, activation installs
+`/Applications/T3 Code (Nightly).app` at that nightly only when it is
+missing, and the app updates itself from then on.
 
 The app's bundled server needs `~/.t3/userdata` to itself; while the server
 service holds it, the app reports "This T3 home is unavailable" and quits.
