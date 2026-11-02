@@ -4,7 +4,7 @@
 
   dotfiles = {
     wm.darwin.windowManager = "aerospace";
-    agents = {
+    agenticTooling = {
       video.enable = true;
       iphoneUse.enable = true;
     };

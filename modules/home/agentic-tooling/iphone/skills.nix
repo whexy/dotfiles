@@ -1,8 +1,8 @@
 # The skills iPhone Use ships, as a `dotfiles.agents.skills` value; the home
 # module and checks/agent-skills both take it from here.
-{ iphoneUse }:
+{ perSystem, ... }:
 {
-  packages = [ iphoneUse ];
+  packages = [ perSystem.self.iphone-use ];
   override.iphone-use-setup = {
     replace = ./iphone-use-setup;
     reason = ''

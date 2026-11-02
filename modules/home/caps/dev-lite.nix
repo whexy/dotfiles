@@ -5,6 +5,10 @@
 {
   dotfiles = {
     agents.enable = lib.mkDefault true;
+    agenticTooling = {
+      transcribe.enable = lib.mkDefault true;
+      wechat.enable = lib.mkDefault true;
+    };
     t3code = {
       enable = lib.mkDefault true;
       pair.enable = lib.mkDefault true;
