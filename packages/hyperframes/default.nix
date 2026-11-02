@@ -13,7 +13,7 @@
 let
   inherit (pkgs) lib;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
-  version = "0.8.157";
+  version = "0.8.229";
 
   # devDependencies only serve upstream's monorepo; its `workspace:*` ones
   # cannot be resolved from the registry, and dist/ already bundles them.
@@ -23,8 +23,8 @@ let
   # fetch it. Compositions copy this file instead and render offline.
   # update.py keeps it at the version the templates name.
   gsap = pkgs.fetchurl {
-    url = "https://registry.npmjs.org/gsap/-/gsap-3.14.2.tgz";
-    hash = "sha512-P8/mMxVLU7o4+55+1TCnQrPmgjPKnwkzkXOK1asnR9Jg2lna4tEY5qBJjMmAaOBDDZWtlRjBXjLa0w53G/uBLA==";
+    url = "https://registry.npmjs.org/gsap/-/gsap-3.15.0.tgz";
+    hash = "sha256-0uM60gLUgR6QhIg/f/mieWesQJXK71HKTJ0gaXolOxw=";
   };
 
   # The npm tarball bundles only three internal skills; the published agent
@@ -35,7 +35,7 @@ let
     repo = "hyperframes";
     tag = "v${version}";
     sparseCheckout = [ "skills" ];
-    hash = "sha256-Qn2pPu97qToIG9xHTBG7kmoNXVRHDbmmwfrfdnxQtts=";
+    hash = "sha256-usHwFMfUOHuM27G9+o0ghID4bxlVG5oX7nm9e5TFbso=";
   };
 
   # A caller's own settings still win. The switches stop HyperFrames from
@@ -82,11 +82,11 @@ pkgs.buildNpmPackage (finalAttrs: {
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/hyperframes/-/hyperframes-${finalAttrs.version}.tgz";
-    hash = "sha512-Xinng95n3mk6iE1jzV9JemVk6J57KJCHQii/lFQVIXrH17KlS8aSAVSRQ+DlNvB3gctg9jc/IVsvhwl4Z0DdHA==";
+    hash = "sha256-Nuqd5sOUrB4tqr2NFB2ch2KoboIYAN4rxipLE9a03lE=";
   };
 
   nodejs = pkgs.nodejs_22;
-  npmDepsHash = "sha256-ZdB1PxMiM1kRGVGBF5dgIPBFunU8zW01MGAmTpKEMIM=";
+  npmDepsHash = "sha256-5XZIsHNVVI/TuzT9+3yJoXt+zN1hUAGBNkecDO7b1ck=";
 
   # `init` copies its templates out of the store with their read-only modes,
   # then fails to rewrite them; the copies get their owner write bit back.
