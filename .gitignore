@@ -13,3 +13,9 @@ docs/.astro/
 
 # python bytecode
 __pycache__/
+
+# Claude Code reads project skills only here; the global ignore covers the
+# rest of .claude/.
+!.claude/
+.claude/*
+!.claude/skills
