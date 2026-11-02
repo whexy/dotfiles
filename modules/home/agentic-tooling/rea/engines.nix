@@ -102,8 +102,6 @@ let
     // cfg.environment;
 in
 {
-  inherit base;
-
   package =
     if environment == { } then
       base

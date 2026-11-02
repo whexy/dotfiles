@@ -2,36 +2,39 @@
 # an upstream bump breaks or a skill with bad frontmatter fails CI before any
 # host switches. `expected` lists every skill agents can see; a change to what
 # agents see must change it too.
-{ pkgs, perSystem, ... }:
+{
+  pkgs,
+  perSystem,
+  flake,
+  ...
+}:
 let
   inherit (pkgs) lib;
-  agents = ../../modules/home/agents;
-  skills = import (agents + "/skill-tree/build.nix") { inherit pkgs; };
-  video = import (agents + "/video/skills.nix") { inherit pkgs perSystem; };
-  cloudflare = import (agents + "/cloudflare/skills.nix") { inherit (perSystem.self) cf; };
-  iphone = import (agents + "/iphone/skills.nix") { iphoneUse = perSystem.self.iphone-use; };
+  skills = import ../../modules/home/agents/skill-tree/build.nix { inherit pkgs; };
 
-  tree = skills.build {
-    packages = [
-      perSystem.self.transcribe
-      perSystem.self.wechat-cli
-      perSystem.self.rea-agents
-    ]
-    ++ cloudflare.packages
-    ++ iphone.packages
-    ++ video.packages;
-    local =
-      lib.mapAttrs (name: _: { source = agents + "/skills/${name}"; }) (
-        lib.filterAttrs (_: type: type == "directory") (builtins.readDir (agents + "/skills"))
-      )
-      // video.local
-      // {
-        spark.source = agents + "/spark/skill";
-        asc.source = agents + "/asc/skill";
-      };
-    override = cloudflare.override // iphone.override // video.override;
-    inherit (video) docs;
+  # Every feature that adds skills declares them in a skills.nix beside its
+  # module, so a new feature is built here without being listed.
+  features = map (file: import file { inherit pkgs perSystem; }) (
+    flake.lib.importDir ../../modules/home { pattern = "/skills.nix"; }
+  );
+  merge =
+    key:
+    lib.foldl' (
+      acc: feature:
+      let
+        new = feature.${key} or { };
+        both = lib.intersectLists (lib.attrNames acc) (lib.attrNames new);
+      in
+      assert lib.assertMsg (both == [ ]) "${key}.${toString both} comes from two skills.nix files";
+      acc // new
+    ) { } features;
+  spec = {
+    packages = lib.concatMap (feature: feature.packages or [ ]) features;
+    local = merge "local";
+    override = merge "override";
+    docs = merge "docs";
   };
+  tree = skills.build spec;
 
   expected = pkgs.writeText "agent-skills-expected" ''
     asc
@@ -66,7 +69,7 @@ pkgs.runCommand "agent-skills"
   }
   ''
     diff -u ${expected} ${tree}/names
-    for name in ${lib.concatStringsSep " " (lib.attrNames video.docs)}; do
+    for name in ${lib.concatStringsSep " " (lib.attrNames spec.docs)}; do
       test -e ${tree}/docs/$name/.
     done
     touch $out

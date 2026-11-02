@@ -9,7 +9,11 @@
     agents = {
       enable = lib.mkDefault true;
       firefoxDevtools.enable = lib.mkDefault true;
-      studio.enable = lib.mkDefault true;
+    };
+    agenticTooling = {
+      video.studio.enable = lib.mkDefault true;
+      transcribe.enable = lib.mkDefault true;
+      wechat.enable = lib.mkDefault true;
     };
     t3code = {
       enable = lib.mkDefault true;
