@@ -7,6 +7,13 @@ let
       required = [ ];
       optional = [ "args" ];
     };
+    github-branch = {
+      required = [
+        "owner"
+        "repo"
+      ];
+      optional = [ ];
+    };
     npm = {
       required = [ "lockfileFilter" ];
       optional = [

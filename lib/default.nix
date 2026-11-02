@@ -2,6 +2,8 @@
 let
   inherit (inputs.nixpkgs) lib;
 
+  updater = import ./updater.nix { inherit lib; };
+
   # Where this repo is published. Machines fetch their own definition from
   # here when they upgrade themselves, so it is a runtime input to the
   # configuration rather than a documentation string. Changing the repo
@@ -126,7 +128,9 @@ in
 
   importDir = import ./importDir.nix { inherit lib; };
 
-  updater = import ./updater.nix { inherit lib; };
+  inherit updater;
+
+  skillRepos = import ./skill-repos.nix { inherit inputs updater; };
 
   nixosHost =
     {

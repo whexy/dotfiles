@@ -82,6 +82,21 @@ def prefetch(url: str, expected: str | None = None) -> tuple[str, str]:
     return data["hash"], data["storePath"]
 
 
+def flake_prefetch(ref: str) -> dict[str, Any]:
+    """Fetch the tree a flake reference names; return its rev, time and hash.
+
+    `--refresh` bypasses the fetcher cache, so a branch pushed to minutes
+    ago is seen rather than the head cached for the cache's TTL.
+    """
+    result = run(["nix", "flake", "prefetch", "--json", "--refresh", ref], capture=True)
+    data = json.loads(result.stdout)
+    return {
+        "rev": data["locked"]["rev"],
+        "lastModified": data["locked"]["lastModified"],
+        "hash": data["hash"],
+    }
+
+
 def git(*args: str, capture: bool = True) -> str:
     return run(["git", *args], capture=capture).stdout or ""
 

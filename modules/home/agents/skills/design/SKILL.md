@@ -12,6 +12,9 @@ If you are modifying an existing project with an established design language
 or documentation structure, follow that project's conventions instead unless I
 explicitly ask otherwise. Still apply the wording rules below.
 
+A project that should look like www.whexy.com takes its visual design from
+the `frost` skill; these rules still apply.
+
 When you brief a subagent to do this work, pass these rules on.
 
 ## The shared rule: everything earns its place
