@@ -98,6 +98,49 @@ class KindTest(unittest.TestCase):
             kinds.platform_binaries(self.pkg, config)
             self.assertEqual(len(fetched), 3)
 
+    def test_pin_prebuilds(self):
+        prebuilds = {
+            "addon": {
+                "urlTemplate": "https://gh/{version}/addon-v{version}-{platform}.tar.gz",
+                "platforms": {"x86_64-linux": "linux-x64", "aarch64-darwin": "darwin-arm64"},
+            }
+        }
+        lock = self.pkg.dir / "package-lock.json"
+        fetched = []
+
+        def prefetch(url, expected=None):
+            fetched.append(url)
+            return f"sha256-{url[-20:]}", "/nix/store/x"
+
+        def lock_addon(version):
+            lock.write_text(json.dumps({"packages": {"node_modules/addon": {"version": version}}}))
+
+        with mock.patch("updater.nix.prefetch", prefetch):
+            lock_addon("2.0.0")
+            kinds.pin_prebuilds(self.pkg.dir, prebuilds)
+            self.assertEqual(
+                fetched,
+                [
+                    "https://gh/2.0.0/addon-v2.0.0-darwin-arm64.tar.gz",
+                    "https://gh/2.0.0/addon-v2.0.0-linux-x64.tar.gz",
+                ],
+            )
+            self.assertEqual(self.sources()["addon"]["version"], "2.0.0")
+
+            # The lock still names the pinned version: nothing is downloaded.
+            fetched.clear()
+            kinds.pin_prebuilds(self.pkg.dir, prebuilds)
+            self.assertEqual(fetched, [])
+
+            lock_addon("2.1.0")
+            kinds.pin_prebuilds(self.pkg.dir, prebuilds)
+            self.assertEqual(len(fetched), 2)
+            self.assertEqual(self.sources()["addon"]["version"], "2.1.0")
+
+            lock.write_text(json.dumps({"packages": {}}))
+            with self.assertRaises(UpdateError):
+                kinds.pin_prebuilds(self.pkg.dir, prebuilds)
+
     def test_version_sources(self):
         with mock.patch("updater.net.fetch_json", lambda _url: {"latest": "2.0", "next": "3.0"}):
             self.assertEqual(kinds.latest_version({"type": "npm", "package": "x"}), "2.0")

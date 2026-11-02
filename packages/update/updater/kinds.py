@@ -65,12 +65,42 @@ def npm(pkg: Package, config: dict[str, Any]) -> None:
     here from the filtered package.json rather than by nix-update.
     """
     latest = npm_version(config.get("package", pkg.pname), config.get("distTag", "latest"))
-    if latest == pkg.version:
-        return
-    nix.run(["nix-update", "--flake", pkg.name, "--version", latest, "--src-only"], cwd=pkg.root)
-    tarball = nix.build(pkg.attr("src"))
-    generate_lockfile(Path(tarball), config["lockfileFilter"], pkg.dir / "package-lock.json")
-    pkg.refresh_hash("npmDeps")
+    if latest != pkg.version:
+        nix.run(
+            ["nix-update", "--flake", pkg.name, "--version", latest, "--src-only"], cwd=pkg.root
+        )
+        tarball = nix.build(pkg.attr("src"))
+        generate_lockfile(Path(tarball), config["lockfileFilter"], pkg.dir / "package-lock.json")
+        pkg.refresh_hash("npmDeps")
+    if "prebuilds" in config:
+        pin_prebuilds(pkg.dir, config["prebuilds"])
+
+
+def pin_prebuilds(pkg_dir: Path, prebuilds: dict[str, dict[str, Any]]) -> None:
+    """Pin the archives dependencies' install scripts would download.
+
+    Each follows its dependency's version in the vendored lockfile, so the
+    pins move whenever the lock does.
+    """
+    lock = json.loads((pkg_dir / "package-lock.json").read_text())["packages"]
+    sources = read_sources(pkg_dir)
+    pinned = {}
+    for dependency, config in sorted(prebuilds.items()):
+        entry = lock.get(f"node_modules/{dependency}")
+        if entry is None:
+            raise UpdateError(f"prebuilds names {dependency}, which the lockfile lacks")
+        version, platforms = entry["version"], config["platforms"]
+        current = sources.get(dependency, {})
+        if current.get("version") == version and set(current.get("hashes", {})) == set(platforms):
+            pinned[dependency] = current
+            continue
+        hashes = {}
+        for system, token in sorted(platforms.items()):
+            url = interpolate(config["urlTemplate"], version=version, platform=token)
+            hashes[system], _ = nix.prefetch(url)
+        pinned[dependency] = {"version": version, "hashes": hashes}
+    if pinned != sources:
+        write_sources(pkg_dir, pinned)
 
 
 def generate_lockfile(tarball: Path, jq_filter: str, dest: Path) -> None:
