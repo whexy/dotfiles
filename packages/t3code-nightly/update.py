@@ -1,11 +1,11 @@
-"""Pin the npm `nightly` dist-tag of T3 Code, its desktop app and its browser."""
+"""Pin the T3 Code nightly whexy/t3code's server builds: upstream's archives
+for the other platforms, its desktop app and its browser."""
 
 import re
 import sys
 import tarfile
 
 from updater import UpdateError, net, nix
-from updater.kinds import npm_version
 from updater.package import Package
 from updater.pins import b64_to_sri, hex_to_sri, write_sources
 
@@ -72,7 +72,9 @@ def browser_pins(executable: bytes) -> dict[str, str]:
 
 def main() -> None:
     pkg = Package.from_env()
-    version = npm_version("t3", "nightly")
+    # x86_64-linux runs the fork's server, so the flake input it is locked
+    # to chooses the nightly; `nix flake update` moves that input.
+    version = nix.eval_raw(f"{pkg.root}#packages.x86_64-linux.{pkg.name}.version")
 
     # The `t3` npm package is a shim that downloads the matching archive from
     # the GitHub Release and verifies it against that release's SHA256SUMS.
