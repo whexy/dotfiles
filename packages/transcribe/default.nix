@@ -8,7 +8,12 @@
 pkgs.stdenvNoCC.mkDerivation {
   pname = "transcribe";
   version = "1.0.0";
-  src = ./.;
+  # The skill is copied in at install, so editing it leaves the build's
+  # source unchanged.
+  src = pkgs.lib.fileset.toSource {
+    root = ./.;
+    fileset = pkgs.lib.fileset.difference ./. ./skills;
+  };
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
   installPhase = ''
@@ -17,6 +22,8 @@ pkgs.stdenvNoCC.mkDerivation {
     makeWrapper ${pkgs.python3}/bin/python3 $out/bin/transcribe \
       --add-flags "$out/lib/transcribe/transcribe.py" \
       --prefix PATH : ${pkgs.lib.makeBinPath [ pkgs.ffmpeg ]}
+    mkdir -p $out/share
+    cp -r ${./skills} $out/share/skills
     runHook postInstall
   '';
 
