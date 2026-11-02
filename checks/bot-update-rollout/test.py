@@ -17,13 +17,16 @@ check = next(
 )
 assert ".#packages.$system.dotfiles-upgraded" in check
 
-# An update lane is a step that runs the package updater.
+# An update lane is a step that commits the package updater's work.
 lanes = {
     name: step["commands"]
     for name, step in pipeline["steps"].items()
-    if any(".#update" in c for c in step.get("commands", []))
+    if any(".#update -- --commit" in c for c in step.get("commands", []))
 }
-assert lanes, "no step runs .#update"
+assert lanes, "no step runs .#update -- --commit"
+
+pin = pipeline["steps"]["pin-t3code-fork"]["commands"]
+assert pin.index(check) < next(i for i, c in enumerate(pin) if "git push origin HEAD:master" in c)
 
 STUB_NIX = """#!{bash}
 echo "nix $*" >> "$CALLS"
