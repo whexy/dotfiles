@@ -103,6 +103,33 @@ in
         `items.nix`, when they need the secret.
       '';
     };
+
+    wrap = lib.mkOption {
+      type = lib.types.functionTo lib.types.package;
+      default = import ./wrap.nix {
+        inherit lib pkgs opSa;
+        items = import ./items.nix;
+      };
+      defaultText = lib.literalMD "a wrapper builder over `op-sa`";
+      readOnly = true;
+      description = ''
+        Wraps a tool started on demand so each run loads its secrets into
+        that process alone:
+
+        ```nix
+        config.dotfiles.onepassword.wrap {
+          package = pkgs.woodpecker-cli;
+          env.WOODPECKER_TOKEN = "woodpecker-token";
+        }
+        ```
+
+        `env` maps variables to `items.nix` names. A secret the caller
+        already set wins (`callerWins` lists the variables that count), and
+        a failed or empty load warns and runs the tool without any of them.
+        `withSecret`, `dotenv`, `skipWhen`, `programs`, and `wrapperArgs`
+        are described in `wrap.nix`.
+      '';
+    };
   };
 
   config = lib.mkMerge [
