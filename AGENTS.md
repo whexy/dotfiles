@@ -404,15 +404,25 @@ provider instance: `t3-claude-models` rewrites the Claude instance's models,
 and T3 locks an instance only as a whole. It never sets `limits.clients`,
 which would end pairing, the tunnel and the tailnet route.
 
-Upstream's prebuilt server ignores the variable. On x86_64-linux,
-`t3code-nightly` is whexy/t3code's server from the `t3code-fork` flake input,
-its derivation unchanged, so hosts substitute the path Woodpecker pushed to
-ci-cache. The input does not follow our nixpkgs, which would change that
-path. Macs and aarch64-linux keep upstream's build, and their servers run
-without a policy, so activation still writes `linkedEnvironmentsEnabled`
-there. `t3code-nightly`'s updater pins `sources.json` (the browser, the
-desktop app, the other platforms' archives and the hub image's tag) to the
-nightly the locked fork builds, so `nix flake update` moves both.
+Upstream's prebuilt server (`t3code-nightly`) ignores the variable.
+`packages/t3code-fork` is whexy/t3code's server from the `t3code-fork` flake
+input, its derivation unchanged, so hosts substitute the path Woodpecker
+pushed to ci-cache; the input does not follow our nixpkgs, which would change
+that path. A home takes it with `dotfiles.t3code.fork.enable`, which the
+`dev` and `dev-lite` caps set on x86_64-linux homes that run the server, and
+proxmox sets itself. The option asserts x86_64-linux and ci-cache, so a host
+that would compile the fork fails to evaluate instead. b3srv0, which never
+joins the tailnet, mars and venus, which run no server, and the Macs keep
+upstream's build and no policy, and activation still writes
+`linkedEnvironmentsEnabled` there.
+
+`flake.nix` pins `t3code-fork` to a `self-hosted-nightly` commit the fork's
+CI built, never to the branch, which the fork rebases onto upstream every
+hour. To move it, pin a newer commit whose pipeline passed, then run
+`nix run .#update -- t3code-nightly`, which pins `sources.json` (the
+browser, the desktop app and the hub image's tag) to the nightly it builds.
+ci-cache keeps a path 48 hours, so a pinned commit older than that compiles
+from source on every host that switches to it.
 
 ### Gateway models for Claude
 

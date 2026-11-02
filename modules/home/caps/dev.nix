@@ -1,7 +1,12 @@
 # dev home cap preset: full development environment.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with plain assignments.
-{ lib, pkgs, ... }:
+{
+  lib,
+  pkgs,
+  config,
+  ...
+}:
 {
   home.packages = [ pkgs.sd ];
 
@@ -15,6 +20,11 @@
     t3code = {
       enable = lib.mkDefault true;
       pair.enable = lib.mkDefault true;
+      # whexy/t3code's server, which applies programs.t3code.policy, comes
+      # prebuilt from ci-cache for x86_64-linux only.
+      fork.enable = lib.mkDefault (
+        pkgs.stdenv.hostPlatform.system == "x86_64-linux" && config.dotfiles.t3code.server.enable
+      );
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser
     # whether or not it has a display.
