@@ -432,6 +432,31 @@ it first, so it stays on the tailnet where that works and falls back to the
 tunnel elsewhere. Paired over Tailscale, a client never learns the public URL,
 because servers report only their LAN and Tailscale addresses.
 
+### Managed policy
+
+`programs.t3code.policy` is T3's managed policy document as plain JSON,
+with setting paths as literal dotted keys (`settings."storageCleanup.logsAfterDays"`).
+Empty means no policy. The module renders it into the Nix store, runs the
+pinned `t3 policy check` on it at build time, and points the server service
+at that store path with `T3CODE_DEV_MANAGED_POLICY_PATH`. Agents run as the
+user and could edit a file in the home; the store path keeps the locks out
+of their reach. A new policy changes the unit, so switching restarts the
+server, which reads the policy only at startup. Each home renders its own,
+so users on one host keep separate policies.
+
+Every server starts from a default policy in `modules/home/t3code`: linked
+environments and provider update checks are locked, telemetry is limited,
+and the rest are defaults the user's own choices override. A home
+replaces any key with a plain assignment. The policy never names a
+provider instance: `t3-claude-models` rewrites the Claude instance's models,
+and T3 locks an instance only as a whole. It never sets `limits.clients`,
+which would end pairing, the tunnel and the tailnet route.
+
+Upstream release builds ignore the variable, so the policy takes effect only
+with a package that sets `passthru.honorsManagedPolicyPath`, as
+whexy/t3code's builds will. Until then, activation still writes
+`linkedEnvironmentsEnabled`.
+
 ### Gateway models for Claude
 
 T3's Claude model picker also lists every non-Claude model CLIProxyAPI serves,

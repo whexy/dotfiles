@@ -25,12 +25,34 @@ let
 
   t3 = lib.getExe' t3code "t3";
 
+  json = pkgs.formats.json { };
+  policyCfg = config.programs.t3code.policy;
+
+  # The `t3` that loads the policy checks it first; it is the only check, as
+  # the option itself is plain JSON.
+  policy =
+    if policyCfg == { } then
+      null
+    else
+      let
+        unchecked = json.generate "t3code-policy-unchecked.json" policyCfg;
+      in
+      pkgs.runCommand "t3code-policy.json" { } ''
+        HOME=$TMPDIR ${t3} policy check ${unchecked} >&2
+        cp ${unchecked} $out
+      '';
+
+  # Release builds ignore T3CODE_DEV_MANAGED_POLICY_PATH; a package whose
+  # server reads it says so with passthru.honorsManagedPolicyPath.
+  policyApplied = policy != null && (t3code.honorsManagedPolicyPath or false);
+
   services = import ./services.nix {
     inherit
       pkgs
       lib
       cfg
       t3
+      policy
       ;
     inherit (config.home) profileDirectory homeDirectory;
     inherit (config.dotfiles.agents.launcher) gitConfig;
@@ -196,10 +218,9 @@ let
       mv "$temporary" "$document"
     '';
 
-  # Linked environments is a Labs setting, off by default, and a server with it
-  # off refuses links. Every server turns it on so the cluster's MCP hub
-  # (clusters-work gitops/apps/t3code-hub) can link to it. The running server
-  # reloads settings.json when it changes.
+  # The policy locks linked environments on. Until the server applies the
+  # policy, activation writes the setting instead; the running server reloads
+  # settings.json when it changes.
   linkedEnvironments = userdataSetting {
     name = "t3-linked-environments";
     file = "settings.json";
@@ -247,6 +268,20 @@ let
     };
 in
 {
+  # Home Manager's own programs.t3code installs a package and merges
+  # settings; the policy applies to the server dotfiles.t3code runs.
+  options.programs.t3code.policy = lib.mkOption {
+    inherit (json) type;
+    default = { };
+    description = ''
+      The T3 Code managed policy for the server dotfiles.t3code runs, as T3's
+      JSON document; empty means none. Setting paths are literal dotted keys.
+      The server reads it from the Nix store, where agents running as the
+      user cannot change it, and restarts when it changes. Only builds that
+      honor `T3CODE_DEV_MANAGED_POLICY_PATH` apply it.
+    '';
+  };
+
   options.dotfiles.t3code = {
     enable = lib.mkEnableOption "T3 Code, the web GUI for coding agents, and its Claude gateway models";
     package = lib.mkOption {
@@ -310,78 +345,142 @@ in
     '';
   };
 
-  config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.server.tunnel.enable -> cfg.server.enable && hostName != null;
-        message = "dotfiles.t3code.server.tunnel.enable requires the server and dotfiles.tunnels.hostName.";
-      }
-    ];
+  config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = policyCfg != { } -> cfg.enable && cfg.server.enable;
+          message = "programs.t3code.policy applies only to the server dotfiles.t3code.server runs.";
+        }
+      ];
+    }
+    (lib.mkIf cfg.enable {
+      assertions = [
+        {
+          assertion = cfg.server.tunnel.enable -> cfg.server.enable && hostName != null;
+          message = "dotfiles.t3code.server.tunnel.enable requires the server and dotfiles.tunnels.hostName.";
+        }
+      ];
 
-    home = {
-      packages = [
-        t3code
-        claudeModels
-      ]
-      ++ lib.optional cfg.pair.enable perSystem.self.t3-pair
-      ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly
-      # pkgs.nodejs rather than a pinned major: editor.javascript installs it
-      # too, and two different nodes would collide in the profile.
-      ++ lib.optional cfg.deviceHost.enable pkgs.nodejs;
+      # Each key is a default a home replaces on its own. Locked: linked
+      # environments, which the cluster's MCP hub (clusters-work
+      # gitops/apps/t3code-hub) needs to link to every server, and provider
+      # update checks, as Nix pins the provider CLIs. The rest are preferences
+      # the user's own choices override. Telemetry also stays off in the
+      # environment, for the desktop app and for servers that ignore the
+      # policy. The Claude provider instance stays out: t3-claude-models
+      # rewrites its models, and T3 locks an instance only as a whole.
+      programs.t3code.policy = lib.mkIf cfg.server.enable (
+        lib.mapAttrsRecursive (_: lib.mkDefault) {
+          schemaVersion = 1;
+          organization = "dotfiles";
+          limits.telemetry = false;
+        }
+        // {
+          settings =
+            lib.mapAttrs (_: lib.mkDefault) {
+              "linkedEnvironmentsEnabled" = {
+                value = true;
+                locked = true;
+              };
+              "enableProviderUpdateChecks" = {
+                value = false;
+                locked = true;
+              };
+            }
+            //
+              lib.mapAttrs
+                (
+                  _: value:
+                  lib.mkDefault {
+                    inherit value;
+                    locked = false;
+                  }
+                )
+                {
+                  "storageCleanup.worktreeAfterDays" = 8;
+                  "storageCleanup.worktreeOnMerge" = true;
+                  "storageCleanup.worktreeOnDelete" = true;
+                  "storageCleanup.worktreeUnchanged" = true;
+                  "storageCleanup.browserArtifactsAfterDays" = 8;
+                  "storageCleanup.logsAfterDays" = 8;
+                  "defaultAutoPull" = true;
+                  "idleCompaction" = "beforeCacheExpires";
+                  "snoozeLimitedThreads" = true;
+                  "autoResumeLimitedThreads" = true;
+                  "sidebarAutoSettleOnMerge" = false;
+                  "branchNamingMode" = "semantic";
+                  "branchNamePrefix" = "whexy/";
+                  "pullRequestMergeMethod" = "rebase";
+                };
+        }
+      );
 
-      sessionVariables = privacyEnv;
+      home = {
+        packages = [
+          t3code
+          claudeModels
+        ]
+        ++ lib.optional cfg.pair.enable perSystem.self.t3-pair
+        ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly
+        # pkgs.nodejs rather than a pinned major: editor.javascript installs it
+        # too, and two different nodes would collide in the profile.
+        ++ lib.optional cfg.deviceHost.enable pkgs.nodejs;
 
-      file = lib.optionalAttrs linkBrowser {
-        ${browserDir}.source = browser;
+        sessionVariables = privacyEnv;
+
+        file = lib.optionalAttrs linkBrowser {
+          ${browserDir}.source = browser;
+        };
+
+        activation = {
+          t3codeClaudeModels = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            run ${lib.getExe claudeModels}
+          '';
+        }
+        // lib.optionalAttrs (cfg.server.enable && !policyApplied) {
+          t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
+            run ${lib.getExe linkedEnvironments}
+          '';
+        }
+        // lib.optionalAttrs (cfg.desktop.enable && cfg.server.enable) {
+          t3codeDesktopClientOnly = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            run ${lib.getExe desktopClientOnly}
+          '';
+        }
+        // lib.optionalAttrs (cfg.desktop.enable && isDarwin) {
+          t3codeDesktopApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+            if [ ! -e ${lib.escapeShellArg desktopApp} ]; then
+              run ${lib.getExe installDesktopApp} || warnEcho "T3 Code was not installed; the next activation retries"
+            fi
+          '';
+        }
+        # A server that ran before this link existed left its own download here,
+        # which Home Manager would otherwise refuse to replace.
+        // lib.optionalAttrs linkBrowser {
+          t3codeBrowser = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+            browser="$HOME/${browserDir}"
+            if [ -d "$browser" ] && [ ! -L "$browser" ]; then
+              run rm -rf $VERBOSE_ARG "$browser"
+            fi
+          '';
+        };
       };
 
-      activation = {
-        t3codeClaudeModels = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          run ${lib.getExe claudeModels}
-        '';
-      }
-      // lib.optionalAttrs cfg.server.enable {
-        t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
-          run ${lib.getExe linkedEnvironments}
-        '';
-      }
-      // lib.optionalAttrs (cfg.desktop.enable && cfg.server.enable) {
-        t3codeDesktopClientOnly = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          run ${lib.getExe desktopClientOnly}
-        '';
-      }
-      // lib.optionalAttrs (cfg.desktop.enable && isDarwin) {
-        t3codeDesktopApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          if [ ! -e ${lib.escapeShellArg desktopApp} ]; then
-            run ${lib.getExe installDesktopApp} || warnEcho "T3 Code was not installed; the next activation retries"
-          fi
-        '';
-      }
-      # A server that ran before this link existed left its own download here,
-      # which Home Manager would otherwise refuse to replace.
-      // lib.optionalAttrs linkBrowser {
-        t3codeBrowser = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-          browser="$HOME/${browserDir}"
-          if [ -d "$browser" ] && [ ! -L "$browser" ]; then
-            run rm -rf $VERBOSE_ARG "$browser"
-          fi
-        '';
-      };
-    };
+      systemd.user.services = services.systemdUserServices;
+      launchd.agents = services.launchdAgents;
 
-    systemd.user.services = services.systemdUserServices;
-    launchd.agents = services.launchdAgents;
-
-    dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (
-      let
-        hostname = flake.lib.publicHost "t3" hostName;
-      in
-      {
-        tunnel = "t3-${hostName}";
-        inherit hostname;
-        inherit (services) port;
-        description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
-      }
-    );
-  };
+      dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (
+        let
+          hostname = flake.lib.publicHost "t3" hostName;
+        in
+        {
+          tunnel = "t3-${hostName}";
+          inherit hostname;
+          inherit (services) port;
+          description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
+        }
+      );
+    })
+  ];
 }
