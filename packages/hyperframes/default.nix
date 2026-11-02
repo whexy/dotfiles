@@ -95,12 +95,15 @@ pkgs.buildNpmPackage (finalAttrs: {
     ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
     mv package.json.new package.json
 
-    # The module's file name changes with every release.
-    init=$(grep -l 'cpSync(templateDir, destDir, { recursive: true });' dist/init-*.js)
+    # Module file names change with every release, and the template copy
+    # goes through whichever helper upstream currently uses, so the copy is
+    # found by its arguments.
+    copyTemplate='[A-Za-z_$][A-Za-z0-9_$]*\(templateDir, destDir[^;]*\);'
+    init=$(grep -lE "$copyTemplate" dist/*.js)
     [ "$(printf '%s\n' "$init" | wc -l)" -eq 1 ]
+    [ "$(grep -cE "$copyTemplate" "$init")" -eq 1 ]
+    sed -Ei "s/$copyTemplate/& makeCopyWritable(templateDir, destDir);/" "$init"
     substituteInPlace "$init" \
-      --replace-fail 'cpSync(templateDir, destDir, { recursive: true });' \
-        'cpSync(templateDir, destDir, { recursive: true }); makeCopyWritable(templateDir, destDir);' \
       --replace-fail 'copyFileSync(src, dest);' \
         'copyFileSync(src, dest); makeCopyWritable(src, dest);'
     cat >> "$init" <<'EOF'
