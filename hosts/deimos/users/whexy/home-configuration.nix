@@ -2,5 +2,5 @@
 {
   imports = [ inputs.self.homeModules.host-user ];
 
-  dotfiles.agents.iphoneUse.enable = true;
+  dotfiles.agenticTooling.iphoneUse.enable = true;
 }

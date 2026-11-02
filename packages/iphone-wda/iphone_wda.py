@@ -45,7 +45,7 @@ def load_config() -> dict:
     try:
         return json.loads(CONFIG_PATH.read_text())
     except FileNotFoundError:
-        fail(f"{CONFIG_PATH} is missing; dotfiles.agents.iphoneUse writes it.")
+        fail(f"{CONFIG_PATH} is missing; dotfiles.agenticTooling.iphoneUse writes it.")
 
 
 def phone_config(config: dict, name: str) -> dict:

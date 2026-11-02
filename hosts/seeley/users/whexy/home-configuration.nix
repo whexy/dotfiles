@@ -5,7 +5,7 @@
   dotfiles = {
     panel.linuxBar = "eww";
     # Only this host: Ghidra brings REA's closure to about 2 GiB.
-    agents.rea = {
+    agenticTooling.rea = {
       enable = true;
       browser.enable = true;
       android.enable = true;

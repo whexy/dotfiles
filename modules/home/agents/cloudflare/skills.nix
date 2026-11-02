@@ -1,8 +1,8 @@
 # The skills cf ships, as a `dotfiles.agents.skills` value; the home module
 # and checks/agent-skills both take it from here.
-{ cf }:
+{ perSystem, ... }:
 {
-  packages = [ cf ];
+  packages = [ perSystem.self.cf ];
   override = {
     cf-cli = {
       patches = [ ./cf-cli-skill.patch ];

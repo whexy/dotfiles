@@ -119,10 +119,15 @@ from each other:
 
 Every agent reads `global-rules.md`, linked into its own config directory.
 
+`modules/home/agentic-tooling` (`dotfiles.agenticTooling`) holds the programs
+agents drive: REA, the video toolkit, iPhone Use, Spark, transcribe, and
+wechat. Each adds its own skills and MCP servers to the options above, and
+`modules/home/agents` never names one.
+
 `checks/t3-tailnet` and `checks/agent-skills` import plain functions beside
-the modules (`modules/home/t3code/services.nix`, `skill-tree/build.nix`, and each
-feature's `skills.nix`) so that they evaluate no home; those files take no
-module arguments.
+the modules (`modules/home/t3code/services.nix`, `skill-tree/build.nix`, and
+each feature's `skills.nix`) so that they evaluate no home; those files take
+no module arguments.
 
 ## Skills
 
@@ -152,10 +157,12 @@ checks.
 
 Every deviation from a package's skill carries a reason: `override` requires
 one, and a `local` skill that stands in for one a tool would install itself
-sets one. Each feature adds its skills in its own module, in the same gate as
-the CLI it installs. A feature that overrides skills keeps its settings in its
-own file (`cloudflare/skills.nix`, `iphone/skills.nix`, `video/skills.nix`),
-which `checks/agent-skills` imports too.
+sets one. Each feature declares its skills in a `skills.nix` beside its
+module: a `dotfiles.agents.skills` value, from a function of
+`{ pkgs, perSystem, ... }`. The module adds it in the same gate as the CLI it
+installs, and `checks/agent-skills` builds every `skills.nix` under
+`modules/home` together, so a new feature needs no change there beyond the
+list of skill names.
 
 | Skill                                     | Source                     | Taken                                         |
 | ----------------------------------------- | -------------------------- | --------------------------------------------- |
@@ -478,7 +485,7 @@ MCP server (`spark mcp`) over Streamable HTTP, at `POST /mcp`, and rejects
 every other Spark tool. Each request spawns its own `spark mcp`, so the server
 holds no state.
 
-sheridan runs it (`dotfiles.agents.spark.server.enable`) as the `spark-mcp`
+sheridan runs it (`dotfiles.agenticTooling.spark.server.enable`) as the `spark-mcp`
 launchd agent on loopback port 8765. The `spark-mcp-tunnel` agent publishes
 only `/mcp`, at `https://sheridan-spark.clusters.work/mcp` (tunnel
 `spark-sheridan`).
@@ -498,10 +505,11 @@ no credentials of its own.
 
 ## SimpleStudio MCP server
 
-`dotfiles.agents.studio` (on the `dev` cap, and wherever `video` is) registers
-SimpleStudio's MCP server, `https://studio-mcp.clusters.work/mcp`, with every
-agent. Its tools generate video on the studio's GPU Workers, and the `broll`
-skill fills B-roll slots with that footage.
+`dotfiles.agenticTooling.video.studio` (on the `dev` cap, and wherever `video`
+is) registers SimpleStudio's MCP server,
+`https://studio-mcp.clusters.work/mcp`, with every agent. Its tools generate
+video on the studio's GPU Workers, and the `broll` skill fills B-roll slots
+with that footage.
 
 Cloudflare Access is the server's OAuth provider. Studio acts as the account
 whose email the sign-in names and refuses service tokens, so each agent signs
@@ -519,8 +527,9 @@ redirect URIs for them.
 
 ## iPhone automation
 
-`dotfiles.agents.iphoneUse` (golf, mudd, deimos, sheridan) gives every agent
-iPhone Use's tools for the phones in `modules/home/agents/iphone/phones.nix`.
+`dotfiles.agenticTooling.iphoneUse` (golf, mudd, deimos, sheridan) gives every
+agent iPhone Use's tools for the phones in
+`modules/home/agentic-tooling/iphone/phones.nix`.
 
 Each phone runs WebDriverAgent on its own: it is launched as an installed app,
 not by xcodebuild, so it keeps serving after the launcher exits and with no
