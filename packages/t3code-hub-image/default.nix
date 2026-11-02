@@ -55,7 +55,7 @@ pkgs.dockerTools.streamLayeredImage {
       "T3CODE_HOME=/data"
       "HOME=/data/home"
       "SSL_CERT_FILE=${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt"
-      # The hosts' privacy settings (modules/home/agents/t3code).
+      # The hosts' privacy settings (modules/home/t3code).
       "T3CODE_TELEMETRY_ENABLED=false"
       "T3CODE_OTEL_SDK_DISABLED=true"
       "T3CODE_TRACE_MIN_LEVEL=None"

@@ -4,7 +4,7 @@
 
 # The T3 Code desktop app on Linux, at the nightly t3code-nightly pins. macOS
 # installs T3's signed app instead, which updates itself
-# (modules/home/agents/t3code).
+# (modules/home/t3code).
 let
   inherit (pkgs) lib;
   sources = lib.importJSON ../t3code-nightly/sources.json;

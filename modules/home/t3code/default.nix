@@ -9,7 +9,8 @@ args@{
   ...
 }:
 let
-  cfg = config.dotfiles.agents.t3code;
+  cfg = config.dotfiles.t3code;
+  inherit (config.dotfiles.tunnels) hostName;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
   # The nightly server package contains only T3's server runtime. Provider
@@ -246,7 +247,8 @@ let
     };
 in
 {
-  options.dotfiles.agents.t3code = {
+  options.dotfiles.t3code = {
+    enable = lib.mkEnableOption "T3 Code, the web GUI for coding agents, and its Claude gateway models";
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
@@ -277,22 +279,13 @@ in
         enable = lib.mkOption {
           type = lib.types.bool;
           default = cfg.server.enable;
-          defaultText = lib.literalExpression "config.dotfiles.agents.t3code.server.enable";
+          defaultText = lib.literalExpression "config.dotfiles.t3code.server.enable";
           description = ''
             Whether to publish the server on the public internet through a
             Cloudflare tunnel at the host's `flake.lib.publicHost "t3"` name. The
             host creates its own tunnel and DNS record on first start with the
             shared `cloudflared-cert` secret. The server's own pairing is the
             only gate in front of it.
-          '';
-        };
-        hostName = lib.mkOption {
-          type = lib.types.nullOr lib.types.str;
-          default = args.osConfig.dotfiles.host.hostName or null;
-          defaultText = lib.literalExpression "osConfig.dotfiles.host.hostName or null";
-          description = ''
-            Dotfiles host name the tunnel and its public name derive from.
-            Standalone homes have no osConfig to supply it.
           '';
         };
       };
@@ -317,11 +310,11 @@ in
     '';
   };
 
-  config = lib.mkIf config.dotfiles.agents.enable {
+  config = lib.mkIf cfg.enable {
     assertions = [
       {
-        assertion = cfg.server.tunnel.enable -> cfg.server.enable && cfg.server.tunnel.hostName != null;
-        message = "dotfiles.agents.t3code.server.tunnel.enable requires the server and dotfiles.agents.t3code.server.tunnel.hostName.";
+        assertion = cfg.server.tunnel.enable -> cfg.server.enable && hostName != null;
+        message = "dotfiles.t3code.server.tunnel.enable requires the server and dotfiles.tunnels.hostName.";
       }
     ];
 
@@ -381,10 +374,10 @@ in
 
     dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (
       let
-        hostname = flake.lib.publicHost "t3" cfg.server.tunnel.hostName;
+        hostname = flake.lib.publicHost "t3" hostName;
       in
       {
-        tunnel = "t3-${cfg.server.tunnel.hostName}";
+        tunnel = "t3-${hostName}";
         inherit hostname;
         inherit (services) port;
         description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
