@@ -11,6 +11,13 @@ from typing import Any
 from . import UpdateError, nix
 from .pins import replace_once
 
+# The trees that hold updatable packages: the directory under the repository
+# root, and where its entries live under the flake outputs.
+TREES = {
+    "packages": "packages.{system}",
+    "skills": "legacyPackages.{system}.skills",
+}
+
 
 @dataclass
 class Package:
@@ -21,14 +28,15 @@ class Package:
     pname: str = ""
     changelog: str | None = None
     updater: dict[str, Any] = field(default_factory=dict)
+    tree: str = "packages"
 
     @property
     def dir(self) -> Path:
-        return self.root / "packages" / self.name
+        return self.root / self.tree / self.name
 
     def attr(self, path: str = "") -> str:
         """The flake installable for this package, or one of its attributes."""
-        base = f"{self.root}#packages.{self.system}.{self.name}"
+        base = f"{self.root}#{TREES[self.tree].format(system=self.system)}.{self.name}"
         return f"{base}.{path}" if path else base
 
     @classmethod
@@ -40,10 +48,17 @@ class Package:
             root = Path(os.environ["UPDATE_ROOT"])
             version = os.environ["UPDATE_VERSION"]
             updater = json.loads(os.environ["UPDATE_CONFIG"])
+            tree = os.environ["UPDATE_TREE"]
         except KeyError as error:
             raise UpdateError(f"update.py runs under the driver ({error} unset)") from error
         return cls(
-            name=name, version=version, system=system, root=root, pname=name, updater=updater
+            name=name,
+            version=version,
+            system=system,
+            root=root,
+            pname=name,
+            updater=updater,
+            tree=tree,
         )
 
     def _file_containing(self, text: str) -> Path:

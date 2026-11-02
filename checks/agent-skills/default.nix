@@ -1,7 +1,8 @@
 # Builds every skill in the repo at once, as no single home does, so a patch
 # an upstream bump breaks or a skill with bad frontmatter fails CI before any
 # host switches. `expected` lists every skill agents can see; a change to what
-# agents see must change it too.
+# agents see must change it too. A skill repository's names come from its
+# build: its declaration under skills/ already says what it takes.
 {
   pkgs,
   perSystem,
@@ -14,7 +15,7 @@ let
 
   # Every feature that adds skills declares them in a skills.nix beside its
   # module, so a new feature is built here without being listed.
-  features = map (file: import file { inherit pkgs perSystem; }) (
+  features = map (file: import file { inherit pkgs perSystem flake; }) (
     flake.lib.importDir ../../modules/home { pattern = "/skills.nix"; }
   );
   merge =
@@ -68,7 +69,13 @@ pkgs.runCommand "agent-skills"
     meta.platforms = [ "x86_64-linux" ];
   }
   ''
-    diff -u ${expected} ${tree}/names
+    {
+      cat ${expected}
+      ${lib.concatMapStrings (repo: "ls ${repo}/share/skills\n") (
+        lib.attrValues (flake.lib.skillRepos pkgs)
+      )}
+    } | LC_ALL=C sort >expected
+    diff -u expected ${tree}/names
     for name in ${lib.concatStringsSep " " (lib.attrNames spec.docs)}; do
       test -e ${tree}/docs/$name/.
     done

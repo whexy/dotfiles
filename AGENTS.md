@@ -9,6 +9,8 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 - `/modules/home` - semantic Home Manager software groups
 - `/modules/home/caps` - Home Manager capability preset modules
 - `/overlays` - nixpkgs overlays
+- `/packages` - software this repo pins from upstream
+- `/skills` - skill repositories agents take skills from, pinned the same way
 
 ### System configs
 
@@ -161,7 +163,7 @@ Every deviation from a package's skill carries a reason: `override` requires
 one, and a `local` skill that stands in for one a tool would install itself
 sets one. Each feature declares its skills in a `skills.nix` beside its
 module: a `dotfiles.agents.skills` value, from a function of
-`{ pkgs, perSystem, ... }`. The module adds it in the same gate as the CLI it
+`{ pkgs, perSystem, flake, ... }`. The module adds it in the same gate as the CLI it
 installs, and `checks/agent-skills` builds every `skills.nix` under
 `modules/home` together, so a new feature needs no change there beyond the
 list of skill names.
@@ -169,6 +171,8 @@ list of skill names.
 | Skill                                     | Source                     | Taken                                                 |
 | ----------------------------------------- | -------------------------- | ----------------------------------------------------- |
 | `modules/home/agents/skills/*`            | local                      | ours                                                  |
+| `frost`, `frost-*`                        | `skills/wxstack`           | ours, published in whexy/wxstack                      |
+| `sol-loop`                                | `skills/tstack`            | picked from t3dotgg/tstack                            |
 | `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                            |
 | `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                        |
 | `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                            |
@@ -191,14 +195,44 @@ see, and a `SKILL.md` whose frontmatter `name` is not its directory or whose
 `description` is empty.
 
 `checks/agent-skills` builds every skill in the repo at once and compares the
-exposed names with the list written in it. The nightly update builds it for
-each package that ships skills, so an upstream bump that breaks a patch holds
-back only that package. Changing which skills agents see means changing that
-list.
+exposed names with the list written in it, plus what the skill repositories
+build. The nightly update builds it for each package that ships skills, so an
+upstream bump that breaks a patch holds back only that package. Changing
+which skills agents see, other than a repository's, means changing that list.
 
 ```sh
 nix build .#checks.x86_64-linux.agent-skills
 ```
+
+### Skill repositories
+
+A repository published for `npx skills` is a directory under `skills/`,
+beside `packages/`, and is pinned like a package:
+
+- `default.nix` declares it: `owner`, `repo`, and `skills`, the names to
+  take as `npx skills add --skill` takes them. Without `skills`, every
+  skill the repository publishes.
+- `sources.json` pins it: `version`, `rev` and `hash`. `nix run .#update --
+<name>` writes it, the first time and whenever the default branch moves,
+  with the commit date as `0-unstable-<date>`.
+- `update.py`, when present, replaces that updater with the package's own
+  (kind `script`, the declaration as its `settings`), for a repository
+  pinned some other way, such as to its releases.
+
+`flake.lib.skillRepos` turns each into a package of what the `skills` CLI
+installs from the pinned source, at `share/skills`, so agents see exactly
+what `npx skills add` gives and nothing is vendored. A pick the repository
+lacks fails the build, and so does an unpinned repository, so each new one is
+pinned before the next is added. `modules/home/agents/skills.nix` gives every
+repository to every agent, and `legacyPackages.<system>.skills` exposes
+them, so `nix build .#skills.<name>` shows one.
+
+Skills anyone could use live in [whexy/wxstack](https://github.com/whexy/wxstack),
+`skills/wxstack` here, which also installs with `npx skills add whexy/wxstack`
+and as a Claude Code plugin marketplace. Skills that name our hosts,
+credentials or infrastructure stay in `modules/home/agents/skills/`. Moving
+one to wxstack deletes the local copy in the same change: the tree fails on
+two sources for one name.
 
 ## Secrets
 
@@ -605,6 +639,8 @@ The kinds, cheapest first:
 
 - `nix-update`: runs `nix-update --flake <name>` with the package's `args`.
   Pins stay inline.
+- `github-branch`: the head of a GitHub repository's default branch, pinned
+  in `sources.json` as `rev`, `hash`, and the commit date as `version`.
 - `npm`: an npm registry tarball. Bumps it with nix-update, regenerates the
   vendored package-lock.json from package.json after `lockfileFilter`, the
   jq filter the package's `postPatch` also applies, and re-pins `npmDepsHash`.
@@ -619,8 +655,8 @@ The kinds, cheapest first:
 - `script`: the package's own `update.py`, written with the `updater` library
   in `packages/update`; it reads its `settings` from the config.
 
-The last three write `sources.json`, which the package reads with
-`lib.importJSON`. Any kind can also take `subpackages` (passthru fetchers
+`github-branch` and the last three write `sources.json`, which the package
+reads with `lib.importJSON`. Any kind can also take `subpackages` (passthru fetchers
 whose hash follows the version), `followBranch` (passthru git fetchers that
 move to their default branch's head with the package), `alsoBuild` (packages
 that read this one's pins) and `allowDowngrade`.
@@ -629,8 +665,8 @@ that read this one's pins) and `allowDowngrade`.
 when a package fetches an upstream source without a `passthru.updater`, or
 has an updater but no `meta.changelog`.
 
-`nix run .#update` updates every such package; name packages to update only
-those, and `--list` shows them. The driver builds each updated package and
+`nix run .#update` updates every such package, skill repositories included;
+name packages to update only those, and `--list` shows them. The driver builds each updated package and
 its `alsoBuild` on this system and evaluates them on the others; when one of
 them ships `share/skills`, it also builds `checks.<system>.agent-skills`. A
 package that fails is restored and reported, the rest continue, and the run

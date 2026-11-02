@@ -154,8 +154,14 @@
     blueprint
     // {
       legacyPackages = lib.mapAttrs (
-        _: legacy:
-        legacy // { homeConfigurations = lib.filterAttrs isStandalone legacy.homeConfigurations; }
+        system: legacy:
+        legacy
+        // {
+          homeConfigurations = lib.filterAttrs isStandalone legacy.homeConfigurations;
+          # The repositories under skills/, so `nix build .#skills.<name>` and
+          # the update driver reach one by name.
+          skills = blueprint.lib.skillRepos inputs.nixpkgs.legacyPackages.${system};
+        }
       ) blueprint.legacyPackages;
     };
 }
