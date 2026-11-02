@@ -328,6 +328,25 @@ through nix-ld, which the `dev` cap enables.
 
 To rotate, roll the token in the dashboard and repeat step 2.
 
+## AWS CLI
+
+The `dev` and `dev-lite` caps install AWS CLI v2
+(`dotfiles.tooling.aws.enable`). Its default profile uses `credential_process`
+to read `secrets/aws-credentials.age` when credentials are needed: JSON with
+`Version` set to `1`, `AccessKeyId`, and `SecretAccessKey`. No key is written
+to `~/.aws/credentials` or the shell environment.
+
+Verify access with `aws sts get-caller-identity --region us-east-1`. No default
+region is set; pass `--region`, set `AWS_DEFAULT_REGION`, or declare
+`programs.awscli.settings.default.region` in the home config. Existing AWS
+environment credentials take precedence over the default profile's process.
+To rotate, replace the key pair in the JSON, from `secrets/` on mudd or
+sheridan:
+
+```sh
+agenix -e aws-credentials.age -i ~/.ssh/agenix_ed25519
+```
+
 ## T3 Code server
 
 `modules/home/t3code` (`dotfiles.t3code`, on the `dev`, `dev-lite` and
