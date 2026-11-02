@@ -546,6 +546,10 @@ in
           };
         };
 
+        dotfiles.agents.skills.packages = [
+          perSystem.self.transcribe
+          perSystem.self.wechat-cli
+        ];
         # Adding a skill is a new directory under ./skills, never a change here.
         dotfiles.agents.skills.local = lib.mapAttrs (name: _: { source = ./skills + "/${name}"; }) (
           lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)

@@ -2,6 +2,8 @@
 let
   inherit (pkgs) lib python3;
 
+  # The skill is copied in at install, so editing it neither rebuilds the
+  # source nor reruns its checks.
   src = lib.fileset.toSource {
     root = ./.;
     fileset = lib.fileset.unions [
@@ -26,6 +28,11 @@ python3.pkgs.buildPythonApplication {
   inherit src;
 
   build-system = [ python3.pkgs.hatchling ];
+
+  postInstall = ''
+    mkdir -p $out/share
+    cp -r ${./skills} $out/share/skills
+  '';
 
   passthru = {
     tests = {
