@@ -32,6 +32,6 @@ in
         passAsFile = [ "spec" ];
       }
       ''
-        python3 ${./build-skills.py} "$specPath" "$out"
+        python3 ${./build.py} "$specPath" "$out"
       '';
 }

@@ -135,7 +135,7 @@ than discarding either writer's configuration.
 
 ## Development
 
-`withModelPicker.nix` in `modules/home/agents` writes the catalog and wraps each
+`launcher/with-model-picker.nix` in `modules/home/agents` writes the catalog and wraps each
 agent with `agent-settings <catalog> launch|select|sync`. Type checking
 (basedpyright) and linting (ruff) are separate flake checks:
 
