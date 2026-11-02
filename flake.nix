@@ -109,6 +109,13 @@
     # prebuilt from pwndbg.cachix.org.
     pwndbg.url = "github:pwndbg/pwndbg/2026.09.15";
 
+    # whexy/t3code's T3 server for x86_64-linux, which reads
+    # T3CODE_DEV_MANAGED_POLICY_PATH. Not following our nixpkgs: Woodpecker
+    # pushes to ci-cache only the paths the fork's own lock builds.
+    # TODO(t3code fork): pinned to whexy/t3code#4's head, which CI built; once
+    # it merges, follow github:whexy/t3code/self-hosted-nightly instead.
+    t3code-fork.url = "github:whexy/t3code/b31df7f1078821579063821b1af5f4927030e8d7";
+
     paneru = {
       # Paneru's Lua layout API is newer than v0.4.4; flake.lock pins the
       # tested main revision until the next release includes it.
