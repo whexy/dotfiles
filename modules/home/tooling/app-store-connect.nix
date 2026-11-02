@@ -7,7 +7,6 @@
 {
   config,
   lib,
-  pkgs,
   perSystem,
   ...
 }:
@@ -19,26 +18,28 @@ let
   # They name the key in the secret; replace them when replacing the key.
   keyId = "8QCF5687D8";
   issuerId = "ef1c3fa8-e9ae-4581-b6c8-fea147b0786a";
-
-  loadKey = ''
-    if ASC_PRIVATE_KEY=$(${lib.getExe config.dotfiles.onepassword.package} read app-store-connect-api-key); then
-      export ASC_PRIVATE_KEY ASC_KEY_ID=${keyId} ASC_ISSUER_ID=${issuerId}
-    else
-      unset ASC_PRIVATE_KEY
-      echo "asc: could not load the App Store Connect API key" >&2
-    fi
-  '';
 in
 {
   config = lib.mkIf cfg.enable {
     home.packages = [
-      (pkgs.symlinkJoin {
-        inherit (asc) name meta;
-        paths = [ asc ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          wrapProgram $out/bin/asc --run ${lib.escapeShellArg loadKey}
-        '';
+      (config.dotfiles.onepassword.wrap {
+        package = asc;
+        env.ASC_PRIVATE_KEY = "app-store-connect-api-key";
+        withSecret = {
+          ASC_KEY_ID = keyId;
+          ASC_ISSUER_ID = issuerId;
+        };
+        # Credentials the caller brings in any form asc takes. A selected
+        # profile outranks environment credentials, so loading would waste a
+        # request.
+        callerWins = [
+          "ASC_PRIVATE_KEY"
+          "ASC_PRIVATE_KEY_B64"
+          "ASC_PRIVATE_KEY_PATH"
+          "ASC_KEY_ID"
+          "ASC_ISSUER_ID"
+          "ASC_PROFILE"
+        ];
       })
     ];
   };

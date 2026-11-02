@@ -13,20 +13,26 @@
 let
   cfg = config.dotfiles.tooling.woodpecker;
 
-  wrapped = pkgs.writeShellScriptBin "woodpecker-cli" ''
-    set -euo pipefail
-
-    if ! WOODPECKER_TOKEN=$(${lib.getExe config.dotfiles.onepassword.package} read woodpecker-token); then
-      echo "woodpecker-cli: could not load the Woodpecker token" >&2
-      exit 1
-    fi
-    export WOODPECKER_TOKEN
-    export WOODPECKER_SERVER=${lib.escapeShellArg cfg.server}
-    # Nix owns this binary; the self-updater must never fire.
-    export WOODPECKER_DISABLE_UPDATE_CHECK=1
-
-    exec ${lib.getExe pkgs.woodpecker-cli} "$@"
-  '';
+  wrapped = config.dotfiles.onepassword.wrap {
+    package = pkgs.woodpecker-cli;
+    env.WOODPECKER_TOKEN = "woodpecker-token";
+    # Shell completion runs woodpecker-cli with this flag on every Tab. It
+    # contacts no server, but will not start without a token.
+    skipWhen = {
+      anyArg = [ "--generate-shell-completion" ];
+      env.WOODPECKER_TOKEN = "completion";
+    };
+    wrapperArgs = [
+      # A default, so a caller's token for another server never goes here.
+      "--set-default"
+      "WOODPECKER_SERVER"
+      cfg.server
+      # Nix owns this binary; the self-updater must never fire.
+      "--set"
+      "WOODPECKER_DISABLE_UPDATE_CHECK"
+      "1"
+    ];
+  };
 in
 {
   config = lib.mkIf cfg.enable {
