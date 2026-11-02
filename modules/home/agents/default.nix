@@ -26,6 +26,80 @@ in
   options.dotfiles.agents = {
     enable = lib.mkEnableOption "agents";
 
+    # Every agent reads the same skills, linked into each agent's user-scope
+    # skill directory. A skill is a directory holding a SKILL.md, per the
+    # Agent Skills standard every harness implements.
+    skills = {
+      packages = lib.mkOption {
+        type = lib.types.listOf lib.types.package;
+        default = [ ];
+        description = ''
+          Packages whose skills, at `share/skills/<name>/SKILL.md`, agents
+          see. Only these are read, never the whole home profile.
+        '';
+      };
+      local = lib.mkOption {
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options = {
+              source = lib.mkOption {
+                type = lib.types.path;
+                description = "The skill's directory.";
+              };
+              reason = lib.mkOption {
+                type = lib.types.nullOr lib.types.str;
+                default = null;
+                description = "Why this skill is written here rather than taken from a package, when a tool it covers ships its own.";
+              };
+            };
+          }
+        );
+        default = { };
+        description = "Skills that come from this repository rather than a package.";
+      };
+      override = lib.mkOption {
+        type = lib.types.attrsOf (
+          lib.types.submodule {
+            options = {
+              patches = lib.mkOption {
+                type = lib.types.listOf lib.types.path;
+                default = [ ];
+                description = "Patches applied to the skill's directory with `patch -p1 --fuzz=0`.";
+              };
+              replace = lib.mkOption {
+                type = lib.types.nullOr lib.types.path;
+                default = null;
+                description = "A directory that stands in for the package's skill.";
+              };
+              ignore = lib.mkOption {
+                type = lib.types.bool;
+                default = false;
+                description = "Whether to hide the skill from agents.";
+              };
+              reason = lib.mkOption {
+                type = lib.types.str;
+                description = "Why the package's skill is not taken as it is.";
+              };
+            };
+          }
+        );
+        default = { };
+        description = ''
+          Changes to a skill a package in `packages` provides: exactly one of
+          `patches`, `replace` or `ignore`.
+        '';
+      };
+      docs = lib.mkOption {
+        type = lib.types.attrsOf lib.types.path;
+        default = { };
+        description = ''
+          Trees skills read by path, linked at
+          `~/.local/share/video-edit/docs/<name>`. They are not registered as
+          skills, so their contents are not checked.
+        '';
+      };
+    };
+
     firefoxDevtools.enable = lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
 
     iphoneUse = {
@@ -294,56 +368,38 @@ in
         fi
         exec ${lib.getExe perSystem.self.transcribe} "$@"
       '';
-      # Every skill is a directory holding a SKILL.md, per the Agent Skills
-      # standard every harness implements.
-      skills =
-        lib.mapAttrs (name: _: ./skills + "/${name}") (
-          lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
-        )
-        # Taken from the package so the instructions match the server's tools.
-        // lib.optionalAttrs cfg.rea.enable {
-          reverse-engineer-anything = "${rea.base}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
-        }
-        // lib.optionalAttrs cfg.video.enable video.skills
-        // lib.optionalAttrs cfg.iphoneUse.enable {
-          iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
-          # Upstream's setup skill builds and starts WebDriverAgent with
-          # xcodebuild on one USB phone; here phones run it on their own and
-          # are chosen per session. The usage skill links to it by this name.
-          iphone-use-setup = ./iphone/iphone-use-setup;
-        }
-        # The search-and-read part of `spark skill` from Spark 1.4.1; compare
-        # against a newer CLI's output when its commands change.
-        // lib.optionalAttrs cfg.spark.enable { spark = ./spark/skill; }
-        # Points at the guides asc prints, which match the installed version,
-        # instead of the skill pack `asc install-skills` would copy in.
-        // lib.optionalAttrs config.dotfiles.tooling.appStoreConnect.enable { asc = ./asc/skill; }
-        # Cloudflare's skill for cf, whose install and sign-in steps would
-        # have agents run `npm install --global cf` and `cf auth login`; here
-        # Nix installs cf and it signs in with the 1Password token.
-        // lib.optionalAttrs config.dotfiles.tooling.cloudflare.cli.enable {
-          cf-cli = pkgs.applyPatches {
-            name = "cf-cli-skill";
-            src = perSystem.self.cf.skill;
-            patches = [ ./cloudflare/cf-cli-skill.patch ];
-          };
-        };
+      skillsBuilder = import ./build-skills.nix { inherit pkgs; };
+      skillTree = skillsBuilder.build cfg.skills;
       # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
-      # for skills it downloads from the account, so every harness gets one
-      # symlink per skill rather than a single directory symlink.
-      mkSkillLinks =
-        prefix: lib.mapAttrs' (name: src: lib.nameValuePair "${prefix}/${name}" { source = src; }) skills;
+      # for skills it downloads from the account, so every root holds one
+      # real directory per skill rather than being a link itself.
+      skillRoots = [
+        ".agents/skills"
+        ".claude/skills"
+        ".config/muse/skills"
+      ];
 
-      # `~/.agents/skills` used to be one symlink to a store directory; it is
-      # now a real directory of per-skill links. Home Manager cannot make that
-      # transition on its own: it tries to back the old symlink up by moving
-      # its read-only store target, fails, and then refuses to overwrite it,
-      # so activation dies before any link is written.
+      # Activation cannot move a root, or a skill in one, from a link to a
+      # directory: Home Manager tries to back the old link up by moving its
+      # read-only store target, or reads through it and reports every file
+      # as a collision, and dies before any link is written. So this removes
+      # `~/.agents/skills` when it is one link, and in every root each skill
+      # that links into a generation's files. Other entries, Claude Code's
+      # `synced/` among them, are not Home Manager's and stay.
       # Remove once every host has activated a generation that has this.
       migrateSkillsDir = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
         if [ -L "$HOME/.agents/skills" ]; then
           run rm $VERBOSE_ARG "$HOME/.agents/skills"
         fi
+        for root in ${lib.concatMapStringsSep " " (root: ''"$HOME/${root}"'') skillRoots}; do
+          for entry in "$root"/*; do
+            if [ -L "$entry" ]; then
+              case "$(readlink "$entry")" in
+                *-home-manager-files/*) run rm $VERBOSE_ARG "$entry" ;;
+              esac
+            fi
+          done
+        done
       '';
       agents = [
         (import ./opencode/home.nix {
@@ -416,78 +472,169 @@ in
         }
       );
     in
-    {
-      assertions = [
-        {
-          # Resolve's MCP server is the macOS app's own, or a Windows program
-          # reached through WSL interop. Standalone homes have no osConfig to
-          # say this is WSL.
-          assertion =
-            cfg.video.enable -> pkgs.stdenv.hostPlatform.isDarwin || args.osConfig.dotfiles.host.wsl or false;
-          message = "dotfiles.agents.video.enable requires a macOS or WSL host.";
-        }
-        {
-          assertion =
-            cfg.t3code.server.tunnel.enable
-            -> cfg.t3code.server.enable && cfg.t3code.server.tunnel.hostName != null;
-          message = "dotfiles.agents.t3code.server.tunnel.enable requires the server and dotfiles.agents.t3code.server.tunnel.hostName.";
-        }
-        {
-          # Spark Desktop runs only on macOS, and the tunnel's name comes from
-          # the host, which standalone homes have no osConfig to supply.
-          assertion = cfg.spark.server.enable -> args.osConfig.nixpkgs.hostPlatform.isDarwin or false;
-          message = "dotfiles.agents.spark.server.enable requires a nix-darwin host.";
-        }
-        {
-          assertion = cfg.spark.server.enable -> cfg.spark.server.accessAud != null;
-          message = "dotfiles.agents.spark.server.enable requires dotfiles.agents.spark.server.accessAud, the AUD tag of the host's Access application.";
-        }
-      ];
-
-      home = {
-        # Single source of truth for global agent rules; every agent reads it.
-        # Claude Code gets extra tool-specific guidance appended by its own
-        # home.nix.
-        file = {
-          ".codex/AGENTS.md".source = ./AGENTS.md;
-          ".config/opencode/AGENTS.md".source = ./AGENTS.md;
-        }
-        # User-scope skill location for codex and opencode; adding a skill is
-        # a new directory under ./skills, never a change here.
-        // mkSkillLinks ".agents/skills"
-        // mkSkillLinks ".claude/skills"
-        // mkSkillLinks ".config/muse/skills"
-        // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents)
-        // lib.optionalAttrs cfg.video.enable video.homeFiles;
-
-        # CLIs that shared skills drive; every harness reaches them through PATH.
-        packages = [
-          transcribe
-          perSystem.self.wechat-cli
+    lib.mkMerge [
+      {
+        assertions = [
+          {
+            # Resolve's MCP server is the macOS app's own, or a Windows program
+            # reached through WSL interop. Standalone homes have no osConfig to
+            # say this is WSL.
+            assertion =
+              cfg.video.enable -> pkgs.stdenv.hostPlatform.isDarwin || args.osConfig.dotfiles.host.wsl or false;
+            message = "dotfiles.agents.video.enable requires a macOS or WSL host.";
+          }
+          {
+            assertion =
+              cfg.t3code.server.tunnel.enable
+              -> cfg.t3code.server.enable && cfg.t3code.server.tunnel.hostName != null;
+            message = "dotfiles.agents.t3code.server.tunnel.enable requires the server and dotfiles.agents.t3code.server.tunnel.hostName.";
+          }
+          {
+            # Spark Desktop runs only on macOS, and the tunnel's name comes from
+            # the host, which standalone homes have no osConfig to supply.
+            assertion = cfg.spark.server.enable -> args.osConfig.nixpkgs.hostPlatform.isDarwin or false;
+            message = "dotfiles.agents.spark.server.enable requires a nix-darwin host.";
+          }
+          {
+            assertion = cfg.spark.server.enable -> cfg.spark.server.accessAud != null;
+            message = "dotfiles.agents.spark.server.enable requires dotfiles.agents.spark.server.accessAud, the AUD tag of the host's Access application.";
+          }
         ]
-        ++ lib.optional cfg.rea.enable rea.package
-        ++ lib.optionals cfg.video.enable video.packages
-        ++ lib.concatMap (a: a.packages or [ ]) agents;
+        ++ lib.mapAttrsToList (name: o: {
+          assertion =
+            lib.length (
+              lib.filter lib.id [
+                (o.patches != [ ])
+                (o.replace != null)
+                o.ignore
+              ]
+            ) == 1;
+          message = "dotfiles.agents.skills.override.${name} must set exactly one of patches, replace or ignore.";
+        }) cfg.skills.override;
 
-        shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
+        home = {
+          # Single source of truth for global agent rules; every agent reads it.
+          # Claude Code gets extra tool-specific guidance appended by its own
+          # home.nix.
+          file = {
+            ".codex/AGENTS.md".source = ./AGENTS.md;
+            ".config/opencode/AGENTS.md".source = ./AGENTS.md;
+          }
+          // lib.genAttrs skillRoots (_: {
+            source = "${skillTree}/skills";
+            recursive = true;
+          })
+          // lib.mapAttrs' (
+            name: _:
+            lib.nameValuePair ".local/share/video-edit/docs/${name}" { source = "${skillTree}/docs/${name}"; }
+          ) cfg.skills.docs
+          // lib.mergeAttrsList (map (a: a.homeFiles or { }) agents);
 
-        sessionVariables =
-          lib.mergeAttrsList (map (a: a.sessionVariables or { }) agents)
-          // lib.optionalAttrs cfg.rea.enable rea.sessionVariables;
+          # CLIs that shared skills drive; every harness reaches them through PATH.
+          packages = [
+            transcribe
+            perSystem.self.wechat-cli
+          ]
+          ++ lib.concatMap (a: a.packages or [ ]) agents;
 
-        activation = lib.mergeAttrsList (map (a: a.activation or { }) agents) // {
-          inherit migrateSkillsDir;
+          shellAliases = lib.mergeAttrsList (map (a: a.shellAliases or { }) agents);
+
+          sessionVariables = lib.mergeAttrsList (map (a: a.sessionVariables or { }) agents);
+
+          activation = lib.mergeAttrsList (map (a: a.activation or { }) agents) // {
+            inherit migrateSkillsDir;
+          };
         };
-      };
 
-      systemd.user.services = lib.mergeAttrsList (map (a: a.systemdUserServices or { }) agents);
-      launchd.agents = lib.mergeAttrsList (map (a: a.launchdAgents or { }) agents);
+        # Adding a skill is a new directory under ./skills, never a change here.
+        dotfiles.agents.skills.local = lib.mapAttrs (name: _: { source = ./skills + "/${name}"; }) (
+          lib.filterAttrs (_: type: type == "directory") (builtins.readDir ./skills)
+        );
 
-      age.secrets = lib.mkIf (cfg.t3code.server.tunnel.enable || cfg.spark.server.enable) {
-        # `cloudflared tunnel login` cert for the tunnels' zone: it creates
-        # tunnels and edits any DNS record in that zone.
-        cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
-      };
-    }
+        systemd.user.services = lib.mergeAttrsList (map (a: a.systemdUserServices or { }) agents);
+        launchd.agents = lib.mergeAttrsList (map (a: a.launchdAgents or { }) agents);
+
+        age.secrets = lib.mkIf (cfg.t3code.server.tunnel.enable || cfg.spark.server.enable) {
+          # `cloudflared tunnel login` cert for the tunnels' zone: it creates
+          # tunnels and edits any DNS record in that zone.
+          cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
+        };
+      }
+
+      (lib.mkIf cfg.rea.enable {
+        home.packages = [ rea.package ];
+        home.sessionVariables = rea.sessionVariables;
+        # Taken from the package so the instructions match the server's tools.
+        dotfiles.agents.skills.packages = [
+          (skillsBuilder.fromPaths "rea-agents" {
+            reverse-engineer-anything = "${rea.base}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
+          })
+        ];
+      })
+
+      (lib.mkIf cfg.video.enable {
+        home.packages = video.packages;
+        home.file = video.homeFiles;
+        dotfiles.agents.skills = {
+          local = lib.mapAttrs (_: source: { inherit source; }) video.skills;
+          inherit (video) docs;
+        };
+      })
+
+      (lib.mkIf cfg.iphoneUse.enable {
+        dotfiles.agents.skills = {
+          packages = [
+            (skillsBuilder.fromPaths "iphone-use" {
+              iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
+              iphone-use-setup = "${iphoneUse}/share/iphone-use/skills/iphone-use-setup";
+            })
+          ];
+          override.iphone-use-setup = {
+            replace = ./iphone/iphone-use-setup;
+            reason = ''
+              Upstream's setup skill builds and starts WebDriverAgent with
+              xcodebuild on one USB phone; here phones run it on their own and
+              are chosen per session. The usage skill links to it by this name.
+            '';
+          };
+        };
+      })
+
+      (lib.mkIf cfg.spark.enable {
+        dotfiles.agents.skills.local.spark = {
+          source = ./spark/skill;
+          reason = ''
+            The search-and-read part of `spark skill` from Spark 1.4.1, which
+            Spark Desktop prints at runtime and no package ships. Compare
+            against a newer CLI's output when its commands change.
+          '';
+        };
+      })
+
+      (lib.mkIf config.dotfiles.tooling.appStoreConnect.enable {
+        dotfiles.agents.skills.local.asc = {
+          source = ./asc/skill;
+          reason = ''
+            Points at the guides asc prints, which match the installed
+            version, instead of the skill pack `asc install-skills` would copy
+            in at runtime.
+          '';
+        };
+      })
+
+      (lib.mkIf config.dotfiles.tooling.cloudflare.cli.enable {
+        dotfiles.agents.skills = {
+          packages = [ (skillsBuilder.fromPaths "cf" { cf-cli = perSystem.self.cf.skill; }) ];
+          override.cf-cli = {
+            patches = [ ./cloudflare/cf-cli-skill.patch ];
+            reason = ''
+              Cloudflare's install and sign-in steps would have agents run
+              `npm install --global cf` and `cf auth login`; here Nix installs
+              cf and it signs in with the 1Password token.
+            '';
+          };
+        };
+      })
+    ]
   );
 }

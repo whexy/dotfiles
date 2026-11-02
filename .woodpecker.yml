@@ -57,10 +57,12 @@ variables:
       echo "OK - tree $tree already passed"
     else
       system=$(nix eval --raw --impure --expr builtins.currentSystem)
-      nix build --accept-flake-config ".#checks.$system.pre-commit" ".#checks.$system.bot-update-rollout" ".#checks.$system.package-updaters" ".#packages.$system.dotfiles-upgraded" -L --no-link
+      nix build --accept-flake-config ".#checks.$system.pre-commit" ".#checks.$system.bot-update-rollout" ".#checks.$system.package-updaters" ".#checks.$system.agent-skills" ".#packages.$system.dotfiles-upgraded" -L --no-link
 
-      # Nix passes agent skills through as paths and reads markdown only as
-      # text, so editing them can break evaluation only by removing a file.
+      # A skill edit can break its frontmatter or a patch over it, which the
+      # agent-skills check above has already caught. Beyond that, Nix passes
+      # skills through as paths and reads markdown only as text, so editing
+      # them can break evaluation only by removing a file.
       docs_only=$(nix eval --impure --expr '
         let files = builtins.fromJSON (builtins.getEnv "CI_PIPELINE_FILES"); in
         files != [ ] && builtins.all (f:
