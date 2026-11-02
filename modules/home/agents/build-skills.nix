@@ -34,17 +34,4 @@ in
       ''
         python3 ${./build-skills.py} "$specPath" "$out"
       '';
-
-  # Exposes skills a package keeps at its own paths as a package with
-  # `share/skills/<name>`.
-  fromPaths =
-    pname: skills:
-    pkgs.runCommand "${pname}-skills" { } ''
-      mkdir -p $out/share/skills
-      ${lib.concatStrings (
-        lib.mapAttrsToList (name: source: ''
-          cp -r ${source} $out/share/skills/${name}
-        '') skills
-      )}
-    '';
 }
