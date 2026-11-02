@@ -32,10 +32,11 @@ ManimGX for math, graphs and diagrams that morph. When the brief asks for real
 footage, generate it with Studio instead; see
 [Footage from Studio](#footage-from-studio).
 
-- HyperFrames: read `hyperframes-core/SKILL.md` and
-  `hyperframes-animation/SKILL.md` in `~/.local/share/video-edit/docs/hyperframes/`.
-  Skip the `hyperframes` entry skill; its interview, usage and upgrade steps
-  are for interactive sessions. Where the docs say `npx hyperframes` or
+- HyperFrames: read `hyperframes/SKILL.md` in
+  `~/.local/share/video-edit/docs/hyperframes/`, and the files under its
+  `references/` it points to for the slot (`motion.md` for animation). Skip
+  its plugin-install, usage and freshness steps; they are for interactive
+  sessions. Where the docs say `npx hyperframes` or
   `npm run`, run `hyperframes` itself: `npx` fetches another version, and on
   Linux a Chrome that cannot start.
 - ManimGX: `manimgx` is ManimGX 0.1.1, Manim CE's API (`import manimgx as m`)
