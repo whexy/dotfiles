@@ -9,6 +9,7 @@
 {
   config,
   lib,
+  pkgs,
   perSystem,
   ...
 }:
@@ -40,5 +41,8 @@ let
       cf;
 in
 {
-  config = lib.mkIf cfg.cli.enable { home.packages = [ package ]; };
+  config = lib.mkIf cfg.cli.enable {
+    home.packages = [ package ];
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
+  };
 }

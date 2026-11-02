@@ -86,7 +86,7 @@ in
       default = { };
       description = ''
         Trees skills read by path, linked at
-        `~/.local/share/video-edit/docs/<name>`. They are not registered as
+        `~/.local/share/agents/docs/<name>`. They are not registered as
         skills, so their contents are not checked.
       '';
     };
@@ -111,8 +111,7 @@ in
         recursive = true;
       })
       // lib.mapAttrs' (
-        name: _:
-        lib.nameValuePair ".local/share/video-edit/docs/${name}" { source = "${tree}/docs/${name}"; }
+        name: _: lib.nameValuePair ".local/share/agents/docs/${name}" { source = "${tree}/docs/${name}"; }
       ) cfg.docs;
 
     # Activation cannot move a root, or a skill in one, from a link to a
