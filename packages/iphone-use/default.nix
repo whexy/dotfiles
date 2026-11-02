@@ -4,7 +4,7 @@ let
 in
 pkgs.stdenv.mkDerivation (finalAttrs: {
   pname = "iphone-use";
-  version = "0.3.15";
+  version = "0.3.16";
 
   # Its setup pins the WebDriverAgent revision it fetches into the user's
   # state directory, so the checkout stays a runtime concern.
@@ -12,7 +12,7 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     owner = "zhongerxin";
     repo = "iPhone-use";
     tag = "v${finalAttrs.version}";
-    hash = "sha256-JwoDQ053h18A5NrOzrlvJiID7w/G+L4HMZ1hIOxbvf8=";
+    hash = "sha256-1+63KhNJEx9UDlazNqV25k7z1hMECeEMqDOEjRbHQsE=";
   };
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
