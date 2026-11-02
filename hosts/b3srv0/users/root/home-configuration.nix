@@ -16,11 +16,11 @@
   dotfiles = {
     onepassword.serviceAccount = "root@b3srv0";
     autoUpgrade.enable = true;
-    agents.t3code = {
+    tunnels.hostName = "b3srv0";
+    t3code = {
       # Off the tailnet, so the tunnel is the server's only route.
       server = {
         enable = true;
-        tunnel.hostName = "b3srv0";
       };
       pair.enable = true;
     };

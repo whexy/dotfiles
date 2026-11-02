@@ -9,7 +9,7 @@ args@{
 }:
 let
   cfg = config.dotfiles.agents.spark;
-  hostName = args.osConfig.dotfiles.host.hostName or null;
+  inherit (config.dotfiles.tunnels) hostName;
 
   # The Cloudflare tunnel proxies to this loopback port.
   port = 8765;

@@ -10,7 +10,10 @@
       enable = lib.mkDefault true;
       firefoxDevtools.enable = lib.mkDefault true;
       studio.enable = lib.mkDefault true;
-      t3code.pair.enable = lib.mkDefault true;
+    };
+    t3code = {
+      enable = lib.mkDefault true;
+      pair.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser
     # whether or not it has a display.

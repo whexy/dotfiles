@@ -16,7 +16,7 @@ let
   '';
   moduleFor =
     isDarwin: enabled: tailnetEnabled:
-    import ../../modules/home/agents/t3code/services.nix {
+    import ../../modules/home/t3code/services.nix {
       pkgs = pkgs // {
         stdenv = pkgs.stdenv // {
           hostPlatform = pkgs.stdenv.hostPlatform // {

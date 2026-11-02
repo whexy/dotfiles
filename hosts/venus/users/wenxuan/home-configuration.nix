@@ -16,7 +16,7 @@
   dotfiles = {
     onepassword.serviceAccount = "wenxuan@venus";
     autoUpgrade.enable = true;
-    agents.t3code.pair.enable = false;
+    t3code.pair.enable = false;
   };
 
   targets.genericLinux.enable = true;
