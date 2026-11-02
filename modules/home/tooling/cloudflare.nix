@@ -9,7 +9,6 @@
 {
   config,
   lib,
-  pkgs,
   perSystem,
   ...
 }:
@@ -23,30 +22,19 @@ let
   # `.cloudflare/cache/` in whatever directory it ran from.
   accountId = "056856e343cb070b2f297daa073054fa";
 
-  loadToken = ''
-    if [ -z "''${CLOUDFLARE_API_TOKEN:-}" ] &&
-      ! ${lib.getExe pkgs.gnugrep} -Eqs '^[[:space:]]*(export[[:space:]]+)?CLOUDFLARE_API_TOKEN[[:space:]]*=' .env; then
-      if CLOUDFLARE_API_TOKEN=$(${lib.getExe config.dotfiles.onepassword.package} read cloudflare-api-token); then
-        export CLOUDFLARE_API_TOKEN
-        export CLOUDFLARE_ACCOUNT_ID="''${CLOUDFLARE_ACCOUNT_ID:-${accountId}}"
-      else
-        unset CLOUDFLARE_API_TOKEN
-        echo "cf: could not load the Cloudflare API token; running signed out" >&2
-      fi
-    fi
-  '';
-
   package =
     if cfg.apiToken.enable then
-      pkgs.symlinkJoin {
-        inherit (cf) name meta;
-        paths = [ cf ];
-        nativeBuildInputs = [ pkgs.makeWrapper ];
-        postBuild = ''
-          for program in cf cloudflare; do
-            wrapProgram $out/bin/$program --run ${lib.escapeShellArg loadToken}
-          done
-        '';
+      config.dotfiles.onepassword.wrap {
+        package = cf;
+        programs = [
+          "cf"
+          "cloudflare"
+        ];
+        env.CLOUDFLARE_API_TOKEN = "cloudflare-api-token";
+        withSecret.CLOUDFLARE_ACCOUNT_ID = accountId;
+        dotenv = true;
+        # Shell completion runs `cf complete` on every Tab.
+        skipWhen.firstArg = [ "complete" ];
       }
     else
       cf;
