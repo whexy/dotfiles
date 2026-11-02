@@ -675,10 +675,10 @@ The nightly `update` step in `.woodpecker.yml` runs `nix flake update`, then
 
 ## CI repair
 
-When a pipeline on master fails (a push's check or the update lane), its
-last step, `report-failure`, posts the failure to a webhook task on mudd's
-T3 Code server, "Repair a failed dotfiles pipeline". The task starts an
-agent run in the Dotfiles project that reruns a transient failure,
+When a pipeline on master fails (a push's check, the update lane, or the
+t3code-fork pin lane), its last step, `report-failure`, posts the failure to a webhook
+task on mudd's T3 Code server, "Repair a failed dotfiles pipeline". The task
+starts an agent run in the Dotfiles project that reruns a transient failure,
 or ships a fix as a rebase-merged pull request and reruns the update lane, so
 the packages it reverted update. Pull requests are not reported.
 
@@ -686,8 +686,11 @@ the packages it reverted update. Pull requests are not reported.
   to push, cron and manual events. It takes no image filter: Woodpecker
   then gives it only to plugins, and `report-failure` is a plain step. A new
   task means a new URL in that secret (see the `t3-setup` skill).
-- The task runs once per event, cron and commit, so a pipeline that fails
-  again on the same commit, such as a rerun, starts no second repair.
+- The task runs once per event, cron, commit and pinned fork revision
+  (`t3code_fork_rev` in the report), so a pipeline that fails again on the
+  same commit, such as a rerun, starts no second repair.
+- When the task does not accept the report, `report-failure` posts it to the
+  alert webhook instead, which reaches WeChat.
 
 ## Verification
 

@@ -166,6 +166,106 @@ steps:
       - *check
       - *push
       - exit "$updated"
+  # Pin the t3code-fork input to a commit whexy/t3code's CI built and pushed
+  # to whexy-t3code.cachix.org. That CI starts this lane through Woodpecker's
+  # API, as a manual run with the variable T3CODE_FORK_REV; no other manual
+  # step runs then. A rev that is no longer the fork's head is superseded by
+  # the run its successor starts, so it ends without pinning.
+  pin-t3code-fork:
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
+    when:
+      - event: manual
+        evaluate: '(T3CODE_FORK_REV ?? "") != ""'
+    backend_options: *k8s_heavy
+    environment: *github_app
+    commands:
+      - *rex_netrc
+      - git config user.name "whexy-bot[bot]"
+      - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
+      - |
+        rev=$T3CODE_FORK_REV
+        case $rev in
+          *[!0-9a-f]* | "") valid=false ;;
+          *) [ "$(printf %s "$rev" | wc -c)" -eq 40 ] && valid=true || valid=false ;;
+        esac
+        if [ "$valid" != true ]; then
+          echo "FAILED(validate) - T3CODE_FORK_REV is not a full commit hash: $rev"
+          exit 1
+        fi
+        is_head() {
+          set -- $(git ls-remote https://github.com/whexy/t3code refs/heads/self-hosted-nightly)
+          [ "$1" = "$rev" ]
+        }
+        if ! is_head; then
+          echo "SUPERSEDED - $rev is no longer the head of whexy/t3code self-hosted-nightly"
+          exit 0
+        fi
+      # Every host substitutes the server, so its whole closure must be in
+      # Cachix or cache.nixos.org. A dry run against an empty store lists
+      # what Nix would have to build instead.
+      - |
+        store=$(mktemp -d)
+        for system in x86_64-linux aarch64-darwin; do
+          out=$(nix eval --raw "github:whexy/t3code/$rev#packages.$system.t3-server.outPath")
+          plan=$(nix build --dry-run --store "$store" \
+            --option substituters "https://cache.nixos.org https://whexy-t3code.cachix.org" \
+            --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= whexy-t3code.cachix.org-1:/pDSZMaQ8YHPw/og8nsuwxiYCAAcRB8JYEcmNd2Czyg=" \
+            "$out" 2>&1)
+          case $plan in
+            *"will be built"* | *"know how to build"*)
+              echo "FAILED(cache) - $system t3-server is not fully cached:"
+              echo "$plan"
+              exit 1
+              ;;
+          esac
+          echo "OK - $system $out is cached"
+        done
+        rm -rf "$store"
+      - |
+        old=$(nix eval --raw --impure --expr '(builtins.fromJSON (builtins.readFile ./flake.lock)).nodes.t3code-fork.locked.rev')
+        nix shell --inputs-from . nixpkgs#gnused -c sed -i "s|github:whexy/t3code/[0-9a-f]\{40\}|github:whexy/t3code/$rev|" flake.nix
+        nix flake update t3code-fork
+        if git diff --quiet; then
+          echo "NOOP - t3code-fork is already pinned to $rev"
+          exit 0
+        fi
+        # The desktop app follows the version the new server builds.
+        nix run --accept-flake-config .#update -- t3code-desktop-nightly
+        version=$(nix eval --raw .#packages.x86_64-linux.t3code-fork.version)
+        git add -A
+        git commit -m "chore(t3code-fork): pin $rev ($version)" \
+          -m "https://github.com/whexy/t3code/compare/$old...$rev"
+      - *check
+      # Push as the GitHub App onto whatever master became meanwhile, as long
+      # as the rev is still the fork's head.
+      - |
+        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
+        origin_url="$(git remote get-url origin)"
+        trap 'git remote set-url origin "$origin_url"' EXIT
+        git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
+        attempt=1
+        while :; do
+          git fetch origin master
+          if ! git rebase origin/master; then
+            git rebase --abort
+            echo "FAILED(push) - the pin does not rebase onto master"
+            exit 1
+          fi
+          if ! is_head; then
+            echo "SUPERSEDED - $rev is no longer the head of whexy/t3code self-hosted-nightly"
+            exit 0
+          fi
+          if git push origin HEAD:master; then
+            echo "OK - pinned t3code-fork to $rev"
+            break
+          fi
+          if [ "$attempt" -ge 3 ]; then
+            echo "FAILED(push) - 3 attempts"
+            exit 1
+          fi
+          sleep $((attempt * 10))
+          attempt=$((attempt + 1))
+        done
   check:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
@@ -221,7 +321,8 @@ steps:
       - echo "OK - deployed"
   # Report a failure on master to the T3 Code task that repairs it (see
   # AGENTS.md). It runs last and no step sets depends_on, so the steps run in
-  # order and a failure in any of them reaches this one.
+  # order and a failure in any of them reaches this one. Should the task not
+  # take the report, the alert webhook sends it to WeChat instead.
   report-failure:
     image: curlimages/curl:8.19.0
     when:
@@ -236,7 +337,21 @@ steps:
         # A cron pipeline's message is the cron's name.
         cron=
         if [ "$CI_PIPELINE_EVENT" = cron ]; then cron=$CI_COMMIT_MESSAGE; fi
-        body=$(printf '{"event":"%s","cron":"%s","branch":"%s","commit":"%s","pipeline":"%s","pipeline_url":"%s"}' \
-          "$CI_PIPELINE_EVENT" "$cron" "$CI_COMMIT_BRANCH" "$CI_COMMIT_SHA" "$CI_PIPELINE_NUMBER" "$CI_PIPELINE_URL")
-        curl -fsS -o /dev/null -D - -X POST -H 'content-type: application/json' \
-          --data "$body" "$T3_REPAIR_WEBHOOK" | grep -i '^x-t3-hook-outcome'
+        # The pin lane's rev, which the task's dedupe key includes.
+        case $T3CODE_FORK_REV in
+          *[!0-9a-f]*) rev=invalid ;;
+          *) rev=$T3CODE_FORK_REV ;;
+        esac
+        body=$(printf '{"event":"%s","cron":"%s","branch":"%s","commit":"%s","pipeline":"%s","pipeline_url":"%s","t3code_fork_rev":"%s"}' \
+          "$CI_PIPELINE_EVENT" "$cron" "$CI_COMMIT_BRANCH" "$CI_COMMIT_SHA" "$CI_PIPELINE_NUMBER" "$CI_PIPELINE_URL" "$rev")
+        if headers=$(curl -fsS -o /dev/null -D - -X POST -H 'content-type: application/json' \
+          --data "$body" "$T3_REPAIR_WEBHOOK"); then
+          printf '%s\n' "$headers" | grep -i '^x-t3-hook-outcome'
+        else
+          alert=$(printf '{"source":"dotfiles-ci","severity":"error","title":"%s","detail":"%s","url":"%s"}' \
+            "dotfiles pipeline $CI_PIPELINE_NUMBER failed and its repair task did not take it" \
+            "event=$CI_PIPELINE_EVENT commit=$CI_COMMIT_SHA t3code_fork_rev=$rev" "$CI_PIPELINE_URL")
+          curl -fsS -o /dev/null --max-time 10 -X POST -H 'content-type: application/json' \
+            --data "$alert" https://n8n.clusters.work/webhook/t3code-alert
+          exit 1
+        fi
