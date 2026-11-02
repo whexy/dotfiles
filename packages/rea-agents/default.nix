@@ -56,15 +56,15 @@ let
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "rea-agents";
-  version = "6.4.0";
+  version = "6.8.0";
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/rea-agents/-/rea-agents-${finalAttrs.version}.tgz";
-    hash = "sha512-Vj1zWfSlna5bphGoaoI/TcVBuYvze9u+OyPC3Shz8YkBqaCTqB4COnnRoX7XDwMpwI24ZlFEel2yEj0k8LTWEQ==";
+    hash = "sha256-jVQux2qcs1BYS2CmycCIcG/4EtW7WwlMIMlbbcJWmLs=";
   };
 
   nodejs = pkgs.nodejs_24;
-  npmDepsHash = "sha256-aMD66LEDaVjyDrdaaSQA2FjdAUltdj+RZH8W8xNIdNo=";
+  npmDepsHash = "sha256-XGu4uNmzDBjm3eE3PXpJGBcz7+vrZK1PnRhJihIQNHo=";
 
   postPatch = ''
     cp ${./package-lock.json} package-lock.json
