@@ -13,8 +13,9 @@ let
   # devDependencies only serve upstream's monorepo, and dist/ bundles them.
   lockfileFilter = "del(.devDependencies)";
 
-  # Cloudflare's agent skill for cf. The skills repository has no releases;
-  # it moves to the default branch's head whenever cf moves.
+  # Cloudflare's agent skill for cf, which the npm tarball does not ship. The
+  # skills repository has no releases; it moves to the default branch's head
+  # whenever cf moves.
   skills = pkgs.fetchFromGitHub {
     owner = "cloudflare";
     repo = "skills";
@@ -67,7 +68,11 @@ pkgs.buildNpmPackage (finalAttrs: {
   # through $ORIGIN, and patchelf moves libvips-cpp's .plt and crashes it.
   dontAutoPatchelf = true;
 
-  postInstall = lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -R ${skills}/skills/cf-cli $out/share/skills/
+  ''
+  + lib.optionalString (stdenv.buildPlatform.canExecute stdenv.hostPlatform) ''
     for shell in bash fish zsh; do
       HOME=$TMPDIR $out/bin/cf complete $shell > cf.$shell
     done
@@ -90,7 +95,6 @@ pkgs.buildNpmPackage (finalAttrs: {
   doInstallCheck = true;
 
   passthru = {
-    skill = "${skills}/skills/cf-cli";
     inherit skills;
     updater = flake.lib.updater {
       kind = "npm";

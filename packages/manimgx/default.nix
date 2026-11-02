@@ -40,7 +40,7 @@ let
     repo = "manimgx";
     tag = "v${version}";
     sparseCheckout = [
-      "skills/manimgx"
+      "skills"
       "docs/content/user-guide"
       "examples"
     ];
@@ -113,6 +113,11 @@ python3.pkgs.buildPythonApplication {
     "MESA_VK_IGNORE_CONFORMANCE_WARNING"
     "1"
   ];
+
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -R ${repo}/skills/*/ $out/share/skills/
+  '';
 
   pythonImportsCheck = [ "manimgx" ];
 

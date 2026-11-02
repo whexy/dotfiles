@@ -7,35 +7,29 @@ let
   inherit (pkgs) lib;
   agents = ../../modules/home/agents;
   skills = import (agents + "/build-skills.nix") { inherit pkgs; };
-  video = import (agents + "/video/home.nix") { inherit pkgs perSystem; };
-  iphoneUse = perSystem.self.iphone-use;
+  video = (import (agents + "/video/home.nix") { inherit pkgs perSystem; }).skills;
+  cloudflare = import (agents + "/cloudflare/skills.nix") { inherit (perSystem.self) cf; };
+  iphone = import (agents + "/iphone/skills.nix") { iphoneUse = perSystem.self.iphone-use; };
 
   tree = skills.build {
     packages = [
       perSystem.self.transcribe
       perSystem.self.wechat-cli
-      (skills.fromPaths "rea-agents" {
-        reverse-engineer-anything = "${perSystem.self.rea-agents}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
-      })
-      (skills.fromPaths "iphone-use" {
-        iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
-        iphone-use-setup = "${iphoneUse}/share/iphone-use/skills/iphone-use-setup";
-      })
-      (skills.fromPaths "cf" { cf-cli = perSystem.self.cf.skill; })
-    ];
+      perSystem.self.rea-agents
+    ]
+    ++ cloudflare.packages
+    ++ iphone.packages
+    ++ video.packages;
     local =
       lib.mapAttrs (name: _: { source = agents + "/skills/${name}"; }) (
         lib.filterAttrs (_: type: type == "directory") (builtins.readDir (agents + "/skills"))
       )
-      // lib.mapAttrs (_: source: { inherit source; }) video.skills
+      // video.local
       // {
         spark.source = agents + "/spark/skill";
         asc.source = agents + "/asc/skill";
       };
-    override = {
-      iphone-use-setup.replace = agents + "/iphone/iphone-use-setup";
-      cf-cli.patches = [ (agents + "/cloudflare/cf-cli-skill.patch") ];
-    };
+    override = cloudflare.override // iphone.override // video.override;
     inherit (video) docs;
   };
 

@@ -24,6 +24,9 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
 
     mkdir -p $out/share/iphone-use/tooling
     cp -r assets server skills $out/share/iphone-use/
+    # The server reads its skills beside it; agents read a copy.
+    mkdir -p $out/share/skills
+    cp -R skills/*/ $out/share/skills/
     install -m644 plugin.json $out/share/iphone-use/plugin.json
 
     # The setup worker copies these four files into its state directory and

@@ -569,39 +569,17 @@ in
         home.packages = [ rea.package ];
         home.sessionVariables = rea.sessionVariables;
         # Taken from the package so the instructions match the server's tools.
-        dotfiles.agents.skills.packages = [
-          (skillsBuilder.fromPaths "rea-agents" {
-            reverse-engineer-anything = "${rea.base}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
-          })
-        ];
+        dotfiles.agents.skills.packages = [ rea.base ];
       })
 
       (lib.mkIf cfg.video.enable {
         home.packages = video.packages;
         home.file = video.homeFiles;
-        dotfiles.agents.skills = {
-          local = lib.mapAttrs (_: source: { inherit source; }) video.skills;
-          inherit (video) docs;
-        };
+        dotfiles.agents.skills = video.skills;
       })
 
       (lib.mkIf cfg.iphoneUse.enable {
-        dotfiles.agents.skills = {
-          packages = [
-            (skillsBuilder.fromPaths "iphone-use" {
-              iphone-use = "${iphoneUse}/share/iphone-use/skills/iphone-use";
-              iphone-use-setup = "${iphoneUse}/share/iphone-use/skills/iphone-use-setup";
-            })
-          ];
-          override.iphone-use-setup = {
-            replace = ./iphone/iphone-use-setup;
-            reason = ''
-              Upstream's setup skill builds and starts WebDriverAgent with
-              xcodebuild on one USB phone; here phones run it on their own and
-              are chosen per session. The usage skill links to it by this name.
-            '';
-          };
-        };
+        dotfiles.agents.skills = import ./iphone/skills.nix { inherit iphoneUse; };
       })
 
       (lib.mkIf cfg.spark.enable {
@@ -627,17 +605,7 @@ in
       })
 
       (lib.mkIf config.dotfiles.tooling.cloudflare.cli.enable {
-        dotfiles.agents.skills = {
-          packages = [ (skillsBuilder.fromPaths "cf" { cf-cli = perSystem.self.cf.skill; }) ];
-          override.cf-cli = {
-            patches = [ ./cloudflare/cf-cli-skill.patch ];
-            reason = ''
-              Cloudflare's install and sign-in steps would have agents run
-              `npm install --global cf` and `cf auth login`; here Nix installs
-              cf and it signs in with the 1Password token.
-            '';
-          };
-        };
+        dotfiles.agents.skills = import ./cloudflare/skills.nix { inherit (perSystem.self) cf; };
       })
     ]
   );
