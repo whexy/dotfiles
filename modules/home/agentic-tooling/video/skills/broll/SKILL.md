@@ -33,7 +33,7 @@ footage, generate it with Studio instead; see
 [Footage from Studio](#footage-from-studio).
 
 - HyperFrames: read `hyperframes/SKILL.md` in
-  `~/.local/share/video-edit/docs/hyperframes/`, and the files under its
+  `~/.local/share/agents/docs/hyperframes/`, and the files under its
   `references/` it points to for the slot (`motion.md` for animation). Skip
   its plugin-install, usage and freshness steps; they are for interactive
   sessions. Where the docs say `npx hyperframes` or
@@ -41,7 +41,7 @@ footage, generate it with Studio instead; see
   Linux a Chrome that cannot start.
 - ManimGX: `manimgx` is ManimGX 0.1.1, Manim CE's API (`import manimgx as m`)
   on a GPU renderer. Typst sets `Tex` and `MathTex`; there is no LaTeX. In
-  `~/.local/share/video-edit/docs/manimgx/`, read `SKILL.md` and
+  `~/.local/share/agents/docs/manimgx/`, read `SKILL.md` and
   `user-guide/coming-from-manim-ce.md`; the other guides in `user-guide/` and
   the scenes in `examples/` cover each feature.
 

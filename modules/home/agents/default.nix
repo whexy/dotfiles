@@ -16,9 +16,6 @@
     ./codex/default.nix
     ./opencode/default.nix
     ./muse-code/default.nix
-    ./firefox-devtools.nix
-    ./asc/default.nix
-    ./cloudflare/default.nix
   ];
 
   options.dotfiles.agents.enable = lib.mkEnableOption "agents";

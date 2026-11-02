@@ -114,7 +114,9 @@ from each other:
 - `dotfiles.agents.launcher`: the git config and shell lines every launcher
   runs before its agent.
 - `dotfiles.agents.mcp.servers`: MCP servers, in Claude's shape. A feature
-  adds its own server, and each agent renders the set into its own config.
+  adds its own server, and each agent renders the set into its own config:
+  the `browser` group adds Firefox DevTools' for its automation browser
+  (`dotfiles.browser.firefox.automation.mcp`).
 - `dotfiles.agents.skills`: the skills every agent sees (below).
 
 Every agent reads `global-rules.md`, linked into its own config directory.
@@ -152,7 +154,7 @@ checks.
   one of `patches` (applied with `patch -p1 --fuzz=0`), `replace` or
   `ignore = true`.
 - `docs.<name> = path`: trees a skill reads by path, at
-  `~/.local/share/video-edit/docs/<name>`. They are not skills; a package's
+  `~/.local/share/agents/docs/<name>`. They are not skills; a package's
   skills read this way are ignored as skills.
 
 Every deviation from a package's skill carries a reason: `override` requires
@@ -164,16 +166,16 @@ installs, and `checks/agent-skills` builds every `skills.nix` under
 `modules/home` together, so a new feature needs no change there beyond the
 list of skill names.
 
-| Skill                                     | Source                     | Taken                                         |
-| ----------------------------------------- | -------------------------- | --------------------------------------------- |
-| `modules/home/agents/skills/*`            | local                      | ours                                          |
-| `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                    |
-| `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                |
-| `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                    |
-| `iphone-use-setup`                        | `iphone-use`               | replaced by `iphone/iphone-use-setup`         |
-| `cf-cli`                                  | `cf`                       | patched by `cloudflare/cf-cli-skill.patch`    |
-| `asc`, `spark`                            | local, with a reason       | the tools generate theirs at runtime          |
-| HyperFrames' skills, ManimGX's skill      | `hyperframes`, `manimgx`   | ignored; `broll` reads them by path as `docs` |
+| Skill                                     | Source                     | Taken                                                 |
+| ----------------------------------------- | -------------------------- | ----------------------------------------------------- |
+| `modules/home/agents/skills/*`            | local                      | ours                                                  |
+| `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                            |
+| `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                        |
+| `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                            |
+| `iphone-use-setup`                        | `iphone-use`               | replaced by `agentic-tooling/iphone/iphone-use-setup` |
+| `cf-cli`                                  | `cf`                       | patched by `tooling/cloudflare/cf-cli-skill.patch`    |
+| `asc`, `spark`                            | local, with a reason       | the tools generate theirs at runtime                  |
+| HyperFrames' skills, ManimGX's skill      | `hyperframes`, `manimgx`   | ignored; `broll` reads them by path as `docs`         |
 
 Our packages of third-party tools copy every skill upstream publishes into
 `share/skills`, and leave upstream's own copy where its code reads it. Each
@@ -338,7 +340,7 @@ through nix-ld, which the `dev` cap enables.
 ### Provision the token
 
 1. In the Cloudflare dashboard, under Manage Account → Account API Tokens,
-   create a custom token for the account in `modules/home/tooling/cloudflare.nix`.
+   create a custom token for the account in `modules/home/tooling/cloudflare`.
    Grant only what agents should do; reading is enough to start:
    Account Settings Read, Zone Read, DNS Read, and Workers Scripts Read, on
    all zones in the account. Editing the token's permissions later keeps its
