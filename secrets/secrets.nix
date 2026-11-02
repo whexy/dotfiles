@@ -68,6 +68,12 @@ in
     }
   );
 
+  "ai-proxy-api-key.age".publicKeys = to homes;
+  "cf-access-dotfiles-id.age".publicKeys = to homes;
+  "cf-access-dotfiles-secret.age".publicKeys = to homes;
+  "kube-clusters-work.age".publicKeys = to homes;
+  "magpie-api-key.age".publicKeys = to homes;
+  "openai-api-key.age".publicKeys = to homes;
   # Homes that run a public tunnel.
   "cloudflared-cert.age".publicKeys = to (
     removeAttrs homes [
@@ -75,6 +81,11 @@ in
       "wenxuan@venus"
     ]
   );
+  "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
+  # Homes that enable tooling.appStoreConnect: the dev and dev-lite homes.
+  "app-store-connect-api-key.age".publicKeys = to users;
+  # Homes that enable tooling.cloudflare.apiToken: the dev and dev-lite homes.
+  "cloudflare-api-token.age".publicKeys = to users;
   # The Atuin module decrypts these during activation, not via age.secrets.
   "atuin-key.age".publicKeys = to users;
   "atuin-session.age".publicKeys = to users;
@@ -85,11 +96,3 @@ in
   "b2-crypt-password.age".publicKeys = to { };
   "nas-webdav-pass.age".publicKeys = to { };
 }
-# Each home's 1Password service-account token, for that home alone
-# (modules/home/onepassword).
-// builtins.listToAttrs (
-  map (home: {
-    name = "onepassword-${builtins.replaceStrings [ "@" ] [ "-" ] home}.age";
-    value.publicKeys = to { ${home} = homes.${home}; };
-  }) (builtins.attrNames homes)
-)

@@ -89,9 +89,9 @@ External config directories are reconciled when selecting a model in them.
 
 `dotfiles-settings.json` beside each agent config records reconciliation ownership
 and the credential-selection label. It contains no credential values. Claude and
-Codex load API keys and Cloudflare headers at launch, by running the command the
-catalog names for each, never written to native configuration, and a launch with
-an unavailable secret fails before starting the agent.
+Codex read API keys and Cloudflare headers from agenix at launch, never written to
+native configuration, and a launch with an unavailable secret fails before starting
+the agent.
 
 Muse's tools inherit its environment, so Muse gets no credential there. Each
 reconciliation instead saves the selected endpoint's key with `muse auth set`

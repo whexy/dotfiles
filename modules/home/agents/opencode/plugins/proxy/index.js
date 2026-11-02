@@ -54,18 +54,20 @@ const SEARXNG_RESULTS = 8;
 
 const execFileAsync = promisify(execFile);
 
-async function readSecret(opSa, name) {
-  const { stdout } = await execFileAsync(opSa, ["read", name]);
+// Agenix paths are shell fragments (`${XDG_RUNTIME_DIR}/...` on Linux,
+// `$(getconf ...)/...` on Darwin), so only a shell can resolve them.
+async function readSecret(cat, path) {
+  const { stdout } = await execFileAsync("/bin/sh", ["-c", `${cat} "${path}"`]);
   const secret = stdout.trim();
-  if (!secret) throw new Error(`dotfiles.proxy: secret is empty: ${name}`);
+  if (!secret) throw new Error(`dotfiles.proxy: secret is empty: ${path}`);
   return secret;
 }
 
 async function readCredentials(options, gateway) {
   const [apiKey, id, secret] = await Promise.all([
-    readSecret(options.opSa, gateway.apiKeySecret),
-    readSecret(options.opSa, options.cfAccess.id),
-    readSecret(options.opSa, options.cfAccess.secret),
+    readSecret(options.cat, gateway.apiKeyPath),
+    readSecret(options.cat, options.cfAccessIdPath),
+    readSecret(options.cat, options.cfAccessSecretPath),
   ]);
   return {
     apiKey,
@@ -84,11 +86,9 @@ async function fetchJson(gateway, url, credentials) {
     signal: AbortSignal.timeout(10_000),
   });
   if (!response.ok) {
-    const error = new Error(
+    throw new Error(
       `${gateway.name} model discovery failed: ${response.status}`,
     );
-    error.rejected = response.status === 401 || response.status === 403;
-    throw error;
   }
   return response.json();
 }
@@ -374,22 +374,12 @@ async function setupGateway(ctx, options, gatewayIds, gateway) {
   };
   const routes = gateway.searchRoutes && new Set(gateway.searchRoutes);
 
-  // Credentials load once and stay in memory; a gateway that rejects them
-  // means a rotated key, so the next refresh loads them again.
-  let loaded;
   const refresh = async () => {
-    loaded ??= await readCredentials(options, gateway);
-    const credentials = loaded;
-    let served, owners;
-    try {
-      [served, owners] = await Promise.all([
-        fetchServed(gateway, credentials),
-        routes ? fetchOwners(gateway, credentials) : new Map(),
-      ]);
-    } catch (error) {
-      if (error.rejected) loaded = undefined;
-      throw error;
-    }
+    const credentials = await readCredentials(options, gateway);
+    const [served, owners] = await Promise.all([
+      fetchServed(gateway, credentials),
+      routes ? fetchOwners(gateway, credentials) : new Map(),
+    ]);
     const changed =
       JSON.stringify(served) !== JSON.stringify(state.served) ||
       JSON.stringify(credentials) !== JSON.stringify(state.credentials);

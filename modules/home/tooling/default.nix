@@ -15,18 +15,15 @@
         type = lib.types.listOf lib.types.str;
         default = [ "clusters-work" ];
         description = ''
-          Clusters to install, each the 1Password document `kube-<name>`
-          (modules/home/onepassword/items.nix). The kubeconfig must name its
-          cluster, user, and context `<name>`, and its user must hold a
-          client certificate.
+          Clusters to install, each read from `secrets/kube-<name>.age`. The
+          kubeconfig must name its cluster, user, and context `<name>`.
         '';
       };
     };
-    appStoreConnect.enable = lib.mkEnableOption "asc, the App Store Connect CLI, with my API key";
-    aws.enable = lib.mkEnableOption "AWS CLI with my credentials from 1Password";
+    appStoreConnect.enable = lib.mkEnableOption "asc, the App Store Connect CLI, with my API key for it and Apple's tools";
     cloudflare = {
       cli.enable = lib.mkEnableOption "cf, the Cloudflare CLI, and its agent skill";
-      apiToken.enable = lib.mkEnableOption "my scoped Cloudflare API token for cf, read from 1Password";
+      apiToken.enable = lib.mkEnableOption "my scoped Cloudflare API token for cf, read from agenix on each run";
     };
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
@@ -40,7 +37,6 @@
 
   imports = [
     ./app-store-connect/default.nix
-    ./aws.nix
     ./cli.nix
     ./cloudflare/default.nix
     ./debug.nix

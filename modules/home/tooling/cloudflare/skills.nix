@@ -9,7 +9,7 @@
       reason = ''
         Cloudflare's install and sign-in steps would have agents run
         `npm install --global cf` and `cf auth login`; here Nix installs
-        cf and it signs in with the 1Password token.
+        cf and it signs in with the agenix token.
       '';
     };
   };

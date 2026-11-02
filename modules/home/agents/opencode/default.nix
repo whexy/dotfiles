@@ -17,7 +17,7 @@ let
     exec ${lib.getExe' upstream "opencode2"} "$@"
   '';
   settings = import ./config.nix {
-    inherit lib;
+    inherit pkgs lib;
     inherit (cfg.opencode) model smallModel;
     llm = import ../launcher/gateways.nix { inherit config; };
     mcpServers = cfg.mcp.servers;

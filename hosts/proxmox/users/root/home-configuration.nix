@@ -14,7 +14,6 @@
     inputs.self.lib.overlays.llm-tools
   ];
   dotfiles = {
-    onepassword.serviceAccount = "root@proxmox";
     autoUpgrade.enable = true;
     # proxmox is on the tailnet, and root is trusted by its Nix daemon.
     nix.ciCache.enable = true;
