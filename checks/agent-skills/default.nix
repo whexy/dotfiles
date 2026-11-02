@@ -12,6 +12,8 @@ let
 
   tree = skills.build {
     packages = [
+      perSystem.self.transcribe
+      perSystem.self.wechat-cli
       (skills.fromPaths "rea-agents" {
         reverse-engineer-anything = "${perSystem.self.rea-agents}/lib/node_modules/rea-agents/skills/reverse-engineer-anything";
       })
