@@ -74,6 +74,12 @@ pkgs.buildNpmPackage (finalAttrs: {
 
   dontNpmBuild = true;
 
+  # REA reads its skills from its own directory; agents read a copy.
+  postInstall = ''
+    mkdir -p $out/share/skills
+    cp -R $out/lib/node_modules/rea-agents/skills/*/ $out/share/skills/
+  '';
+
   env.npm_config_frida_local_prebuilds = fridaPrebuilds;
 
   # node-pty's prebuilt Linux addon links against libstdc++.

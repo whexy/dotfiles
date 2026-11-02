@@ -28,8 +28,7 @@ let
   };
 
   # The npm tarball bundles only three internal skills; the published agent
-  # skills live in the repository. They ship as plain files to read by path:
-  # installing all of them as agent skills would flood every session.
+  # skills live in the repository.
   skills = pkgs.fetchFromGitHub {
     owner = "heygen-com";
     repo = "hyperframes";
@@ -130,8 +129,8 @@ pkgs.buildNpmPackage (finalAttrs: {
   postInstall = ''
     tar -xzf ${gsap} -O package/dist/gsap.min.js > gsap.min.js
     install -Dm444 gsap.min.js $out/share/hyperframes/vendor/gsap.min.js
-    mkdir -p $out/share/hyperframes/skills
-    cp -R ${skills}/skills/*/ $out/share/hyperframes/skills/
+    mkdir -p $out/share/skills
+    cp -R ${skills}/skills/*/ $out/share/skills/
   '';
 
   postFixup = ''
@@ -142,7 +141,6 @@ pkgs.buildNpmPackage (finalAttrs: {
 
   passthru = {
     gsap = "${finalAttrs.finalPackage}/share/hyperframes/vendor/gsap.min.js";
-    skills = "${finalAttrs.finalPackage}/share/hyperframes/skills";
     gsapTarball = gsap;
     skillsSrc = skills;
     updater = flake.lib.updater {

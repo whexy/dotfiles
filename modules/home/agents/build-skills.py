@@ -43,11 +43,6 @@ for package in spec["packages"]:
 for name, source in spec["local"].items():
     add(name, source, "local")
 
-for name, path in spec["docs"].items():
-    for package in spec["packages"]:
-        if path == package or path.startswith(package + "/"):
-            errors.append(f"docs.{name} reads {package}, which is also listed in packages")
-
 patches = {}
 for name, override in spec["override"].items():
     modes = [m for m in ("patches", "replace", "ignore") if override[m]]
@@ -63,6 +58,13 @@ for name, override in spec["override"].items():
         sources[name] = (Path(override["replace"]), "override")
     else:
         patches[name] = override["patches"]
+
+# What agents read as docs must not also reach them as a skill.
+for doc, path in spec["docs"].items():
+    for name, (source, _) in sorted(sources.items()):
+        skill = str(source)
+        if path == skill or skill.startswith(path.rstrip("/") + "/") or path.startswith(skill + "/"):
+            errors.append(f"docs.{doc} reads skill {name}, which agents also see")
 
 # Claude Code keeps the skills it downloads from the account there.
 if "synced" in sources:
