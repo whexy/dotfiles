@@ -167,16 +167,13 @@ let
     };
   });
 
-  # TODO(t3code fork): x86_64-linux runs whexy/t3code's server, which reads
-  # T3CODE_DEV_MANAGED_POLICY_PATH, once whexy/t3code#4 puts its flake on
-  # self-hosted-nightly. Add the input to flake.nix without `follows`, as
-  # ci-cache holds only what the fork's own lock builds:
-  #   t3code-fork.url = "github:whexy/t3code/self-hosted-nightly";
-  # sources.json's version still pins the browser, the desktop app and the
-  # hub image's tag, so it must name the nightly the fork builds.
+  # x86_64-linux runs whexy/t3code's server, which reads
+  # T3CODE_DEV_MANAGED_POLICY_PATH; the other platforms keep upstream's. The
+  # nightly the fork builds is sources.json's version, which also pins the
+  # browser, the desktop app and the hub image's tag.
   fork =
     if pkgs.stdenv.hostPlatform.system == "x86_64-linux" then
-      inputs.t3code-fork.packages.x86_64-linux.t3-server or null
+      inputs.t3code-fork.packages.x86_64-linux.t3-server
     else
       null;
 in
@@ -185,10 +182,16 @@ if fork == null then
 else
   # The fork's own derivation, so the store path is the one CI cached; these
   # attributes leave what it builds unchanged.
+  let
+    passthru = {
+      inherit (upstream) browser updater;
+      honorsManagedPolicyPath = true;
+    };
+  in
   fork
+  // passthru
   // {
-    inherit (upstream) browser updater;
-    honorsManagedPolicyPath = true;
+    passthru = fork.passthru or { } // passthru;
     meta = fork.meta // {
       changelog = "https://github.com/whexy/t3code/commits/${inputs.t3code-fork.rev}";
     };

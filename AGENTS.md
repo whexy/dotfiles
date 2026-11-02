@@ -458,11 +458,14 @@ and T3 locks an instance only as a whole. It never sets `limits.clients`,
 which would end pairing, the tunnel and the tailnet route.
 
 Upstream's prebuilt server ignores the variable. On x86_64-linux,
-`t3code-nightly` is to take whexy/t3code's server from a flake input, its
-derivation unchanged so hosts substitute the path Woodpecker pushed to
-ci-cache; the input waits on a TODO in `packages/t3code-nightly`. Macs and
-aarch64-linux keep upstream's build. Wherever the server runs without a
-policy, activation still writes `linkedEnvironmentsEnabled`.
+`t3code-nightly` is whexy/t3code's server from the `t3code-fork` flake input,
+its derivation unchanged, so hosts substitute the path Woodpecker pushed to
+ci-cache. The input does not follow our nixpkgs, which would change that
+path. Macs and aarch64-linux keep upstream's build, and their servers run
+without a policy, so activation still writes `linkedEnvironmentsEnabled`
+there. `t3code-nightly`'s updater pins `sources.json` (the browser, the
+desktop app, the other platforms' archives and the hub image's tag) to the
+nightly the locked fork builds, so `nix flake update` moves both.
 
 ### Gateway models for Claude
 

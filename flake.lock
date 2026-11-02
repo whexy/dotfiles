@@ -665,6 +665,22 @@
     },
     "nixpkgs_4": {
       "locked": {
+        "lastModified": 1793540411,
+        "narHash": "sha256-fiPJ88izTVucjeo2EQ3jk4aWmLg03I1D4vxnX2QjEgE=",
+        "owner": "NixOS",
+        "repo": "nixpkgs",
+        "rev": "0bb2eedc20e4739f29e8045034f2828ad7054f8f",
+        "type": "github"
+      },
+      "original": {
+        "owner": "NixOS",
+        "ref": "nixos-unstable",
+        "repo": "nixpkgs",
+        "type": "github"
+      }
+    },
+    "nixpkgs_5": {
+      "locked": {
         "lastModified": 1779560665,
         "narHash": "sha256-tpyBcxPpcQb8ukyNF7DoCwfSY3VPsxHoYwj00Cayv5o=",
         "owner": "nixos",
@@ -862,6 +878,7 @@
         "paneru": "paneru",
         "pwndbg": "pwndbg",
         "rex": "rex",
+        "t3code-fork": "t3code-fork",
         "treefmt-nix": "treefmt-nix_2",
         "vicinae-extensions": "vicinae-extensions"
       }
@@ -923,6 +940,25 @@
       "original": {
         "owner": "nix-systems",
         "repo": "default",
+        "type": "github"
+      }
+    },
+    "t3code-fork": {
+      "inputs": {
+        "nixpkgs": "nixpkgs_4"
+      },
+      "locked": {
+        "lastModified": 1793634313,
+        "narHash": "sha256-H7HoVbtD0gdoemOWkivtVSXwob8pZktlsYBeh2/w/QQ=",
+        "owner": "whexy",
+        "repo": "t3code",
+        "rev": "b31df7f1078821579063821b1af5f4927030e8d7",
+        "type": "github"
+      },
+      "original": {
+        "owner": "whexy",
+        "repo": "t3code",
+        "rev": "b31df7f1078821579063821b1af5f4927030e8d7",
         "type": "github"
       }
     },
@@ -1041,7 +1077,7 @@
     "vicinae-extensions": {
       "inputs": {
         "flake-compat": "flake-compat_4",
-        "nixpkgs": "nixpkgs_4",
+        "nixpkgs": "nixpkgs_5",
         "systems": "systems_4",
         "vicinae": "vicinae"
       },
