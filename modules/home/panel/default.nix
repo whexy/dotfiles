@@ -21,12 +21,15 @@
     };
   };
 
+  # homeModules.all also imports these by file path. The module system keys
+  # imports by path string, and ./renpho is not ./renpho/default.nix, so a
+  # directory import would load each module twice.
   imports = [
     ./waybar.nix
     ./eww.nix
     ./sketchybar.nix
-    ./renpho
-    ./wm
-    ./ai-quota
+    ./renpho/default.nix
+    ./wm/default.nix
+    ./ai-quota/default.nix
   ];
 }
