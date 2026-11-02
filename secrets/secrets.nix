@@ -86,6 +86,8 @@ in
   "app-store-connect-api-key.age".publicKeys = to users;
   # Homes that enable tooling.cloudflare.apiToken: the dev and dev-lite homes.
   "cloudflare-api-token.age".publicKeys = to users;
+  # Homes that enable tooling.aws: the dev and dev-lite homes.
+  "aws-credentials.age".publicKeys = to users;
   # The Atuin module decrypts these during activation, not via age.secrets.
   "atuin-key.age".publicKeys = to users;
   "atuin-session.age".publicKeys = to users;
