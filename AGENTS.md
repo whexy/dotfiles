@@ -244,8 +244,12 @@ To rotate a credential, put the new value in its item. Each tool uses it from
 its next run.
 
 To add a credential, create its item in the vault of the homes that read it,
-add its reference to `items.nix`, and load it with `op-sa read` where the
-tool starts.
+add its reference to `items.nix`, and load it where the tool starts. A tool
+started on demand is wrapped with `config.dotfiles.onepassword.wrap`, which
+loads the secret into that program's environment on each run. A value the
+caller sets wins, and a failed load warns and runs the tool without it. A tool
+that ticks often, or takes the secret another way (a header on stdin, a
+credential command), runs `op-sa read` itself.
 
 To give a home its service account, sign in with `eval $(op signin)` and run,
 from `secrets/` (a root home leaves out `dotfiles-dev`):
