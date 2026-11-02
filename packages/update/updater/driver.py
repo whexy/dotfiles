@@ -86,6 +86,12 @@ def evaluation_error(root: Path, name: str) -> str:
     return result.stderr.strip()[-2000:] or "evaluation failed"
 
 
+# Packages whose output ships agent skills must keep this check building, so
+# an upstream bump that breaks a skill patch fails its own package here
+# rather than the shared check that holds back every other update.
+SKILLS_CHECK = "agent-skills"
+
+
 def check_targets(pkg: Package, targets: list[str]) -> None:
     """Build each target on this system, and evaluate it on the others."""
     pairs = [{"system": s, "path": t.split(".")} for t in targets for s in FLAKE_SYSTEMS]
@@ -94,16 +100,32 @@ def check_targets(pkg: Package, targets: list[str]) -> None:
       let p = builtins.foldl' (a: n: if a == null then null else a.${{n}} or null)
         ps.${{pair.system}} pair.path;
       in if p != null && builtins.elem pair.system (p.meta.platforms or [ pair.system ])
-         then p.drvPath else null
+         then map (o: p.${{o}}.outPath) (p.outputs or [ "out" ]) else null
     ) (builtins.fromJSON {json.dumps(json.dumps(pairs))})
     """
-    drvs = nix.eval_json(f"{pkg.root}#packages", apply=apply)
-    for pair, drv in zip(pairs, drvs, strict=True):
+    outputs = nix.eval_json(f"{pkg.root}#packages", apply=apply)
+    ships_skills = False
+    for pair, paths in zip(pairs, outputs, strict=True):
         target = ".".join(pair["path"])
-        if pair["system"] == pkg.system and drv is not None:
+        if pair["system"] == pkg.system and paths is not None:
             nix.run(["nix", "build", "--no-link", f"{pkg.root}#packages.{pkg.system}.{target}"])
-        elif drv is not None:
+            ships_skills |= any(Path(path, "share/skills").is_dir() for path in paths)
+        elif paths is not None:
             print(f"{target} evaluates on {pair['system']}", file=sys.stderr)
+    if ships_skills:
+        check_skills(pkg)
+
+
+def check_skills(pkg: Package) -> None:
+    checks = f"{pkg.root}#checks.{pkg.system}"
+    if not nix.eval_json(checks, apply=f"cs: cs ? {SKILLS_CHECK}"):
+        return
+    try:
+        nix.run(["nix", "build", "--no-link", f"{checks}.{SKILLS_CHECK}"])
+    except UpdateError as error:
+        raise UpdateError(
+            f"checks.{pkg.system}.{SKILLS_CHECK} fails with this update\n{error}"
+        ) from None
 
 
 def update(pkg: Package, *, commit: bool) -> str | None:

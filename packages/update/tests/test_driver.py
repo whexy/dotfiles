@@ -111,6 +111,69 @@ class UpdateTest(unittest.TestCase):
             driver.update(self.pkg, commit=False)
         self.assertEqual((self.pkg.dir / "sources.json").read_text(), '{"version": "2"}\n')
 
+    def test_broken_skills_revert_only_this_package(self):
+        out = Path(self.tmp.name) / "out"
+        (out / "share" / "skills" / "demo").mkdir(parents=True)
+        outputs = [[str(out)] if s == "x86_64-linux" else None for s in driver.FLAKE_SYSTEMS]
+
+        def run(args, **_kwargs):
+            if args[-1].endswith(f"#checks.x86_64-linux.{driver.SKILLS_CHECK}"):
+                raise UpdateError("nix exited 1")
+
+        evals = [{"version": "3", "changelog": None}, outputs, True]
+        with (
+            self.write_version("3"),
+            mock.patch("updater.nix.eval_json", side_effect=evals),
+            mock.patch("updater.nix.run", side_effect=run),
+            self.assertRaisesRegex(
+                UpdateError, f"^checks.x86_64-linux.{driver.SKILLS_CHECK} fails"
+            ),
+        ):
+            driver.update(self.pkg, commit=False)
+        self.assertEqual((self.pkg.dir / "sources.json").read_text(), '{"version": "2"}\n')
+
+
+class CheckTargetsTest(unittest.TestCase):
+    """The skills check runs only for outputs that ship skills."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.out = Path(self.tmp.name) / "out"
+        self.out.mkdir()
+        self.pkg = Package(
+            name="demo",
+            version="2",
+            system="x86_64-linux",
+            root=Path(self.tmp.name),
+            updater={"kind": "demo"},
+        )
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def built(self, *, has_check=True):
+        outputs = [[str(self.out)] if s == "x86_64-linux" else None for s in driver.FLAKE_SYSTEMS]
+        with (
+            mock.patch("updater.nix.eval_json", side_effect=[outputs, has_check]),
+            mock.patch("updater.nix.run") as run,
+        ):
+            driver.check_targets(self.pkg, ["demo"])
+        return [call.args[0][-1].split("#", 1)[1] for call in run.call_args_list]
+
+    def test_package_without_skills(self):
+        self.assertEqual(self.built(), ["packages.x86_64-linux.demo"])
+
+    def test_package_with_skills(self):
+        (self.out / "share" / "skills" / "demo").mkdir(parents=True)
+        self.assertEqual(
+            self.built(),
+            ["packages.x86_64-linux.demo", f"checks.x86_64-linux.{driver.SKILLS_CHECK}"],
+        )
+
+    def test_system_without_the_check(self):
+        (self.out / "share" / "skills" / "demo").mkdir(parents=True)
+        self.assertEqual(self.built(has_check=False), ["packages.x86_64-linux.demo"])
+
 
 if __name__ == "__main__":
     unittest.main()
