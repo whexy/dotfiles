@@ -4,9 +4,10 @@
 { lib, ... }:
 {
   dotfiles = {
-    agents = {
+    agents.enable = lib.mkDefault true;
+    t3code = {
       enable = lib.mkDefault true;
-      t3code.pair.enable = lib.mkDefault true;
+      pair.enable = lib.mkDefault true;
     };
     ssh.enable = lib.mkDefault true;
     nix.ghTokenFlakes.enable = lib.mkDefault true;

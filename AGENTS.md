@@ -109,8 +109,8 @@ behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 each in a module of its own. They take what they share from options, never
 from each other:
 
-- `dotfiles.llmGateways`: the model gateways, CLIProxyAPI and magpie, and the
-  Cloudflare Access token in front of them.
+- `dotfiles.llmGateways` (`modules/home/llm-gateways`): the model gateways,
+  CLIProxyAPI and magpie, and the Cloudflare Access token in front of them.
 - `dotfiles.agents.launcher`: the git config and shell lines every launcher
   runs before its agent.
 - `dotfiles.agents.mcp.servers`: MCP servers, in Claude's shape. A feature
@@ -120,7 +120,7 @@ from each other:
 Every agent reads `global-rules.md`, linked into its own config directory.
 
 `checks/t3-tailnet` and `checks/agent-skills` import plain functions beside
-the modules (`t3code/services.nix`, `skill-tree/build.nix`, and each
+the modules (`modules/home/t3code/services.nix`, `skill-tree/build.nix`, and each
 feature's `skills.nix`) so that they evaluate no home; those files take no
 module arguments.
 
@@ -359,14 +359,16 @@ To rotate, replace the key pair in the 1Password item's JSON.
 
 ## T3 Code server
 
-The server listens only on loopback, at port 3773. On tailnet hosts
-(`dotfiles.agents.t3code.server.tailnet.enable`, on by default wherever
+`modules/home/t3code` (`dotfiles.t3code`, on the `dev`, `dev-lite` and
+`sysadmin` caps) installs T3 Code and runs its server where `server.enable`
+is set. The server listens only on loopback, at port 3773. On tailnet hosts
+(`dotfiles.t3code.server.tailnet.enable`, on by default wherever
 `dotfiles.network.tailscale` is), Tailscale Serve also publishes it at
 `https://<MagicDNS name>:35338`. Every server is published on the public
 internet by its own tunnel (below).
 
 Standalone homes have no `osConfig`, so a standalone host that runs the
-server enables it, its tailnet route, and `server.tunnel.hostName` itself
+server enables it, its tailnet route, and `dotfiles.tunnels.hostName` itself
 (b3srv0, off the tailnet; proxmox, on it). Its user services start at boot
 only with lingering, which the auto-upgrade module turns on.
 
@@ -405,7 +407,7 @@ beside T3's settings records the models `t3-claude-models` wrote.
 ### Desktop app
 
 The `gui` cap installs the T3 Code desktop app
-(`dotfiles.agents.t3code.desktop.enable`). On Linux it is
+(`dotfiles.t3code.desktop.enable`). On Linux it is
 `t3code-desktop-nightly`, pinned with the server, with its own updater off. On
 macOS, activation installs `/Applications/T3 Code (Nightly).app` only when it
 is missing, and the app updates itself.
@@ -567,9 +569,10 @@ To add a phone:
 Each service a host publishes on the public internet gets its own Cloudflare
 tunnel, at `https://<host>-<service>.clusters.work` (`flake.lib.publicHost`,
 the single place these names are defined). A feature adds its tunnel to
-`dotfiles.tunnels.services`, and `modules/home/agents/tunnels.nix` runs each
-as a user service to the service's loopback port, so traffic never passes
-through the cluster.
+`dotfiles.tunnels.services`, and `modules/home/tunnels` runs each as a user
+service to the service's loopback port, so traffic never passes through the
+cluster. Tunnel names derive from `dotfiles.tunnels.hostName`, which a
+standalone home sets itself.
 
 No host is set up by hand. Every host decrypts the same `cloudflared-cert`
 secret, the cert from one `cloudflared tunnel login` for the zone. On start a

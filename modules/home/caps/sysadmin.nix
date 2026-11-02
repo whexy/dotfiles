@@ -8,9 +8,8 @@
       debug.enable = lib.mkDefault true;
       kube.enable = lib.mkDefault true;
     };
-    agents = {
-      enable = lib.mkDefault true;
-    };
+    agents.enable = lib.mkDefault true;
+    t3code.enable = lib.mkDefault true;
   };
 
   programs.nix-index-database.comma.enable = lib.mkDefault true;

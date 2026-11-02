@@ -9,15 +9,12 @@
 {
   imports = [
     ./launcher/default.nix
-    ./llm-gateways.nix
     ./mcp.nix
     ./skill-tree/default.nix
-    ./tunnels.nix
     ./claude-code/default.nix
     ./codex/default.nix
     ./opencode/default.nix
     ./muse-code/default.nix
-    ./t3code/default.nix
     ./firefox-devtools.nix
     ./rea/default.nix
     ./video/default.nix

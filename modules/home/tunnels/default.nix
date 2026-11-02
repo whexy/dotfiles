@@ -3,7 +3,7 @@
 #
 # Every host shares one `cloudflared tunnel login` cert, so a new host creates
 # its own tunnel and DNS record here instead of being set up by hand.
-{
+args@{
   config,
   lib,
   pkgs,
@@ -67,6 +67,16 @@ let
   log = name: "${config.home.homeDirectory}/Library/Logs/${name}.log";
 in
 {
+  options.dotfiles.tunnels.hostName = lib.mkOption {
+    type = lib.types.nullOr lib.types.str;
+    default = args.osConfig.dotfiles.host.hostName or null;
+    defaultText = lib.literalExpression "osConfig.dotfiles.host.hostName or null";
+    description = ''
+      Dotfiles host name each tunnel and its public name derive from.
+      Standalone homes have no osConfig to supply it.
+    '';
+  };
+
   options.dotfiles.tunnels.services = lib.mkOption {
     type = lib.types.attrsOf (
       lib.types.submodule {
