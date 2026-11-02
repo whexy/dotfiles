@@ -126,37 +126,45 @@ checks.
   one of `patches` (applied with `patch -p1 --fuzz=0`), `replace` or
   `ignore = true`.
 - `docs.<name> = path`: trees a skill reads by path, at
-  `~/.local/share/video-edit/docs/<name>`. They are not skills.
+  `~/.local/share/video-edit/docs/<name>`. They are not skills; a package's
+  skills read this way are ignored as skills.
 
 Every deviation from a package's skill carries a reason: `override` requires
 one, and a `local` skill that stands in for one a tool would install itself
 sets one. Each feature adds its skills in `modules/home/agents/default.nix`,
-in the same gate as the CLI it installs.
+in the same gate as the CLI it installs. A feature that overrides skills keeps
+its settings in its own file (`cloudflare/skills.nix`, `iphone/skills.nix`,
+`video/home.nix`), which `checks/agent-skills` imports too.
 
-| Skill                                     | Source                     | Taken                                      |
-| ----------------------------------------- | -------------------------- | ------------------------------------------ |
-| `modules/home/agents/skills/*`            | local                      | ours                                       |
-| `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                 |
-| `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools             |
-| `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                 |
-| `iphone-use-setup`                        | `iphone-use`               | replaced by `iphone/iphone-use-setup`      |
-| `cf-cli`                                  | `cf`                       | patched by `cloudflare/cf-cli-skill.patch` |
-| `asc`, `spark`                            | local, with a reason       | the tools generate theirs at runtime       |
-| HyperFrames' skills, ManimGX's guide      | `docs`                     | read by path from `broll`                  |
+| Skill                                     | Source                     | Taken                                         |
+| ----------------------------------------- | -------------------------- | --------------------------------------------- |
+| `modules/home/agents/skills/*`            | local                      | ours                                          |
+| `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                    |
+| `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                |
+| `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                    |
+| `iphone-use-setup`                        | `iphone-use`               | replaced by `iphone/iphone-use-setup`         |
+| `cf-cli`                                  | `cf`                       | patched by `cloudflare/cf-cli-skill.patch`    |
+| `asc`, `spark`                            | local, with a reason       | the tools generate theirs at runtime          |
+| HyperFrames' skills, ManimGX's skill      | `hyperframes`, `manimgx`   | ignored; `broll` reads them by path as `docs` |
 
-Third-party packages keep their skills at upstream's paths; `fromPaths` in
-`modules/home/agents/build-skills.nix` exposes them at `share/skills`.
+Our packages of third-party tools copy every skill upstream publishes into
+`share/skills`, and leave upstream's own copy where its code reads it. Each
+one agents do not see is ignored with a reason, so a skill an upstream bump
+adds or drops fails `checks/agent-skills` until it is accounted for. cf's
+npm tarball ships no skill, so cf takes its own, `cf-cli`, from Cloudflare's
+separate skills repository and none of that repository's product guides.
 
 `build-skills.nix` assembles the tree in one derivation. It fails on a listed
 package without skills, two sources for one name, an override no package
-provides, a patch that does not apply, a package also read as `docs`, and a
-`SKILL.md` whose frontmatter `name` is not its directory or whose
+provides, a patch that does not apply, a `docs` tree that reads a skill agents
+see, and a `SKILL.md` whose frontmatter `name` is not its directory or whose
 `description` is empty.
 
 `checks/agent-skills` builds every skill in the repo at once and compares the
-exposed names with the list written in it; CI builds it first, so an upstream
-bump that breaks a patch fails there. Changing which skills agents see means
-changing that list.
+exposed names with the list written in it. The nightly update builds it for
+each package that ships skills, so an upstream bump that breaks a patch holds
+back only that package. Changing which skills agents see means changing that
+list.
 
 ```sh
 nix build .#checks.x86_64-linux.agent-skills
@@ -583,9 +591,10 @@ has an updater but no `meta.changelog`.
 
 `nix run .#update` updates every such package; name packages to update only
 those, and `--list` shows them. The driver builds each updated package and
-its `alsoBuild` on this system and evaluates them on the others. A package
-that fails is restored and reported, the rest continue, and the run exits
-non-zero. To test an updater, downgrade the package's pin and run it:
+its `alsoBuild` on this system and evaluates them on the others; when one of
+them ships `share/skills`, it also builds `checks.<system>.agent-skills`. A
+package that fails is restored and reported, the rest continue, and the run
+exits non-zero. To test an updater, downgrade the package's pin and run it:
 
 ```sh
 nix run .#update -- muse-code
