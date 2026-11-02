@@ -6,9 +6,8 @@
   lib,
   cfg,
   t3,
-  # The validated policy in the Nix store, or null. The server reads it only
-  # at startup, so the path sits in the unit itself: a new policy changes the
-  # unit, and switching restarts the server.
+  # The resolver that picks the managed policy at each start
+  # (dotfiles.t3code.policy), or null for none.
   policy ? null,
   profileDirectory,
   homeDirectory,
@@ -16,8 +15,6 @@
 }:
 let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
-
-  policyEnvironment.T3CODE_DEV_MANAGED_POLICY_PATH = "${policy}";
 
   # Tailscale Serve and the Cloudflare tunnel both proxy to this loopback port.
   port = 3773;
@@ -45,8 +42,21 @@ let
     cd ${lib.escapeShellArg homeDirectory}
   '';
 
+  # The server reads its policy only at startup, and with the path unset it
+  # would look for the machine's own. Whatever the resolver does, the server
+  # starts, with no policy if none was checked.
+  applyPolicy = lib.optionalString (policy != null) ''
+    if ! T3CODE_DEV_MANAGED_POLICY_PATH=$(${lib.getExe' pkgs.coreutils "timeout"} 120 ${policy.command} resolve) ||
+      [ -z "$T3CODE_DEV_MANAGED_POLICY_PATH" ]; then
+      echo "t3code-policy: state=none sha= http=none err=resolver failed" >&2
+      T3CODE_DEV_MANAGED_POLICY_PATH=${policy.none}
+    fi
+    export T3CODE_DEV_MANAGED_POLICY_PATH
+  '';
+
   serve = pkgs.writeShellScript "t3-serve" (
     launchEnvironment
+    + applyPolicy
     + ''
       exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port ${toString tailnetPort}"}
     ''
@@ -83,9 +93,6 @@ in
           ExecStart = "${serve}";
           Restart = "on-failure";
           RestartSec = 10;
-        }
-        // lib.optionalAttrs (policy != null) {
-          Environment = lib.mapAttrsToList (name: value: "${name}=${value}") policyEnvironment;
         };
         Install.WantedBy = [ "default.target" ];
       };
@@ -113,9 +120,6 @@ in
           KeepAlive.SuccessfulExit = false;
           StandardOutPath = "${homeDirectory}/Library/Logs/t3code.log";
           StandardErrorPath = "${homeDirectory}/Library/Logs/t3code.log";
-        }
-        // lib.optionalAttrs (policy != null) {
-          EnvironmentVariables = policyEnvironment;
         };
       };
     }

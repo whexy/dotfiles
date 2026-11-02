@@ -1,30 +1,39 @@
 {
+  pkgs,
   inputs,
-  perSystem,
+  system,
 }:
 
-# whexy/t3code's T3 server, which reads T3CODE_DEV_MANAGED_POLICY_PATH, for
-# the x86_64-linux hosts that opt in with dotfiles.t3code.fork.enable. It is
-# the fork's derivation unchanged, so those hosts substitute the path
-# Woodpecker pushed to ci-cache; the attributes added here leave what it
-# builds alone.
+# whexy/t3code's T3 server, which every host runs. It is the fork's derivation
+# unchanged, so hosts substitute the path the fork's CI pushed to Cachix
+# (whexy-t3code); the attributes added here leave what it builds alone.
 let
-  fork = inputs.t3code-fork.packages.x86_64-linux.t3-server;
+  inherit (pkgs) lib;
+  inherit (inputs.t3code-fork) packages;
+  platforms = lib.filter (s: packages.${s} ? t3-server) (lib.attrNames packages);
+  fork = packages.${system}.t3-server;
   passthru = {
-    # The browser t3code-nightly pins, for the same nightly the fork builds.
-    inherit (perSystem.self.t3code-nightly) browser;
-    honorsManagedPolicyPath = true;
-    # flake.nix pins the t3code-fork input to a commit the fork's CI built,
-    # and t3code-nightly's updater then pins sources.json to its nightly.
+    # Woodpecker's pin-t3code-fork step moves the t3code-fork input to each
+    # commit the fork's CI built and cached.
     updater = null;
+  }
+  // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux {
+    browser = import ./browser.nix {
+      inherit pkgs;
+      source = inputs.t3code-fork;
+    };
   };
 in
-fork
-// passthru
-// {
-  passthru = fork.passthru or { } // passthru;
-  meta = fork.meta // {
-    changelog = "https://github.com/whexy/t3code/commits/${inputs.t3code-fork.rev}";
-    platforms = [ "x86_64-linux" ];
-  };
-}
+# Blueprint lists a package only on the systems in its meta.platforms.
+if !lib.elem system platforms then
+  pkgs.runCommand "t3code-fork-unsupported" { meta = { inherit platforms; }; } "exit 1"
+else
+  fork
+  // passthru
+  // {
+    passthru = fork.passthru or { } // passthru;
+    meta = fork.meta // {
+      changelog = "https://github.com/whexy/t3code/commits/${inputs.t3code-fork.rev}";
+      inherit platforms;
+    };
+  }
