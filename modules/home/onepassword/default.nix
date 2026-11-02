@@ -47,7 +47,12 @@ let
       cli
       pkgs.jq
     ];
-    text =
+    # A caller's exported `SHELLOPTS=xtrace` turns tracing on in every bash
+    # it starts, which would print the token and each value read to stderr.
+    text = ''
+      { set +x; } 2>/dev/null
+    ''
+    + (
       if hasToken then
         ''
           vaults=(${lib.escapeShellArgs (lib.attrValues (import ./vaults.nix))})
@@ -70,7 +75,8 @@ let
         ''
           echo "op-sa: this home has no 1Password service account (AGENTS.md, \"Secrets\")" >&2
           exit 1
-        '';
+        ''
+    );
   };
 in
 {
