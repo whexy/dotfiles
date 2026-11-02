@@ -64,7 +64,6 @@ let
     let
       gateway = config.dotfiles.llmGateways.gateways.cliproxyapi;
       inherit (config.dotfiles.llmGateways) accessToken;
-      opSa = "${config.dotfiles.onepassword.package}/bin/op-sa";
       jq = lib.getExe pkgs.jq;
     in
     pkgs.writeShellScriptBin "t3-claude-models" ''
@@ -73,10 +72,12 @@ let
       settings="$userdata/settings.json"
       state="$userdata/dotfiles-settings.json"
 
+      # The agenix paths expand XDG_RUNTIME_DIR, which an activation outside
+      # the user's session lacks; the reads then fail and the list stays.
       # Credentials reach curl on stdin, never on its command line.
-      if ! key=$(${opSa} read ${gateway.apiKeySecret}) ||
-        ! accessId=$(${opSa} read ${accessToken.id}) ||
-        ! accessSecret=$(${opSa} read ${accessToken.secret}) ||
+      if ! key=$(<"${gateway.apiKeyPath}") ||
+        ! accessId=$(<"${accessToken.idPath}") ||
+        ! accessSecret=$(<"${accessToken.secretPath}") ||
         ! catalog=$(
           printf 'Authorization: Bearer %s\nCF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
             "$key" "$accessId" "$accessSecret" |
@@ -317,6 +318,8 @@ in
         message = "dotfiles.t3code.server.tunnel.enable requires the server and dotfiles.tunnels.hostName.";
       }
     ];
+
+    age.secrets = config.dotfiles.llmGateways.secrets;
 
     home = {
       packages = [

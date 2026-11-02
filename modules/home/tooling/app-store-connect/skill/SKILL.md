@@ -29,8 +29,8 @@ skill packs or an `ASC.md` outside what the user asked for.
 
 ## Authentication
 
-`asc` loads the user's API key from 1Password on each run, so never run
-`asc auth login`.
+The user's API key is already configured through `ASC_KEY_ID`,
+`ASC_ISSUER_ID`, and `ASC_PRIVATE_KEY_PATH`, so never run `asc auth login`.
 If a command reports missing authentication, run `asc auth status --validate`
 and tell the user what it says; do not create or store other credentials.
 

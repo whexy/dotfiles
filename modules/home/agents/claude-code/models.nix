@@ -47,7 +47,7 @@ let
           CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
         };
         secrets = llm.accessSecrets // {
-          ANTHROPIC_API_KEY = llm.secretCommand gateway.apiKeySecret;
+          ANTHROPIC_API_KEY = gateway.apiKeyPath;
         };
         secretHeaders = llm.accessHeaderEnv;
       };

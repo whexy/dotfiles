@@ -16,7 +16,7 @@ let
     {
       label = "${id} (default models)";
       secrets = llm.accessSecrets // {
-        OPENAI_API_KEY = llm.secretCommand gateway.apiKeySecret;
+        OPENAI_API_KEY = gateway.apiKeyPath;
       };
       settings = {
         model_provider = id;

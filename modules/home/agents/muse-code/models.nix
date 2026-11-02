@@ -20,7 +20,7 @@ let
   gateway = llm.gateways.cliproxyapi;
   base = {
     secrets = llm.accessSecrets // {
-      META_API_KEY = llm.secretCommand gateway.apiKeySecret;
+      META_API_KEY = gateway.apiKeyPath;
     };
     secretHeaders = llm.accessHeaderEnv;
     settings.endpoint_transport = {

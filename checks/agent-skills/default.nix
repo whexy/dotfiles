@@ -53,7 +53,6 @@ let
     iphone-use-setup
     knowledge
     nix-blueprint
-    op-sa
     reverse-engineer-anything
     review-loop
     ship-pr

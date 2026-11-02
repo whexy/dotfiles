@@ -2,10 +2,20 @@
 #
 # Both are published on the public internet behind one Cloudflare Access
 # application, so every request needs its service-token headers in addition
-# to the gateway's own API key. Each consumer loads both from 1Password when
-# it starts, with `op-sa read`, and sends them its own way.
-{ lib, pkgs, ... }:
+# to the gateway's own API key. The keys are agenix secrets; each consumer
+# declares `secrets` in its own gate, reads the files at run time, and sends
+# them its own way.
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 let
+  # agenix paths are shell fragments ("''${XDG_RUNTIME_DIR}/agenix/..." on
+  # Linux, "$(getconf DARWIN_USER_TEMP_DIR)/agenix/..." on Darwin), so a
+  # consumer expands them at run time.
+  secretPath = name: config.age.secrets.${name}.path;
   gateway = lib.types.submodule {
     options = {
       name = lib.mkOption {
@@ -16,9 +26,9 @@ let
         type = lib.types.str;
         description = "Origin of the gateway's OpenAI- and Anthropic-compatible endpoints.";
       };
-      apiKeySecret = lib.mkOption {
+      apiKeyPath = lib.mkOption {
         type = lib.types.str;
-        description = "1Password secret name of the gateway's API key.";
+        description = "agenix path of the gateway's API key.";
       };
       catalogUrl = lib.mkOption {
         type = lib.types.str;
@@ -57,7 +67,7 @@ in
         cliproxyapi = rec {
           name = "CLIProxyAPI";
           baseUrl = "https://llm.clusters.work";
-          apiKeySecret = "ai-proxy-api-key";
+          apiKeyPath = secretPath "ai-proxy-api-key";
           # `client_version` selects the Codex catalog over OpenAI's list.
           catalogUrl = "${baseUrl}/v1/models?client_version=${pkgs.llm-agents.codex.version}";
           qualifiedIds = false;
@@ -75,7 +85,7 @@ in
         magpie = rec {
           name = "magpie";
           baseUrl = "https://magpie.clusters.work";
-          apiKeySecret = "magpie-api-key";
+          apiKeyPath = secretPath "magpie-api-key";
           # /v1/models ignores `client_version` and answers OpenAI's list.
           catalogUrl = "${baseUrl}/v1/codex/models";
           # Every model is `<magpie provider>/<model>`, such as
@@ -93,22 +103,35 @@ in
     accessToken = lib.mkOption {
       type = lib.types.submodule {
         options = {
-          id = lib.mkOption {
+          idPath = lib.mkOption {
             type = lib.types.str;
-            description = "1Password secret name of the service token's client ID.";
+            description = "agenix path of the service token's client ID.";
           };
-          secret = lib.mkOption {
+          secretPath = lib.mkOption {
             type = lib.types.str;
-            description = "1Password secret name of the service token's client secret.";
+            description = "agenix path of the service token's client secret.";
           };
         };
       };
       readOnly = true;
       default = {
-        id = "cf-access-dotfiles-id";
-        secret = "cf-access-dotfiles-secret";
+        idPath = secretPath "cf-access-dotfiles-id";
+        secretPath = secretPath "cf-access-dotfiles-secret";
       };
       description = "The Cloudflare Access service token in front of every gateway.";
+    };
+
+    secrets = lib.mkOption {
+      type = lib.types.attrsOf lib.types.attrs;
+      readOnly = true;
+      description = "The `age.secrets` every consumer of the gateways declares.";
+      default = {
+        ai-proxy-api-key.file = ../../../secrets/ai-proxy-api-key.age;
+        # A magpie gateway key, made under Gateway → Gateway keys in its web UI.
+        magpie-api-key.file = ../../../secrets/magpie-api-key.age;
+        cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
+        cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
+      };
     };
   };
 }

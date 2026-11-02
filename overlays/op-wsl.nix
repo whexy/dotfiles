@@ -1,8 +1,7 @@
 # Override 1password-cli to use Windows op.exe in WSL
 # Dynamically locates op.exe via WinGet or PATH, with caching for performance
-_final: prev:
-let
-  opExe = prev.writeShellScriptBin "op" ''
+_final: prev: {
+  _1password-cli = prev.writeShellScriptBin "op" ''
     set -euo pipefail
     source ${../lib/wsl-interop.bash}
 
@@ -48,12 +47,4 @@ let
 
     exec "$OP_EXE" "$@"
   '';
-in
-{
-  _1password-cli = opExe.overrideAttrs (old: {
-    # Service accounts need no desktop app, so op-sa runs the Linux CLI.
-    passthru = (old.passthru or { }) // {
-      linux = prev._1password-cli;
-    };
-  });
 }

@@ -14,7 +14,6 @@
     inputs.self.lib.overlays.llm-tools
   ];
   dotfiles = {
-    onepassword.serviceAccount = "root@b3srv0";
     autoUpgrade.enable = true;
     tunnels.hostName = "b3srv0";
     t3code = {
