@@ -103,6 +103,65 @@ asserts `nixpkgs.config == { }` when `nixpkgs.pkgs` is set. Host-specific
 hardware lives beside the host as `hardware.nix`; reusable platform and image
 behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 
+## Skills
+
+An agent skill is a directory holding a `SKILL.md`. Every agent sees the
+same skills, linked into `~/.agents/skills`, `~/.claude/skills` and
+`~/.config/muse/skills`. Claude Code keeps the skills it syncs from the
+account in `~/.claude/skills/synced/`, so no skill may be named `synced`.
+
+A package ships its skills at `$out/share/skills/<name>/SKILL.md`, the way it
+ships `bin/` or `share/man/`. Our own packages keep them in
+`packages/<pname>/skills/`, left out of the build source with `lib.fileset`
+and copied in at install, so editing a skill does not rerun the tool's
+checks.
+
+`dotfiles.agents.skills` decides what agents see:
+
+- `packages`: packages whose `share/skills` agents read; never the whole home
+  profile.
+- `local.<name> = { source; reason; }`: skills written in this repo. Each
+  directory in `modules/home/agents/skills/` is one.
+- `override.<name>`: changes a skill a listed package provides, with exactly
+  one of `patches` (applied with `patch -p1 --fuzz=0`), `replace` or
+  `ignore = true`.
+- `docs.<name> = path`: trees a skill reads by path, at
+  `~/.local/share/video-edit/docs/<name>`. They are not skills.
+
+Every deviation from a package's skill carries a reason: `override` requires
+one, and a `local` skill that stands in for one a tool would install itself
+sets one. Each feature adds its skills in `modules/home/agents/default.nix`,
+in the same gate as the CLI it installs.
+
+| Skill                                     | Source                     | Taken                                      |
+| ----------------------------------------- | -------------------------- | ------------------------------------------ |
+| `modules/home/agents/skills/*`            | local                      | ours                                       |
+| `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                 |
+| `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools             |
+| `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                 |
+| `iphone-use-setup`                        | `iphone-use`               | replaced by `iphone/iphone-use-setup`      |
+| `cf-cli`                                  | `cf`                       | patched by `cloudflare/cf-cli-skill.patch` |
+| `asc`, `spark`                            | local, with a reason       | the tools generate theirs at runtime       |
+| HyperFrames' skills, ManimGX's guide      | `docs`                     | read by path from `broll`                  |
+
+Third-party packages keep their skills at upstream's paths; `fromPaths` in
+`modules/home/agents/build-skills.nix` exposes them at `share/skills`.
+
+`build-skills.nix` assembles the tree in one derivation. It fails on a listed
+package without skills, two sources for one name, an override no package
+provides, a patch that does not apply, a package also read as `docs`, and a
+`SKILL.md` whose frontmatter `name` is not its directory or whose
+`description` is empty.
+
+`checks/agent-skills` builds every skill in the repo at once and compares the
+exposed names with the list written in it; CI builds it first, so an upstream
+bump that breaks a patch fails there. Changing which skills agents see means
+changing that list.
+
+```sh
+nix build .#checks.x86_64-linux.agent-skills
+```
+
 ## Secrets
 
 A secret lives in agenix or in 1Password:
