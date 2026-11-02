@@ -1,6 +1,7 @@
 {
   pkgs,
   flake,
+  inputs,
 }:
 
 let
@@ -84,85 +85,110 @@ let
       sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
     };
   });
-in
-pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
-  pname = "t3code-nightly";
-  inherit (sources) version;
 
-  # The `t3` npm package no longer carries per-platform builds; it downloads
-  # this archive from the GitHub Release, so fetch it there directly.
-  src = pkgs.fetchurl {
-    url = "https://github.com/pingdotgg/t3code/releases/download/v${finalAttrs.version}/t3-${finalAttrs.version}-${platform}.tar.gz";
-    hash = sources.hashes.${platform};
-  };
+  upstream = pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
+    pname = "t3code-nightly";
+    inherit (sources) version;
 
-  sourceRoot = "t3-${finalAttrs.version}-${platform}";
+    # The `t3` npm package no longer carries per-platform builds; it downloads
+    # this archive from the GitHub Release, so fetch it there directly.
+    src = pkgs.fetchurl {
+      url = "https://github.com/pingdotgg/t3code/releases/download/v${finalAttrs.version}/t3-${finalAttrs.version}-${platform}.tar.gz";
+      hash = sources.hashes.${platform};
+    };
 
-  nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-    pkgs.autoPatchelfHook
-  ];
+    sourceRoot = "t3-${finalAttrs.version}-${platform}";
 
-  buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
-    pkgs.glibc
-    pkgs.stdenv.cc.cc.lib
-  ];
+    nativeBuildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+      pkgs.autoPatchelfHook
+    ];
 
-  # Native addons ship musl prebuilds beside the glibc ones and load them only
-  # on a musl libc, so their libc never has to resolve here.
-  autoPatchelfIgnoreMissingDeps = [ "libc.musl-*.so.1" ];
+    buildInputs = lib.optionals pkgs.stdenv.hostPlatform.isLinux [
+      pkgs.glibc
+      pkgs.stdenv.cc.cc.lib
+    ];
 
-  # The executable is a Node single-executable with an embedded runtime
-  # payload; stripping it removes data that the runtime needs at startup.
-  dontStrip = true;
+    # Native addons ship musl prebuilds beside the glibc ones and load them only
+    # on a musl libc, so their libc never has to resolve here.
+    autoPatchelfIgnoreMissingDeps = [ "libc.musl-*.so.1" ];
 
-  unpackPhase = ''
-    runHook preUnpack
-    tar -xzf "$src"
-    runHook postUnpack
-  '';
+    # The executable is a Node single-executable with an embedded runtime
+    # payload; stripping it removes data that the runtime needs at startup.
+    dontStrip = true;
 
-  installPhase = ''
-    runHook preInstall
-    install -d "$out/bin" "$out/libexec/t3code"
-    cp -R . "$out/libexec/t3code/"
-    ln -s ../libexec/t3code/t3 "$out/bin/t3"
-    runHook postInstall
-  '';
+    unpackPhase = ''
+      runHook preUnpack
+      tar -xzf "$src"
+      runHook postUnpack
+    '';
 
-  passthru = {
-    # Upstream release builds ignore T3CODE_DEV_MANAGED_POLICY_PATH, so
-    # modules/home/t3code keeps writing the settings the policy locks.
-    # whexy/t3code's builds read it.
-    honorsManagedPolicyPath = false;
+    installPhase = ''
+      runHook preInstall
+      install -d "$out/bin" "$out/libexec/t3code"
+      cp -R . "$out/libexec/t3code/"
+      ln -s ../libexec/t3code/t3 "$out/bin/t3"
+      runHook postInstall
+    '';
 
-    # update.py also pins the desktop app and the browser, which
-    # t3code-desktop-nightly reads from sources.json.
-    updater = flake.lib.updater {
-      kind = "script";
-      alsoBuild = [
-        "t3code-nightly.browser"
-        "t3code-desktop-nightly"
+    passthru = {
+      # Upstream's prebuilt server ignores T3CODE_DEV_MANAGED_POLICY_PATH.
+      honorsManagedPolicyPath = false;
+
+      # update.py also pins the desktop app and the browser, which
+      # t3code-desktop-nightly reads from sources.json.
+      updater = flake.lib.updater {
+        kind = "script";
+        alsoBuild = [
+          "t3code-nightly.browser"
+          "t3code-desktop-nightly"
+          ];
+      };
+    }
+    // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux { inherit browser; };
+
+    nativeInstallCheckInputs = [ pkgs.versionCheckHook ];
+    doInstallCheck = true;
+    versionCheckProgram = "${placeholder "out"}/bin/t3";
+    versionCheckProgramArg = [ "--version" ];
+
+    meta = {
+      description = "Nightly T3 Code server";
+      homepage = "https://t3.codes";
+      changelog = "https://github.com/pingdotgg/t3code/releases/tag/v${finalAttrs.version}";
+      license = lib.licenses.mit;
+      mainProgram = "t3";
+      platforms = [
+        "x86_64-linux"
+        "aarch64-linux"
+        "aarch64-darwin"
       ];
+      sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
+    };
+  });
+
+  # TODO(t3code fork): x86_64-linux runs whexy/t3code's server, which reads
+  # T3CODE_DEV_MANAGED_POLICY_PATH, once whexy/t3code#4 puts its flake on
+  # self-hosted-nightly. Add the input to flake.nix without `follows`, as
+  # ci-cache holds only what the fork's own lock builds:
+  #   t3code-fork.url = "github:whexy/t3code/self-hosted-nightly";
+  # sources.json's version still pins the browser, the desktop app and the
+  # hub image's tag, so it must name the nightly the fork builds.
+  fork =
+    if pkgs.stdenv.hostPlatform.system == "x86_64-linux" then
+      inputs.t3code-fork.packages.x86_64-linux.t3-server or null
+    else
+      null;
+in
+if fork == null then
+  upstream
+else
+  # The fork's own derivation, so the store path is the one CI cached; these
+  # attributes leave what it builds unchanged.
+  fork
+  // {
+    inherit (upstream) browser updater;
+    honorsManagedPolicyPath = true;
+    meta = fork.meta // {
+      changelog = "https://github.com/whexy/t3code/commits/${inputs.t3code-fork.rev}";
     };
   }
-  // lib.optionalAttrs pkgs.stdenv.hostPlatform.isLinux { inherit browser; };
-
-  nativeInstallCheckInputs = [ pkgs.versionCheckHook ];
-  doInstallCheck = true;
-  versionCheckProgram = "${placeholder "out"}/bin/t3";
-  versionCheckProgramArg = [ "--version" ];
-
-  meta = {
-    description = "Nightly T3 Code server";
-    homepage = "https://t3.codes";
-    changelog = "https://github.com/pingdotgg/t3code/releases/tag/v${finalAttrs.version}";
-    license = lib.licenses.mit;
-    mainProgram = "t3";
-    platforms = [
-      "x86_64-linux"
-      "aarch64-linux"
-      "aarch64-darwin"
-    ];
-    sourceProvenance = with lib.sourceTypes; [ binaryNativeCode ];
-  };
-})
