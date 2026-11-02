@@ -303,7 +303,10 @@ in
     claudeModels
   ]
   ++ lib.optional cfg.pair.enable perSystem.self.t3-pair
-  ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly;
+  ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly
+  # pkgs.nodejs rather than a pinned major: editor.javascript installs it
+  # too, and two different nodes would collide in the profile.
+  ++ lib.optional cfg.deviceHost.enable pkgs.nodejs;
 
   sessionVariables = privacyEnv;
 

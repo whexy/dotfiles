@@ -192,6 +192,18 @@ in
           };
         };
       };
+      deviceHost.enable = lib.mkOption {
+        type = lib.types.bool;
+        # A Mac that manages Xcode has the simulators other T3 servers drive.
+        default = args.osConfig.dotfiles.system.xcodes.enable or false;
+        defaultText = lib.literalExpression "osConfig.dotfiles.system.xcodes.enable or false";
+        description = ''
+          Whether this machine serves as a T3 Code SSH device host, whose iOS
+          simulators other T3 servers drive over SSH. Their probe and device
+          tools run `node` from the non-interactive SSH PATH, so this puts
+          Node.js on the profile.
+        '';
+      };
       pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
       desktop.enable = lib.mkEnableOption ''
         the T3 Code desktop app. Where this host runs the server, the app has
