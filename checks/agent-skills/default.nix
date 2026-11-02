@@ -6,8 +6,8 @@
 let
   inherit (pkgs) lib;
   agents = ../../modules/home/agents;
-  skills = import (agents + "/build-skills.nix") { inherit pkgs; };
-  video = (import (agents + "/video/home.nix") { inherit pkgs perSystem; }).skills;
+  skills = import (agents + "/skill-tree/build.nix") { inherit pkgs; };
+  video = import (agents + "/video/skills.nix") { inherit pkgs perSystem; };
   cloudflare = import (agents + "/cloudflare/skills.nix") { inherit (perSystem.self) cf; };
   iphone = import (agents + "/iphone/skills.nix") { iphoneUse = perSystem.self.iphone-use; };
 

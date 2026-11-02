@@ -1,4 +1,4 @@
-{ proxy }:
+{ llm }:
 # Codex discovers a gateway's models itself through `model_catalog_url`, so
 # its own model picker lists them; each gateway's entry only configures the
 # provider. The native login entry clears the provider so Codex uses its saved
@@ -11,12 +11,12 @@ let
   gatewayEntry =
     id: extra:
     let
-      gateway = proxy.gateways.${id};
+      gateway = llm.gateways.${id};
     in
     {
       label = "${id} (default models)";
-      secrets = proxy.cfAccessSecrets // {
-        OPENAI_API_KEY = proxy.secretCommand gateway.apiKeySecret;
+      secrets = llm.accessSecrets // {
+        OPENAI_API_KEY = llm.secretCommand gateway.apiKeySecret;
       };
       settings = {
         model_provider = id;
@@ -29,7 +29,7 @@ let
           supports_websockets = gateway.websockets;
           requires_openai_auth = false;
           env_key = "OPENAI_API_KEY";
-          env_http_headers = proxy.cfAccessHeaderEnv;
+          env_http_headers = llm.accessHeaderEnv;
         }
         // extra.provider or { };
       }

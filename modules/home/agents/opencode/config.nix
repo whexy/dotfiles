@@ -1,8 +1,9 @@
 {
   lib,
-  proxy,
-  defaults,
-  mcp,
+  llm,
+  model,
+  smallModel,
+  mcpServers,
 }:
 let
   # Shared servers are written in Claude's shape: `url` for remote, `command`
@@ -24,9 +25,9 @@ let
 in
 {
   "$schema" = "https://opencode.ai/v2/config.json";
-  model = defaults.default;
+  inherit model;
   # Session titles are OpenCode's small-model task.
-  agents.title.model = defaults.cheap;
+  agents.title.model = smallModel;
   agents.plan.disabled = true;
   default_agent = "build";
   update = "disable";
@@ -39,8 +40,9 @@ in
     {
       package = "${./plugins/proxy}";
       options = {
-        inherit (proxy) opSa cfAccess;
-        gateways = lib.mapAttrsToList (id: gateway: gateway // { inherit id; }) proxy.gateways;
+        inherit (llm) opSa;
+        cfAccess = llm.accessToken;
+        gateways = lib.mapAttrsToList (id: gateway: gateway // { inherit id; }) llm.gateways;
         # The cluster's SearXNG, in the gateways' Cloudflare Access application.
         searchUrl = "https://search.clusters.work";
       };
@@ -48,7 +50,7 @@ in
   ];
   # Registered by the plugin above; models with hosted search do not see it.
   websearch.provider = "searxng";
-  mcp.servers = lib.mapAttrs (_: toMcp) mcp.servers;
+  mcp.servers = lib.mapAttrs (_: toMcp) mcpServers;
 
   permissions = [
     {
@@ -81,5 +83,5 @@ in
     action = "provider.use";
     resource = id;
     effect = "allow";
-  }) (lib.attrNames proxy.gateways);
+  }) (lib.attrNames llm.gateways);
 }

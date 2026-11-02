@@ -16,7 +16,7 @@ let
   '';
   moduleFor =
     isDarwin: enabled: tailnetEnabled:
-    import ../../modules/home/agents/t3code/home.nix {
+    import ../../modules/home/agents/t3code/services.nix {
       pkgs = pkgs // {
         stdenv = pkgs.stdenv // {
           hostPlatform = pkgs.stdenv.hostPlatform // {
@@ -24,26 +24,15 @@ let
           };
         };
       };
-      config = {
-        dotfiles.agents.t3code = {
-          package = t3;
-          server = {
-            enable = enabled;
-            tailnet.enable = tailnetEnabled;
-            tunnel.enable = false;
-          };
-        };
-        home = {
-          profileDirectory = profile;
-          homeDirectory = "/tmp";
-        };
-      };
       inherit (pkgs) lib;
-      perSystem = { };
-      flake = { };
-      proxy = { };
+      cfg.server = {
+        enable = enabled;
+        tailnet.enable = tailnetEnabled;
+      };
+      t3 = "${t3}/bin/t3";
+      profileDirectory = profile;
+      homeDirectory = "/tmp";
       gitConfig = "/dev/null";
-      mkTunnel = _: { };
     };
   linux = moduleFor false true true;
   darwin = moduleFor true true true;
