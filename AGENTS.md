@@ -103,6 +103,27 @@ asserts `nixpkgs.config == { }` when `nixpkgs.pkgs` is set. Host-specific
 hardware lives beside the host as `hardware.nix`; reusable platform and image
 behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 
+## Agents
+
+`modules/home/agents` configures Claude Code, Codex, OpenCode, and Muse Code,
+each in a module of its own. They take what they share from options, never
+from each other:
+
+- `dotfiles.llmGateways`: the model gateways, CLIProxyAPI and magpie, and the
+  Cloudflare Access token in front of them.
+- `dotfiles.agents.launcher`: the git config and shell lines every launcher
+  runs before its agent.
+- `dotfiles.agents.mcp.servers`: MCP servers, in Claude's shape. A feature
+  adds its own server, and each agent renders the set into its own config.
+- `dotfiles.agents.skills`: the skills every agent sees (below).
+
+Every agent reads `global-rules.md`, linked into its own config directory.
+
+`checks/t3-tailnet` and `checks/agent-skills` import plain functions beside
+the modules (`t3code/services.nix`, `skill-tree/build.nix`, and each
+feature's `skills.nix`) so that they evaluate no home; those files take no
+module arguments.
+
 ## Skills
 
 An agent skill is a directory holding a `SKILL.md`. Every agent sees the
@@ -131,10 +152,10 @@ checks.
 
 Every deviation from a package's skill carries a reason: `override` requires
 one, and a `local` skill that stands in for one a tool would install itself
-sets one. Each feature adds its skills in `modules/home/agents/default.nix`,
-in the same gate as the CLI it installs. A feature that overrides skills keeps
-its settings in its own file (`cloudflare/skills.nix`, `iphone/skills.nix`,
-`video/home.nix`), which `checks/agent-skills` imports too.
+sets one. Each feature adds its skills in its own module, in the same gate as
+the CLI it installs. A feature that overrides skills keeps its settings in its
+own file (`cloudflare/skills.nix`, `iphone/skills.nix`, `video/skills.nix`),
+which `checks/agent-skills` imports too.
 
 | Skill                                     | Source                     | Taken                                         |
 | ----------------------------------------- | -------------------------- | --------------------------------------------- |
@@ -154,7 +175,7 @@ adds or drops fails `checks/agent-skills` until it is accounted for. cf's
 npm tarball ships no skill, so cf takes its own, `cf-cli`, from Cloudflare's
 separate skills repository and none of that repository's product guides.
 
-`build-skills.nix` assembles the tree in one derivation. It fails on a listed
+`skill-tree/build.nix` assembles the tree in one derivation. It fails on a listed
 package without skills, two sources for one name, an override no package
 provides, a patch that does not apply, a `docs` tree that reads a skill agents
 see, and a `SKILL.md` whose frontmatter `name` is not its directory or whose
@@ -545,9 +566,10 @@ To add a phone:
 
 Each service a host publishes on the public internet gets its own Cloudflare
 tunnel, at `https://<host>-<service>.clusters.work` (`flake.lib.publicHost`,
-the single place these names are defined). `modules/home/agents/tunnel.nix`
-runs each tunnel as a user service to the service's loopback port, so traffic
-never passes through the cluster.
+the single place these names are defined). A feature adds its tunnel to
+`dotfiles.tunnels.services`, and `modules/home/agents/tunnels.nix` runs each
+as a user service to the service's loopback port, so traffic never passes
+through the cluster.
 
 No host is set up by hand. Every host decrypts the same `cloudflared-cert`
 secret, the cert from one `cloudflared tunnel login` for the zone. On start a

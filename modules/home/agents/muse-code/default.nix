@@ -1,12 +1,17 @@
 {
+  config,
   lib,
+  pkgs,
   perSystem,
-  proxy,
-  withModelPicker,
-  mcp,
-  prelude,
+  ...
 }:
 let
+  cfg = config.dotfiles.agents;
+  withModelPicker = import ../launcher/with-model-picker.nix {
+    inherit pkgs;
+    agentSettings = perSystem.self.agent-settings;
+  };
+
   # Muse's MCP shape names the transport and expands `${VAR}` in header
   # values, like Claude's; local servers take a command plus its arguments.
   toMuse =
@@ -28,8 +33,8 @@ let
   agent = withModelPicker {
     name = "muse";
     package = perSystem.self.muse-code;
-    mcpServers = lib.mapAttrs (_: toMuse) mcp.servers;
-    inherit prelude;
+    mcpServers = lib.mapAttrs (_: toMuse) cfg.mcp.servers;
+    inherit (cfg.launcher) prelude;
     managedLinks = [
       "AGENTS.md"
       "skills"
@@ -42,17 +47,21 @@ let
       "MUSE_CUSTOM_HEADERS"
       "MUSE_MODEL"
     ];
-    entries = import ./models.nix { inherit proxy; };
+    entries = import ./models.nix { llm = import ../launcher/gateways.nix { inherit config; }; };
   };
 in
 {
-  packages = [ agent ];
+  config = lib.mkIf cfg.enable {
+    home = {
+      packages = [ agent ];
 
-  homeFiles.".config/muse/AGENTS.md".text = builtins.readFile ../AGENTS.md;
+      file.".config/muse/AGENTS.md".text = builtins.readFile ../global-rules.md;
 
-  # Every host starts on the gateway: the first sync saves the default entry
-  # and its credentials, so no host signs in to Meta.
-  activation.museSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
-    run ${agent}/bin/muse-settings-sync
-  '';
+      # Every host starts on the gateway: the first sync saves the default entry
+      # and its credentials, so no host signs in to Meta.
+      activation.museSettings = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+        run ${agent}/bin/muse-settings-sync
+      '';
+    };
+  };
 }

@@ -1,6 +1,6 @@
 """Assemble the skill tree agents see, failing on any inconsistency.
 
-Usage: build-skills.py SPEC OUT, where SPEC is the JSON build-skills.nix
+Usage: build.py SPEC OUT, where SPEC is the JSON build.nix
 writes from dotfiles.agents.skills.
 """
 

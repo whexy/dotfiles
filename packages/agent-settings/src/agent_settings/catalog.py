@@ -1,4 +1,4 @@
-"""The selector catalog that `withModelPicker.nix` writes for each agent."""
+"""The selector catalog that `with-model-picker.nix` writes for each agent."""
 
 import copy
 from collections.abc import Callable

@@ -1,12 +1,12 @@
-{
-  pkgs,
+# T3 Code: its server, published on the tailnet and through a public tunnel,
+# the desktop app, the t3-pair helper, and the SSH device host.
+args@{
   config,
   lib,
+  pkgs,
   perSystem,
   flake,
-  proxy,
-  gitConfig,
-  mkTunnel,
+  ...
 }:
 let
   cfg = config.dotfiles.agents.t3code;
@@ -24,69 +24,16 @@ let
 
   t3 = lib.getExe' t3code "t3";
 
-  # Tailscale Serve and the Cloudflare tunnel both proxy to this loopback port.
-  port = 3773;
-  tailnetPort = 35338;
-
-  # Service managers start with a bare environment; source the same session
-  # variables and profile PATH a login shell would get.
-  launchEnvironment = ''
-    export PATH=${
-      lib.concatStringsSep ":" [
-        "${config.home.profileDirectory}/bin"
-        "/run/wrappers/bin"
-        "/run/current-system/sw/bin"
-        "/nix/var/nix/profiles/default/bin"
-        "/usr/bin"
-        "/bin"
-        "/usr/sbin"
-        "/sbin"
-      ]
-    }
-    . ${config.home.profileDirectory}/etc/profile.d/hm-session-vars.sh
-    # T3 sessions arrive without SSH, so no forwarded signing agent ever
-    # reaches its git actions or terminal panel; commit unsigned as agents do.
-    export GIT_CONFIG_GLOBAL=${gitConfig}
-    cd ${lib.escapeShellArg config.home.homeDirectory}
-  '';
-
-  serve = pkgs.writeShellScript "t3-serve" (
-    launchEnvironment
-    + ''
-      exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port ${toString tailnetPort}"}
-    ''
-  );
-
-  # Keep T3's Serve flag for dynamic environment discovery. Its initial setup
-  # may fail while Tailscale is offline; this independent service repairs only
-  # T3's HTTPS root handler, preserving other ports and paths.
-  tailnet = pkgs.writeShellScript "t3-tailnet" (
-    launchEnvironment
-    + ''
-      export PATH=${
-        lib.makeBinPath [
-          pkgs.coreutils
-          pkgs.jq
-        ]
-      }:"$PATH"
-    ''
-    + ''
-      backend=http://127.0.0.1:${toString port}
-      serve_port=${toString tailnetPort}
-    ''
-    + builtins.readFile ./tailnet.sh
-  );
-
-  tunnel =
-    let
-      hostname = flake.lib.publicHost "t3" cfg.server.tunnel.hostName;
-    in
-    mkTunnel {
-      name = "t3code-tunnel";
-      tunnel = "t3-${cfg.server.tunnel.hostName}";
-      inherit hostname port;
-      description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
-    };
+  services = import ./services.nix {
+    inherit
+      pkgs
+      lib
+      cfg
+      t3
+      ;
+    inherit (config.home) profileDirectory homeDirectory;
+    inherit (config.dotfiles.agents.launcher) gitConfig;
+  };
 
   # The server reads these from its own environment, and the desktop app
   # forwards the telemetry flag from the login shell to the server it bundles.
@@ -114,7 +61,9 @@ let
   # so models the gateway drops are removed and ones added in T3 survive.
   claudeModels =
     let
-      gateway = proxy.gateways.cliproxyapi;
+      gateway = config.dotfiles.llmGateways.gateways.cliproxyapi;
+      inherit (config.dotfiles.llmGateways) accessToken;
+      opSa = "${config.dotfiles.onepassword.package}/bin/op-sa";
       jq = lib.getExe pkgs.jq;
     in
     pkgs.writeShellScriptBin "t3-claude-models" ''
@@ -124,9 +73,9 @@ let
       state="$userdata/dotfiles-settings.json"
 
       # Credentials reach curl on stdin, never on its command line.
-      if ! key=$(${proxy.opSa} read ${gateway.apiKeySecret}) ||
-        ! accessId=$(${proxy.opSa} read ${proxy.cfAccess.id}) ||
-        ! accessSecret=$(${proxy.opSa} read ${proxy.cfAccess.secret}) ||
+      if ! key=$(${opSa} read ${gateway.apiKeySecret}) ||
+        ! accessId=$(${opSa} read ${accessToken.id}) ||
+        ! accessSecret=$(${opSa} read ${accessToken.secret}) ||
         ! catalog=$(
           printf 'Authorization: Bearer %s\nCF-Access-Client-Id: %s\nCF-Access-Client-Secret: %s\n' \
             "$key" "$accessId" "$accessSecret" |
@@ -295,109 +244,151 @@ let
         mv "$tmp/T3 Code (Nightly).app" ${lib.escapeShellArg desktopApp}
       '';
     };
-
 in
 {
-  packages = [
-    t3code
-    claudeModels
-  ]
-  ++ lib.optional cfg.pair.enable perSystem.self.t3-pair
-  ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly
-  # pkgs.nodejs rather than a pinned major: editor.javascript installs it
-  # too, and two different nodes would collide in the profile.
-  ++ lib.optional cfg.deviceHost.enable pkgs.nodejs;
-
-  sessionVariables = privacyEnv;
-
-  homeFiles = lib.optionalAttrs linkBrowser {
-    ${browserDir}.source = browser;
+  options.dotfiles.agents.t3code = {
+    package = lib.mkOption {
+      type = lib.types.nullOr lib.types.package;
+      default = null;
+      description = "T3 Code package; null selects the pinned nightly package.";
+    };
+    server = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        # Standalone homes have no osConfig to say whether this machine is
+        # on the tailnet, so they enable the server themselves.
+        default = args.osConfig.dotfiles.network.tailscale.enable or false;
+        defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
+        description = ''
+          Whether to run the T3 Code server. It listens on loopback only,
+          for Tailscale Serve and the Cloudflare tunnel to publish.
+        '';
+      };
+      tailnet.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = args.osConfig.dotfiles.network.tailscale.enable or false;
+        defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or false";
+        description = ''
+          Whether to publish the server on the tailnet through Tailscale
+          Serve at `https://<MagicDNS name>:35338`.
+        '';
+      };
+      tunnel = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = cfg.server.enable;
+          defaultText = lib.literalExpression "config.dotfiles.agents.t3code.server.enable";
+          description = ''
+            Whether to publish the server on the public internet through a
+            Cloudflare tunnel at the host's `flake.lib.publicHost "t3"` name. The
+            host creates its own tunnel and DNS record on first start with the
+            shared `cloudflared-cert` secret. The server's own pairing is the
+            only gate in front of it.
+          '';
+        };
+        hostName = lib.mkOption {
+          type = lib.types.nullOr lib.types.str;
+          default = args.osConfig.dotfiles.host.hostName or null;
+          defaultText = lib.literalExpression "osConfig.dotfiles.host.hostName or null";
+          description = ''
+            Dotfiles host name the tunnel and its public name derive from.
+            Standalone homes have no osConfig to supply it.
+          '';
+        };
+      };
+    };
+    deviceHost.enable = lib.mkOption {
+      type = lib.types.bool;
+      # A Mac that manages Xcode has the simulators other T3 servers drive.
+      default = args.osConfig.dotfiles.system.xcodes.enable or false;
+      defaultText = lib.literalExpression "osConfig.dotfiles.system.xcodes.enable or false";
+      description = ''
+        Whether this machine serves as a T3 Code SSH device host, whose iOS
+        simulators other T3 servers drive over SSH. Their probe and device
+        tools run `node` from the non-interactive SSH PATH, so this puts
+        Node.js on the profile.
+      '';
+    };
+    pair.enable = lib.mkEnableOption "the t3-pair helper, which mints pairing URLs for T3 Code servers";
+    desktop.enable = lib.mkEnableOption ''
+      the T3 Code desktop app. Where this host runs the server, the app has
+      no local environment of its own and connects to that server once
+      paired with `t3-pair`
+    '';
   };
 
-  activation = {
-    t3codeClaudeModels = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run ${lib.getExe claudeModels}
-    '';
-  }
-  // lib.optionalAttrs cfg.server.enable {
-    t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
-      run ${lib.getExe linkedEnvironments}
-    '';
-  }
-  // lib.optionalAttrs (cfg.desktop.enable && cfg.server.enable) {
-    t3codeDesktopClientOnly = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      run ${lib.getExe desktopClientOnly}
-    '';
-  }
-  // lib.optionalAttrs (cfg.desktop.enable && isDarwin) {
-    t3codeDesktopApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if [ ! -e ${lib.escapeShellArg desktopApp} ]; then
-        run ${lib.getExe installDesktopApp} || warnEcho "T3 Code was not installed; the next activation retries"
-      fi
-    '';
-  }
-  # A server that ran before this link existed left its own download here,
-  # which Home Manager would otherwise refuse to replace.
-  // lib.optionalAttrs linkBrowser {
-    t3codeBrowser = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      browser="$HOME/${browserDir}"
-      if [ -d "$browser" ] && [ ! -L "$browser" ]; then
-        run rm -rf $VERBOSE_ARG "$browser"
-      fi
-    '';
+  config = lib.mkIf config.dotfiles.agents.enable {
+    assertions = [
+      {
+        assertion = cfg.server.tunnel.enable -> cfg.server.enable && cfg.server.tunnel.hostName != null;
+        message = "dotfiles.agents.t3code.server.tunnel.enable requires the server and dotfiles.agents.t3code.server.tunnel.hostName.";
+      }
+    ];
+
+    home = {
+      packages = [
+        t3code
+        claudeModels
+      ]
+      ++ lib.optional cfg.pair.enable perSystem.self.t3-pair
+      ++ lib.optional (cfg.desktop.enable && !isDarwin) perSystem.self.t3code-desktop-nightly
+      # pkgs.nodejs rather than a pinned major: editor.javascript installs it
+      # too, and two different nodes would collide in the profile.
+      ++ lib.optional cfg.deviceHost.enable pkgs.nodejs;
+
+      sessionVariables = privacyEnv;
+
+      file = lib.optionalAttrs linkBrowser {
+        ${browserDir}.source = browser;
+      };
+
+      activation = {
+        t3codeClaudeModels = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          run ${lib.getExe claudeModels}
+        '';
+      }
+      // lib.optionalAttrs cfg.server.enable {
+        t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
+          run ${lib.getExe linkedEnvironments}
+        '';
+      }
+      // lib.optionalAttrs (cfg.desktop.enable && cfg.server.enable) {
+        t3codeDesktopClientOnly = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          run ${lib.getExe desktopClientOnly}
+        '';
+      }
+      // lib.optionalAttrs (cfg.desktop.enable && isDarwin) {
+        t3codeDesktopApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
+          if [ ! -e ${lib.escapeShellArg desktopApp} ]; then
+            run ${lib.getExe installDesktopApp} || warnEcho "T3 Code was not installed; the next activation retries"
+          fi
+        '';
+      }
+      # A server that ran before this link existed left its own download here,
+      # which Home Manager would otherwise refuse to replace.
+      // lib.optionalAttrs linkBrowser {
+        t3codeBrowser = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
+          browser="$HOME/${browserDir}"
+          if [ -d "$browser" ] && [ ! -L "$browser" ]; then
+            run rm -rf $VERBOSE_ARG "$browser"
+          fi
+        '';
+      };
+    };
+
+    systemd.user.services = services.systemdUserServices;
+    launchd.agents = services.launchdAgents;
+
+    dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (
+      let
+        hostname = flake.lib.publicHost "t3" cfg.server.tunnel.hostName;
+      in
+      {
+        tunnel = "t3-${cfg.server.tunnel.hostName}";
+        inherit hostname;
+        inherit (services) port;
+        description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
+      }
+    );
   };
-
-  systemdUserServices =
-    lib.optionalAttrs (cfg.server.enable && !isDarwin) {
-      t3code = {
-        Unit.Description = "T3 Code server";
-        Service = {
-          ExecStart = "${serve}";
-          Restart = "on-failure";
-          RestartSec = 10;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-    }
-    // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable && !isDarwin) {
-      t3code-tailnet = {
-        Unit.Description = "T3 Code Tailscale route";
-        Service = {
-          ExecStart = "${tailnet}";
-          TimeoutStopSec = 30;
-          Restart = "on-failure";
-          RestartSec = 10;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-    }
-    // lib.optionalAttrs cfg.server.tunnel.enable tunnel.systemdUserServices;
-
-  launchdAgents =
-    lib.optionalAttrs (cfg.server.enable && isDarwin) {
-      t3code = {
-        enable = true;
-        config = {
-          ProgramArguments = [ "${serve}" ];
-          RunAtLoad = true;
-          KeepAlive.SuccessfulExit = false;
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code.log";
-        };
-      };
-    }
-    // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable && isDarwin) {
-      t3code-tailnet = {
-        enable = true;
-        config = {
-          ProgramArguments = [ "${tailnet}" ];
-          ExitTimeOut = 30;
-          RunAtLoad = true;
-          KeepAlive.SuccessfulExit = false;
-          StandardOutPath = "${config.home.homeDirectory}/Library/Logs/t3code-tailnet.log";
-          StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/t3code-tailnet.log";
-        };
-      };
-    }
-    // lib.optionalAttrs cfg.server.tunnel.enable tunnel.launchdAgents;
 }

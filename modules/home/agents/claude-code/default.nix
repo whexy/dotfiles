@@ -1,20 +1,24 @@
 {
-  pkgs,
+  config,
   lib,
-  proxy,
-  withModelPicker,
-  mcp,
-  prelude,
+  pkgs,
+  perSystem,
+  ...
 }:
 let
+  cfg = config.dotfiles.agents;
+  withModelPicker = import ../launcher/with-model-picker.nix {
+    inherit pkgs;
+    agentSettings = perSystem.self.agent-settings;
+  };
   agent = withModelPicker {
     name = "claude";
     package = pkgs.llm-agents.claude-code;
-    mcpServers = mcp.servers;
+    mcpServers = cfg.mcp.servers;
     # The Bash tool otherwise runs the login shell, zsh, where unquoted
     # expansions do not word-split and unmatched globs abort the command;
     # models write bash and keep tripping on both.
-    prelude = prelude + ''
+    prelude = cfg.launcher.prelude + ''
       export CLAUDE_CODE_SHELL=${lib.getExe pkgs.bashInteractive}
     '';
     managedLinks = [
@@ -31,15 +35,19 @@ let
       "CLAUDE_CODE_USE_VERTEX"
       "CLAUDE_CODE_USE_FOUNDRY"
     ];
-    entries = import ./models.nix { inherit proxy; };
+    entries = import ./models.nix { llm = import ../launcher/gateways.nix { inherit config; }; };
   };
 in
 {
-  packages = [ agent ];
-  # Shared global rules plus Claude Code-only guidance.
-  homeFiles.".claude/CLAUDE.md".text =
-    builtins.readFile ../AGENTS.md + "\n" + builtins.readFile ./SPECIAL_INSTRUCTION.md;
-  activation.claudeSettings = lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
-    run ${agent}/bin/claude-settings-sync
-  '';
+  config = lib.mkIf cfg.enable {
+    home = {
+      packages = [ agent ];
+      # Shared global rules plus Claude Code-only guidance.
+      file.".claude/CLAUDE.md".text =
+        builtins.readFile ../global-rules.md + "\n" + builtins.readFile ./SPECIAL_INSTRUCTION.md;
+      activation.claudeSettings = lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ] ''
+        run ${agent}/bin/claude-settings-sync
+      '';
+    };
+  };
 }

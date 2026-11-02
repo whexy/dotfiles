@@ -1,7 +1,7 @@
 # claude-code provider/model entries for the fzf picker wrapper.
 # claude reads ANTHROPIC_MODEL and authenticates with ANTHROPIC_API_KEY.
 # Compatible providers additionally require ANTHROPIC_BASE_URL.
-{ proxy }:
+{ llm }:
 let
   roles = [
     {
@@ -34,7 +34,7 @@ let
   gatewayEntries =
     id:
     let
-      gateway = proxy.gateways.${id};
+      gateway = llm.gateways.${id};
     in
     rec {
       default = {
@@ -46,10 +46,10 @@ let
           # model named at launch, as T3 Code's model picker does.
           CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
         };
-        secrets = proxy.cfAccessSecrets // {
-          ANTHROPIC_API_KEY = proxy.secretCommand gateway.apiKeySecret;
+        secrets = llm.accessSecrets // {
+          ANTHROPIC_API_KEY = llm.secretCommand gateway.apiKeySecret;
         };
-        secretHeaders = proxy.cfAccessHeaderEnv;
+        secretHeaders = llm.accessHeaderEnv;
       };
       # One entry per model the gateway serves when the picker opens. The
       # picked model fills every role, so Claude Code never falls back to a
