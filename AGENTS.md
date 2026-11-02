@@ -444,7 +444,12 @@ of their reach. A new policy changes the unit, so switching restarts the
 server, which reads the policy only at startup. Each home renders its own,
 so users on one host keep separate policies.
 
-Every server starts from a default policy in `modules/home/t3code`: linked
+A server package declares that it reads the variable with
+`passthru.honorsManagedPolicyPath`. Without it, the home renders no policy
+and sets no variable, so nothing looks applied that is not, and a policy set
+for that server warns.
+
+Every server that applies one starts from a default policy in `modules/home/t3code`: linked
 environments and provider update checks are locked, telemetry is limited,
 and the rest are defaults the user's own choices override. A home
 replaces any key with a plain assignment. The policy never names a
@@ -452,10 +457,12 @@ provider instance: `t3-claude-models` rewrites the Claude instance's models,
 and T3 locks an instance only as a whole. It never sets `limits.clients`,
 which would end pairing, the tunnel and the tailnet route.
 
-Upstream release builds ignore the variable, so the policy takes effect only
-with a package that sets `passthru.honorsManagedPolicyPath`, as
-whexy/t3code's builds will. Until then, activation still writes
-`linkedEnvironmentsEnabled`.
+Upstream's prebuilt server ignores the variable. On x86_64-linux,
+`t3code-nightly` is to take whexy/t3code's server from a flake input, its
+derivation unchanged so hosts substitute the path Woodpecker pushed to
+ci-cache; the input waits on a TODO in `packages/t3code-nightly`. Macs and
+aarch64-linux keep upstream's build. Wherever the server runs without a
+policy, activation still writes `linkedEnvironmentsEnabled`.
 
 ### Gateway models for Claude
 

@@ -28,10 +28,15 @@ let
   json = pkgs.formats.json { };
   policyCfg = config.programs.t3code.policy;
 
+  # Upstream's prebuilt server ignores T3CODE_DEV_MANAGED_POLICY_PATH; a
+  # package whose server reads it says so with passthru.honorsManagedPolicyPath.
+  # Any other server gets no policy, so none looks applied.
+  honorsPolicy = t3code.honorsManagedPolicyPath or false;
+
   # The `t3` that loads the policy checks it first; it is the only check, as
   # the option itself is plain JSON.
   policy =
-    if policyCfg == { } then
+    if policyCfg == { } || !honorsPolicy then
       null
     else
       let
@@ -41,10 +46,6 @@ let
         HOME=$TMPDIR ${t3} policy check ${unchecked} >&2
         cp ${unchecked} $out
       '';
-
-  # Release builds ignore T3CODE_DEV_MANAGED_POLICY_PATH; a package whose
-  # server reads it says so with passthru.honorsManagedPolicyPath.
-  policyApplied = policy != null && (t3code.honorsManagedPolicyPath or false);
 
   services = import ./services.nix {
     inherit
@@ -218,7 +219,7 @@ let
       mv "$temporary" "$document"
     '';
 
-  # The policy locks linked environments on. Until the server applies the
+  # The policy locks linked environments on. Where the server runs without a
   # policy, activation writes the setting instead; the running server reloads
   # settings.json when it changes.
   linkedEnvironments = userdataSetting {
@@ -277,8 +278,9 @@ in
       The T3 Code managed policy for the server dotfiles.t3code runs, as T3's
       JSON document; empty means none. Setting paths are literal dotted keys.
       The server reads it from the Nix store, where agents running as the
-      user cannot change it, and restarts when it changes. Only builds that
-      honor `T3CODE_DEV_MANAGED_POLICY_PATH` apply it.
+      user cannot change it, and restarts when it changes. A server package
+      without `passthru.honorsManagedPolicyPath` ignores the policy, so
+      none is set for it, and a policy given anyway warns.
     '';
   };
 
@@ -353,6 +355,10 @@ in
           message = "programs.t3code.policy applies only to the server dotfiles.t3code.server runs.";
         }
       ];
+      warnings = lib.optional (policyCfg != { } && !honorsPolicy) ''
+        programs.t3code.policy is set, but ${t3code.name} ignores
+        T3CODE_DEV_MANAGED_POLICY_PATH, so the T3 Code server runs without it.
+      '';
     }
     (lib.mkIf cfg.enable {
       assertions = [
@@ -370,7 +376,7 @@ in
       # environment, for the desktop app and for servers that ignore the
       # policy. The Claude provider instance stays out: t3-claude-models
       # rewrites its models, and T3 locks an instance only as a whole.
-      programs.t3code.policy = lib.mkIf cfg.server.enable (
+      programs.t3code.policy = lib.mkIf (cfg.server.enable && honorsPolicy) (
         lib.mapAttrsRecursive (_: lib.mkDefault) {
           schemaVersion = 1;
           organization = "dotfiles";
@@ -438,7 +444,7 @@ in
             run ${lib.getExe claudeModels}
           '';
         }
-        // lib.optionalAttrs (cfg.server.enable && !policyApplied) {
+        // lib.optionalAttrs (cfg.server.enable && policy == null) {
           t3codeLinkedEnvironments = lib.hm.dag.entryAfter [ "t3codeClaudeModels" ] ''
             run ${lib.getExe linkedEnvironments}
           '';
