@@ -1,0 +1,10 @@
+{
+  "frida": {
+    "version": "17.23.2",
+    "hashes": {
+      "aarch64-darwin": "sha256-hQ+6Igotm2quKCrG3eN/SIR+c1l7egbWSHN/+a3cM0A=",
+      "aarch64-linux": "sha256-EQg/AWpCnodQbNaBZr0URdqP69UGok7fP2xKmno+qf4=",
+      "x86_64-linux": "sha256-n6j2aM6R6wNxPoVk3k+PveIyIz7pHXKcFnc/3hHbrpU="
+    }
+  }
+}
