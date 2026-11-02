@@ -23,9 +23,12 @@ in
   # Engine guides are read by path from the broll skill instead of being
   # registered as skills: HyperFrames alone has 21, which every session would
   # otherwise list.
+  docs = {
+    hyperframes = hyperframes.skills;
+    manimgx = manimgx.docs;
+  };
+
   homeFiles = {
-    ".local/share/video-edit/docs/hyperframes".source = hyperframes.skills;
-    ".local/share/video-edit/docs/manimgx".source = manimgx.docs;
     # HyperFrames' templates load GSAP from a CDN; slots copy this build
     # instead so renders work offline.
     ".local/share/video-edit/vendor/gsap.min.js".source = hyperframes.gsap;
