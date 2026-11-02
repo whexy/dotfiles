@@ -501,6 +501,10 @@ The kinds, cheapest first:
 - `npm`: an npm registry tarball. Bumps it with nix-update, regenerates the
   vendored package-lock.json from package.json after `lockfileFilter`, the
   jq filter the package's `postPatch` also applies, and re-pins `npmDepsHash`.
+  `prebuilds` names dependencies whose install script downloads a prebuilt
+  archive (`urlTemplate`, `platforms`); their pins in `sources.json` follow
+  each dependency's version in the lockfile, and the package hands the
+  archive to the install script.
 - `platform-binaries`: one prebuilt archive per platform, from
   `versionSource`, `urlTemplate` and `platforms`; downloads each to hash it.
 - `manifest-checksums`: per-platform binaries whose hashes the vendor's
