@@ -11,6 +11,8 @@
     "https://vicinae.cachix.org"
     "https://pwndbg.cachix.org"
     "https://whexy.cachix.org"
+    # whexy/t3code's CI pushes the T3 server every host runs here.
+    "https://whexy-t3code.cachix.org"
   ];
   extra-trusted-public-keys = [
     "niks3.numtide.com-1:DTx8wZduET09hRmMtKdQDxNNthLQETkc/yaX7M4qK0g="
@@ -19,6 +21,7 @@
     "vicinae.cachix.org-1:1kDrfienkGHPYbkpNj1mWTr7Fm1+zcenzgTizIcI3oc="
     "pwndbg.cachix.org-1:HhtIpP7j73SnuzLgobqqa8LVTng5Qi36sQtNt79cD3k="
     "whexy.cachix.org-1:XzmCWs+qh3vMtB4p1joLM+ajn5z/UYgZOyxykzEDV2o="
+    "whexy-t3code.cachix.org-1:/pDSZMaQ8YHPw/og8nsuwxiYCAAcRB8JYEcmNd2Czyg="
   ];
   experimental-features = [
     "nix-command"

@@ -14,7 +14,7 @@ let
   services = import ./services.nix {
     inherit pkgs lib cfg;
     t3 = lib.getExe' cfg.finalPackage "t3";
-    policy = cfg.policyFile;
+    inherit (cfg) policy;
     inherit (config.home) profileDirectory homeDirectory;
     inherit (config.dotfiles.agents.launcher) gitConfig;
   };

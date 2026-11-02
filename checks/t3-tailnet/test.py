@@ -52,6 +52,7 @@ def tailscale(args):
 
 def serve(args):
     assert os.environ["T3_TEST_SESSION"] == "loaded"
+    assert os.environ["T3CODE_DEV_MANAGED_POLICY_PATH"] == "/no-policy.json"
     assert args == ["serve", "--host", "127.0.0.1", "--port", "3773", "--no-browser", "--tailscale-serve", "--tailscale-serve-port", "35338"], args
     root = Path(os.environ["T3_TEST_ROOT"])
 

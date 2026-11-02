@@ -14,9 +14,6 @@ let
   cfg = config.dotfiles.t3code;
 
   privacy = import ./privacy.nix { inherit lib pkgs; };
-
-  # The daemon's cache for integrated homes, the user's own for standalone ones.
-  ciCache = args.osConfig.dotfiles.nix.ciCache.enable or false || config.dotfiles.nix.ciCache.enable;
 in
 {
   imports = [
@@ -30,11 +27,10 @@ in
     enable = lib.mkEnableOption "T3 Code, the web GUI for coding agents, and its Claude gateway models";
     package = lib.mkOption {
       type = lib.types.package;
-      # The nightly server package contains only T3's server runtime.
-      # Provider CLIs remain on the Home Manager profile PATH with their
-      # existing wrappers.
-      default = if cfg.fork.enable then perSystem.self.t3code-fork else perSystem.self.t3code-nightly;
-      defaultText = lib.literalExpression "t3code-fork where fork.enable is set, else the pinned nightly package";
+      # The server package contains only T3's server runtime. Provider CLIs
+      # remain on the Home Manager profile PATH with their existing wrappers.
+      default = perSystem.self.t3code-fork;
+      defaultText = lib.literalExpression "perSystem.self.t3code-fork";
       description = "T3 Code package.";
     };
     finalPackage = lib.mkOption {
@@ -44,13 +40,6 @@ in
       default = privacy.wrap cfg.package;
       description = "The package with the privacy environment bound to its programs; what the home installs and runs.";
     };
-    fork.enable = lib.mkEnableOption ''
-      whexy/t3code's server (t3code-fork), which applies
-      programs.t3code.policy, in place of upstream's prebuilt nightly. Only an
-      x86_64-linux host that substitutes from ci-cache takes it: anywhere
-      else, and for a locked revision older than the cache's 48-hour expiry,
-      Nix compiles it from source
-    '';
     server = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -108,13 +97,6 @@ in
   };
 
   config = lib.mkIf cfg.enable {
-    assertions = [
-      {
-        assertion = cfg.fork.enable -> pkgs.stdenv.hostPlatform.system == "x86_64-linux" && ciCache;
-        message = "dotfiles.t3code.fork.enable requires x86_64-linux and ci-cache (dotfiles.nix.ciCache.enable), or the fork compiles from source.";
-      }
-    ];
-
     home.packages = [
       cfg.finalPackage
     ]

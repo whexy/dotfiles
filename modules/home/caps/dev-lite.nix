@@ -1,12 +1,7 @@
 # dev-lite home cap preset: terminal UX, git, ssh, AI agents, and essential
 # CLI tools. Enables only the lightweight tooling bundles — language
 # toolchains and other heavy bundles stay in the "dev" cap.
-{
-  lib,
-  pkgs,
-  config,
-  ...
-}:
+{ lib, ... }:
 {
   dotfiles = {
     agents.enable = lib.mkDefault true;
@@ -17,11 +12,6 @@
     t3code = {
       enable = lib.mkDefault true;
       pair.enable = lib.mkDefault true;
-      # whexy/t3code's server, which applies programs.t3code.policy, comes
-      # prebuilt from ci-cache for x86_64-linux only.
-      fork.enable = lib.mkDefault (
-        pkgs.stdenv.hostPlatform.system == "x86_64-linux" && config.dotfiles.t3code.server.enable
-      );
     };
     ssh.enable = lib.mkDefault true;
     nix.ghTokenFlakes.enable = lib.mkDefault true;
