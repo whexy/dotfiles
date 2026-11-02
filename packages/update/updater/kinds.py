@@ -9,6 +9,7 @@ import subprocess
 import sys
 import tarfile
 import tempfile
+from datetime import UTC, datetime
 from pathlib import Path
 from typing import TYPE_CHECKING, Any
 
@@ -55,6 +56,21 @@ def _pins_current(pkg: Package, latest: str, platforms: dict[str, str]) -> bool:
 
 def nix_update(pkg: Package, config: dict[str, Any]) -> None:
     nix.run(["nix-update", "--flake", pkg.name, *config.get("args", [])], cwd=pkg.root)
+
+
+def github_branch(pkg: Package, config: dict[str, Any]) -> None:
+    """Pin the head of a GitHub repository's default branch in sources.json.
+
+    The version is the commit's date, nixpkgs' form for a repository
+    followed without releases.
+    """
+    head = nix.flake_prefetch(f"github:{config['owner']}/{config['repo']}")
+    if read_sources(pkg.dir).get("rev") == head["rev"]:
+        return
+    date = datetime.fromtimestamp(head["lastModified"], tz=UTC).strftime("%Y-%m-%d")
+    write_sources(
+        pkg.dir, {"version": f"0-unstable-{date}", "rev": head["rev"], "hash": head["hash"]}
+    )
 
 
 def npm(pkg: Package, config: dict[str, Any]) -> None:
@@ -171,6 +187,7 @@ def script(pkg: Package, _config: dict[str, Any]) -> None:
         UPDATE_ROOT=str(pkg.root),
         UPDATE_VERSION=pkg.version,
         UPDATE_CONFIG=json.dumps(pkg.updater),
+        UPDATE_TREE=pkg.tree,
     )
     print(f"+ {path}", file=sys.stderr, flush=True)
     result = subprocess.run([sys.executable, str(path)], cwd=pkg.root, env=env, check=False)
@@ -180,6 +197,7 @@ def script(pkg: Package, _config: dict[str, Any]) -> None:
 
 KINDS: dict[str, Callable[[Package, dict[str, Any]], None]] = {
     "nix-update": nix_update,
+    "github-branch": github_branch,
     "npm": npm,
     "platform-binaries": platform_binaries,
     "manifest-checksums": manifest_checksums,

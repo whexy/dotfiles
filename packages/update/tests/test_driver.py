@@ -163,6 +163,14 @@ class CheckTargetsTest(unittest.TestCase):
     def test_package_without_skills(self):
         self.assertEqual(self.built(), ["packages.x86_64-linux.demo"])
 
+    def test_skill_repository(self):
+        self.pkg.tree = "skills"
+        (self.out / "share" / "skills").mkdir(parents=True)
+        self.assertEqual(
+            self.built(),
+            ["legacyPackages.x86_64-linux.skills.demo", "checks.x86_64-linux.agent-skills"],
+        )
+
     def test_package_with_skills(self):
         (self.out / "share" / "skills" / "demo").mkdir(parents=True)
         self.assertEqual(
@@ -177,3 +185,14 @@ class CheckTargetsTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class TreeTest(unittest.TestCase):
+    """A skill repository is addressed by name like a package, in its own tree."""
+
+    def test_skill_repository_paths(self):
+        pkg = Package(
+            name="tstack", version="0", system="x86_64-linux", root=Path("/r"), tree="skills"
+        )
+        self.assertEqual(pkg.dir, Path("/r/skills/tstack"))
+        self.assertEqual(pkg.attr("src"), "/r#legacyPackages.x86_64-linux.skills.tstack.src")

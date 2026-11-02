@@ -164,3 +164,38 @@ class KindTest(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+HEAD = {"rev": "a" * 40, "lastModified": 1793155082, "hash": "sha256-" + "A" * 43 + "="}
+
+
+class GithubBranchTest(unittest.TestCase):
+    """The pin follows the default branch's head and carries its commit date."""
+
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        root = Path(self.tmp.name)
+        (root / "skills" / "demo").mkdir(parents=True)
+        self.pkg = Package(
+            name="demo", version="0", system="x86_64-linux", root=root, tree="skills"
+        )
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def pin(self):
+        with mock.patch("updater.nix.flake_prefetch", return_value=dict(HEAD)) as prefetch:
+            kinds.github_branch(self.pkg, {"owner": "o", "repo": "r"})
+        prefetch.assert_called_once_with("github:o/r")
+        return json.loads((self.pkg.dir / "sources.json").read_text())
+
+    def test_pins_head_with_its_date(self):
+        self.assertEqual(
+            self.pin(),
+            {"version": "0-unstable-2026-10-28", "rev": HEAD["rev"], "hash": HEAD["hash"]},
+        )
+
+    def test_same_head_leaves_pins_alone(self):
+        pins = self.pkg.dir / "sources.json"
+        pins.write_text(json.dumps({"rev": HEAD["rev"], "kept": True}))
+        self.assertTrue(self.pin()["kept"])
