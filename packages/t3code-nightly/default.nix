@@ -130,6 +130,11 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   '';
 
   passthru = {
+    # Upstream release builds ignore T3CODE_DEV_MANAGED_POLICY_PATH, so
+    # modules/home/t3code keeps writing the settings the policy locks.
+    # whexy/t3code's builds read it.
+    honorsManagedPolicyPath = false;
+
     # update.py also pins the desktop app and the browser, which
     # t3code-desktop-nightly reads from sources.json.
     updater = flake.lib.updater {
