@@ -23,6 +23,36 @@ let
   # devDependencies only serve upstream's source checkout, and the vitepress
   # override belongs to one of them.
   lockfileFilter = "del(.devDependencies, .overrides)";
+
+  # frida backs REA's Frida tools. Its install script runs prebuild-install,
+  # which downloads this addon unless it finds the archive, under its release
+  # file name, in the dependency's local-prebuilds directory.
+  prebuilds.frida = {
+    urlTemplate = "https://github.com/frida/frida/releases/download/{version}/frida-v{version}-napi-v8-{platform}.tar.gz";
+    platforms = {
+      x86_64-linux = "linux-x64";
+      aarch64-linux = "linux-arm64";
+      aarch64-darwin = "darwin-arm64";
+    };
+  };
+  fridaPin = (lib.importJSON ./sources.json).frida;
+  fridaPrebuild = pkgs.fetchurl {
+    url =
+      builtins.replaceStrings
+        [ "{version}" "{platform}" ]
+        [
+          fridaPin.version
+          prebuilds.frida.platforms.${system}
+        ]
+        prebuilds.frida.urlTemplate;
+    hash = fridaPin.hashes.${system};
+  };
+  fridaPrebuilds = pkgs.linkFarm "frida-prebuilds" [
+    {
+      inherit (fridaPrebuild) name;
+      path = fridaPrebuild;
+    }
+  ];
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "rea-agents";
@@ -43,6 +73,8 @@ pkgs.buildNpmPackage (finalAttrs: {
   '';
 
   dontNpmBuild = true;
+
+  env.npm_config_frida_local_prebuilds = fridaPrebuilds;
 
   # node-pty's prebuilt Linux addon links against libstdc++.
   nativeBuildInputs = [
@@ -72,9 +104,12 @@ pkgs.buildNpmPackage (finalAttrs: {
       done
     '';
 
-  passthru.updater = flake.lib.updater {
-    kind = "npm";
-    inherit lockfileFilter;
+  passthru = {
+    inherit fridaPrebuild;
+    updater = flake.lib.updater {
+      kind = "npm";
+      inherit lockfileFilter prebuilds;
+    };
   };
 
   meta = {
