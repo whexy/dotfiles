@@ -6,10 +6,7 @@
   home.packages = [ pkgs.sd ];
 
   dotfiles = {
-    agents = {
-      enable = lib.mkDefault true;
-      firefoxDevtools.enable = lib.mkDefault true;
-    };
+    agents.enable = lib.mkDefault true;
     agenticTooling = {
       video.studio.enable = lib.mkDefault true;
       transcribe.enable = lib.mkDefault true;
@@ -21,7 +18,10 @@
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser
     # whether or not it has a display.
-    browser.firefox.automation.enable = lib.mkDefault true;
+    browser.firefox.automation = {
+      enable = lib.mkDefault true;
+      mcp.enable = lib.mkDefault true;
+    };
     ssh.enable = lib.mkDefault true;
     rclone.enable = lib.mkDefault false;
     nix.ghTokenFlakes.enable = lib.mkDefault true;

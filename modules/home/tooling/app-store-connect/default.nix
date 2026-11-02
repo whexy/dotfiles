@@ -7,6 +7,7 @@
 {
   config,
   lib,
+  pkgs,
   perSystem,
   ...
 }:
@@ -21,6 +22,7 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
     home.packages = [
       (config.dotfiles.onepassword.wrap {
         package = asc;

@@ -7,7 +7,6 @@
   ...
 }:
 let
-  cfg = config.dotfiles.agents;
   firefox = config.dotfiles.browser.firefox.automation;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
@@ -43,10 +42,7 @@ let
   ];
 in
 {
-  options.dotfiles.agents.firefoxDevtools.enable =
-    lib.mkEnableOption "Mozilla's Firefox DevTools MCP server";
-
-  config = lib.mkIf (cfg.enable && cfg.firefoxDevtools.enable && firefox.enable) {
+  config = lib.mkIf (firefox.enable && firefox.mcp.enable) {
     dotfiles.agents.mcp.servers.firefox-devtools = {
       # Not yet in the release branches; nixpkgs-unstable has it.
       command = lib.getExe pkgs.unstable.firefox-devtools-mcp;

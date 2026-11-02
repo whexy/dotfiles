@@ -39,10 +39,10 @@
   };
 
   imports = [
-    ./app-store-connect.nix
+    ./app-store-connect/default.nix
     ./aws.nix
     ./cli.nix
-    ./cloudflare.nix
+    ./cloudflare/default.nix
     ./debug.nix
     ./extras.nix
     ./kube.nix
