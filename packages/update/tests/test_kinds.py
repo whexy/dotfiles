@@ -175,10 +175,8 @@ class GithubBranchTest(unittest.TestCase):
     def setUp(self):
         self.tmp = tempfile.TemporaryDirectory()
         root = Path(self.tmp.name)
-        (root / "skills" / "demo").mkdir(parents=True)
-        self.pkg = Package(
-            name="demo", version="0", system="x86_64-linux", root=root, tree="skills"
-        )
+        (root / "packages" / "demo").mkdir(parents=True)
+        self.pkg = Package(name="demo", version="0", system="x86_64-linux", root=root)
 
     def tearDown(self):
         self.tmp.cleanup()

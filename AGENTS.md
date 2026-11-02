@@ -9,8 +9,8 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 - `/modules/home` - semantic Home Manager software groups
 - `/modules/home/caps` - Home Manager capability preset modules
 - `/overlays` - nixpkgs overlays
-- `/packages` - software this repo pins from upstream
-- `/skills` - skill repositories agents take skills from, pinned the same way
+- `/packages` - software this repo pins from upstream, skill repositories
+  agents take skills from included
 
 ### System configs
 
@@ -171,8 +171,8 @@ list of skill names.
 | Skill                                     | Source                     | Taken                                                 |
 | ----------------------------------------- | -------------------------- | ----------------------------------------------------- |
 | `modules/home/agents/skills/*`            | local                      | ours                                                  |
-| `frost`, `frost-*`                        | `skills/wxstack`           | ours, published in whexy/wxstack                      |
-| `sol-loop`                                | `skills/tstack`            | picked from t3dotgg/tstack                            |
+| `frost`, `frost-*`                        | `wxstack`                  | ours, published in whexy/wxstack                      |
+| `sol-loop`                                | `tstack`                   | picked from t3dotgg/tstack                            |
 | `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                            |
 | `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                        |
 | `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                            |
@@ -206,8 +206,8 @@ nix build .#checks.x86_64-linux.agent-skills
 
 ### Skill repositories
 
-A repository published for `npx skills` is a directory under `skills/`,
-beside `packages/`, and is pinned like a package:
+A repository published for `npx skills` is a package, `packages/<name>`,
+that calls `flake.lib.skillRepo`:
 
 - `default.nix` declares it: `owner`, `repo`, and `skills`, the names to
   take as `npx skills add --skill` takes them. Without `skills`, every
@@ -215,20 +215,16 @@ beside `packages/`, and is pinned like a package:
 - `sources.json` pins it: `version`, `rev` and `hash`. `nix run .#update --
 <name>` writes it, the first time and whenever the default branch moves,
   with the commit date as `0-unstable-<date>`.
-- `update.py`, when present, replaces that updater with the package's own
-  (kind `script`, the declaration as its `settings`), for a repository
-  pinned some other way, such as to its releases.
 
-`flake.lib.skillRepos` turns each into a package of what the `skills` CLI
-installs from the pinned source, at `share/skills`, so agents see exactly
-what `npx skills add` gives and nothing is vendored. A pick the repository
-lacks fails the build, and so does an unpinned repository, so each new one is
-pinned before the next is added. `modules/home/agents/skills.nix` gives every
-repository to every agent, and `legacyPackages.<system>.skills` exposes
-them, so `nix build .#skills.<name>` shows one.
+`flake.lib.skillRepo` builds what the `skills` CLI installs from the pinned
+source, at `share/skills`, so agents see exactly what `npx skills add` gives
+and nothing is vendored. A pick the repository lacks fails the build, and so
+does an unpinned repository, so each new one is pinned before the next is
+added. `modules/home/agents/skills.nix` lists the repositories every agent
+gets, and `nix build .#<name>` shows one.
 
 Skills anyone could use live in [whexy/wxstack](https://github.com/whexy/wxstack),
-`skills/wxstack` here, which also installs with `npx skills add whexy/wxstack`
+`packages/wxstack` here, which also installs with `npx skills add whexy/wxstack`
 and as a Claude Code plugin marketplace. Skills that name our hosts,
 credentials or infrastructure stay in `modules/home/agents/skills/`. Moving
 one to wxstack deletes the local copy in the same change: the tree fails on
@@ -665,8 +661,8 @@ that read this one's pins) and `allowDowngrade`.
 when a package fetches an upstream source without a `passthru.updater`, or
 has an updater but no `meta.changelog`.
 
-`nix run .#update` updates every such package, skill repositories included;
-name packages to update only those, and `--list` shows them. The driver builds each updated package and
+`nix run .#update` updates every such package; name packages to update only
+those, and `--list` shows them. The driver builds each updated package and
 its `alsoBuild` on this system and evaluates them on the others; when one of
 them ships `share/skills`, it also builds `checks.<system>.agent-skills`. A
 package that fails is restored and reported, the rest continue, and the run

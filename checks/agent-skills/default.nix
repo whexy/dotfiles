@@ -2,7 +2,7 @@
 # an upstream bump breaks or a skill with bad frontmatter fails CI before any
 # host switches. `expected` lists every skill agents can see; a change to what
 # agents see must change it too. A skill repository's names come from its
-# build: its declaration under skills/ already says what it takes.
+# build: its package already says what it takes.
 {
   pkgs,
   perSystem,
@@ -36,6 +36,8 @@ let
     docs = merge "docs";
   };
   tree = skills.build spec;
+  # The skill repositories every agent takes.
+  repos = (import ../../modules/home/agents/skills.nix { inherit pkgs perSystem; }).packages;
 
   expected = pkgs.writeText "agent-skills-expected" ''
     asc
@@ -71,9 +73,7 @@ pkgs.runCommand "agent-skills"
   ''
     {
       cat ${expected}
-      ${lib.concatMapStrings (repo: "ls ${repo}/share/skills\n") (
-        lib.attrValues (flake.lib.skillRepos pkgs)
-      )}
+      ${lib.concatMapStrings (repo: "ls ${repo}/share/skills\n") repos}
     } | LC_ALL=C sort >expected
     diff -u expected ${tree}/names
     for name in ${lib.concatStringsSep " " (lib.attrNames spec.docs)}; do

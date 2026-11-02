@@ -187,7 +187,6 @@ def script(pkg: Package, _config: dict[str, Any]) -> None:
         UPDATE_ROOT=str(pkg.root),
         UPDATE_VERSION=pkg.version,
         UPDATE_CONFIG=json.dumps(pkg.updater),
-        UPDATE_TREE=pkg.tree,
     )
     print(f"+ {path}", file=sys.stderr, flush=True)
     result = subprocess.run([sys.executable, str(path)], cwd=pkg.root, env=env, check=False)
