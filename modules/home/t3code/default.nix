@@ -15,7 +15,16 @@ let
 
   # The nightly server package contains only T3's server runtime. Provider
   # CLIs remain on the Home Manager profile PATH with their existing wrappers.
-  t3code = if cfg.package == null then perSystem.self.t3code-nightly else cfg.package;
+  t3code =
+    if cfg.package != null then
+      cfg.package
+    else if cfg.fork.enable then
+      perSystem.self.t3code-fork
+    else
+      perSystem.self.t3code-nightly;
+
+  # The daemon's cache for integrated homes, the user's own for standalone ones.
+  ciCache = args.osConfig.dotfiles.nix.ciCache.enable or false || config.dotfiles.nix.ciCache.enable;
 
   # T3 treats an executable at this path as its installed preview browser; the
   # package's patched copy replaces the download that cannot run on NixOS.
@@ -289,8 +298,15 @@ in
     package = lib.mkOption {
       type = lib.types.nullOr lib.types.package;
       default = null;
-      description = "T3 Code package; null selects the pinned nightly package.";
+      description = "T3 Code package; null selects t3code-fork or the pinned nightly package.";
     };
+    fork.enable = lib.mkEnableOption ''
+      whexy/t3code's server (t3code-fork), which applies
+      programs.t3code.policy, in place of upstream's prebuilt nightly. Only an
+      x86_64-linux host that substitutes from ci-cache takes it: anywhere
+      else, and for a locked revision older than the cache's 48-hour expiry,
+      Nix compiles it from source
+    '';
     server = {
       enable = lib.mkOption {
         type = lib.types.bool;
@@ -365,6 +381,10 @@ in
         {
           assertion = cfg.server.tunnel.enable -> cfg.server.enable && hostName != null;
           message = "dotfiles.t3code.server.tunnel.enable requires the server and dotfiles.tunnels.hostName.";
+        }
+        {
+          assertion = cfg.fork.enable -> pkgs.stdenv.hostPlatform.system == "x86_64-linux" && ciCache;
+          message = "dotfiles.t3code.fork.enable requires x86_64-linux and ci-cache (dotfiles.nix.ciCache.enable), or the fork compiles from source.";
         }
       ];
 

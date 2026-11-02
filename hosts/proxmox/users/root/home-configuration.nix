@@ -25,6 +25,8 @@
         tailnet.enable = true;
       };
       pair.enable = true;
+      # ci-cache above serves the fork prebuilt.
+      fork.enable = true;
     };
   };
 
