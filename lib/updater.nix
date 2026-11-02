@@ -12,6 +12,9 @@ let
       optional = [
         "package"
         "distTag"
+        # Dependencies whose install script downloads a prebuilt archive:
+        # each name maps to its `urlTemplate` and `platforms`.
+        "prebuilds"
       ];
     };
     platform-binaries = {
@@ -66,6 +69,11 @@ let
     ];
   };
 
+  prebuildFields = [
+    "urlTemplate"
+    "platforms"
+  ];
+
   fail = msg: throw "passthru.updater: ${msg}";
 
   checkFields =
@@ -102,8 +110,13 @@ let
   ) config;
 in
 builtins.seq checked (
-  if config ? versionSource then
-    config // { versionSource = checkVersionSource config.versionSource; }
-  else
-    config
+  config
+  // lib.optionalAttrs (config ? versionSource) {
+    versionSource = checkVersionSource config.versionSource;
+  }
+  // lib.optionalAttrs (config ? prebuilds) {
+    prebuilds = lib.mapAttrs (
+      name: checkFields "prebuild '${name}'" prebuildFields prebuildFields
+    ) config.prebuilds;
+  }
 )
