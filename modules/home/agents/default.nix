@@ -2,7 +2,6 @@
 # rules, skills, and MCP servers every one of them shares.
 {
   config,
-  flake,
   lib,
   pkgs,
   perSystem,
@@ -23,6 +22,6 @@
 
   # Adding a skill is a new directory under ./skills, never a change here.
   config = lib.mkIf config.dotfiles.agents.enable {
-    dotfiles.agents.skills = import ./skills.nix { inherit flake pkgs perSystem; };
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
   };
 }

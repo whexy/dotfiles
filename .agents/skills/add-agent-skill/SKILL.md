@@ -1,6 +1,6 @@
 ---
 name: add-agent-skill
-description: Add, change, hide, or remove a skill that agents see through the dotfiles repo - a local skill, a skill a package ships, a skill repository under skills/, or an override of an upstream skill. Use when the set of skills in ~/.agents/skills or ~/.claude/skills should change.
+description: Add, change, hide, or remove a skill that agents see through the dotfiles repo - a local skill, a skill a package ships, a skill repository package, or an override of an upstream skill. Use when the set of skills in ~/.agents/skills or ~/.claude/skills should change.
 ---
 
 # Adding a skill to dotfiles
@@ -12,13 +12,13 @@ put a skill in those directories by hand.
 
 Every skill comes from one of three sources. Pick the source first:
 
-| The skill                                              | Source                                                                        |
-| ------------------------------------------------------ | ----------------------------------------------------------------------------- |
-| is general, so anyone could use it                     | [whexy/wxstack](https://github.com/whexy/wxstack), pinned at `skills/wxstack` |
-| is published in someone else's `npx skills` repository | a new skill repository under `skills/`                                        |
-| teaches one CLI that a package here builds             | that package, at `$out/share/skills`                                          |
-| names our hosts, credentials or infrastructure         | a local skill, in `modules/home/agents/skills/<name>/`                        |
-| belongs to one feature and drives several of its tools | a local skill beside that feature, such as `agentic-tooling/video/skills/`    |
+| The skill                                              | Source                                                                          |
+| ------------------------------------------------------ | ------------------------------------------------------------------------------- |
+| is general, so anyone could use it                     | [whexy/wxstack](https://github.com/whexy/wxstack), pinned at `packages/wxstack` |
+| is published in someone else's `npx skills` repository | a new skill repository package under `packages/`                                |
+| teaches one CLI that a package here builds             | that package, at `$out/share/skills`                                            |
+| names our hosts, credentials or infrastructure         | a local skill, in `modules/home/agents/skills/<name>/`                          |
+| belongs to one feature and drives several of its tools | a local skill beside that feature, such as `agentic-tooling/video/skills/`      |
 
 A skill that only this repository's work needs, such as a host procedure,
 is not an agent skill. Put it in `.agents/skills/` of this repo, like this
@@ -58,17 +58,24 @@ changes. A skill beside a feature goes in that feature's `skills.nix` as
 
 ## Add a skill repository
 
-1. Create `skills/<repo>/default.nix`:
+1. Create `packages/<repo>/default.nix`:
 
    ```nix
    {
+     flake,
+     pkgs,
+     pname,
+   }:
+   flake.lib.skillRepo {
+     inherit pkgs pname;
      owner = "t3dotgg";
      repo = "tstack";
      skills = [ "sol-loop" ]; # leave out to take every skill
+     pins = ./sources.json;
    }
    ```
 
-2. `git add skills/<repo>`, then pin it:
+2. `git add packages/<repo>`, then pin it:
 
    ```sh
    nix run .#update -- <repo>
@@ -77,10 +84,12 @@ changes. A skill beside a feature goes in that feature's `skills.nix` as
    This writes `sources.json`. An unpinned repository fails the build, so pin
    each one before you add the next.
 
-Every agent gets every repository. The check reads the repository's names
-from its build, so `expected` does not change. When a skill moves from local
-to wxstack, delete the local copy in the same change: two sources for one
-name fail the build.
+3. Add `perSystem.self.<repo>` to `packages` in
+   `modules/home/agents/skills.nix`, which gives it to every agent.
+
+The check reads the repository's names from its build, so `expected` does
+not change. When a skill moves from local to wxstack, delete the local copy
+in the same change: two sources for one name fail the build.
 
 ## Add a package's skills
 

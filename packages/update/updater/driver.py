@@ -13,12 +13,11 @@ from typing import Any
 
 from . import UpdateError, nix
 from .kinds import run_kind
-from .package import TREES, Package
+from .package import Package
 from .pins import compare_versions
 
 # Packages are discovered on one system so the list does not depend on the
 # machine; each update then evaluates and builds on the machine's own system.
-# Names are shared across trees: `nix run .#update -- tstack` needs no tree.
 DISCOVERY_SYSTEM = "x86_64-linux"
 FLAKE_SYSTEMS = ("x86_64-linux", "aarch64-linux", "aarch64-darwin")
 
@@ -74,23 +73,13 @@ def commit_message(name: str, old: str, new: str, changelog: str | None) -> list
 
 
 def discover(root: Path) -> dict[str, dict[str, Any]]:
-    found: dict[str, dict[str, Any]] = {}
-    for tree, attrpath in TREES.items():
-        installable = f"{root}#{attrpath.format(system=DISCOVERY_SYSTEM)}"
-        entries = nix.eval_json(installable, apply=DISCOVER)
-        for name, info in sorted(entries.items()):
-            if info is None:
-                continue
-            if name in found:
-                raise UpdateError(f"{name} is in both {found[name]['tree']}/ and {tree}/")
-            found[name] = {**info, "tree": tree}
-    return found
+    found = nix.eval_json(f"{root}#packages.{DISCOVERY_SYSTEM}", apply=DISCOVER)
+    return {name: info for name, info in sorted(found.items()) if info is not None}
 
 
-def evaluation_error(root: Path, name: str, tree: str) -> str:
-    attrpath = TREES[tree].format(system=DISCOVERY_SYSTEM)
+def evaluation_error(root: Path, name: str) -> str:
     result = nix.run(
-        ["nix", "eval", "--json", f"{root}#{attrpath}.{name}.passthru.updater"],
+        ["nix", "eval", "--json", f"{root}#packages.{DISCOVERY_SYSTEM}.{name}.passthru.updater"],
         capture=True,
         check=False,
     )
@@ -104,33 +93,25 @@ SKILLS_CHECK = "agent-skills"
 
 
 def check_targets(pkg: Package, targets: list[str]) -> None:
-    """Build each target on this system, and evaluate it on the others.
-
-    Targets name entries of the package's tree, with a dot path into one.
-    """
-    top, *below = TREES[pkg.tree].split(".")
-    pairs = [
-        {"system": s, "target": t, "path": [*(b.format(system=s) for b in below), *t.split(".")]}
-        for t in targets
-        for s in FLAKE_SYSTEMS
-    ]
+    """Build each target on this system, and evaluate it on the others."""
+    pairs = [{"system": s, "path": t.split(".")} for t in targets for s in FLAKE_SYSTEMS]
     apply = f"""
-    outputs: map (pair:
+    ps: map (pair:
       let p = builtins.foldl' (a: n: if a == null then null else a.${{n}} or null)
-        outputs pair.path;
+        ps.${{pair.system}} pair.path;
       in if p != null && builtins.elem pair.system (p.meta.platforms or [ pair.system ])
          then map (o: p.${{o}}.outPath) (p.outputs or [ "out" ]) else null
     ) (builtins.fromJSON {json.dumps(json.dumps(pairs))})
     """
-    outputs = nix.eval_json(f"{pkg.root}#{top}", apply=apply)
+    outputs = nix.eval_json(f"{pkg.root}#packages", apply=apply)
     ships_skills = False
     for pair, paths in zip(pairs, outputs, strict=True):
+        target = ".".join(pair["path"])
         if pair["system"] == pkg.system and paths is not None:
-            attrpath = ".".join([top, *pair["path"]])
-            nix.run(["nix", "build", "--no-link", f"{pkg.root}#{attrpath}"])
+            nix.run(["nix", "build", "--no-link", f"{pkg.root}#packages.{pkg.system}.{target}"])
             ships_skills |= any(Path(path, "share/skills").is_dir() for path in paths)
         elif paths is not None:
-            print(f"{pair['target']} evaluates on {pair['system']}", file=sys.stderr)
+            print(f"{target} evaluates on {pair['system']}", file=sys.stderr)
     if ships_skills:
         check_skills(pkg)
 
@@ -227,12 +208,12 @@ def main(argv: list[str] | None = None) -> int:
     failed: dict[str, str] = {}
     for name in selected:
         if found[name].get("error"):
-            failed[name] = evaluation_error(root, name, found[name]["tree"])
+            failed[name] = evaluation_error(root, name)
     if args.list:
         for name in selected:
             if name not in failed:
                 info = found[name]
-                print(f"{info['tree']}/{name}  {info['version']}  {info['updater']['kind']}")
+                print(f"{name}  {info['version']}  {info['updater']['kind']}")
         for name, error in failed.items():
             print(f"{name}: {error}", file=sys.stderr)
         return 1 if failed else 0
@@ -251,7 +232,6 @@ def main(argv: list[str] | None = None) -> int:
             pname=info["pname"],
             changelog=info["changelog"],
             updater=info["updater"],
-            tree=info["tree"],
         )
         print(f"=== {name} {pkg.version}", file=sys.stderr, flush=True)
         try:

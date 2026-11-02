@@ -130,7 +130,7 @@ in
 
   inherit updater;
 
-  skillRepos = import ./skill-repos.nix { inherit inputs updater; };
+  skillRepo = import ./skill-repo.nix { inherit inputs updater; };
 
   nixosHost =
     {
