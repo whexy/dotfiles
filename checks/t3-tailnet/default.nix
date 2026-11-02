@@ -16,7 +16,11 @@ let
   '';
   moduleFor =
     isDarwin: enabled: tailnetEnabled:
+    withPolicy isDarwin enabled tailnetEnabled null;
+  withPolicy =
+    isDarwin: enabled: tailnetEnabled: policy:
     import ../../modules/home/t3code/services.nix {
+      inherit policy;
       pkgs = pkgs // {
         stdenv = pkgs.stdenv // {
           hostPlatform = pkgs.stdenv.hostPlatform // {
@@ -43,6 +47,15 @@ assert darwin.launchdAgents.t3code.config.ProgramArguments == [ server ];
 assert darwin.launchdAgents.t3code-tailnet.config.ProgramArguments == [ route ];
 assert !(moduleFor false true false).systemdUserServices ? t3code-tailnet;
 assert !(moduleFor true false true).launchdAgents ? t3code-tailnet;
+assert !linux.systemdUserServices.t3code.Service ? Environment;
+assert
+  (withPolicy false true true "/policy.json").systemdUserServices.t3code.Service.Environment == [
+    "T3CODE_DEV_MANAGED_POLICY_PATH=/policy.json"
+  ];
+assert
+  (withPolicy true true true "/policy.json").launchdAgents.t3code.config.EnvironmentVariables == {
+    T3CODE_DEV_MANAGED_POLICY_PATH = "/policy.json";
+  };
 pkgs.runCommand "t3-tailnet"
   {
     __darwinAllowLocalNetworking = true;
