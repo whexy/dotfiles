@@ -1,12 +1,11 @@
 # Cluster access on every host without fetching kubeconfigs by hand.
 #
 # Each cluster's kubeconfig is its own agenix secret whose cluster, user,
-# and context are all named after the cluster. Activation writes them all
-# into ~/.kube/config, the file every Kubernetes client reads by default,
-# so any process reaches them and `kubectx <cluster>` switches between them.
-# That file holds only each cluster's address and CA: kubectl loads the
-# client certificate through a credential plugin, which decrypts the secret
-# into its own memory for each command.
+# and context are all named after the cluster. Activation builds
+# ~/.kube/config from them, the file every Kubernetes client reads by
+# default, so any process reaches them and `kubectx <cluster>` switches
+# between them. This module owns that file: entries other tools add to it
+# are dropped at the next activation.
 {
   config,
   pkgs,
@@ -15,121 +14,81 @@
 }:
 let
   cfg = config.dotfiles.tooling.kube;
-  home = config.home.homeDirectory;
-  yq = lib.getExe pkgs.yq-go;
-  kubeconfig = "${home}/.kube/config";
-  secret = name: ../../../secrets/kube-${name}.age;
 
-  # Decrypts the way agenix does, at the moment of use, so neither the plugin
-  # nor activation waits for agenix's service to have run.
-  decrypt = ''
-    kube_decrypt() {
-      local identities=() identity
-      for identity in ${lib.escapeShellArgs config.age.identityPaths}; do
+  writeConfig = pkgs.writeShellApplication {
+    name = "kube-write-config";
+    runtimeInputs = [
+      pkgs.coreutils
+      pkgs.diffutils
+      pkgs.kubectl
+    ];
+    text = ''
+      target=$1
+      work=$(mktemp -d)
+      trap 'rm -rf "$work"' EXIT
+
+      candidates=(${lib.escapeShellArgs config.age.identityPaths})
+      identities=()
+      for identity in "''${candidates[@]}"; do
         [ -r "$identity" ] && identities+=(-i "$identity")
       done
-      ${lib.getExe config.age.package} --decrypt "''${identities[@]}" "$1"
-    }
-  '';
 
-  # The plugin kubectl runs, `kube-credential <cluster>`, printing the
-  # client certificate as an ExecCredential.
-  credential = pkgs.writeShellScriptBin "kube-credential" ''
-    set -euo pipefail
-    ${decrypt}
-    case "$1" in
-    ${lib.concatMapStrings (name: ''
-      ${lib.escapeShellArg name}) secret=${secret name} ;;
-    '') cfg.clusters}
-    *)
-      echo "kube-credential: no cluster $1" >&2
-      exit 1
-      ;;
-    esac
-    kube_decrypt "$secret" | CLUSTER=$1 ${yq} -o json '
-      .users[] | select(.name == strenv(CLUSTER)) | .user | {
-        "apiVersion": "client.authentication.k8s.io/v1",
-        "kind": "ExecCredential",
-        "status": {
-          "clientCertificateData": (."client-certificate-data" | @base64d),
-          "clientKeyData": (."client-key-data" | @base64d)
-        }
-      }'
-  '';
-  # Named through the profile, not the store, so the config stays valid
-  # after the generation that wrote it is collected.
-  credentialCommand = "${config.home.profileDirectory}/bin/kube-credential";
+      # Checked one by one, so a malformed secret cannot block the merge or
+      # shadow another cluster's entries.
+      files=()
+      add() {
+        if ${lib.getExe config.age.package} --decrypt "''${identities[@]}" -o "$work/$1" "$2" &&
+          [ "$(KUBECONFIG="$work/$1" kubectl config view --flatten 2>/dev/null \
+            -o jsonpath="{.contexts[?(@.name==\"$1\")].context.cluster}/{.contexts[?(@.name==\"$1\")].context.user}")" = "$1/$1" ]; then
+          files+=("$work/$1")
+        else
+          echo "kube: skipping $1: cannot decrypt it, or it is not a self-contained kubeconfig naming its cluster, user and context $1" >&2
+        fi
+      }
+      ${lib.concatMapStrings (name: ''
+        add ${lib.escapeShellArg name} ${../../../secrets/kube-${name}.age}
+      '') cfg.clusters}
+      if [ ''${#files[@]} -eq 0 ]; then
+        echo "kube: no cluster available; leaving $target as it is" >&2
+        exit 0
+      fi
 
-  # Replaces each cluster's entries, by name, with the secret's cluster and
-  # the plugin as its user, and leaves every other entry alone. A context
-  # already there is kept, so a namespace chosen with kubens survives. A
-  # cluster whose secret cannot be decrypted keeps its last entries.
-  writeClusters = lib.concatMapStrings (name: ''
-    if kube_entry=$(kube_decrypt ${secret name} | CLUSTER=${lib.escapeShellArg name} ${yq} '{
-      "cluster": (.clusters[] | select(.name == strenv(CLUSTER))),
-      "context": (.contexts[] | select(.name == strenv(CLUSTER)))
-    }'); then
-      kube_config=$(printf '%s\n' "$kube_config" | CLUSTER=${lib.escapeShellArg name} ENTRY="$kube_entry" \
-        COMMAND=${lib.escapeShellArg credentialCommand} ${yq} '
-        (strenv(ENTRY) | from_yaml) as $entry |
-        .clusters = ([.clusters[] | select(.name != strenv(CLUSTER))] + [$entry.cluster]) |
-        .users = ([.users[] | select(.name != strenv(CLUSTER))] + [{
-          "name": strenv(CLUSTER),
-          "user": {
-            "exec": {
-              "apiVersion": "client.authentication.k8s.io/v1",
-              "command": strenv(COMMAND),
-              "args": [strenv(CLUSTER)],
-              "interactiveMode": "Never"
-            }
-          }
-        }]) |
-        .contexts = ([.contexts[] | select(.name != strenv(CLUSTER))] +
-          [([.contexts[] | select(.name == strenv(CLUSTER))] + [$entry.context]) | .[0]])
-      ')
-    else
-      warnEcho "Could not decrypt the kubeconfig of ${name}; keeping its last entries"
-    fi
-  '') cfg.clusters;
+      # Built from the secrets alone, so rotated credentials always land and
+      # removed clusters disappear. Only the context kubectx chose and the
+      # namespace kubens set on it carry over.
+      current=$(kubectl --kubeconfig "$target" config current-context 2>/dev/null || true)
+      namespace=$(kubectl --kubeconfig "$target" config view --minify \
+        -o jsonpath='{.contexts[0].context.namespace}' 2>/dev/null || true)
+
+      KUBECONFIG=$(IFS=:; echo "''${files[*]}") kubectl config view --flatten >"$work/config"
+      export KUBECONFIG="$work/config"
+      if [ -n "$current" ] && kubectl config get-contexts "$current" >/dev/null 2>&1; then
+        kubectl config use-context "$current" >/dev/null
+        [ -z "$namespace" ] || kubectl config set-context "$current" --namespace "$namespace" >/dev/null
+      else
+        kubectl config use-context "$(basename "''${files[0]}")" >/dev/null
+      fi
+
+      if ! cmp -s "$work/config" "$target"; then
+        mkdir -p "$(dirname "$target")"
+        staged=$(mktemp "$target.XXXXXX")
+        trap 'rm -rf "$work" "$staged"' EXIT
+        cat "$work/config" >"$staged"
+        mv -f "$staged" "$target"
+      fi
+    '';
+  };
 in
 {
   config = lib.mkIf cfg.enable {
     home = {
-      packages = [
-        pkgs.kubectx
-        credential
-      ];
+      packages = [ pkgs.kubectx ];
 
+      # agenix decrypts from a systemd user service or launchd agent that may
+      # run after activation, so the secrets are read directly.
       activation.kubeConfig = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        ${decrypt}
-        kube_config=$(cat ${lib.escapeShellArg kubeconfig} 2>/dev/null || true)
-        kube_config=$(printf '%s\n' "$kube_config" | ${yq} '
-          .apiVersion = "v1" | .kind = "Config" |
-          .clusters = (.clusters // []) | .users = (.users // []) | .contexts = (.contexts // [])
-        ')
-        ${writeClusters}
-        ${lib.optionalString (cfg.clusters != [ ]) ''
-          # Without a current-context kubectl reaches no cluster at all; one
-          # kubectx chose, even unset, stays.
-          kube_config=$(printf '%s\n' "$kube_config" | FIRST=${lib.escapeShellArg (lib.head cfg.clusters)} ${yq} '
-            .["current-context"] = (.["current-context"] // strenv(FIRST))
-          ')
-        ''}
-
-        if [ "$kube_config" != "$(cat ${lib.escapeShellArg kubeconfig} 2>/dev/null)" ]; then
-          run mkdir -p ${lib.escapeShellArg (dirOf kubeconfig)}
-          # coreutils install rejects /dev/stdin as a source on Darwin.
-          kube_tmp=$(mktemp)
-          printf '%s\n' "$kube_config" >"$kube_tmp"
-          run install -m 600 "$kube_tmp" ${lib.escapeShellArg kubeconfig}
-          rm -f "$kube_tmp"
-        fi
-
-        # Earlier generations kept each cluster in a file of its own here.
-        ${lib.concatMapStrings (name: ''
-          run rm -f ${lib.escapeShellArg "${home}/.kube/clusters/${name}"}
-        '') cfg.clusters}
-        run rmdir --ignore-fail-on-non-empty ${lib.escapeShellArg "${home}/.kube/clusters"} 2>/dev/null || true
+        run ${lib.getExe writeConfig} ${lib.escapeShellArg "${config.home.homeDirectory}/.kube/config"} \
+          || warnEcho "~/.kube/config was not updated"
       '';
     };
   };
