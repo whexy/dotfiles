@@ -48,7 +48,7 @@ let
   applyPolicy = lib.optionalString (policy != null) ''
     if ! T3CODE_DEV_MANAGED_POLICY_PATH=$(${lib.getExe' pkgs.coreutils "timeout"} 120 ${policy.command} resolve) ||
       [ -z "$T3CODE_DEV_MANAGED_POLICY_PATH" ]; then
-      echo "t3code-policy: state=none sha= http=none err=resolver failed" >&2
+      echo "t3code-policy: state=none sha= http=none err=resolver failed; status.json is stale" >&2
       T3CODE_DEV_MANAGED_POLICY_PATH=${policy.none}
     fi
     export T3CODE_DEV_MANAGED_POLICY_PATH
