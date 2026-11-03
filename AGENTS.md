@@ -347,6 +347,23 @@ sheridan:
 agenix -e aws-credentials.age -i ~/.ssh/agenix_ed25519
 ```
 
+## Kubernetes clusters
+
+The `dev`, `dev-lite` and `sysadmin` caps give every process kubectl access to
+the clusters in `dotfiles.tooling.kube.clusters`. Each cluster's kubeconfig is
+`secrets/kube-<name>.age` and names its cluster, user and context `<name>`.
+
+- Activation writes every cluster into `~/.kube/config`, the file kubectl
+  reads by default. It keeps the current context, the namespace each
+  context has, and entries it does not own.
+- Switch clusters with `kubectx <name>`.
+- The file holds only each cluster's address and CA. Its user runs
+  `kube-credential <name>`, which decrypts the secret with the home's agenix
+  identity on each command and hands kubectl the client certificate.
+- A cluster whose secret cannot be decrypted keeps its last entries.
+
+Verify with `kubectl config get-contexts`.
+
 ## T3 Code server
 
 `modules/home/t3code` (`dotfiles.t3code`, on the `dev`, `dev-lite` and

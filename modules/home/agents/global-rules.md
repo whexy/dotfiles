@@ -33,6 +33,11 @@ separate commit. This includes test suites, language tools, or helpful libraries
 making check, monitoring and debug easier. Only add when you actually need it
 for current task, and generally believe future tasks may also need it.
 
+### Kubernetes
+
+`kubectl` reaches my clusters from any shell, with no setup:
+`~/.kube/config` lists them all. Switch clusters with `kubectx`.
+
 ### Run commands
 
 If you want to stop or restart some process, never use `pkill`. Always `kill`
