@@ -117,7 +117,7 @@
     # commit the fork's CI built and cached, never to the branch, which the
     # fork rebases onto each upstream nightly; Woodpecker's pin-t3code-fork
     # step moves it.
-    t3code-fork.url = "github:whexy/t3code/9ffad812e5770971cadabb22a6078650473d321a";
+    t3code-fork.url = "github:whexy/t3code/d4eb9968e18c0391a1ea6512a0a7d05049e3b846";
 
     paneru = {
       # Paneru's Lua layout API is newer than v0.4.4; flake.lock pins the
