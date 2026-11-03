@@ -14,8 +14,9 @@ let
   services = import ./services.nix {
     inherit pkgs lib cfg;
     t3 = lib.getExe' cfg.finalPackage "t3";
-    inherit (cfg) policy;
+    policy = cfg.policy.resolver;
     inherit (config.home) profileDirectory homeDirectory;
+    stateHome = config.xdg.stateHome;
     inherit (config.dotfiles.agents.launcher) gitConfig;
   };
 
@@ -35,6 +36,7 @@ in
     ];
 
     systemd.user.services = services.systemdUserServices;
+    systemd.user.timers = services.systemdUserTimers;
     launchd.agents = services.launchdAgents;
 
     dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (

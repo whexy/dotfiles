@@ -38,6 +38,7 @@ let
       t3 = "${t3}/bin/t3";
       profileDirectory = profile;
       homeDirectory = "/tmp";
+      stateHome = "/tmp/.local/state";
       gitConfig = "/dev/null";
     };
   linux = moduleFor false true true;
