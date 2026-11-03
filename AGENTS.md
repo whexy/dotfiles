@@ -353,14 +353,14 @@ The `dev`, `dev-lite` and `sysadmin` caps give every process kubectl access to
 the clusters in `dotfiles.tooling.kube.clusters`. Each cluster's kubeconfig is
 `secrets/kube-<name>.age` and names its cluster, user and context `<name>`.
 
-- Activation writes every cluster into `~/.kube/config`, the file kubectl
-  reads by default. It keeps the current context, the namespace each
-  context has, and entries it does not own.
-- Switch clusters with `kubectx <name>`.
-- The file holds only each cluster's address and CA. Its user runs
-  `kube-credential <name>`, which decrypts the secret with the home's agenix
-  identity on each command and hands kubectl the client certificate.
-- A cluster whose secret cannot be decrypted keeps its last entries.
+- Activation decrypts the secrets with the home's agenix identity and builds
+  `~/.kube/config` (mode 0600), the file kubectl reads by default, from them
+  alone. Entries other tools add there are dropped; point those tools at a
+  file of their own.
+- Switch clusters with `kubectx <name>`. Activation keeps the current context
+  and the namespace `kubens` set on it.
+- A cluster whose secret cannot be decrypted is left out with a warning; when
+  none can be, the file stays as it was.
 
 Verify with `kubectl config get-contexts`.
 
