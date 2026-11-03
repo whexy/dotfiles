@@ -1,7 +1,7 @@
 {
   pkgs,
   flake,
-  perSystem,
+  inputs,
 }:
 
 # HyperFrames: a CLI that renders HTML/CSS/GSAP compositions to video,
@@ -68,7 +68,14 @@ let
   ++ lib.optionals isLinux [
     "--set-default"
     "HYPERFRAMES_BROWSER_PATH"
-    "${perSystem.self.t3code-fork.browser}/chrome-headless-shell"
+    # T3's preview browser, read from the fork source rather than through
+    # t3code-fork, which has no server on aarch64-linux.
+    "${
+      import ../t3code-fork/browser.nix {
+        inherit pkgs;
+        source = inputs.t3code-fork;
+      }
+    }/chrome-headless-shell"
     "--prefix"
     "LD_LIBRARY_PATH"
     ":"

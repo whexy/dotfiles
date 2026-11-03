@@ -24,9 +24,12 @@ let
     };
   };
 in
-# Blueprint lists a package only on the systems in its meta.platforms.
+# Blueprint reads only meta.platforms to leave the package out elsewhere.
 if !lib.elem system platforms then
-  pkgs.runCommand "t3code-fork-unsupported" { meta = { inherit platforms; }; } "exit 1"
+  {
+    meta = { inherit platforms; };
+    outPath = throw "t3code-fork: whexy/t3code builds no t3-server for ${system}";
+  }
 else
   fork
   // passthru
