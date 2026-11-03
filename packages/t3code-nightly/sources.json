@@ -1,14 +1,14 @@
 {
-  "version": "0.1.7-nightly.20261102.4066",
+  "version": "0.1.7-nightly.20261102.4093",
   "hashes": {
-    "darwin-arm64": "sha256-7tjHLcCtPng34ZXvUISMgRJ7W6ufNsQLJfjwjLeq838=",
-    "linux-arm64": "sha256-tSXRBUFU3U4ie1dGl1hdCevBqR7AOrwGMUL5tXcU3+o=",
-    "linux-x64": "sha256-9U96g/CVEqlL/xNOaKgDTqaOEGZ/odoeFh4nDXaYJ3A="
+    "darwin-arm64": "sha256-hRjVGokv/tTZeZ390oyVvEN0zWRFODriWB+zaEOEfXQ=",
+    "linux-arm64": "sha256-vyEfOB5kLeX0FpNeNsHJtA0FSMxoPJslG/pPps8kHb0=",
+    "linux-x64": "sha256-87HDtuxlbB7wuag4/fv/02u0Urh4XE+XGXpwJKcdfYs="
   },
   "desktop": {
     "hashes": {
-      "linux-arm64": "sha512-CxdQm7uNstLDzQWYV3MvMTgmw5mFCAF7acDtaMQtspSdtsOs495sKZz9RZFFrqezoZRYipQMpj5DyqN75bo0GQ==",
-      "linux-x64": "sha512-iVJrZPCslyUrxLz4GIsuvpvkN6Vlf6ZN0asYDKmhgJ0zOrIFpT2K7OCNV+niJygzrQH7503h76txuiDgTnkTkw=="
+      "linux-arm64": "sha512-Jgq5LsJv4njgTZrB0Y9oiuUhdHN7YsheoN5CQF4uY2sY5yvvCxKNpJ9kI3hEGnArKptIkYPC+EhIGYv/gfFrVA==",
+      "linux-x64": "sha512-T9ZyuE81FBc2Ctc6d/izLDnfDyWm2zHIxlma02TeOW4/rS+ygUUZpAXqGHsZhZ9DHeYdFFy+ueKq8Vi54myQJQ=="
     }
   },
   "browser": {
