@@ -247,7 +247,10 @@ steps:
         stage=pin
         old=$(nix eval --raw --impure --expr '(builtins.fromJSON (builtins.readFile ./flake.lock)).nodes.t3code-fork.locked.rev')
         nix shell --inputs-from . nixpkgs#gnused -c sed -i "s|github:whexy/t3code/[0-9a-f]\{40\}|github:whexy/t3code/$rev|" flake.nix
-        nix flake update t3code-fork
+        # Nix caches a source's hash by commit alone, and a working tree of the
+        # fork at that commit hashes differently, so the lock gets a cache of
+        # its own (AGENTS.md, "The server package").
+        XDG_CACHE_HOME=$(mktemp -d) nix flake update t3code-fork
         if git diff --quiet; then
           echo "NOOP - t3code-fork is already pinned to $rev"
           exit 0

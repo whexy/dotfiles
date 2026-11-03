@@ -399,6 +399,13 @@ the same commit: the preview browser comes from the server source of the
 pinned commit itself, and `t3code-desktop-nightly`'s updater follows the
 version that commit builds. No T3 pin moves on its own.
 
+To pin by hand, lock with an empty fetcher cache:
+`XDG_CACHE_HOME=$(mktemp -d) nix flake update t3code-fork`. Nix caches a
+source's hash by commit alone, and a checkout of the fork at that commit
+hashes differently from GitHub's tarball (the checkout has no directories
+for `.repos`' submodule links), so a home that evaluated one locks a hash
+CI rejects.
+
 ### Managed policy
 
 No policy lives in this repository. The server's wrapper runs
