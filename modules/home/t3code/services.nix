@@ -6,15 +6,21 @@
   lib,
   cfg,
   t3,
-  # The resolver that picks the managed policy at each start
-  # (dotfiles.t3code.policy), or null for none.
+  # The policy command that picks the managed policy at each start and
+  # restarts the server when it changes (dotfiles.t3code.policy.resolver),
+  # or null for none.
   policy ? null,
   profileDirectory,
   homeDirectory,
+  # Where the wrapper's resolve keeps status.json, given to the updater too.
+  stateHome,
   gitConfig,
 }:
 let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
+
+  updatePolicy = cfg.server.enable && policy != null;
+  updateInterval = 120;
 
   # Tailscale Serve and the Cloudflare tunnel both proxy to this loopback port.
   port = 3773;
@@ -108,7 +114,28 @@ in
         };
         Install.WantedBy = [ "default.target" ];
       };
+    }
+    // lib.optionalAttrs (updatePolicy && !isDarwin) {
+      t3code-policy-update = {
+        Unit.Description = "Restart the T3 Code server when its policy changes";
+        Service = {
+          Type = "oneshot";
+          ExecStart = "${policy.command} update";
+          Environment = [ "XDG_STATE_HOME=${stateHome}" ];
+        };
+      };
     };
+
+  systemdUserTimers = lib.optionalAttrs (updatePolicy && !isDarwin) {
+    t3code-policy-update = {
+      Unit.Description = "Check the T3 Code policy for changes";
+      Timer = {
+        OnStartupSec = updateInterval;
+        OnUnitActiveSec = updateInterval;
+      };
+      Install.WantedBy = [ "timers.target" ];
+    };
+  };
 
   launchdAgents =
     lib.optionalAttrs (cfg.server.enable && isDarwin) {
@@ -133,6 +160,21 @@ in
           KeepAlive.SuccessfulExit = false;
           StandardOutPath = "${homeDirectory}/Library/Logs/t3code-tailnet.log";
           StandardErrorPath = "${homeDirectory}/Library/Logs/t3code-tailnet.log";
+        };
+      };
+    }
+    // lib.optionalAttrs (updatePolicy && isDarwin) {
+      t3code-policy-update = {
+        enable = true;
+        config = {
+          ProgramArguments = [
+            policy.command
+            "update"
+          ];
+          StartInterval = updateInterval;
+          EnvironmentVariables.XDG_STATE_HOME = stateHome;
+          StandardOutPath = "${homeDirectory}/Library/Logs/t3code-policy.log";
+          StandardErrorPath = "${homeDirectory}/Library/Logs/t3code-policy.log";
         };
       };
     };
