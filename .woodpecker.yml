@@ -184,44 +184,67 @@ steps:
       - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
       - |
         rev=$T3CODE_FORK_REV
+        stage=validate
+        origin_url=
+        reported=
+        # Every failure names its stage, which the repair task reads; the push
+        # stage also gets the plain origin URL back.
+        trap 'status=$?; if [ -n "$origin_url" ]; then git remote set-url origin "$origin_url"; fi; if [ "$status" -ne 0 ] && [ -z "$reported" ]; then echo "FAILED($stage) - exit $status"; fi' EXIT
+        fail() {
+          echo "FAILED($stage) - $*"
+          reported=1
+          exit 1
+        }
+        # Ends the run as SUPERSEDED once the fork has moved past rev. Failing
+        # to read the head is a failure, not a newer commit.
+        check_head() {
+          if ! head=$(git ls-remote --exit-code https://github.com/whexy/t3code refs/heads/self-hosted-nightly); then
+            fail "cannot read the head of whexy/t3code self-hosted-nightly"
+          fi
+          case $head in
+            "$rev"[[:space:]]*) ;;
+            *)
+              echo "SUPERSEDED - $rev is no longer the head of whexy/t3code self-hosted-nightly"
+              exit 0
+              ;;
+          esac
+        }
         case $rev in
           *[!0-9a-f]* | "") valid=false ;;
           *) [ "$(printf %s "$rev" | wc -c)" -eq 40 ] && valid=true || valid=false ;;
         esac
-        if [ "$valid" != true ]; then
-          echo "FAILED(validate) - T3CODE_FORK_REV is not a full commit hash: $rev"
-          exit 1
-        fi
-        is_head() {
-          set -- $(git ls-remote https://github.com/whexy/t3code refs/heads/self-hosted-nightly)
-          [ "$1" = "$rev" ]
-        }
-        if ! is_head; then
-          echo "SUPERSEDED - $rev is no longer the head of whexy/t3code self-hosted-nightly"
-          exit 0
-        fi
+        [ "$valid" = true ] || fail "T3CODE_FORK_REV is not a full commit hash: $rev"
+        check_head
       # Every host substitutes the server, so its whole closure must be in
       # Cachix or cache.nixos.org. A dry run against an empty store lists
       # what Nix would have to build instead.
       - |
+        stage=cache
         store=$(mktemp -d)
+        errors=$(mktemp)
         for system in x86_64-linux aarch64-darwin; do
-          out=$(nix eval --raw "github:whexy/t3code/$rev#packages.$system.t3-server.outPath")
-          plan=$(nix build --dry-run --store "$store" \
+          if ! out=$(nix eval --raw "github:whexy/t3code/$rev#packages.$system.t3-server.outPath" 2>"$errors"); then
+            cat "$errors"
+            fail "cannot evaluate the $system t3-server"
+          fi
+          if ! plan=$(nix build --dry-run --store "$store" \
             --option substituters "https://cache.nixos.org https://whexy-t3code.cachix.org" \
             --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= whexy-t3code.cachix.org-1:/pDSZMaQ8YHPw/og8nsuwxiYCAAcRB8JYEcmNd2Czyg=" \
-            "$out" 2>&1)
+            "$out" 2>&1); then
+            echo "$plan"
+            fail "the dry run for the $system t3-server failed"
+          fi
           case $plan in
             *"will be built"* | *"know how to build"*)
-              echo "FAILED(cache) - $system t3-server is not fully cached:"
               echo "$plan"
-              exit 1
+              fail "the $system t3-server is not fully cached"
               ;;
           esac
           echo "OK - $system $out is cached"
         done
-        rm -rf "$store"
+        rm -rf "$store" "$errors"
       - |
+        stage=pin
         old=$(nix eval --raw --impure --expr '(builtins.fromJSON (builtins.readFile ./flake.lock)).nodes.t3code-fork.locked.rev')
         nix shell --inputs-from . nixpkgs#gnused -c sed -i "s|github:whexy/t3code/[0-9a-f]\{40\}|github:whexy/t3code/$rev|" flake.nix
         nix flake update t3code-fork
@@ -235,34 +258,30 @@ steps:
         git add -A
         git commit -m "chore(t3code-fork): pin $rev ($version)" \
           -m "https://github.com/whexy/t3code/compare/$old...$rev"
+      - stage=check
       - *check
       # Push as the GitHub App onto whatever master became meanwhile, as long
-      # as the rev is still the fork's head.
+      # as the rev is still the fork's head. A newer pin that landed first
+      # supersedes this one rather than conflicting with it.
       - |
+        stage=push
         GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
         origin_url="$(git remote get-url origin)"
-        trap 'git remote set-url origin "$origin_url"' EXIT
         git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
         attempt=1
         while :; do
+          check_head
           git fetch origin master
           if ! git rebase origin/master; then
             git rebase --abort
-            echo "FAILED(push) - the pin does not rebase onto master"
-            exit 1
-          fi
-          if ! is_head; then
-            echo "SUPERSEDED - $rev is no longer the head of whexy/t3code self-hosted-nightly"
-            exit 0
+            check_head
+            fail "the pin does not rebase onto master"
           fi
           if git push origin HEAD:master; then
             echo "OK - pinned t3code-fork to $rev"
             break
           fi
-          if [ "$attempt" -ge 3 ]; then
-            echo "FAILED(push) - 3 attempts"
-            exit 1
-          fi
+          [ "$attempt" -lt 3 ] || fail "3 attempts"
           sleep $((attempt * 10))
           attempt=$((attempt + 1))
         done
@@ -344,8 +363,9 @@ steps:
         esac
         body=$(printf '{"event":"%s","cron":"%s","branch":"%s","commit":"%s","pipeline":"%s","pipeline_url":"%s","t3code_fork_rev":"%s"}' \
           "$CI_PIPELINE_EVENT" "$cron" "$CI_COMMIT_BRANCH" "$CI_COMMIT_SHA" "$CI_PIPELINE_NUMBER" "$CI_PIPELINE_URL" "$rev")
-        if headers=$(curl -fsS -o /dev/null -D - -X POST -H 'content-type: application/json' \
-          --data "$body" "$T3_REPAIR_WEBHOOK"); then
+        # Bounded, so a stalled task server still leaves time for the alert.
+        if headers=$(curl -fsS --connect-timeout 5 --max-time 20 -o /dev/null -D - -X POST \
+          -H 'content-type: application/json' --data "$body" "$T3_REPAIR_WEBHOOK"); then
           printf '%s\n' "$headers" | grep -i '^x-t3-hook-outcome'
         else
           alert=$(printf '{"source":"dotfiles-ci","severity":"error","title":"%s","detail":"%s","url":"%s"}' \
