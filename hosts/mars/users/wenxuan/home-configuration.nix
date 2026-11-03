@@ -15,7 +15,10 @@
   ];
   dotfiles = {
     autoUpgrade.enable = true;
-    t3code.pair.enable = false;
+    # No T3 server runs here, and the fork's t3 comes only from
+    # whexy-t3code.cachix.org, which this home's Nix daemon may not trust;
+    # without it every upgrade would compile T3 from source.
+    t3code.enable = false;
   };
 
   targets.genericLinux.enable = true;

@@ -29,7 +29,9 @@ in
       type = lib.types.package;
       # The server package contains only T3's server runtime. Provider CLIs
       # remain on the Home Manager profile PATH with their existing wrappers.
-      default = perSystem.self.t3code-fork;
+      default =
+        perSystem.self.t3code-fork
+          or (throw "dotfiles.t3code: whexy/t3code builds no T3 server for ${pkgs.stdenv.hostPlatform.system}");
       defaultText = lib.literalExpression "perSystem.self.t3code-fork";
       description = "T3 Code package.";
     };
