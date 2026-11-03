@@ -629,10 +629,10 @@ The nightly `update` step in `.woodpecker.yml` runs `nix flake update`, then
 
 ## CI repair
 
-When a pipeline on master fails (a push's check, the update lane, or the T3
-hub publish), its last step, `report-failure`, posts the failure to a webhook
-task on mudd's T3 Code server, "Repair a failed dotfiles pipeline". The task
-starts an agent run in the Dotfiles project that reruns a transient failure,
+When a pipeline on master fails (a push's check or the update lane), its
+last step, `report-failure`, posts the failure to a webhook task on mudd's
+T3 Code server, "Repair a failed dotfiles pipeline". The task starts an
+agent run in the Dotfiles project that reruns a transient failure,
 or ships a fix as a rebase-merged pull request and reruns the update lane, so
 the packages it reverted update. Pull requests are not reported.
 

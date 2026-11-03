@@ -131,13 +131,12 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
 
   passthru = {
     # update.py also pins the desktop app and the browser, which
-    # t3code-desktop-nightly and the hub image read from sources.json.
+    # t3code-desktop-nightly reads from sources.json.
     updater = flake.lib.updater {
       kind = "script";
       alsoBuild = [
         "t3code-nightly.browser"
         "t3code-desktop-nightly"
-        "t3code-hub-image"
       ];
     };
   }
