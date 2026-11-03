@@ -48,6 +48,8 @@ fetch() {
       *) break ;;
       esac
     else
+      # No response this time, so an earlier attempt's status no longer applies.
+      http_status=
       fetch_error=$(head -n 1 "$errors")
     fi
     remaining=$((deadline - SECONDS))
