@@ -10,7 +10,7 @@
     extras.enable = lib.mkEnableOption "extra dev utilities";
     debug.enable = lib.mkEnableOption "Linux tracing, profiling, and fuzzing tools";
     kube = {
-      enable = lib.mkEnableOption "kubeconfigs for my clusters, merged for kubectx";
+      enable = lib.mkEnableOption "my clusters in ~/.kube/config, switched with kubectx";
       clusters = lib.mkOption {
         type = lib.types.listOf lib.types.str;
         default = [ "clusters-work" ];
