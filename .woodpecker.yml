@@ -277,6 +277,7 @@ steps:
             check_head
             fail "the pin does not rebase onto master"
           fi
+          check_head
           if git push origin HEAD:master; then
             echo "OK - pinned t3code-fork to $rev"
             break
