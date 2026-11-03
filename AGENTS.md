@@ -128,10 +128,11 @@ agents drive: REA, the video toolkit, iPhone Use, Spark, transcribe, and
 wechat. Each adds its own skills and MCP servers to the options above, and
 `modules/home/agents` never names one.
 
-`checks/t3-tailnet` and `checks/agent-skills` import plain functions beside
-the modules (`modules/home/t3code/services.nix`, `skill-tree/build.nix`, and
-each feature's `skills.nix`) so that they evaluate no home; those files take
-no module arguments.
+`checks/t3-tailnet`, `checks/t3-policy` and `checks/agent-skills` import
+plain functions beside the modules (`modules/home/t3code/services.nix`,
+`modules/home/t3code/policy-command.nix`, `skill-tree/build.nix`, and each
+feature's `skills.nix`) so that they evaluate no home; those files take no
+module arguments.
 
 ## Skills
 
@@ -425,16 +426,20 @@ CI rejects.
 
 ### Managed policy
 
-No policy lives in this repository. The server's wrapper runs
-`t3code-policy resolve` before each start, on Linux and macOS alike:
+No policy lives in this repository. Each host follows the policy at
+`dotfiles.t3code.policy.url`, by default
+`https://t3-policy.clusters.work/dotfiles.json`, which the policy editor
+(`https://t3-policy.at-basking.ts.net/`, on the tailnet) publishes. The
+server's wrapper runs `t3code-policy resolve` before each start, on Linux and
+macOS alike:
 
-- It fetches `https://t3-policy.at-basking.ts.net/policy.json` from the
-  policy editor, retrying for up to 30 s (a boot can start the server before
-  Tailscale), and checks it with the `t3` about to run.
+- It fetches the policy, retrying for up to 30 s (a boot can start the server
+  before the network), and checks it with the `t3` about to run.
 - A valid policy replaces the last good copy in
   `~/.local/state/t3code-policy/policy.json`, which the server then loads.
-  When the editor is unreachable or serves an invalid policy, the server
-  loads the last good copy, after checking it again.
+  When the URL is unreachable, serves an invalid policy, or answers 404 or
+  410 (state `stale-missing`), the server loads the last good copy, after
+  checking it again.
 - With no valid policy at all, the wrapper names a file that cannot exist,
   which T3 reads as no policy. It never leaves the variable unset: T3 would
   then look for the machine's own policy.
@@ -442,11 +447,34 @@ No policy lives in this repository. The server's wrapper runs
   `t3code-policy: state=...` line (the journal, or `~/Library/Logs/t3code.log`).
   A change of state posts to the alert webhook, which reaches WeChat.
 
-The server reads its policy only at startup, so a new policy applies at the
-next restart. `t3code-policy status` shows what the last start decided and
-what the running server loaded. The last good copy is user-writable, so an
-agent could replace it with another valid policy; the check on every start
-keeps it to valid ones.
+The server reads its policy only at startup. Every 2 minutes,
+`t3code-policy update` (the `t3code-policy-update` systemd timer, or launchd
+agent on macOS) asks the URL for anything but the applied policy's sha256
+(`If-None-Match`). When a running server's policy changed and the new one
+passes the check, it restarts the server at once, and the wrapper applies it;
+the server resumes interrupted turns. It never starts a stopped server, even
+one stopped while it fetched: it checks again, and on Linux restarts with
+`try-restart`.
+
+- An unreachable URL or a server error restarts nothing and alerts nothing.
+- An invalid policy restarts nothing; the state turns `stale-invalid`, which
+  alerts once, and back to `current` when the URL serves the applied policy
+  again. The same invalid bytes are not checked again.
+- A 404 or 410 restarts nothing either; the state turns `stale-missing`,
+  which alerts once, and back the same way.
+- A start that still applies another policy after a restart for this one gets
+  no second restart for the same sha within the hour.
+- A lock keeps it from overlapping itself or a start. Every step is bounded,
+  well below the 60 s a start waits for the lock; a start that still cannot
+  take it loads the last good copy and writes nothing. It records each run under
+  `update` in `status.json`, and logs a `t3code-policy: update=...` line when
+  the result changes (the journal, or `~/Library/Logs/t3code-policy.log`).
+
+`t3code-policy status` shows what the last start decided, the last update
+check, and what the running server loaded. The last good copy is
+user-writable, so an agent could replace it with another valid policy; the
+check on every start keeps it to valid ones. `checks/t3-policy` runs the
+command against a fixture server.
 
 ### Gateway models for Claude
 
