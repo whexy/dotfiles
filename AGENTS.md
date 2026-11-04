@@ -172,7 +172,7 @@ list of skill names.
 | Skill                                     | Source                     | Taken                                                 |
 | ----------------------------------------- | -------------------------- | ----------------------------------------------------- |
 | `modules/home/agents/skills/*`            | local                      | ours                                                  |
-| `frost`, `frost-*`                        | `wxstack`                  | ours, published in whexy/wxstack                      |
+| every skill wxstack publishes             | `wxstack`                  | ours, published in whexy/wxstack                      |
 | `sol-loop`                                | `tstack`                   | picked from t3dotgg/tstack                            |
 | `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                            |
 | `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                        |
