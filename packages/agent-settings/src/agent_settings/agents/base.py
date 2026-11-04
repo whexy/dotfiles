@@ -94,6 +94,10 @@ class Agent(ABC):
     def launch_args(self, session: Session, args: list[str], *, inherited: bool) -> list[str]:
         """Arguments that apply `session` ahead of the caller's own."""
 
+    def refresh_selection(self, doc: Table, selection: Entry) -> None:
+        """Bring a still-valid saved selection's fields up to date with Nix."""
+        del doc, selection
+
     def maintained_settings(self, _selection: Entry | None = None) -> Table:
         return copy.deepcopy(self.manifest["maintainedSettings"])
 
@@ -150,10 +154,13 @@ class Agent(ABC):
         # also gets an optimistic check against non-cooperating writers.
         with edit_document(self.state_file) as state:
             desired = self.maintained_settings(selection)
+            saved = self.catalog.find(state.get("selection")) if selection is None else None
             with edit_document(self.config_file) as doc:
                 merge_owned(doc, table_or_empty(state.get("owned")), desired)
                 if selection is not None:
                     self.apply_selection(doc, selection)
+                elif saved is not None:
+                    self.refresh_selection(doc, saved)
             state["owned"] = desired
             for record, (path, extra_desired) in self.extra_owned_documents().items():
                 with edit_document(path) as doc:
