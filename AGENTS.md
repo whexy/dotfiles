@@ -738,8 +738,8 @@ When a pipeline on master fails (a push's check, the update lane, or the
 t3code-fork pin lane), its last step, `report-failure`, posts the failure to a webhook
 task on mudd's T3 Code server, "Repair a failed dotfiles pipeline". The task
 starts an agent run in the Dotfiles project that reruns a transient failure,
-or ships a fix as a rebase-merged pull request and reruns the update lane, so
-the packages it reverted update. Pull requests are not reported.
+or pushes a fix to master and reruns the update lane, so the packages it
+reverted update.
 
 - The task's webhook URL is the Woodpecker secret `t3_repair_webhook`, open
   to push, cron and manual events. It takes no image filter: Woodpecker
@@ -750,6 +750,14 @@ the packages it reverted update. Pull requests are not reported.
   same commit, such as a rerun, starts no second repair.
 - When the task does not accept the report, `report-failure` posts it to the
   alert webhook instead, which reaches WeChat.
+
+## Commits
+
+This repository keeps one branch, `master`, with linear history. Commit on
+master and push it; rebase onto `origin/master` when the push is rejected.
+Create no other branch, git worktree or pull request, and do not use the
+`ship-pr` skill here: work left on a branch is easily forgotten and never
+reaches master.
 
 ## Verification
 
