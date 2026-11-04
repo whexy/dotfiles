@@ -132,6 +132,10 @@ in
     (lib.mkIf config.dotfiles.editor.vscode.enable {
       programs.vscode = {
         enable = true;
+        # release-26.05 took VS Code 1.144 without the builder's new bundled
+        # ripgrep path (@vscode/ripgrep-universal), so its build fails; return
+        # to the stable package once that branch's vscode/generic.nix has it.
+        package = pkgs.unstable.vscode;
         mutableExtensionsDir = false;
         profiles.default = {
           enableUpdateCheck = false;
