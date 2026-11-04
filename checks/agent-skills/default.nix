@@ -44,6 +44,7 @@ let
     broll
     cf-cli
     council
+    create-formal-verification-skill
     deploy-to-cluster
     design
     draw
@@ -52,11 +53,13 @@ let
     iphone-use
     iphone-use-setup
     knowledge
+    maintain-formal-verification-skill
     nix-blueprint
     reverse-engineer-anything
     review-loop
     ship-pr
     spark
+    statechart
     t3-setup
     transcribe
     video-edit
