@@ -124,8 +124,8 @@ from each other:
 Every agent reads `global-rules.md`, linked into its own config directory.
 
 `modules/home/agentic-tooling` (`dotfiles.agenticTooling`) holds the programs
-agents drive: REA, the video toolkit, iPhone Use, Spark, transcribe, and
-wechat. Each adds its own skills and MCP servers to the options above, and
+agents drive: REA, the video toolkit, formal verification, iPhone Use, Spark,
+transcribe, and wechat. Each adds its own skills and MCP servers to the options above, and
 `modules/home/agents` never names one.
 
 `checks/t3-tailnet`, `checks/t3-policy` and `checks/agent-skills` import
@@ -169,18 +169,20 @@ installs, and `checks/agent-skills` builds every `skills.nix` under
 `modules/home` together, so a new feature needs no change there beyond the
 list of skill names.
 
-| Skill                                     | Source                     | Taken                                                 |
-| ----------------------------------------- | -------------------------- | ----------------------------------------------------- |
-| `modules/home/agents/skills/*`            | local                      | ours                                                  |
-| every skill wxstack publishes             | `wxstack`                  | ours, published in whexy/wxstack                      |
-| `sol-loop`                                | `tstack`                   | picked from t3dotgg/tstack                            |
-| `transcribe`, `wechat`                    | `transcribe`, `wechat-cli` | as shipped                                            |
-| `video-edit`, `broll`                     | local, video feature       | ours; they drive several tools                        |
-| `reverse-engineer-anything`, `iphone-use` | `rea-agents`, `iphone-use` | as shipped                                            |
-| `iphone-use-setup`                        | `iphone-use`               | replaced by `agentic-tooling/iphone/iphone-use-setup` |
-| `cf-cli`                                  | `cf`                       | patched by `tooling/cloudflare/cf-cli-skill.patch`    |
-| `asc`, `spark`                            | local, with a reason       | the tools generate theirs at runtime                  |
-| HyperFrames' skills, ManimGX's skill      | `hyperframes`, `manimgx`   | ignored; `broll` reads them by path as `docs`         |
+| Skill                                       | Source                     | Taken                                                 |
+| ------------------------------------------- | -------------------------- | ----------------------------------------------------- |
+| `modules/home/agents/skills/*`              | local                      | ours                                                  |
+| every skill wxstack publishes               | `wxstack`                  | ours, published in whexy/wxstack                      |
+| `sol-loop`                                  | `tstack`                   | picked from t3dotgg/tstack                            |
+| `ketchup`, `bro`                            | `pstack`                   | picked from cursor/plugins' pstack                    |
+| `statechart`, `*-formal-verification-skill` | `formal-verification`      | picked from pstack, with TLC for statechart           |
+| `transcribe`, `wechat`                      | `transcribe`, `wechat-cli` | as shipped                                            |
+| `video-edit`, `broll`                       | local, video feature       | ours; they drive several tools                        |
+| `reverse-engineer-anything`, `iphone-use`   | `rea-agents`, `iphone-use` | as shipped                                            |
+| `iphone-use-setup`                          | `iphone-use`               | replaced by `agentic-tooling/iphone/iphone-use-setup` |
+| `cf-cli`                                    | `cf`                       | patched by `tooling/cloudflare/cf-cli-skill.patch`    |
+| `asc`, `spark`                              | local, with a reason       | the tools generate theirs at runtime                  |
+| HyperFrames' skills, ManimGX's skill        | `hyperframes`, `manimgx`   | ignored; `broll` reads them by path as `docs`         |
 
 Our packages of third-party tools copy every skill upstream publishes into
 `share/skills`, and leave upstream's own copy where its code reads it. Each
