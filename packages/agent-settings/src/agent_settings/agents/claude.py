@@ -13,6 +13,7 @@ from agent_settings.documents import (
     is_list,
     is_table,
     read_document,
+    table_or_empty,
 )
 from agent_settings.errors import SettingsError
 
@@ -49,6 +50,31 @@ class ClaudeAgent(Agent):
         if model:
             doc["model"] = model
         env.update(values)
+
+    @override
+    def refresh_selection(self, doc: Table, selection: Entry) -> None:
+        # Model picks stay as saved, since the label cannot rebuild fusion
+        # roles; the variables the gateway entry itself sets follow Nix.
+        model_env = {_MODEL, _SUBAGENT_MODEL}
+        for entry in self.catalog.entries:
+            if "discover" in entry:
+                model_env.update(entry["discover"]["modelEnv"])
+            if "fusion" in entry:
+                model_env.update(role["export"] for role in entry["fusion"]["roles"])
+        endpoint_env = {
+            key for entry in self.catalog.entries for key in entry.get("env", {})
+        } - model_env
+        wanted = {
+            key: value for key, value in selection.get("env", {}).items() if key in endpoint_env
+        }
+        saved = table_or_empty(doc.get("env"))
+        # A hand-edited endpoint stays the user's, as in `snapshot`.
+        if saved.get(_BASE_URL) != wanted.get(_BASE_URL) or not (saved or wanted):
+            return
+        env = child_table(doc, "env")
+        for key in endpoint_env - wanted.keys():
+            env.pop(key, None)
+        env.update(wanted)
 
     @override
     def extra_owned_documents(self) -> dict[str, tuple[Path, Table]]:

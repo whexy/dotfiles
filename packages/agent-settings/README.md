@@ -64,7 +64,10 @@ Claude's skills are shared, including user-installed skills in that directory.
 Codex also continues discovering shared user skills in `~/.agents/skills`.
 Forked native settings remain separate writable files. Activation always reconciles
 the default first, then named configs, preserving valid model choices and user
-settings while migrating removed choices to the CLIProxyAPI default.
+settings while migrating removed choices to the CLIProxyAPI default. A valid
+Claude choice still takes the gateway variables Nix now sets for its entry, such
+as `ANTHROPIC_BASE_URL` and `CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY`, unless
+its saved endpoint was edited by hand; its model picks stay as saved.
 `CODEX_HOME` and `CLAUDE_CONFIG_DIR` cannot redirect activation.
 External config directories are reconciled when selecting a model in them.
 
