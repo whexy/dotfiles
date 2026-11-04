@@ -478,18 +478,23 @@ command against a fixture server.
 
 ### Gateway models for Claude
 
-T3's Claude model picker also lists every non-Claude model CLIProxyAPI serves,
-with the reasoning levels Claude Code accepts. `t3-claude-models` writes them
-into `~/.t3/userdata/settings.json` as custom models of T3's `claudeAgent`
-provider. Activation runs it; run it yourself to pick up a changed catalog.
-While the gateway or its secrets are unavailable, the list stays as it was.
+T3's Claude model picker also lists every model the selected gateway serves.
+The gateway entries of `claude-select` set
+`CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY`, so Claude Code fetches the
+gateway's model list, caches it in `~/.claude/cache/gateway-models.json`, and
+reports it at initialize; T3 adds each model its own catalog does not know. The
+same list appears in Claude Code's `/model`. With the claude.ai login selected,
+the picker lists only Claude's own models.
 
-T3 starts Claude Code through the `claude` launcher, so these models go to the
-gateway `claude-select` saved. They work only while that is CLIProxyAPI, the
-default.
+CLIProxyAPI reports its models under encoded IDs (`claude-fable-5-dd-` and the
+original ID reversed), which it routes back to the model, so thread metadata
+shows those slugs. Every reported model offers the same effort levels, Low to
+Max.
 
-Custom models added in T3 itself survive a refresh: `dotfiles-settings.json`
-beside T3's settings records the models `t3-claude-models` wrote.
+A new gateway model shows up from the second Claude session after it is
+served: the first one refreshes the cache. Activation brings an existing
+selection's gateway variables up to date, so the flag reaches hosts without
+running `claude-select` again.
 
 ### Desktop app
 
