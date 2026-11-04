@@ -140,6 +140,17 @@ steps:
       - git config user.name "whexy-bot[bot]"
       - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
       - start=$(git rev-parse HEAD)
+      # The input and release lookups below make more GitHub API calls than
+      # the 60 an hour an unauthenticated runner IP gets, so they run as the
+      # GitHub App: Nix through access-tokens, the updater through
+      # GITHUB_TOKEN. The token expires within the hour, so the check and
+      # push go without it.
+      - |
+        nix_config=$NIX_CONFIG
+        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
+        export GITHUB_TOKEN
+        export NIX_CONFIG="$NIX_CONFIG
+        access-tokens = github.com=$GITHUB_TOKEN"
       - cp flake.lock /tmp/flake.lock.old
       - nix flake update
       - |
@@ -158,6 +169,9 @@ steps:
       # step fails and report-failure runs.
       - updated=0
       - nix run --accept-flake-config .#update -- --commit || updated=$?
+      - |
+        export NIX_CONFIG="$nix_config"
+        unset GITHUB_TOKEN
       - |
         if [ "$(git rev-parse HEAD)" = "$start" ]; then
           echo "Nothing to update"
