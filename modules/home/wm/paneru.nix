@@ -174,6 +174,9 @@ in
 
         paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
         paneru.bind(hyper .. " - t", function() os.execute("${terminalLaunch}") end)
+      ''
+      + lib.optionalString (config.dotfiles.t3code.enable && config.dotfiles.t3code.desktop.enable) ''
+        paneru.bind(meh .. " - t", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "T3 Code (Nightly)"]]) end)
       '';
     };
 
