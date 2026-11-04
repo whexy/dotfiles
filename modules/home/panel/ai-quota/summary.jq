@@ -185,6 +185,8 @@ def provider_accent:
   elif . == "codex" then "green"
   elif . == "antigravity" then "gray"
   elif . == "grok" or . == "xai" then "white"
+  elif . == "meta" then "blue"
+  elif . == "zed" then "cyan"
   else "gray"
   end;
 
@@ -193,7 +195,10 @@ def provider_accent:
 | if . == null then
     { present: false }
   else
-    (.accounts | sort_by(.id // .name)) as $accounts
+    # An account without meters and without an error (OpenCode's free plan)
+    # has no quota to show; keeping it would cost the pill an empty column.
+    (.accounts |= map(select(.error != null or (.meters | length > 0))))
+    | (.accounts | sort_by(.id // .name)) as $accounts
     | ($provider | provider_accent) as $accent
     | ([$accounts[] | coding[]] | unique_by(.label) | sort_by(window_span, .label) | .[:3] | map(.label)) as $windows
     | [$accounts[] | . as $account | account_info + {
@@ -266,9 +271,7 @@ def provider_accent:
                 end)
             ),
             lines: [
-              ([$root.providers[] | select(matches_provider($provider))]
-                | .[0]
-                | .accounts[]
+              (.accounts[]
                 | if .error then
                     "✗ \(.name): \(.error)"
                   else
@@ -282,9 +285,7 @@ def provider_accent:
               )
             ],
             compact_lines: [
-              ([$root.providers[] | select(matches_provider($provider))]
-                | .[0]
-                | .accounts | sort_by(.id // .name)[]
+              ($accounts[]
                 | if .error then "✗ \(.name): \(.error)"
                   else .name, (coding[] | compact_meter_line) end
               )

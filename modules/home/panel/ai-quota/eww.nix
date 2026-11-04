@@ -170,6 +170,18 @@ in
           color: #ffffff;
         }
 
+        .quota-meta .quota-countdown {
+          color: #007cff;
+        }
+
+        .quota-opencode-go .quota-countdown {
+          color: #98989d;
+        }
+
+        .quota-zed .quota-countdown {
+          color: #22b8cf;
+        }
+
         .quota.error {
           color: $on-surface-variant;
         }
@@ -195,6 +207,10 @@ in
         .quota-track.orange progress { background-color: #d97757; }
         .quota-track.orangeDim progress { background-color: rgba(217, 119, 87, 0.7); }
         .quota-track.orangeFaint progress { background-color: rgba(217, 119, 87, 0.45); }
+
+        .quota-track.cyan progress { background-color: #22b8cf; }
+        .quota-track.cyanDim progress { background-color: rgba(34, 184, 207, 0.7); }
+        .quota-track.cyanFaint progress { background-color: rgba(34, 184, 207, 0.45); }
 
         .quota-track.white progress { background-color: #ffffff; }
         .quota-track.whiteDim progress { background-color: rgba(255, 255, 255, 0.7); }

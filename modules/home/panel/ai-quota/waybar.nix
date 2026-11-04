@@ -61,6 +61,20 @@ let
         end'
     '';
 
+  colors = {
+    claude = "#d97757";
+    kimi = "#007cff";
+    codex = "#10a37f";
+    antigravity = "#98989d";
+    grok = "#ffffff";
+    meta = "#007cff";
+    opencode-go = "#98989d";
+    zed = "#22b8cf";
+  };
+
+  selectors =
+    state: lib.concatMapStringsSep ",\n" (p: "#custom-ai-quota-${p.name}${state}") providers;
+
   pillModule =
     provider: icon:
     lib.nameValuePair "custom/ai-quota-${provider}" {
@@ -82,67 +96,38 @@ in
     }
     // builtins.listToAttrs (map (p: pillModule p.name p.icon) providers);
 
-    programs.waybar.style = lib.mkAfter ''
-      #custom-ai-quota-claude,
-      #custom-ai-quota-kimi,
-      #custom-ai-quota-codex,
-      #custom-ai-quota-antigravity,
-      #custom-ai-quota-grok {
-        padding: 2px 10px;
-        margin: 3px 2px;
-        border-radius: 10px;
-        background-color: #3c3836;
-        transition: all 0.3s ease;
-      }
+    programs.waybar.style = lib.mkAfter (
+      ''
+        ${selectors ""} {
+          padding: 2px 10px;
+          margin: 3px 2px;
+          border-radius: 10px;
+          background-color: #3c3836;
+          transition: all 0.3s ease;
+        }
 
-      #custom-ai-quota-claude {
-        color: #d97757;
-      }
+        ${selectors ":hover"} {
+          background-color: #504945;
+        }
 
-      #custom-ai-quota-kimi {
-        color: #007cff;
-      }
+        ${selectors ".error"} {
+          color: #928374;
+        }
 
-      #custom-ai-quota-codex {
-        color: #10a37f;
-      }
-
-      #custom-ai-quota-antigravity {
-        color: #98989d;
-      }
-
-      #custom-ai-quota-grok {
-        color: #ffffff;
-      }
-
-      #custom-ai-quota-claude:hover,
-      #custom-ai-quota-kimi:hover,
-      #custom-ai-quota-codex:hover,
-      #custom-ai-quota-antigravity:hover,
-      #custom-ai-quota-grok:hover {
-        background-color: #504945;
-      }
-
-      #custom-ai-quota-claude.error,
-      #custom-ai-quota-kimi.error,
-      #custom-ai-quota-codex.error,
-      #custom-ai-quota-antigravity.error,
-      #custom-ai-quota-grok.error {
-        color: #928374;
-      }
-
-      /* Collapse absent providers entirely. */
-      #custom-ai-quota-claude.empty,
-      #custom-ai-quota-kimi.empty,
-      #custom-ai-quota-codex.empty,
-      #custom-ai-quota-antigravity.empty,
-      #custom-ai-quota-grok.empty {
-        padding: 0;
-        margin: 0;
-        min-width: 0;
-        font-size: 0;
-        background-color: transparent;
-      }
-    '';
+        /* Collapse absent providers entirely. */
+        ${selectors ".empty"} {
+          padding: 0;
+          margin: 0;
+          min-width: 0;
+          font-size: 0;
+          background-color: transparent;
+        }
+      ''
+      + lib.concatMapStrings (p: ''
+        #custom-ai-quota-${p.name} {
+          color: ${colors.${p.name}};
+        }
+      '') providers
+    );
   };
 }

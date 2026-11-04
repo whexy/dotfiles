@@ -50,5 +50,26 @@ in
       icon = "󰬅";
       logo = "${logos}/grok.png";
     }
+    {
+      name = "meta";
+      title = "Muse";
+      variable = "meta";
+      icon = "󰛤";
+      logo = "${logos}/meta.png";
+    }
+    {
+      name = "opencode-go";
+      title = "OpenCode";
+      variable = "opencode_go";
+      icon = "󰅴";
+      logo = "${logos}/opencode-go.png";
+    }
+    {
+      name = "zed";
+      title = "Zed";
+      variable = "zed";
+      icon = "󰬡";
+      logo = "${logos}/zed.png";
+    }
   ];
 }
