@@ -57,6 +57,26 @@ in
             done
           '';
       };
+
+      t3codeDesktop = config.dotfiles.t3code.enable && config.dotfiles.t3code.desktop.enable;
+
+      # niri raises the open window itself, so the binding does not depend on
+      # how the app handles being launched a second time.
+      showT3code = pkgs.writeShellApplication {
+        name = "niri-show-t3code";
+        runtimeInputs = [
+          config.programs.niri.package
+          pkgs.jq
+        ];
+        text = ''
+          id=$(niri msg --json windows | jq -r 'first(.[] | select((.app_id // "") | test("t3code"; "i")) | .id) // empty')
+          if [ -n "$id" ]; then
+            niri msg action focus-window --id "$id"
+          else
+            exec t3code-desktop
+          fi
+        '';
+      };
     in
     {
       home.packages = with pkgs; [
@@ -286,7 +306,14 @@ in
                   ];
               repeat = false;
             };
-
+          }
+          // lib.optionalAttrs t3codeDesktop {
+            "${meh}+T" = {
+              action.spawn = [ (lib.getExe showT3code) ];
+              repeat = false;
+            };
+          }
+          // {
             # Close window
             "${hyper}+Q" = {
               action.close-window = [ ];

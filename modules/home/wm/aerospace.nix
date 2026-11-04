@@ -136,7 +136,11 @@ in
             else
               "exec-and-forget open -a Ghostty";
           cmd-alt-ctrl-shift-q = "close";
-
+        }
+        // lib.optionalAttrs (config.dotfiles.t3code.enable && config.dotfiles.t3code.desktop.enable) {
+          cmd-alt-ctrl-t = "exec-and-forget open -a 'T3 Code (Nightly)'";
+        }
+        // {
           # service binding
           cmd-alt-ctrl-shift-semicolon = "mode service";
         };
