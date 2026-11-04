@@ -40,6 +40,7 @@ let
     blue = "0xff007cff";
     orange = "0xffd97757";
     green = "0xff10a37f";
+    cyan = "0xff22b8cf";
     white = "0xffffffff";
     track = "0x26ffffff";
     glass = "0x1affffff";
@@ -288,6 +289,24 @@ let
       logo = "${logos}/grok.png";
       logoScale = 0.026;
       accent = colors.white;
+    }
+    {
+      name = "meta";
+      logo = "${logos}/meta.png";
+      logoScale = 0.026;
+      accent = colors.blue;
+    }
+    {
+      name = "opencode-go";
+      logo = "${logos}/opencode-go.png";
+      logoScale = 0.025;
+      accent = colors.gray;
+    }
+    {
+      name = "zed";
+      logo = "${logos}/zed.png";
+      logoScale = 0.024;
+      accent = colors.cyan;
     }
   ];
 

@@ -32,6 +32,9 @@ let
     codex = "green";
     antigravity = "mauve";
     grok = "fg";
+    meta = "blue";
+    opencode-go = "fg";
+    zed = "sky";
   };
 
   providerArgs = lib.concatMapStringsSep " " (
@@ -62,9 +65,9 @@ let
     rendered="''${cache%.json}.status"
 
     # Theme options may themselves be formats, so expand them through tmux.
-    theme="$(tmux display -p '#{E:@catppuccin_status_background}|#{E:@thm_surface_1}|#{E:@thm_surface_0}|#{E:@thm_fg}|#{E:@thm_overlay_1}|#{E:@thm_yellow}|#{E:@thm_red}|#{E:@thm_overlay_0}|#{E:@thm_peach}|#{E:@thm_blue}|#{E:@thm_green}|#{E:@thm_mauve}|#{E:@thm_fg}|#{E:@thm_mantle}')"
+    theme="$(tmux display -p '#{E:@catppuccin_status_background}|#{E:@thm_surface_1}|#{E:@thm_surface_0}|#{E:@thm_fg}|#{E:@thm_overlay_1}|#{E:@thm_yellow}|#{E:@thm_red}|#{E:@thm_overlay_0}|#{E:@thm_peach}|#{E:@thm_blue}|#{E:@thm_green}|#{E:@thm_mauve}|#{E:@thm_sky}|#{E:@thm_fg}|#{E:@thm_mantle}')"
     IFS='|' read -r bg name_bg pct_bg fg dim warn crit err \
-      c_peach c_blue c_green c_mauve c_fg mantle <<< "$theme"
+      c_peach c_blue c_green c_mauve c_sky c_fg mantle <<< "$theme"
     [ "$bg" = default ] || [ -z "$bg" ] && bg="$mantle"
     # Powerline half-circles; catppuccin's own right separator is a plain space.
     lcap=$'\ue0b6'; rcap=$'\ue0b4'
