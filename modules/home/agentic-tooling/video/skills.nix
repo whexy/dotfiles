@@ -27,6 +27,7 @@ in
         "remotion-to-hyperframes"
         "reverse-any-video"
         "slideshow"
+        "style-sampling"
       ]
       (_: {
         ignore = true;
