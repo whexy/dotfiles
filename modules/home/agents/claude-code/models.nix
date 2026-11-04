@@ -45,6 +45,9 @@ let
           # API instead of an assumed 200k window. That includes a gateway
           # model named at launch, as T3 Code's model picker does.
           CLAUDE_CODE_DISABLE_UNKNOWN_MODEL_WINDOW_ENFORCEMENT = "1";
+          # Claude Code lists the gateway's models in /model and reports them
+          # at initialize, where T3 Code adds them to its Claude provider.
+          CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = "1";
         };
         secrets = llm.accessSecrets // {
           ANTHROPIC_API_KEY = gateway.apiKeyPath;

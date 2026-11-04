@@ -19,12 +19,12 @@ in
   imports = [
     ./policy.nix
     ./server.nix
-    ./claude-models.nix
+    ./retired-claude-models.nix
     ./desktop.nix
   ];
 
   options.dotfiles.t3code = {
-    enable = lib.mkEnableOption "T3 Code, the web GUI for coding agents, and its Claude gateway models";
+    enable = lib.mkEnableOption "T3 Code, the web GUI for coding agents";
     package = lib.mkOption {
       type = lib.types.package;
       # The server package contains only T3's server runtime. Provider CLIs
