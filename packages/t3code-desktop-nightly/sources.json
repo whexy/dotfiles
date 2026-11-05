@@ -1,7 +1,7 @@
 {
-  "version": "0.1.8-nightly.20261105.4205",
+  "version": "0.1.8-nightly.20261105.4218",
   "hashes": {
-    "linux-arm64": "sha512-EbtHuEo0qi41uM5sEvEwzam4kQnJOHWC+3L8NDeLqz3TD2jSx4Bhan/JTghSA6aKLLc2LUvzYaXshMURrIKslA==",
-    "linux-x64": "sha512-4h7hFyN1BS1vSy7Vu+AaXhwVCOCLIUwvTkoLWmj4QOXNqLJferl/uGui11+I9psX6nHvTtPuXzXUbqjo28DgWQ=="
+    "linux-arm64": "sha512-tgdN7lkG40wOhmIfkXMzNmdLQf36w4LZJ5Tt+yFYQ0X24KHjfhezh55sU6ORLT/EfrAqjW4XJaujS4OEkAMQuw==",
+    "linux-x64": "sha512-B3D4t4UfTqcxWFaQUU+tBom3VdfKNaI1pStebHogTFRFSiDAxhlCd8tNvWfxzcEcKHCcRRxql49lOXdBq3Otog=="
   }
 }
