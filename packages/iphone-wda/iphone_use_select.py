@@ -3,7 +3,8 @@
 A session starts with no phone. The agent lists the phones, asks the user
 which one to use, and selects it; every iPhone Use tool then runs against that
 phone's WebDriverAgent. iPhone Use only talks to loopback, so the proxy
-forwards a loopback port to the phone's Tailscale address. iPhone Use's own
+forwards loopback ports to the phone's Tailscale address: one to the runner,
+and one to its MJPEG screen stream, which feeds the live preview. iPhone Use's own
 setup tools are hidden: they drive xcodebuild, while `iphone-wda` launches the
 runner here.
 """
@@ -66,7 +67,7 @@ def pump(source: socket.socket, sink: socket.socket) -> None:
 
 
 class Forward:
-    """A loopback port relaying each connection to the phone's runner."""
+    """A loopback port relaying each connection to one port on the phone."""
 
     def __init__(self, host: str, port: int) -> None:
         self.target = (host, port)
@@ -111,11 +112,12 @@ class Proxy:
     def __init__(self, config: dict, server: str, launcher: str) -> None:
         self.phones = config["phones"]
         self.port = config["wda"]["port"]
+        self.mjpeg_port = config["wda"]["mjpegPort"]
         self.server, self.launcher = server, launcher
         self.write_lock = threading.Lock()
         self.child_lock = threading.Lock()
         self.child: subprocess.Popen | None = None
-        self.forward: Forward | None = None
+        self.forwards: list[Forward] = []
         self.phone: str | None = None
         # Requests forwarded to the current child, by id, so a restart can
         # answer the ones it will never reply to.
@@ -135,14 +137,16 @@ class Proxy:
         """Run iPhone Use for one phone; with none, it only answers the catalog."""
         env = dict(os.environ)
         name = phone or "_unselected"
-        if self.forward:
-            self.forward.close()
-            self.forward = None
+        self.close_forwards()
         if phone:
-            self.forward = Forward(self.phones[phone]["host"], self.port)
-            env["WDA_URL"] = f"http://127.0.0.1:{self.forward.port}"
+            host = self.phones[phone]["host"]
+            runner, stream = Forward(host, self.port), Forward(host, self.mjpeg_port)
+            self.forwards = [runner, stream]
+            env["WDA_URL"] = f"http://127.0.0.1:{runner.port}"
+            env["IPHONE_USE_MJPEG_URL"] = f"http://127.0.0.1:{stream.port}/"
         else:
             env["WDA_URL"] = "http://127.0.0.1:9"
+            env.pop("IPHONE_USE_MJPEG_URL", None)
         (STATE / name).mkdir(parents=True, exist_ok=True, mode=0o700)
         env["IPHONE_USE_STATE_DIR"] = str(STATE / name)
         child = subprocess.Popen(
@@ -165,10 +169,13 @@ class Proxy:
                 child.wait(timeout=5)
             except subprocess.TimeoutExpired:
                 child.kill()
-        if self.forward:
-            self.forward.close()
-            self.forward = None
+        self.close_forwards()
         self.abandon_pending("The phone changed before iPhone Use answered; call the tool again.")
+
+    def close_forwards(self) -> None:
+        for forward in self.forwards:
+            forward.close()
+        self.forwards = []
 
     def abandon_pending(self, message: str) -> None:
         pending, self.pending = self.pending, {}

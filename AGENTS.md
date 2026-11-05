@@ -630,11 +630,23 @@ Agents reach a phone through `iphone-use-select`, an MCP proxy in front of
 iPhone Use:
 
 - A session starts with no phone; the agent asks the user which one to use.
-- The proxy forwards a loopback port to that phone, because iPhone Use talks
-  only to loopback.
+- The proxy forwards two loopback ports to that phone, because iPhone Use talks
+  only to loopback: one to the runner (8100), and one to its screen stream
+  (9100, `IPHONE_USE_MJPEG_URL`).
 - iPhone Use's xcodebuild setup tools are hidden.
 - Two agents on one phone end each other's sessions, because WebDriverAgent
   keeps only one.
+
+iPhone Use's live preview, the MCP app that `pua_ready` and `pua_screen` show,
+reads that screen stream with curl (`packages/iphone-use/mjpeg-relay.patch`);
+upstream captures it over USB, which no host here does. It needs the tailnet to
+reach the phone on port 9100.
+
+- Before the user enters a password or uses Face ID, the agent pauses the
+  preview. The pause is in the host's own state file, so a panel open on
+  another host keeps streaming the phone's screen.
+- `checks/iphone-preview` model-checks the preview's stream around a pause.
+  The `verify-iphone-preview` project skill says what it covers.
 
 `iphone-wda` launches the runner. It needs a host that reaches the phone's
 developer services, today a Mac paired with the phone (golf, over Wi-Fi). Run
