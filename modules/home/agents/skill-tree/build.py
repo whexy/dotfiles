@@ -113,6 +113,14 @@ for name, (source, origin) in sorted(sources.items()):
     if not isinstance(description, str) or not description.strip():
         errors.append(f"skill {name} ({origin}): SKILL.md has no description")
 
+# Home Manager links a recursive source file by file but copies the links it
+# finds there as they are, so a root linked from here holds one link per
+# skill directory.
+links = out / "links"
+links.mkdir()
+for name in sorted(sources):
+    (links / name).symlink_to(skills / name)
+
 docs = out / "docs"
 docs.mkdir()
 for name, path in spec["docs"].items():

@@ -11,9 +11,10 @@ let
   cfg = config.dotfiles.agents.skills;
   tree = (import ./build.nix { inherit pkgs; }).build cfg;
 
-  # Claude Code scans only `~/.claude/skills` and reserves `synced/` there
-  # for skills it downloads from the account, so every root holds one real
-  # directory per skill rather than being a link itself.
+  # Each root is a real directory holding one link per skill directory, never
+  # per file: Codex skips a skill whose SKILL.md is a link out of the
+  # skill's directory and Muse Code rejects it, while Claude Code keeps
+  # `synced/` in its root and Muse Code `.muse/` in its.
   roots = [
     ".agents/skills"
     ".claude/skills"
@@ -107,20 +108,22 @@ in
 
     home.file =
       lib.genAttrs roots (_: {
-        source = "${tree}/skills";
+        source = "${tree}/links";
         recursive = true;
       })
       // lib.mapAttrs' (
         name: _: lib.nameValuePair ".local/share/agents/docs/${name}" { source = "${tree}/docs/${name}"; }
       ) cfg.docs;
 
-    # Activation cannot move a root, or a skill in one, from a link to a
-    # directory: Home Manager tries to back the old link up by moving its
-    # read-only store target, or reads through it and reports every file
-    # as a collision, and dies before any link is written. So this removes
-    # `~/.agents/skills` when it is one link, and in every root each skill
-    # that links into a generation's files. Other entries, Claude Code's
-    # `synced/` among them, are not Home Manager's and stay.
+    # Home Manager cannot write a skill's link where an old link to a
+    # directory, or a directory, still stands: it reports a collision, or
+    # backs the path up by moving it, which fails inside the store and
+    # otherwise leaves a copy of every skill beside the new links. So this
+    # removes `~/.agents/skills` when it is one link, and empties every
+    # directory in a root that holds a link into a generation's files, as
+    # each skill linked file by file does: those links go, then every empty
+    # directory under it. Entries holding no such link, Claude
+    # Code's `synced/` among them, are not Home Manager's and stay.
     # Remove once every host has activated a generation that has this.
     home.activation.migrateSkillsDir = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
       if [ -L "$HOME/.agents/skills" ]; then
@@ -128,10 +131,10 @@ in
       fi
       for root in ${lib.concatMapStringsSep " " (root: ''"$HOME/${root}"'') roots}; do
         for entry in "$root"/*; do
-          if [ -L "$entry" ]; then
-            case "$(readlink "$entry")" in
-              *-home-manager-files/*) run rm $VERBOSE_ARG "$entry" ;;
-            esac
+          if [ -d "$entry" ] && [ ! -L "$entry" ] \
+            && [ -n "$(find "$entry" -type l -lname '*-home-manager-files/*' -print -quit)" ]; then
+            run find "$entry" -type l -lname '*-home-manager-files/*' -delete
+            run find "$entry" -depth -type d -empty -delete
           fi
         done
       done
