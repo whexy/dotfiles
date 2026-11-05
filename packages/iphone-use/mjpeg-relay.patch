@@ -1,0 +1,20 @@
+--- a/server/wda_screen.py
++++ b/server/wda_screen.py
+@@ -409,6 +409,17 @@
+                            "mimeType": "image/jpeg", "width": width, "height": height}
+ 
+     def _command(self):
++        # iphone-use-select relays the phone's MJPEG port to loopback, so the
++        # preview reads the same stream with no USB connection or setup state.
++        relayed = os.environ.get("IPHONE_USE_MJPEG_URL")
++        if relayed is not None:
++            if not re.fullmatch(r"http://127\.0\.0\.1:[0-9]{1,5}/", relayed):
++                return None
++            # A silent connection ends after 5 s, as screen-stream.mjs does, so
++            # _run reconnects instead of holding a dead stream.
++            return ["@curl@", "--silent", "--fail", "--no-buffer", "--noproxy", "*",
++                    "--connect-timeout", "5", "--speed-limit", "1", "--speed-time", "5",
++                    relayed]
+         try:
+             config = json.loads((self.state_dir / "config.json").read_text())
+             udid = config.get("udid")

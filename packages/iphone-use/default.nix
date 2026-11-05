@@ -15,6 +15,15 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     hash = "sha256-1+63KhNJEx9UDlazNqV25k7z1hMECeEMqDOEjRbHQsE=";
   };
 
+  # The preview reads the phone's MJPEG stream from the loopback relay
+  # iphone-use-select provides, since no host here captures over USB.
+  patches = [ ./mjpeg-relay.patch ];
+
+  postPatch = ''
+    substituteInPlace server/wda_screen.py \
+      --replace-fail '"@curl@"' '"${lib.getExe pkgs.curl}"'
+  '';
+
   nativeBuildInputs = [ pkgs.makeWrapper ];
 
   dontBuild = true;
