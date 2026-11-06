@@ -131,6 +131,12 @@
       inputs.nixpkgs.follows = "nixpkgs";
     };
 
+    direnv-instant = {
+      url = "github:Mic92/direnv-instant";
+      inputs.nixpkgs.follows = "nixpkgs";
+      inputs.treefmt-nix.follows = "treefmt-nix";
+    };
+
     # Rex's prebuilt server and its NixOS module. The channel has no stable
     # release yet, and until one exists pkgs.superlogical.com serves the flake
     # only with the testing token (dotfiles.nix.rexNetrc).

@@ -1,4 +1,4 @@
-# Nushell developer extras (carapace, starship, zoxide, direnv, atuin, bat, eza)
+# Nushell developer extras (carapace, starship, zoxide, direnv-instant, atuin, bat, eza)
 {
   config,
   pkgs,
@@ -84,6 +84,9 @@ in
         silent = true;
         nix-direnv.enable = true;
       };
+
+      # Runs direnv in a background daemon, in place of direnv's own hook.
+      direnv-instant.enable = true;
 
       nushell = {
         shellAliases = {
