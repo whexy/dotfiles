@@ -18,6 +18,7 @@ pkgs.writeShellApplication {
     pkgs.coreutils
     pkgs.curl
     pkgs.jq
+    pkgs.qrencode
   ]
   ++ pkgs.lib.optional pkgs.stdenv.hostPlatform.isLinux pkgs.wl-clipboard;
   text = ''
@@ -26,10 +27,13 @@ pkgs.writeShellApplication {
     usage: t3-pair [--label LABEL] [--ttl DURATION] [host]
 
     Mint a one-time T3 Code pairing URL on [host] (a dotfiles host, a tailnet
-    machine name, or this machine when omitted) and copy it to the clipboard
-    when one is available. The URL uses the public tunnel name of [host], or
-    of this machine's hostname, when it answers, else the host's tailnet name.
-    Paste it into T3 Code under Settings -> Connections -> Add environment.
+    machine name, or this machine when omitted), show it as a QR code, and
+    copy it to the clipboard: pbcopy, then wl-copy, then the terminal's own
+    clipboard (OSC 52), which is the only one tried over ssh. The URL uses the
+    public tunnel name of [host], or of this machine's hostname, when it
+    answers, else the host's tailnet name. Scan the code with the T3 Code
+    mobile app, or paste the URL into T3 Code under Settings -> Connections ->
+    Add environment.
 
       --label LABEL     name shown in the host's client list (default: this host)
       --ttl DURATION    how long the unused link stays valid (default: 5m)
@@ -143,15 +147,37 @@ pkgs.writeShellApplication {
     expires=$(jq -r '.expiresAt' <<<"$pairing")
 
     echo "$url"
+
+    # Colored blocks keep the code dark-on-light on any terminal theme; text
+    # captured from a pipe gets plain blocks instead of escape codes.
+    qr_type=UTF8
+    [ -t 2 ] && qr_type=ANSIUTF8
+    qrencode -t "$qr_type" -m 2 "$url" >&2
+
     echo "Single use, expires $expires." >&2
 
-    if [ "$(uname)" = Darwin ]; then
-      printf '%s' "$url" | pbcopy
-      echo "Copied to the clipboard." >&2
-    elif [ -n "''${WAYLAND_DISPLAY:-}" ]; then
-      printf '%s' "$url" | wl-copy
-      echo "Copied to the clipboard." >&2
+    copied=""
+    # Over ssh, this machine's clipboard is not the one in front of the user;
+    # the terminal's is.
+    if [ -z "''${SSH_CONNECTION:-}" ]; then
+      if command -v pbcopy >/dev/null && printf '%s' "$url" | pbcopy 2>/dev/null; then
+        copied="Copied to the clipboard."
+      # wl-copy forks a server that keeps the selection; leaving it our stdout
+      # would hold open any pipe or $(...) reading this command.
+      elif command -v wl-copy >/dev/null &&
+        printf '%s' "$url" | wl-copy >/dev/null 2>&1; then
+        copied="Copied to the clipboard."
+      fi
     fi
-    echo "Paste it into T3 Code: Settings -> Connections -> Add environment." >&2
+    # tmux (set-clipboard on) and zellij forward OSC 52 to the outer terminal.
+    # Nothing answers it, so success only means the terminal was sent it.
+    if [ -z "$copied" ] &&
+      { printf '\033]52;c;%s\a' "$(printf '%s' "$url" | base64 -w0)" >/dev/tty; } 2>/dev/null; then
+      copied="Sent to the terminal's clipboard (OSC 52)."
+    fi
+    if [ -n "$copied" ]; then
+      echo "$copied" >&2
+    fi
+    echo "Scan it with the T3 Code app, or paste it into T3 Code: Settings -> Connections -> Add environment." >&2
   '';
 }
