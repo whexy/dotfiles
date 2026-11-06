@@ -52,12 +52,15 @@ in
         curl
         inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.home-manager
         jq
+        magic-wormhole-rs
         mosh
         podman
         rsync
         wget
         unzip
         zstd
+        # Not in the stable branch yet.
+        p.tailcat
       ]
       # macOS ships the BSD userland, which lacks GNU tools like `timeout`.
       ++ lib.optionals pkgs.stdenv.isDarwin [ coreutils ]

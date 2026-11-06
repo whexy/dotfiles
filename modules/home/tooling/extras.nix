@@ -9,7 +9,6 @@
   config = lib.mkIf config.dotfiles.tooling.extras.enable {
     home.packages = with pkgs; [
       devenv
-      magic-wormhole-rs
       qemu
       sqlite
       watchexec
