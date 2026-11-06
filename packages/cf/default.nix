@@ -19,24 +19,24 @@ let
   skills = pkgs.fetchFromGitHub {
     owner = "cloudflare";
     repo = "skills";
-    rev = "1a33048817d06df12882cb881dfc754e7039954a";
+    rev = "1f2cd0a19588e2c6197c91dd7c71729df1fb6156";
     sparseCheckout = [ "skills/cf-cli" ];
-    hash = "sha256-QJY8p6Ck33R3f5XxyBqh6LRgBWYFy+r82a9KB+lAfdw=";
+    hash = "sha256-NOtmhGkbymtLaQ5BUHUVHujHyUajWPPI7CDIH6+CcWk=";
   };
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "cf";
-  version = "1.0.0-beta.27";
+  version = "1.0.0-beta.28";
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/cf/-/cf-${finalAttrs.version}.tgz";
-    hash = "sha256-znB9+XzZWlmHv3TSnxC3rcK4Ux75HX8lgrOTvByYFTI=";
+    hash = "sha256-GVAu+BzoufP+6e/CsIfoqD/4ZN7sBV7ZurQ5oQ8l+Ss=";
   };
 
   # engines: ^22.23 || ^24.22 || ^26.12; the Darwin branch's nodejs_24 is
   # still 24.21.
   nodejs = pkgs.nodejs_22;
-  npmDepsHash = "sha256-QU8nqvvuZuGzhdxt7rjF4/BeQO9sbLAm7IVSsJ8o9Ps=";
+  npmDepsHash = "sha256-U1sDWkB4BQbSoohPHetMotRCJ9XNmIU+TlF8PEf+JrE=";
 
   # Nix owns this copy, so the daily update notice, which tells the user to
   # `npm install --global cf@latest`, would only install a second one. The
