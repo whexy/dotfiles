@@ -1,6 +1,7 @@
 # Shell group: zsh, nushell, motd.
 args@{
   config,
+  inputs,
   lib,
   ...
 }:
@@ -25,11 +26,11 @@ in
     };
     zsh = {
       enable = lib.mkEnableOption "zsh";
-      devExtras = lib.mkEnableOption "shell developer extras (p10k prompt, fzf, zoxide, bat, direnv)";
+      devExtras = lib.mkEnableOption "shell developer extras (p10k prompt, fzf, zoxide, bat, direnv-instant)";
     };
     nushell = {
       enable = lib.mkEnableOption "nushell";
-      devExtras = lib.mkEnableOption "nushell developer extras (carapace, zoxide, direnv, atuin, starship)";
+      devExtras = lib.mkEnableOption "nushell developer extras (carapace, zoxide, direnv-instant, atuin, starship)";
     };
   };
 
@@ -41,6 +42,7 @@ in
   };
 
   imports = [
+    inputs.direnv-instant.homeModules.direnv-instant
     ./atuin.nix
     ./motd.nix
     ./zsh.nix

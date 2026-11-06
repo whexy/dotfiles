@@ -1,4 +1,4 @@
-# Shell configuration (zsh, fzf, direnv, etc.)
+# Shell configuration (zsh, fzf, direnv-instant, etc.)
 {
   config,
   pkgs,
@@ -72,8 +72,8 @@ in
         command = "${lib.getExe config.programs.zoxide.package} init zsh ${lib.concatStringsSep " " config.programs.zoxide.options}";
       };
       fzfHook = zshHook "fzf" { command = "${lib.getExe config.programs.fzf.package} --zsh"; };
-      direnvHook = zshHook "direnv" {
-        command = "${lib.getExe config.programs.direnv.package} hook zsh";
+      direnvHook = zshHook "direnv-instant" {
+        command = "${lib.getExe config.programs.direnv-instant.finalPackage} hook zsh";
       };
       atuinHook = zshHook "atuin" {
         setup = ''
@@ -94,7 +94,7 @@ in
       };
 
       programs = {
-        # The zsh hooks of fzf, zoxide, atuin and direnv are sourced from
+        # The zsh hooks of fzf, zoxide, atuin and direnv-instant are sourced from
         # build-time renders in initContent below, at Home Manager's positions.
         fzf = {
           enable = true;
@@ -148,6 +148,12 @@ in
           enableZshIntegration = false;
           silent = true;
           nix-direnv.enable = true;
+        };
+
+        # Runs direnv in a background daemon, in place of direnv's own hook.
+        direnv-instant = {
+          enable = true;
+          enableZshIntegration = false;
         };
 
         zsh = {
