@@ -3,3 +3,15 @@ extend = "../../lib/python-checks/pyproject.toml"
 
 [tool.ruff.lint.isort]
 known-first-party = ["updater"]
+
+[tool.basedpyright]
+extends = "../../lib/python-checks/pyproject.toml"
+# The tests also see every package's update.py, which default.nix names, so
+# they are limited by exclusion.
+exclude = ["tests"]
+# Updater configs, sources.json and upstream manifests are untyped JSON.
+reportAny = false
+reportExplicitAny = false
+reportUnknownMemberType = false
+reportUnknownArgumentType = false
+reportUnknownVariableType = false

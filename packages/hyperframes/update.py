@@ -2,7 +2,6 @@
 
 import functools
 import re
-import sys
 import tarfile
 
 from updater import UpdateError, kinds, nix
@@ -46,10 +45,3 @@ def main() -> None:
     if wanted != current[1]:
         replace_once(pkg.dir / "default.nix", f"gsap-{current[1]}.tgz", f"gsap-{wanted}.tgz")
         pkg.refresh_hash("gsapTarball")
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except UpdateError as error:
-        sys.exit(f"hyperframes: {error}")

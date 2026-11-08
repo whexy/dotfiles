@@ -815,8 +815,10 @@ The kinds, cheapest first:
   `versionSource`, `urlTemplate` and `platforms`; downloads each to hash it.
 - `manifest-checksums`: per-platform binaries whose hashes the vendor's
   manifest lists, so nothing is downloaded.
-- `script`: the package's own `update.py`, written with the `updater` library
-  in `packages/update`; it reads its `settings` from the config.
+- `script`: the `main()` of the package's own `update.py`, written with the
+  `updater` library in `packages/update`; it reads its `settings` from the
+  config, and an `UpdateError` it raises fails the package. packages/update's
+  lint, typecheck and tests cover every `update.py`.
 
 `github-branch` and the last three write `sources.json`, which the package
 reads with `lib.importJSON`; `flake.lib.platformBinary` fetches a per-platform

@@ -1,8 +1,6 @@
 """Pin upstream's T3 Code desktop app at the nightly whexy/t3code's server
 builds, so the app on every Linux host matches the server it connects to."""
 
-import sys
-
 from updater import UpdateError, net, nix
 from updater.package import Package
 from updater.pins import b64_to_sri, write_sources
@@ -40,10 +38,3 @@ def main() -> None:
             },
         },
     )
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except UpdateError as error:
-        sys.exit(f"t3code-desktop-nightly: {error}")

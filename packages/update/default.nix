@@ -34,6 +34,9 @@ let
   checks = flake.lib.pythonChecks {
     inherit pkgs fileset;
     dir = ./.;
+    # The `script` kind's update.py files import the updater, so its tests
+    # cover them too.
+    extraFiles = lib.fileset.toList (lib.fileset.fileFilter (file: file.name == "update.py") ../.);
   };
 in
 pkgs.stdenvNoCC.mkDerivation {
@@ -60,7 +63,7 @@ pkgs.stdenvNoCC.mkDerivation {
     unit = checks.sourceTest "unit" [ python3 ] ''
       python3 -m unittest discover -s tests -t . -v
     '';
-    inherit (checks) lint;
+    inherit (checks) lint typecheck;
   };
 
   meta = {

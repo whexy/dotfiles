@@ -182,6 +182,10 @@ def script(pkg: Package, _config: dict[str, Any]) -> None:
         raise UpdateError(f"{pkg.name}: kind 'script' needs {path}")
     env = dict(
         os.environ,
+        # update.py imports the updater from wherever this copy of it lives.
+        PYTHONPATH=os.pathsep.join(
+            filter(None, [str(Path(__file__).parent.parent), os.environ.get("PYTHONPATH")])
+        ),
         UPDATE_PACKAGE=pkg.name,
         UPDATE_SYSTEM=pkg.system,
         UPDATE_ROOT=str(pkg.root),
@@ -189,7 +193,12 @@ def script(pkg: Package, _config: dict[str, Any]) -> None:
         UPDATE_CONFIG=json.dumps(pkg.updater),
     )
     print(f"+ {path}", file=sys.stderr, flush=True)
-    result = subprocess.run([sys.executable, str(path)], cwd=pkg.root, env=env, check=False)
+    result = subprocess.run(
+        [sys.executable, "-P", "-m", "updater.script", str(path)],
+        cwd=pkg.root,
+        env=env,
+        check=False,
+    )
     if result.returncode != 0:
         raise UpdateError(f"{path} exited {result.returncode}")
 

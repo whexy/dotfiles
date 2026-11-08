@@ -1,7 +1,7 @@
 """Pin ManimGX's wheels and the font wheels it requires, from PyPI."""
 
 import re
-import sys
+from typing import Any
 
 from updater import UpdateError
 from updater.kinds import pypi_release
@@ -11,14 +11,14 @@ from updater.pins import hex_to_sri, read_sources, write_sources
 FONTS = ("manimgx-fonts", "manimgx-fonts-cjk")
 
 
-def wheel_hash(release: dict, filename: str) -> str:
+def wheel_hash(release: dict[str, Any], filename: str) -> str:
     for file in release["urls"]:
         if file["filename"] == filename:
             return hex_to_sri(file["digests"]["sha256"])
     raise UpdateError(f"PyPI lists no {filename}")
 
 
-def required_version(release: dict, name: str) -> str:
+def required_version(release: dict[str, Any], name: str) -> str:
     for requirement in release["info"]["requires_dist"] or []:
         match = re.match(rf"{re.escape(name)}==([^;\s]+)", requirement)
         if match:
@@ -47,13 +47,4 @@ def main() -> None:
     # The repository checkout is a fetch of the release tag; the driver
     # re-pins it once the version moves.
     repo = read_sources(pkg.dir)["repo"]
-    write_sources(
-        pkg.dir, {"version": version, "hashes": hashes, "fonts": fonts, "repo": repo}
-    )
-
-
-if __name__ == "__main__":
-    try:
-        main()
-    except UpdateError as error:
-        sys.exit(f"manimgx: {error}")
+    write_sources(pkg.dir, {"version": version, "hashes": hashes, "fonts": fonts, "repo": repo})
