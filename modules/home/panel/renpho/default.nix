@@ -4,8 +4,7 @@
 # (https://zepbound.whexy.com/api/data.json) behind Cloudflare Access.
 # Each selected bar runs ./weight.nix, which fetches only after the server's
 # `sync.next_check_at` and otherwise reads its cache, authenticated with the
-# shared CF Access service token (see modules/home/rclone for the header
-# mechanics).
+# shared CF Access service token.
 {
   config,
   lib,

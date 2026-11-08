@@ -126,8 +126,8 @@ the same way. They take what they share from options, never from each other:
   [tailnet relay](#tailnet-relay) reach their tailnet origins, others the
   public ones (`publicRoutes`).
 - `dotfiles.cloudflareAccess.serviceToken` (`modules/home/cloudflare-access`):
-  the Cloudflare Access service token in front of the gateways, SearXNG, the
-  NAS and zepbound. A consumer sets `enable` in its own gate and reads
+  the Cloudflare Access service token in front of the gateways, SearXNG and
+  zepbound. A consumer sets `enable` in its own gate and reads
   `idPath` and `secretPath`.
 - `dotfiles.agents.launcher`: the git config and shell lines every launcher
   runs before its agent.

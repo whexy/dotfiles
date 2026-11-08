@@ -1,6 +1,6 @@
 # The Cloudflare Access service token this repo's clients send to the
-# services behind Access: the model gateways, the cluster's SearXNG, the NAS
-# and the zepbound site. Each sends it as the `CF-Access-Client-Id` and
+# services behind Access: the model gateways, the cluster's SearXNG and the
+# zepbound site. Each sends it as the `CF-Access-Client-Id` and
 # `CF-Access-Client-Secret` headers, read from the files at run time.
 { config, lib, ... }:
 let

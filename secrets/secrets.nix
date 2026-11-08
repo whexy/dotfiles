@@ -96,10 +96,4 @@ in
   # The Atuin module decrypts these during activation, not via age.secrets.
   "atuin-key.age".publicKeys = to users;
   "atuin-session.age".publicKeys = to users;
-
-  # Only rclone reads these, and no home enables it.
-  "b2-account.age".publicKeys = to { };
-  "b2-key.age".publicKeys = to { };
-  "b2-crypt-password.age".publicKeys = to { };
-  "nas-webdav-pass.age".publicKeys = to { };
 }
