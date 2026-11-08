@@ -30,7 +30,6 @@ in
     };
     ssh.client.enable = lib.mkDefault true;
     vcs.git.command.enable = lib.mkDefault true;
-    shell.zsh.enable = lib.mkDefault true;
     shell.motd.enable = lib.mkDefault true;
     editor.neovim.enable = lib.mkDefault true;
   };

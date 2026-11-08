@@ -1,7 +1,10 @@
 # dev-lite home cap preset: terminal UX, git, ssh, AI agents, and essential
 # CLI tools. Enables only the lightweight tooling bundles — language
 # toolchains and other heavy bundles stay in the "dev" cap.
-{ lib, ... }:
+args@{ lib, ... }:
+let
+  osConfig = args.osConfig or null;
+in
 {
   dotfiles = {
     agents.enable = lib.mkDefault true;
@@ -20,7 +23,8 @@
     };
     shell = {
       zsh.devExtras = lib.mkDefault true;
-      nushell.enable = lib.mkDefault true;
+      # Integrated homes follow the system dev-lite cap.
+      nushell.enable = lib.mkIf (osConfig == null) (lib.mkDefault true);
       nushell.devExtras = lib.mkDefault true;
     };
     # Daily scripting maintenance: Nix, config files, Markdown, Typst,
