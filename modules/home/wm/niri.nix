@@ -17,6 +17,8 @@ in
     let
       monitors = osConfig.dotfiles.hardware.monitors or [ ];
       swaylock = lib.getExe config.programs.swaylock.package;
+      playerctl = lib.getExe pkgs.playerctl;
+      brightnessctl = lib.getExe pkgs.brightnessctl;
 
       # Build programs.niri.settings.outputs from dotfiles.hardware.monitors entries.
       # Each entry maps to a niri output block with mode, refresh, and scale.
@@ -356,28 +358,28 @@ in
               "toggle"
             ];
             "XF86AudioPlay".action.spawn = [
-              "playerctl"
+              playerctl
               "play-pause"
             ];
             "XF86AudioPause".action.spawn = [
-              "playerctl"
+              playerctl
               "play-pause"
             ];
             "XF86AudioNext".action.spawn = [
-              "playerctl"
+              playerctl
               "next"
             ];
             "XF86AudioPrev".action.spawn = [
-              "playerctl"
+              playerctl
               "previous"
             ];
             "XF86MonBrightnessUp".action.spawn = [
-              "brightnessctl"
+              brightnessctl
               "set"
               "5%+"
             ];
             "XF86MonBrightnessDown".action.spawn = [
-              "brightnessctl"
+              brightnessctl
               "set"
               "5%-"
             ];
