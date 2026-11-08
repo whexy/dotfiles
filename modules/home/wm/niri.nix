@@ -10,6 +10,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.wm;
+  shared = import ./shared.nix { inherit config pkgs; };
 in
 {
   config = lib.mkIf cfg.niri.enable (
@@ -57,8 +58,6 @@ in
             done
           '';
       };
-
-      t3codeDesktop = config.dotfiles.t3code.enable && config.dotfiles.t3code.desktop.enable;
 
       # niri raises the open window itself, so the binding does not depend on
       # how the app handles being launched a second time.
@@ -174,11 +173,8 @@ in
 
         binds =
           let
-            # Modifier prefixes matching Karabiner setup via kanata:
-            #   CapsLock (held) = Hyper = Ctrl+Alt+Shift+Super
-            #   Tab (held)      = Meh   = Ctrl+Alt+Super
-            hyper = "Ctrl+Alt+Shift+Super";
-            meh = "Ctrl+Alt+Super";
+            hyper = shared.hyper.niri;
+            meh = shared.meh.niri;
           in
           {
             # ── Focus (Hyper + vim keys) ───────────────────────────────
@@ -294,20 +290,21 @@ in
             # its niri backend keeps the same `+new-window` D-Bus activation.
             "${hyper}+T" = {
               action.spawn =
-                if config.programs.ssh-window.enable then
-                  [
+                {
+                  ssh-window = [
                     "${config.programs.ssh-window.package}/bin/ssh-window"
                     "launch"
-                  ]
-                else
-                  [
+                  ];
+                  ghostty = [
                     "ghostty"
                     "+new-window"
                   ];
+                }
+                .${shared.terminal};
               repeat = false;
             };
           }
-          // lib.optionalAttrs t3codeDesktop {
+          // lib.optionalAttrs shared.t3codeDesktop {
             "${meh}+T" = {
               action.spawn = [ (lib.getExe showT3code) ];
               repeat = false;

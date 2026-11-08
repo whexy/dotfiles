@@ -2,11 +2,13 @@
 args@{
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.wm;
+  shared = import ./shared.nix { inherit config pkgs; };
   enabled = cfg.darwin.enable && cfg.darwin.windowManager == "paneru";
   autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
   inherit (config.dotfiles.panel.sketchybar) reserve;
@@ -51,16 +53,13 @@ let
   );
   luaStringList = lib.concatMapStringsSep ", " (s: ''"${s}"'');
 
-  # The terminal-spawn binding opens Rex when it is enabled. Otherwise it is
-  # SSH-context aware when multiplexing is on: `ssh-window launch` clones the
-  # focused window's SSH destination, which works only for Ghostty windows.
   terminalLaunch =
-    if config.dotfiles.terminal.rex.enable then
-      "/usr/bin/env -i /usr/bin/open -a 'Rex Beta'"
-    else if config.programs.ssh-window.enable then
-      "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &"
-    else
-      "/usr/bin/env -i /usr/bin/open -a Ghostty";
+    {
+      rex = "/usr/bin/env -i /usr/bin/open -a 'Rex Beta'";
+      ssh-window = "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &";
+      ghostty = "/usr/bin/env -i /usr/bin/open -a Ghostty";
+    }
+    .${shared.terminal};
 in
 {
   config = lib.mkIf enabled {
@@ -71,8 +70,8 @@ in
       # Lua is used only for actions Paneru does not expose as native commands,
       # such as launching applications and invoking macOS utilities.
       config = ''
-        local hyper = "ctrl + alt + shift + cmd"
-        local meh = "ctrl + alt + cmd"
+        local hyper = "${shared.hyper.paneru}"
+        local meh = "${shared.meh.paneru}"
 
         paneru.setup {
           default_workspaces = 1,
@@ -172,7 +171,7 @@ in
         paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
         paneru.bind(hyper .. " - t", function() os.execute("${terminalLaunch}") end)
       ''
-      + lib.optionalString (config.dotfiles.t3code.enable && config.dotfiles.t3code.desktop.enable) ''
+      + lib.optionalString shared.t3codeDesktop ''
         paneru.bind(meh .. " - t", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "T3 Code (Nightly)"]]) end)
       '';
     };

@@ -7,6 +7,9 @@
 }:
 let
   cfg = config.dotfiles.wm;
+  shared = import ./shared.nix { inherit config pkgs; };
+  hyper = shared.hyper.aerospace;
+  meh = shared.meh.aerospace;
   inherit (config.dotfiles.panel.sketchybar) reserve;
   sketchybar = lib.getExe pkgs.sketchybar;
 in
@@ -79,63 +82,61 @@ in
         };
 
         mode.main.binding = {
-          cmd-alt-ctrl-shift-s = "layout tiles accordion";
-          cmd-alt-ctrl-shift-h = "focus left --boundaries all-monitors-outer-frame";
-          cmd-alt-ctrl-shift-j = "focus down --boundaries all-monitors-outer-frame";
-          cmd-alt-ctrl-shift-k = "focus up --boundaries all-monitors-outer-frame";
-          cmd-alt-ctrl-shift-l = "focus right --boundaries all-monitors-outer-frame";
-          cmd-alt-ctrl-shift-tab = "focus-back-and-forth";
-          cmd-alt-ctrl-h = "move left";
-          cmd-alt-ctrl-j = "move down";
-          cmd-alt-ctrl-k = "move up";
-          cmd-alt-ctrl-l = "move right";
-          cmd-alt-ctrl-f = "fullscreen";
-          cmd-alt-ctrl-minus = "resize smart -50";
-          cmd-alt-ctrl-equal = "resize smart +50";
-          cmd-alt-ctrl-shift-1 = "workspace 1";
-          cmd-alt-ctrl-shift-2 = "workspace 2";
-          cmd-alt-ctrl-shift-3 = "workspace 3";
-          cmd-alt-ctrl-shift-4 = "workspace 4";
-          cmd-alt-ctrl-shift-5 = "workspace 5";
-          cmd-alt-ctrl-shift-6 = "workspace 6";
-          cmd-alt-ctrl-shift-7 = "workspace 7";
-          cmd-alt-ctrl-shift-8 = "workspace 8";
-          cmd-alt-ctrl-shift-9 = "workspace 9";
-          cmd-alt-ctrl-shift-0 = "workspace 10";
-          cmd-alt-ctrl-1 = "move-node-to-workspace 1 --focus-follows-window";
-          cmd-alt-ctrl-2 = "move-node-to-workspace 2 --focus-follows-window";
-          cmd-alt-ctrl-3 = "move-node-to-workspace 3 --focus-follows-window";
-          cmd-alt-ctrl-4 = "move-node-to-workspace 4 --focus-follows-window";
-          cmd-alt-ctrl-5 = "move-node-to-workspace 5 --focus-follows-window";
-          cmd-alt-ctrl-6 = "move-node-to-workspace 6 --focus-follows-window";
-          cmd-alt-ctrl-7 = "move-node-to-workspace 7 --focus-follows-window";
-          cmd-alt-ctrl-8 = "move-node-to-workspace 8 --focus-follows-window";
-          cmd-alt-ctrl-9 = "move-node-to-workspace 9 --focus-follows-window";
-          cmd-alt-ctrl-0 = "move-node-to-workspace 10 --focus-follows-window";
-          cmd-alt-ctrl-leftSquareBracket = "join-with left";
-          cmd-alt-ctrl-rightSquareBracket = "join-with right";
-          cmd-alt-ctrl-left = "move-node-to-monitor --wrap-around prev";
-          cmd-alt-ctrl-right = "move-node-to-monitor --wrap-around next";
-          cmd-alt-ctrl-shift-f = "layout floating tiling";
-          cmd-alt-ctrl-shift-left = "focus-monitor --wrap-around prev";
-          cmd-alt-ctrl-shift-right = "focus-monitor --wrap-around next";
-          cmd-alt-ctrl-shift-t =
-            # Rex takes the key over ssh-window, which only clones Ghostty windows.
-            if config.dotfiles.terminal.rex.enable then
-              "exec-and-forget open -a 'Rex Beta'"
-            else if config.programs.ssh-window.enable then
-              # SSH-context aware: clones the focused window's ssh destination.
-              "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch"
-            else
-              "exec-and-forget open -a Ghostty";
-          cmd-alt-ctrl-shift-q = "close";
+          "${hyper}-s" = "layout tiles accordion";
+          "${hyper}-h" = "focus left --boundaries all-monitors-outer-frame";
+          "${hyper}-j" = "focus down --boundaries all-monitors-outer-frame";
+          "${hyper}-k" = "focus up --boundaries all-monitors-outer-frame";
+          "${hyper}-l" = "focus right --boundaries all-monitors-outer-frame";
+          "${hyper}-tab" = "focus-back-and-forth";
+          "${meh}-h" = "move left";
+          "${meh}-j" = "move down";
+          "${meh}-k" = "move up";
+          "${meh}-l" = "move right";
+          "${meh}-f" = "fullscreen";
+          "${meh}-minus" = "resize smart -50";
+          "${meh}-equal" = "resize smart +50";
+          "${hyper}-1" = "workspace 1";
+          "${hyper}-2" = "workspace 2";
+          "${hyper}-3" = "workspace 3";
+          "${hyper}-4" = "workspace 4";
+          "${hyper}-5" = "workspace 5";
+          "${hyper}-6" = "workspace 6";
+          "${hyper}-7" = "workspace 7";
+          "${hyper}-8" = "workspace 8";
+          "${hyper}-9" = "workspace 9";
+          "${hyper}-0" = "workspace 10";
+          "${meh}-1" = "move-node-to-workspace 1 --focus-follows-window";
+          "${meh}-2" = "move-node-to-workspace 2 --focus-follows-window";
+          "${meh}-3" = "move-node-to-workspace 3 --focus-follows-window";
+          "${meh}-4" = "move-node-to-workspace 4 --focus-follows-window";
+          "${meh}-5" = "move-node-to-workspace 5 --focus-follows-window";
+          "${meh}-6" = "move-node-to-workspace 6 --focus-follows-window";
+          "${meh}-7" = "move-node-to-workspace 7 --focus-follows-window";
+          "${meh}-8" = "move-node-to-workspace 8 --focus-follows-window";
+          "${meh}-9" = "move-node-to-workspace 9 --focus-follows-window";
+          "${meh}-0" = "move-node-to-workspace 10 --focus-follows-window";
+          "${meh}-leftSquareBracket" = "join-with left";
+          "${meh}-rightSquareBracket" = "join-with right";
+          "${meh}-left" = "move-node-to-monitor --wrap-around prev";
+          "${meh}-right" = "move-node-to-monitor --wrap-around next";
+          "${hyper}-f" = "layout floating tiling";
+          "${hyper}-left" = "focus-monitor --wrap-around prev";
+          "${hyper}-right" = "focus-monitor --wrap-around next";
+          "${hyper}-t" =
+            {
+              rex = "exec-and-forget open -a 'Rex Beta'";
+              ssh-window = "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch";
+              ghostty = "exec-and-forget open -a Ghostty";
+            }
+            .${shared.terminal};
+          "${hyper}-q" = "close";
         }
-        // lib.optionalAttrs (config.dotfiles.t3code.enable && config.dotfiles.t3code.desktop.enable) {
-          cmd-alt-ctrl-t = "exec-and-forget open -a 'T3 Code (Nightly)'";
+        // lib.optionalAttrs shared.t3codeDesktop {
+          "${meh}-t" = "exec-and-forget open -a 'T3 Code (Nightly)'";
         }
         // {
           # service binding
-          cmd-alt-ctrl-shift-semicolon = "mode service";
+          "${hyper}-semicolon" = "mode service";
         };
 
         mode.service.binding = {
@@ -151,19 +152,19 @@ in
             "close-all-windows-but-current"
             "mode main"
           ];
-          cmd-alt-ctrl-h = [
+          "${meh}-h" = [
             "join-with left"
             "mode main"
           ];
-          cmd-alt-ctrl-j = [
+          "${meh}-j" = [
             "join-with down"
             "mode main"
           ];
-          cmd-alt-ctrl-k = [
+          "${meh}-k" = [
             "join-with up"
             "mode main"
           ];
-          cmd-alt-ctrl-l = [
+          "${meh}-l" = [
             "join-with right"
             "mode main"
           ];
