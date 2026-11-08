@@ -296,8 +296,8 @@ let
     ${cfg.eww.styles}
   '';
 
-  # Store-path copies double as reload triggers for the opener unit below;
-  # feeding them through readFile keeps the deployed text identical.
+  # Store-path copies of the deployed text, as restart triggers for the
+  # daemon unit below.
   yuckFile = pkgs.writeText "eww.yuck" yuck;
   scssFile = pkgs.writeText "eww.scss" scss;
 in
