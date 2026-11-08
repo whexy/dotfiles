@@ -14,12 +14,11 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.launcher;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
   inputServerEnabled = osConfig.dotfiles.launcher.inputServer.enable or false;
   storeExtensions = inputs.vicinae-extensions.packages.${pkgs.stdenv.hostPlatform.system};
 in
 {
-  config = lib.mkIf (cfg.vicinae.enable && !isDarwin) {
+  config = lib.mkIf (cfg.vicinae.enable && pkgs.stdenv.hostPlatform.isLinux) {
     programs.vicinae = {
       enable = true;
       systemd = {

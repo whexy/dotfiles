@@ -17,12 +17,12 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.clipboard;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 in
 {
   config = lib.mkIf cfg.vmware.enable (
     let
-      isVmware = !isDarwin && osConfig != null && (osConfig.virtualisation.vmware.guest.enable or false);
+      # Only NixOS declares virtualisation.vmware.
+      isVmware = osConfig != null && (osConfig.virtualisation.vmware.guest.enable or false);
       xDisplay = ":0";
     in
     if !isVmware then

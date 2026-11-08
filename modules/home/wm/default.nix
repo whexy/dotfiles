@@ -3,10 +3,12 @@ args@{
   config,
   inputs,
   lib,
+  pkgs,
   ...
 }:
 let
   osConfig = args.osConfig or null;
+  # imports cannot depend on pkgs.
   isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 in
 {
@@ -38,7 +40,7 @@ in
   config = {
     assertions = [
       {
-        assertion = !config.dotfiles.wm.darwin.enable || isDarwin;
+        assertion = !config.dotfiles.wm.darwin.enable || pkgs.stdenv.hostPlatform.isDarwin;
         message = "dotfiles.wm.darwin can only be enabled on macOS.";
       }
     ];
