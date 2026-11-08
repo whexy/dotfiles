@@ -44,9 +44,9 @@ variables:
     printf 'machine pkgs.superlogical.com login rex password %s\n' "$REX_PACKAGE_TOKEN" >"$netrc"
     export NIX_CONFIG="$NIX_CONFIG
     netrc-file = $netrc"
-  # Lint, then evaluate one configuration of each kind without building it.
-  # `nix flake check --all-systems` is too memory-heavy for this repo after
-  # Blueprint host discovery. A tree that passes is recorded in the CI cache,
+  # Lint, then evaluate every host and standalone home without building it,
+  # each in its own process (ci/eval-all.sh). `nix flake check --all-systems`
+  # is too memory-heavy for this repo after Blueprint host discovery. A tree that passes is recorded in the CI cache,
   # so a pull request that lands on master unchanged is not checked again.
   # Woodpecker substitutes braced variables anywhere in this file, so the
   # script refers to shell variables only as bare $name.
@@ -73,13 +73,7 @@ variables:
       if [ "$docs_only" = true ]; then
         echo "OK - only docs, markdown and skills changed"
       else
-        nix eval --impure --json --show-trace --expr '
-          let flake = builtins.getFlake (toString ./.); in {
-            ellison = flake.nixosConfigurations.ellison.config.system.build.toplevel.drvPath;
-            golf = flake.darwinConfigurations.golf.system.drvPath;
-            "wenxuan@mars" = flake.legacyPackages.x86_64-linux.homeConfigurations."wenxuan@mars".activationPackage.drvPath;
-          }'
-        echo "OK - configurations evaluate"
+        EVAL_JOBS=3 bash ci/eval-all.sh
 
         # nix-ci uploads only what it builds, so every Pod would otherwise
         # fetch the flake inputs from GitHub and cache.nixos.org again.

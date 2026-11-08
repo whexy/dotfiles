@@ -8,6 +8,6 @@ pkgs.runCommand "bot-update-rollout"
     ];
   }
   ''
-    python ${./test.py} ${../../.woodpecker.yml}
+    python ${./test.py} ${../../.woodpecker.yml} ${../../ci}
     touch "$out"
   ''

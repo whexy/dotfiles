@@ -871,7 +871,8 @@ reaches master.
 (Before verification, remember to use `git add` to add new files, as flake
 only see files tracked by git.)
 
-Run `just verify` to check all flake outputs evaluate correctly.
+Run `just verify` to evaluate every host and standalone home
+(`ci/eval-all.sh`, which CI runs too) and build the updater check.
 Run `just check` to run formatters and linters checklists.
 
 ## Dev environment

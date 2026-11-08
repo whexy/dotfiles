@@ -8,6 +8,8 @@ from pathlib import Path
 import yaml
 
 pipeline = yaml.safe_load(Path(sys.argv[1]).read_text())
+# The scripts the steps run, copied into each fixture checkout.
+scripts = Path(sys.argv[2])
 assert {"event": "push", "branch": "master"} in pipeline["when"]
 assert "push" in pipeline["steps"]["check"]["when"]["event"]
 check = next(
@@ -86,6 +88,7 @@ def fixture(directory):
     )
     repo = root / "repo"
     repo.mkdir()
+    shutil.copytree(scripts, repo / "ci")
     setup = (
         "git init -q && git config core.hooksPath /dev/null"
         " && git config user.name fixture && git config user.email fixture@example.invalid"

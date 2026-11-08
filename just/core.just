@@ -48,13 +48,9 @@ check-nvim-cache:
     fi
     echo "SUCCESS - nightly Neovim is cached for all systems"
 
-# Verify primary configurations evaluate correctly (ellison)
+# Evaluate every host and standalone home, as CI does (EVAL_JOBS=4 runs four at once)
 verify:
-    @echo "=== Verifying primary configurations ==="
-    @echo "Evaluating ellison..."
-    nix eval .#nixosConfigurations.ellison.config.system.build.toplevel.drvPath --show-trace
-    @echo "OK - ellison"
+    ci/eval-all.sh
     @echo "Checking package updaters..."
     nix build ".#checks.$(nix eval --raw --impure --expr builtins.currentSystem).package-updaters" --no-link
     @echo "OK - package updaters"
-    @echo "SUCCESS - All primary configurations evaluate correctly"
