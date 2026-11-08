@@ -1,9 +1,5 @@
 [tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
+extend = "../../lib/python-checks/pyproject.toml"
 
 [tool.ruff.lint.isort]
 known-first-party = ["updater"]

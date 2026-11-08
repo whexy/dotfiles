@@ -16,20 +16,13 @@ build-backend = "hatchling.build"
 packages = ["src/spark_mcp"]
 
 [tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
+extend = "../../lib/python-checks/pyproject.toml"
 
 [tool.ruff.lint.isort]
 known-first-party = ["spark_mcp"]
 
 [tool.basedpyright]
+extends = "../../lib/python-checks/pyproject.toml"
 include = ["src"]
-pythonVersion = "3.13"
-pythonPlatform = "All"
-typeCheckingMode = "recommended"
-reportUnusedCallResult = false
 # argparse results are untyped.
 reportAny = false

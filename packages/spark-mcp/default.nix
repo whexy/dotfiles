@@ -1,14 +1,15 @@
-{ pkgs }:
+{ pkgs, flake }:
 let
   inherit (pkgs) lib python3;
 
+  fileset = lib.fileset.unions [
+    ./pyproject.toml
+    ./src
+    ./tests
+  ];
   src = lib.fileset.toSource {
     root = ./.;
-    fileset = lib.fileset.unions [
-      ./pyproject.toml
-      ./src
-      ./tests
-    ];
+    inherit fileset;
   };
 
   dependencies = with python3.pkgs; [
@@ -22,14 +23,11 @@ let
   # The interpreter basedpyright resolves imports against.
   devPython = python3.withPackages (_: dependencies);
 
-  sourceCheck =
-    name: nativeBuildInputs: script:
-    pkgs.runCommand "spark-mcp-${name}" { inherit nativeBuildInputs; } ''
-      cp -r ${src} source && chmod -R u+w source && cd source
-      export HOME=$TMPDIR
-      ${script}
-      touch $out
-    '';
+  checks = flake.lib.pythonChecks {
+    inherit pkgs fileset;
+    dir = ./.;
+    python = devPython;
+  };
 in
 python3.pkgs.buildPythonApplication {
   pname = "spark-mcp";
@@ -41,15 +39,7 @@ python3.pkgs.buildPythonApplication {
   pythonImportsCheck = [ "spark_mcp.server" ];
   nativeCheckInputs = [ python3.pkgs.pytestCheckHook ];
 
-  passthru.tests = {
-    typecheck = sourceCheck "typecheck" [ pkgs.basedpyright ] ''
-      basedpyright --pythonpath ${devPython}/bin/python3
-    '';
-    lint = sourceCheck "lint" [ pkgs.ruff ] ''
-      ruff check --no-cache .
-      ruff format --no-cache --check .
-    '';
-  };
+  passthru.tests = { inherit (checks) lint typecheck; };
 
   meta = {
     description = "Spark's email search and reading tools as a remote MCP server";

@@ -16,18 +16,11 @@ build-backend = "hatchling.build"
 packages = ["src/wechat_cli"]
 
 [tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
+extend = "../../lib/python-checks/pyproject.toml"
 
 [tool.basedpyright]
+extends = "../../lib/python-checks/pyproject.toml"
 include = ["src"]
-pythonVersion = "3.13"
-pythonPlatform = "All"
-typeCheckingMode = "recommended"
-reportUnusedCallResult = false
 # Wire payloads are untyped JSON; they are narrowed where read.
 reportAny = false
 reportExplicitAny = false

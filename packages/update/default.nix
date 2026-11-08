@@ -7,13 +7,14 @@
 let
   inherit (pkgs) lib python3;
 
+  fileset = lib.fileset.unions [
+    ./pyproject.toml
+    ./updater
+    ./tests
+  ];
   src = lib.fileset.toSource {
     root = ./.;
-    fileset = lib.fileset.unions [
-      ./pyproject.toml
-      ./updater
-      ./tests
-    ];
+    inherit fileset;
   };
 
   # Formats what an updater writes the way the pre-commit check expects.
@@ -30,14 +31,10 @@ let
     treefmt
   ];
 
-  sourceCheck =
-    name: nativeBuildInputs: script:
-    pkgs.runCommand "update-${name}" { inherit nativeBuildInputs; } ''
-      cp -r ${src} source && chmod -R u+w source && cd source
-      export HOME=$TMPDIR
-      ${script}
-      touch $out
-    '';
+  checks = flake.lib.pythonChecks {
+    inherit pkgs fileset;
+    dir = ./.;
+  };
 in
 pkgs.stdenvNoCC.mkDerivation {
   pname = "update";
@@ -60,13 +57,10 @@ pkgs.stdenvNoCC.mkDerivation {
   '';
 
   passthru.tests = {
-    unit = sourceCheck "unit" [ python3 ] ''
+    unit = checks.sourceTest "unit" [ python3 ] ''
       python3 -m unittest discover -s tests -t . -v
     '';
-    lint = sourceCheck "lint" [ pkgs.ruff ] ''
-      ruff check --no-cache .
-      ruff format --no-cache --check .
-    '';
+    inherit (checks) lint;
   };
 
   meta = {

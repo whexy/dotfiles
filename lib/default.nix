@@ -105,6 +105,8 @@ in
 
   npmTarball = import ./npm-tarball.nix;
 
+  pythonChecks = import ./python-checks;
+
   nixosHost =
     {
       system,
