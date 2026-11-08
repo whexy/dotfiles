@@ -15,7 +15,8 @@
     browser.firefox.enable = lib.mkDefault true;
     # PipeWire audio stack; only has an effect on NixOS.
     audio.enable = lib.mkDefault true;
-    # OBS Studio with virtual camera; only has an effect on NixOS.
+    # OBS Studio (with its virtual camera on NixOS), and the home streaming
+    # tools.
     streaming.enable = lib.mkDefault true;
     keyboard = {
       # Kanata remapper; only has an effect on NixOS.

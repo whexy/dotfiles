@@ -18,7 +18,6 @@ in
         editor.neovide.enable = lib.mkDefault true;
         editor.vscode.enable = lib.mkDefault true;
         clipboard.history.enable = lib.mkDefault true;
-        streaming.enable = lib.mkDefault true;
         desktop.wallpaper.enable = lib.mkDefault true;
         vcs.git.opSshSigning = lib.mkDefault true;
         t3code = {

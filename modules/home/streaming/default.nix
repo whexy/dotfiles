@@ -1,14 +1,22 @@
-{
+# Streaming group: streaming tools. Integrated homes follow the system
+# streaming group, which installs OBS; standalone homes set the option.
+args@{
   config,
   lib,
   pkgs,
   ...
 }:
 let
+  osConfig = args.osConfig or null;
   cfg = config.dotfiles.streaming;
 in
 {
-  options.dotfiles.streaming.enable = lib.mkEnableOption "streaming";
+  options.dotfiles.streaming.enable = lib.mkOption {
+    type = lib.types.bool;
+    default = if osConfig != null then osConfig.dotfiles.streaming.enable else false;
+    defaultText = lib.literalExpression "osConfig.dotfiles.streaming.enable, or false without osConfig";
+    description = "Whether to enable streaming tools.";
+  };
 
   config = lib.mkIf cfg.enable (
     let

@@ -1,5 +1,5 @@
 # Streaming group: OBS Studio system integration.
-# Pairs with the home streaming group (streaming tools).
+# The home streaming group adds its tools wherever this is on.
 { lib, ... }:
 {
   options.dotfiles.streaming = {
