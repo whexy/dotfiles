@@ -22,7 +22,7 @@ let
   # rollout_signing_key. dotfiles-upgraded daemons subscribe to it instead of
   # polling GitHub (packages/dotfiles-upgraded/README.md).
   rollout = {
-    relay = "https://ntfy.at-basking.ts.net";
+    relay = "https://${tailnetHost "ntfy"}";
     topic = "dotfiles-rollout";
     publicKey = "9TsY4W+qgm9Lz07eKWbRMUiLQwB8j3E1M0sPVpZS+FE=";
   };
@@ -32,6 +32,9 @@ let
   # Keep it one label below the zone: Cloudflare's free certificate covers
   # only `*.<zone>`.
   publicHost = service: host: "${host}-${service}.clusters.work";
+
+  # MagicDNS name of a tailnet node or ingress.
+  tailnetHost = name: "${name}.at-basking.ts.net";
 
   # ExecReload of the Linux dotfiles-upgraded units, which a switch reloads
   # when it changes them. That switch is usually the daemon's own, and
@@ -131,6 +134,7 @@ in
     upgradeFailureWebhook
     rollout
     publicHost
+    tailnetHost
     upgraderReload
     overlays
     capsModules
