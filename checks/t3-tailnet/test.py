@@ -1,3 +1,4 @@
+import contextlib
 import http.client
 import json
 import os
@@ -207,7 +208,8 @@ def test(server_script, route_script):
             route.wait(timeout=3)
             assert read(root / "routes.json", {}) == replacement
             print(
-                "offline loopback/public backend, recovery/discovery, route ownership and cleanup, Linux/Darwin parity: passed"
+                "offline loopback/public backend, recovery/discovery, route ownership and "
+                "cleanup, Linux/Darwin parity: passed"
             )
         finally:
             if proxy:
@@ -321,10 +323,10 @@ def actual(binary, fixture_bin):
                 try:
                     initial = discovery()
                     break
-                except (OSError, ValueError):
+                except (OSError, ValueError) as error:
                     if time.monotonic() > deadline or process.poll() is not None:
                         log.seek(0)
-                        raise AssertionError(log.read())
+                        raise AssertionError(log.read()) from error
                     time.sleep(0.1)
             token = subprocess.run(
                 [
@@ -386,10 +388,8 @@ def actual(binary, fixture_bin):
             print("pinned T3 executable: offline startup and dynamic tailnet discovery passed")
         finally:
             if process.poll() is None:
-                try:
+                with contextlib.suppress(ProcessLookupError):
                     os.killpg(process.pid, signal.SIGTERM)
-                except ProcessLookupError:
-                    pass
                 try:
                     process.wait(timeout=5)
                 except subprocess.TimeoutExpired:

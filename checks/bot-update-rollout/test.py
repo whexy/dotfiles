@@ -186,7 +186,8 @@ for name, commands in lanes.items():
             calls = (root / "calls").read_text()
             assert ("nix build " in calls) == (hit == "0"), calls
     print(
-        f"{name}: failed updates still pushed, rebased onto a moved master and rechecked, cached success reused, failed checks rejected"
+        f"{name}: failed updates still pushed, rebased onto a moved master and rechecked, "
+        "cached success reused, failed checks rejected"
     )
 
 # The pin lane names the stage of every failure, and pushes only a checked

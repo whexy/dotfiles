@@ -48,7 +48,8 @@ for name, override in spec["override"].items():
     modes = [m for m in ("patches", "replace", "ignore") if override[m]]
     if len(modes) != 1:
         errors.append(
-            f"override.{name} sets {modes or 'nothing'}; set exactly one of patches, replace or ignore"
+            f"override.{name} sets {modes or 'nothing'}; "
+            "set exactly one of patches, replace or ignore"
         )
         continue
     if name not in from_packages:

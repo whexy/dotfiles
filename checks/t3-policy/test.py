@@ -214,7 +214,8 @@ def test(command):
         assert "t3code-policy: update=restarted" in log, log
         assert restarts() == 3
     print(
-        "t3code-policy: stopped, stopped mid-fetch, 304, restart, backoff, invalid, missing, unreachable and lock passed"
+        "t3code-policy: stopped, stopped mid-fetch, 304, restart, backoff, invalid, missing, "
+        "unreachable and lock passed"
     )
 
 

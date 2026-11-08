@@ -48,14 +48,14 @@ if key_path.exists() and key_path.read_bytes() != key:
 
 
 def replace(name, data):
-    fd, tmp = tempfile.mkstemp(dir=root)
+    fd, tmp_name = tempfile.mkstemp(dir=root)
+    tmp = pathlib.Path(tmp_name)
     try:
         with os.fdopen(fd, "wb") as stream:
             stream.write(data)
-        os.replace(tmp, root / name)
+        tmp.replace(root / name)
     finally:
-        if os.path.exists(tmp):
-            os.unlink(tmp)
+        tmp.unlink(missing_ok=True)
 
 
 if not key_path.exists():
@@ -67,8 +67,10 @@ if meta.exists():
     with sqlite3.connect(meta, timeout=10) as db:
         if db.execute("SELECT 1 FROM sqlite_master WHERE type='table' AND name='meta'").fetchone():
             db.execute(
-                "INSERT INTO meta (key,value,updated_at) VALUES ('session',?,strftime('%s','now')) "
-                "ON CONFLICT(key) DO UPDATE SET value=excluded.value,updated_at=excluded.updated_at",
+                "INSERT INTO meta (key,value,updated_at) "
+                "VALUES ('session',?,strftime('%s','now')) "
+                "ON CONFLICT(key) DO UPDATE "
+                "SET value=excluded.value,updated_at=excluded.updated_at",
                 (token,),
             )
 replace("session", token.encode())

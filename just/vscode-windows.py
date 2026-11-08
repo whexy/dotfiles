@@ -6,8 +6,8 @@ dropping them.
 """
 
 import json
-import os
 import sys
+from pathlib import Path
 
 
 def strip_jsonc(text):
@@ -53,8 +53,7 @@ def main():
     }
 
     try:
-        with open(path, encoding="utf-8-sig") as f:
-            original = f.read()
+        original = Path(path).read_text(encoding="utf-8-sig")
     except FileNotFoundError:
         original = ""
 
@@ -72,13 +71,12 @@ def main():
 
     settings.update(wanted)
     if original:
-        with open(path + ".bak", "w", encoding="utf-8") as f:
-            f.write(original)
-    tmp = path + ".tmp"
-    with open(tmp, "w", encoding="utf-8") as f:
+        Path(path + ".bak").write_text(original, encoding="utf-8")
+    tmp = Path(path + ".tmp")
+    with tmp.open("w", encoding="utf-8") as f:
         json.dump(settings, f, indent=4, ensure_ascii=False)
         f.write("\n")
-    os.replace(tmp, path)
+    tmp.replace(path)
     print(f"Updated {path}; reload VS Code windows to restart vscode-neovim.")
 
 
