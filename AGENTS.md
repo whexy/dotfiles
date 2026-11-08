@@ -27,8 +27,8 @@ Each group follows this pattern:
 - `modules/hosts/<group>/darwin.nix` - Darwin config gated by those options
 
 `modules/hosts/nixos.nix` and `darwin.nix` recursively aggregate the
-matching files and exclude the other platform. Platforms, images, user setup,
-and custom hardware metadata are option-driven groups under this same tree;
+matching files and exclude the other platform. Platforms, user setup, and
+custom hardware metadata are option-driven groups under this same tree;
 there are no separate `modules/nixos` or `modules/darwin` directories.
 
 ### Home configs
@@ -110,8 +110,8 @@ own nixpkgs settings and overlays, and generic Linux targets) plus
 Do not set `nixpkgs.config` in system modules: blueprint configures nixpkgs at
 the flake level (`flake.nix`) and injects `nixpkgs.pkgs`, and the module system
 asserts `nixpkgs.config == { }` when `nixpkgs.pkgs` is set. Host-specific
-hardware lives beside the host as `hardware.nix`; reusable platform and image
-behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
+hardware lives beside the host as `hardware.nix`; reusable platform behavior
+is selected with `dotfiles.platform.*`.
 
 ## Agents
 

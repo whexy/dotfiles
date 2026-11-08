@@ -22,7 +22,6 @@ let
     container-darwin = import ../overlays/container-darwin.nix;
     direnv-darwin = import ../overlays/direnv-darwin.nix;
     docker-runc-lxc = import ../overlays/docker-runc-lxc.nix;
-    lkl-bigmem = import ../overlays/lkl-bigmem.nix;
     op-wsl = import ../overlays/op-wsl.nix;
     ssh-wsl = import ../overlays/ssh-wsl.nix;
     tailscale-wsl = import ../overlays/tailscale-wsl.nix;
