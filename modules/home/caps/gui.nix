@@ -1,13 +1,8 @@
 # gui home cap preset: desktop apps, Wayland/niri on Linux,
 # selectable window manager/karabiner on macOS.
-args@{
-  pkgs,
-  lib,
-  ...
-}:
+{ pkgs, lib, ... }:
 let
-  osConfig = args.osConfig or null;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 in
 {
   # Deep merge (not //): the Linux/Darwin branches extend sub-attrsets like

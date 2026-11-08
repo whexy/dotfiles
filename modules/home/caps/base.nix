@@ -12,7 +12,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   p = pkgs.unstable;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
   witr-pkg = p.witr;
   ghostty-pkg = if isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
@@ -61,7 +61,7 @@ in
         p.tailcat
       ]
       # macOS ships the BSD userland, which lacks GNU tools like `timeout`.
-      ++ lib.optionals pkgs.stdenv.isDarwin [ coreutils ]
+      ++ lib.optionals isDarwin [ coreutils ]
       ++ lib.optionals (!isDarwin) [
         git # macOS: use native git to avoid keychain prompt
       ];
