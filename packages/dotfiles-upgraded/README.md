@@ -79,7 +79,7 @@ timeout and SIGTERM, and cancellation signals the rebuild's whole process group.
 daemon's structured log, which is where an unattended failure leaves its trace.
 
 The Linux units restart the daemon behind the same lock when a switch changes
-them (`upgraderReload` in `lib/default.nix`), so a new build replaces the daemon
+them (`upgraderReload` in `fleet.nix`), so a new build replaces the daemon
 only after the rebuild that delivered it has finished. SIGTERM only cancels the
 daemon's context, so a restart that arrives as the lock is released still lets
 it record that rebuild.
@@ -283,7 +283,7 @@ match the key, since hosts would reject what it signs.
 ### Rotate the signing key
 
 Generate a seed and its public key, update the Woodpecker secret, then at once
-commit the public key to `flake.lib.rollout.publicKey` and push: `announce`
+commit the public key to `flake.lib.rollout.publicKey` (`fleet.nix`) and push: `announce`
 checks the secret against the key of the commit it announces, so a commit that
 lands between the two fails its pipeline. Hosts verify with
 the key their current generation carries, so the commit that changes it is
