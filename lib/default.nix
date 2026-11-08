@@ -43,44 +43,6 @@ let
   # lib.mkDefault; hosts override individual values with plain assignments.
   capsModules = caps: map (cap: ../modules/caps/${cap}.nix) caps;
   homeCapsModules = caps: map (cap: ../modules/home/caps/${cap}.nix) caps;
-
-  hostOptionsModule =
-    {
-      system,
-      hostName,
-      username,
-      wsl,
-    }:
-    { lib, ... }:
-    {
-      options.dotfiles.host = {
-        hostName = lib.mkOption {
-          type = lib.types.str;
-          description = "Host output and runtime hostname.";
-        };
-        system = lib.mkOption {
-          type = lib.types.str;
-          description = "Host platform, e.g. x86_64-linux.";
-        };
-        username = lib.mkOption {
-          type = lib.types.str;
-          description = "Primary user for this host.";
-        };
-        wsl = lib.mkOption {
-          type = lib.types.bool;
-          description = "Whether this host runs under WSL.";
-        };
-      };
-
-      config.dotfiles.host = {
-        inherit
-          system
-          hostName
-          username
-          wsl
-          ;
-      };
-    };
 in
 {
   inherit (upgrade)
@@ -140,15 +102,15 @@ in
         imports = [ (modulesPath + "/image/images.nix") ];
       })
       ../modules/hosts/nixos.nix
-      (hostOptionsModule {
-        inherit
-          system
-          hostName
-          username
-          wsl
-          ;
-      })
       {
+        dotfiles.host = {
+          inherit
+            system
+            hostName
+            username
+            wsl
+            ;
+        };
         nixpkgs = {
           hostPlatform = system;
           # op-wsl swaps 1Password's CLI for the Windows one, so these apply
@@ -197,15 +159,10 @@ in
       # dotfiles feature supplies actual configuration.
       inputs.agenix.darwinModules.default
       ../modules/hosts/darwin.nix
-      (hostOptionsModule {
-        inherit
-          system
-          hostName
-          username
-          ;
-        wsl = false;
-      })
       {
+        dotfiles.host = {
+          inherit system hostName username;
+        };
         nixpkgs = {
           hostPlatform = system;
           # Blueprint's injected pkgs follows the NixOS nixpkgs input; keep
