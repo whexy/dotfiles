@@ -7,24 +7,6 @@
   smallModel,
   mcpServers,
 }:
-let
-  # Shared servers are written in Claude's shape: `url` for remote, `command`
-  # plus `args` for local.
-  toMcp =
-    server:
-    if server ? url then
-      {
-        type = "remote";
-        inherit (server) url;
-      }
-      // lib.optionalAttrs (server ? headers) { inherit (server) headers; }
-    else
-      {
-        type = "local";
-        command = [ server.command ] ++ server.args or [ ];
-      }
-      // lib.optionalAttrs (server ? env) { environment = server.env; };
-in
 {
   "$schema" = "https://opencode.ai/v2/config.json";
   inherit model;
@@ -57,7 +39,7 @@ in
   ];
   # Registered by the plugin above; models with hosted search do not see it.
   websearch.provider = "searxng";
-  mcp.servers = lib.mapAttrs (_: toMcp) mcpServers;
+  mcp.servers = mcpServers;
 
   permissions = [
     {

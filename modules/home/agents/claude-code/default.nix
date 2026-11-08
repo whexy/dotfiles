@@ -14,7 +14,7 @@ let
   agent = withModelPicker {
     name = "claude";
     package = pkgs.llm-agents.claude-code;
-    mcpServers = cfg.mcp.servers;
+    mcpServers = cfg.mcp.rendered.claude;
     # The Bash tool otherwise runs the login shell, zsh, where unquoted
     # expansions do not word-split and unmatched globs abort the command;
     # models write bash and keep tripping on both.

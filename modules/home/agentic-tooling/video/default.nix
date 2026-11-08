@@ -46,10 +46,7 @@ in
     # the account its sign-in names, refusing the agents' service token, so
     # every agent signs the owner in itself (see AGENTS.md).
     (lib.mkIf cfg.studio.enable {
-      dotfiles.agents.mcp.servers.studio = {
-        type = "http";
-        url = "https://studio-mcp.clusters.work/mcp";
-      };
+      dotfiles.agents.mcp.servers.studio.url = "https://studio-mcp.clusters.work/mcp";
     })
   ];
 }

@@ -12,28 +12,10 @@ let
     agentSettings = perSystem.self.agent-settings;
   };
 
-  # Muse's MCP shape names the transport and expands `${VAR}` in header
-  # values, like Claude's; local servers take a command plus its arguments.
-  toMuse =
-    server:
-    if server ? url then
-      {
-        transport = "streamable_http";
-        inherit (server) url;
-      }
-      // lib.optionalAttrs (server ? headers) { inherit (server) headers; }
-    else
-      {
-        transport = "stdio";
-        inherit (server) command;
-        args = server.args or [ ];
-      }
-      // lib.optionalAttrs (server ? env) { inherit (server) env; };
-
   agent = withModelPicker {
     name = "muse";
     package = perSystem.self.muse-code;
-    mcpServers = lib.mapAttrs (_: toMuse) cfg.mcp.servers;
+    mcpServers = cfg.mcp.rendered.muse;
     inherit (cfg.launcher) prelude;
     managedLinks = [
       "AGENTS.md"

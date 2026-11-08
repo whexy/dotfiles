@@ -121,8 +121,9 @@ from each other:
   `idPath` and `secretPath`.
 - `dotfiles.agents.launcher`: the git config and shell lines every launcher
   runs before its agent.
-- `dotfiles.agents.mcp.servers`: MCP servers, in Claude's shape. A feature
-  adds its own server, and each agent renders the set into its own config:
+- `dotfiles.agents.mcp.servers`: MCP servers, `url` for a remote one and
+  `command` for a local one. A feature adds its own server, and each agent
+  takes the set in its config's shape from `dotfiles.agents.mcp.rendered`:
   the `browser` group adds Firefox DevTools' for its automation browser
   (`dotfiles.browser.firefox.automation.mcp`).
 - `dotfiles.agents.skills`: the skills every agent sees (below).

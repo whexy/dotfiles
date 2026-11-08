@@ -21,7 +21,7 @@ let
     inherit (cfg.opencode) model smallModel;
     inherit (config.dotfiles.llmGateways) gateways;
     access = config.dotfiles.cloudflareAccess.serviceToken;
-    mcpServers = cfg.mcp.servers;
+    mcpServers = cfg.mcp.rendered.opencode;
   };
 in
 {

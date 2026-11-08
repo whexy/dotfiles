@@ -14,7 +14,7 @@ let
   agent = withModelPicker {
     name = "codex";
     package = pkgs.llm-agents.codex;
-    mcpServers = cfg.mcp.servers;
+    mcpServers = cfg.mcp.rendered.codex;
     inherit (cfg.launcher) prelude;
     managedLinks = [ "AGENTS.md" ];
     resetEnv = [
