@@ -4,8 +4,6 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    system.stateVersion = "25.11";
-
     boot = {
       loader.systemd-boot.enable = true;
       loader.efi.canTouchEfiVariables = true;

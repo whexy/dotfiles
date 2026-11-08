@@ -28,4 +28,6 @@
     ];
     modules = [ ./hardware.nix ];
   };
+
+  system.stateVersion = 6;
 }

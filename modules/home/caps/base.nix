@@ -36,8 +36,6 @@ in
   };
 
   home = {
-    stateVersion = "26.05";
-
     shellAliases = lib.mkIf config.dotfiles.editor.neovim.enable {
       e = "nvim";
       r = "nvim -RM";

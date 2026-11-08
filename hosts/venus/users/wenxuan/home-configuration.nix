@@ -21,4 +21,6 @@
       hostName = "venus-relay";
     };
   };
+
+  home.stateVersion = "26.05";
 }

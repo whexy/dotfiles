@@ -34,8 +34,6 @@
   programs.nix-index.enable = lib.mkDefault true;
 
   home = {
-    stateVersion = "26.05";
-
     packages = with pkgs; [
       # Search and edit
       ripgrep

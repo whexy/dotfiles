@@ -23,4 +23,6 @@
   };
 
   home.homeDirectory = "/data/wenxuan";
+
+  home.stateVersion = "26.05";
 }

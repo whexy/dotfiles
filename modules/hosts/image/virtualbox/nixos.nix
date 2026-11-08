@@ -12,7 +12,6 @@ in
 {
   config = lib.mkIf cfg.enable {
     nixpkgs.overlays = [ flake.lib.overlays.lkl-bigmem ];
-    system.stateVersion = "25.11";
 
     image.modules.virtualbox = {
       virtualbox.memorySize = 16 * 1024;

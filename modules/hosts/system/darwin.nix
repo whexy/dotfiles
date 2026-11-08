@@ -38,8 +38,6 @@ let
 in
 {
   config = lib.mkMerge [
-    { system.stateVersion = 6; }
-
     (lib.mkIf cfg.xcodes.enable { homebrew.casks = [ "xcodes-app" ]; })
 
     (lib.mkIf cfg.autoUpgrade.enable {

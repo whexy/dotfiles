@@ -93,6 +93,8 @@ semantic system feature aggregator. Caps assign no overlays; a platform that
 needs one applies it itself. `darwinHost` additionally
 overrides `nixpkgs.pkgs` to keep Darwin hosts on the `nixpkgs-darwin` branch
 (blueprint's injected pkgs comes from the NixOS-branch `nixpkgs` input).
+Each host file sets its own `system.stateVersion`, and each home file its
+`home.stateVersion`; no platform, image or cap module sets one.
 
 Integrated users import `homeModules.host-user`, which imports
 `homeModules.all` and the matching Home Manager cap presets via

@@ -14,4 +14,6 @@
     platform.qemuGuest.enable = true;
     services.openssh.cloudflareAccess.enable = true;
   };
+
+  system.stateVersion = "25.11";
 }

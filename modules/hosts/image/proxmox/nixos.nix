@@ -10,7 +10,6 @@ in
 {
   config = lib.mkIf cfg.enable {
     nixpkgs.overlays = [ flake.lib.overlays.lkl-bigmem ];
-    system.stateVersion = "25.11";
     services.qemuGuest.enable = true;
 
     # Fallbacks overridden by nixos-generators' proxmox module.
