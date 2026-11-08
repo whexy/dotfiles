@@ -239,17 +239,7 @@ let
     clickScript = popupClick provider;
   };
 
-  # Left-to-right pill order on this bar.
-  providers = map (name: lib.findFirst (p: p.name == name) null aiQuotaPackage.providers) [
-    "claude"
-    "codex"
-    "kimi"
-    "antigravity"
-    "grok"
-    "meta"
-    "opencode-go"
-    "zed"
-  ];
+  inherit (aiQuotaPackage) providers;
 
   # SketchyBar colors are 0xAARRGGBB.
   accentColor = p: "0xff${lib.removePrefix "#" p.accent.hex}";
