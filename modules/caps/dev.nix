@@ -3,14 +3,9 @@
 # Options whose config only exists on one platform (e.g. virtualization on
 # NixOS, nix.linuxBuilder on Darwin) are no-ops elsewhere, so one preset
 # file serves both platforms.
-{
-  config,
-  flake,
-  lib,
-  ...
-}:
+{ lib, pkgs, ... }:
 let
-  isDarwin = lib.hasSuffix "-darwin" config.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 in
 {
   dotfiles = {
@@ -75,12 +70,4 @@ in
       };
     };
   };
-
-  nixpkgs.overlays =
-    # Note: pkgs.stdenv cannot be used here (pkgs depends on overlays).
-    [ flake.lib.overlays.llm-tools ]
-    ++ lib.optionals isDarwin [
-      flake.lib.overlays.container-darwin
-      flake.lib.overlays.direnv-darwin
-    ];
 }

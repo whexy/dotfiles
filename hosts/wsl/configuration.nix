@@ -12,11 +12,6 @@
       ./hardware.nix
       ./nvidia.nix
     ];
-    overlays = [
-      flake.lib.overlays.op-wsl
-      flake.lib.overlays.ssh-wsl
-      flake.lib.overlays.tailscale-wsl
-    ];
   };
 
   dotfiles.system.autoUpgrade.enable = true;

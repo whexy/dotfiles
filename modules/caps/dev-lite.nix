@@ -1,12 +1,7 @@
 # dev-lite cap preset: lightweight development setup (no heavy services).
-{
-  config,
-  flake,
-  lib,
-  ...
-}:
+{ lib, pkgs, ... }:
 let
-  isDarwin = lib.hasSuffix "-darwin" config.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 in
 {
   dotfiles = {
@@ -31,12 +26,4 @@ in
       beszel.enable = lib.mkDefault true;
     };
   };
-
-  nixpkgs.overlays =
-    # Note: pkgs.stdenv cannot be used here (pkgs depends on overlays).
-    [ flake.lib.overlays.llm-tools ]
-    ++ lib.optionals isDarwin [
-      flake.lib.overlays.container-darwin
-      flake.lib.overlays.direnv-darwin
-    ];
 }

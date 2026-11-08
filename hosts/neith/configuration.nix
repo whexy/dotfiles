@@ -9,7 +9,6 @@
       "dev"
     ];
     modules = [ ./nvidia.nix ];
-    overlays = [ flake.lib.overlays.docker-runc-lxc ];
   };
 
   # Incus guest on venus, sharing its public IP with k8s-4 and the other

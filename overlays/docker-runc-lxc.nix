@@ -30,8 +30,8 @@
 # released in Incus 6.0.6 and 6.19. These hosts run Incus 6.0, and upgrading it
 # requires a newer kernel than we control. Newer nixpkgs only ships newer runc,
 # which keeps the breakage, so there is nothing to detect from inside Nix.
-# Drop this overlay (and the host `overlays = [ ... ]` entries) once the host is
-# on Incus >= 6.0.6.
+# Drop this overlay (and its use in dotfiles.platform.incusContainer) once the
+# host is on Incus >= 6.0.6.
 #
 # References:
 #   https://github.com/opencontainers/runc/issues/4968

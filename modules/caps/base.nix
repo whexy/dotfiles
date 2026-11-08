@@ -2,7 +2,7 @@
 #
 # Caps are preset modules: importing one assigns dotfiles.* options with
 # lib.mkDefault. Hosts override individual options with plain assignments.
-{ flake, lib, ... }:
+{ lib, ... }:
 {
   dotfiles = {
     nix = {
@@ -15,8 +15,4 @@
     # No-op on Darwin: the compat group only ships a nixos.nix.
     compat.envfs.enable = lib.mkDefault true;
   };
-
-  nixpkgs.overlays = [
-    flake.lib.overlays.unstable
-  ];
 }

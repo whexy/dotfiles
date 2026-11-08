@@ -9,10 +9,7 @@
   ];
 
   nixpkgs.config.allowUnfree = true;
-  nixpkgs.overlays = [
-    inputs.self.lib.overlays.unstable
-    inputs.self.lib.overlays.llm-tools
-  ];
+  nixpkgs.overlays = inputs.self.lib.commonOverlays;
   dotfiles = {
     autoUpgrade = {
       enable = true;

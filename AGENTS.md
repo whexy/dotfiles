@@ -84,10 +84,12 @@ and HM modules, and enables `useGlobalPkgs`/`useUserPackages`. Hosts with only a
 `legacyPackages.<system>.homeConfigurations."<user>@<host>"`.
 
 Host files call `flake.lib.nixosHost` or `flake.lib.darwinHost` with their local
-`system`, `hostName`, `caps`, optional extra `modules`, and optional extra
-`overlays`. The helpers import the selected system cap presets, expose host
-metadata as `config.dotfiles.host.*`, set `nixpkgs.hostPlatform`/`overlays`,
-and wire the semantic system feature aggregator. `darwinHost` additionally
+`system`, `hostName`, `caps`, and optional extra `modules`. The helpers
+import the selected system cap presets, expose host metadata as
+`config.dotfiles.host.*`, set `nixpkgs.hostPlatform`, apply
+`flake.lib.commonOverlays` (plus WSL's under `wsl = true`), and wire the
+semantic system feature aggregator. Caps assign no overlays; a platform that
+needs one applies it itself. `darwinHost` additionally
 overrides `nixpkgs.pkgs` to keep Darwin hosts on the `nixpkgs-darwin` branch
 (blueprint's injected pkgs comes from the NixOS-branch `nixpkgs` input).
 

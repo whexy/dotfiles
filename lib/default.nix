@@ -30,6 +30,15 @@ let
     llm-tools = import ../overlays/llm-tools.nix { inherit (inputs) llm-agents; };
   };
 
+  # Overlays every host and standalone home applies. The Darwin workarounds
+  # gate themselves on the platform, so they are inert elsewhere.
+  commonOverlays = [
+    overlays.unstable
+    overlays.llm-tools
+    overlays.container-darwin
+    overlays.direnv-darwin
+  ];
+
   # Caps are preset modules, not options. They assign feature options with
   # lib.mkDefault; hosts override individual values with plain assignments.
   capsModules = caps: map (cap: ../modules/caps/${cap}.nix) caps;
@@ -85,6 +94,7 @@ in
     publicHost
     tailnetHost
     overlays
+    commonOverlays
     capsModules
     homeCapsModules
     ;
@@ -118,7 +128,6 @@ in
       username ? "whexy",
       caps,
       modules ? [ ],
-      overlays ? [ ],
       wsl ? false,
       incusContainer ? false,
     }:
@@ -142,7 +151,15 @@ in
       {
         nixpkgs = {
           hostPlatform = system;
-          inherit overlays;
+          # op-wsl swaps 1Password's CLI for the Windows one, so these apply
+          # only under WSL.
+          overlays =
+            lib.optionals wsl [
+              overlays.op-wsl
+              overlays.ssh-wsl
+              overlays.tailscale-wsl
+            ]
+            ++ commonOverlays;
         };
         networking.hostName = hostName;
 
@@ -171,7 +188,6 @@ in
       username ? "whexy",
       caps,
       modules ? [ ],
-      overlays ? [ ],
     }:
     [
       # External option providers. Their behavior remains inert until a
@@ -195,7 +211,7 @@ in
             inherit system;
             config.allowUnfree = true;
           };
-          inherit overlays;
+          overlays = commonOverlays;
         };
         networking.hostName = hostName;
 

@@ -1,6 +1,7 @@
 {
   config,
   options,
+  flake,
   lib,
   pkgs,
   ...
@@ -28,6 +29,10 @@ in
           info.enable = true;
         };
         environment.defaultPackages = options.environment.defaultPackages.default;
+
+        # Current runc cannot start containers nested under the Incus hosts'
+        # LXC AppArmor profile.
+        nixpkgs.overlays = [ flake.lib.overlays.docker-runc-lxc ];
 
         # The profile opens a passwordless root console login. This host is
         # reached as dotfiles.host.username like every other NixOS host.
