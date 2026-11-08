@@ -3,6 +3,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 {
@@ -19,6 +20,6 @@
     ];
     # whisper-1 for `transcribe`; a key restricted to the Audio API.
     age.secrets.openai-api-key.file = ../../../../secrets/openai-api-key.age;
-    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
   };
 }

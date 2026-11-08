@@ -5,6 +5,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 {
@@ -23,7 +24,7 @@
 
   # Adding a skill is a new directory under ./skills, never a change here.
   config = lib.mkIf config.dotfiles.agents.enable {
-    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
     age.secrets = config.dotfiles.llmGateways.secrets;
     dotfiles.cloudflareAccess.serviceToken.enable = true;
   };

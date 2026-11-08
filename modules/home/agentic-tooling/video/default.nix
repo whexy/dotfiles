@@ -6,6 +6,7 @@ args@{
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -37,7 +38,7 @@ in
       home.file.".local/share/video-edit/vendor/gsap.min.js".source = hyperframes.gsap;
 
       dotfiles.agents = {
-        skills = import ./skills.nix { inherit pkgs perSystem; };
+        skills = import ./skills.nix { inherit pkgs perSystem flake; };
         mcp.servers.resolve.command = lib.getExe perSystem.self.resolve-mcp;
       };
     })

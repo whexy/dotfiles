@@ -3,7 +3,9 @@
 args@{
   config,
   lib,
+  pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -47,7 +49,7 @@ in
     }
 
     (lib.mkIf cfg.enable {
-      dotfiles.agents.skills = import ./skills.nix { };
+      dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
     })
 
     # spark-mcp spawns `spark mcp` per request, which talks to Spark Desktop

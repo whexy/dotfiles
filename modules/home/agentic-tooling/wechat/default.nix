@@ -3,6 +3,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -32,7 +33,7 @@ in
     lib.mkMerge [
       {
         home.packages = [ (if relay.enable then viaRelay else wechat) ];
-        dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
+        dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
       }
       (lib.mkIf relay.enable {
         dotfiles.tailnetRelay.forwards.wechat = {

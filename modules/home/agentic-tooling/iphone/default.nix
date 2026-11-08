@@ -5,6 +5,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -26,7 +27,7 @@ in
     };
 
     dotfiles.agents = {
-      skills = import ./skills.nix { inherit pkgs perSystem; };
+      skills = import ./skills.nix { inherit pkgs perSystem flake; };
       # iPhone Use behind a per-session phone choice; the tool names stay
       # iPhone Use's, so its usage skill applies unchanged.
       mcp.servers.iphone_use.command = "${package}/bin/iphone-use-select";

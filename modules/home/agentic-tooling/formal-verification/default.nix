@@ -6,6 +6,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -14,6 +15,6 @@ in
 {
   config = lib.mkIf cfg.enable {
     home.packages = [ pkgs.tlaplus ];
-    dotfiles.agents.skills = import ./skills.nix { inherit perSystem; };
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
   };
 }

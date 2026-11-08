@@ -5,6 +5,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -23,7 +24,7 @@ in
     home.packages = [ rea.package ];
     home.sessionVariables = rea.sessionVariables;
     dotfiles.agents = {
-      skills = import ./skills.nix { inherit pkgs perSystem; };
+      skills = import ./skills.nix { inherit pkgs perSystem flake; };
       # Registered here rather than by `rea setup`, which would write an
       # npx-pinned entry into every agent's own config.
       mcp.servers.rea = {
