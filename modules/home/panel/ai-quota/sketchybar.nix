@@ -24,7 +24,6 @@ let
   showCountdown = cfg.aiQuota.showCountdown;
   inherit (aiQuotaPackage)
     apiUrl
-    logos
     summaryFilter
     updateInterval
     ;
@@ -36,15 +35,6 @@ let
   cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
   enabled = cfg.renderer == "sketchybar" && cfg.aiQuota.enable;
-
-  colors = {
-    gray = "0xff98989d";
-    blue = "0xff007cff";
-    orange = "0xffd97757";
-    green = "0xff10a37f";
-    cyan = "0xff22b8cf";
-    white = "0xffffffff";
-  };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
 
@@ -151,37 +141,29 @@ let
     };
   };
 
-  mkIconItem =
-    provider:
-    {
-      logo,
-      logoScale,
-      accent,
-      ...
-    }:
-    {
-      name = "ai_quota.${provider}.icon";
-      side = "right";
-      settings = {
-        drawing = "off";
-        updates = "on";
-        script = pillPlugin provider accent;
-        icon = " ";
-        "icon.width" = 28;
-        "icon.padding_left" = 0;
-        "icon.padding_right" = 0;
-        "icon.background.drawing" = "on";
-        "icon.background.image" = logo;
-        "icon.background.image.scale" = logoScale;
-        "icon.background.image.padding_left" = 7;
-        "icon.background.image.padding_right" = 5;
-        label = "";
-        "label.drawing" = "off";
-        "background.drawing" = "off";
-      };
-      clickScript = popupClick provider;
-      subscribe = [ "ai_quota_refresh" ];
+  mkIconItem = p: {
+    name = "ai_quota.${p.name}.icon";
+    side = "right";
+    settings = {
+      drawing = "off";
+      updates = "on";
+      script = pillPlugin p.name (accentColor p);
+      icon = " ";
+      "icon.width" = 28;
+      "icon.padding_left" = 0;
+      "icon.padding_right" = 0;
+      "icon.background.drawing" = "on";
+      "icon.background.image" = p.logo;
+      "icon.background.image.scale" = p.logoScale;
+      "icon.background.image.padding_left" = 7;
+      "icon.background.image.padding_right" = 5;
+      label = "";
+      "label.drawing" = "off";
+      "background.drawing" = "off";
     };
+    clickScript = popupClick p.name;
+    subscribe = [ "ai_quota_refresh" ];
+  };
 
   trackWidth = 42;
   rightPadding = 8;
@@ -257,56 +239,20 @@ let
     clickScript = popupClick provider;
   };
 
-  providers = [
-    {
-      name = "claude";
-      logo = "${logos}/claude.png";
-      logoScale = 0.026;
-      accent = colors.orange;
-    }
-    {
-      name = "codex";
-      logo = "${logos}/codex.png";
-      logoScale = 0.027;
-      accent = colors.green;
-    }
-    {
-      name = "kimi";
-      logo = "${logos}/kimi.png";
-      logoScale = 0.025;
-      accent = colors.blue;
-    }
-    {
-      name = "antigravity";
-      logo = "${logos}/antigravity.png";
-      logoScale = 0.026;
-      accent = colors.gray;
-    }
-    {
-      name = "grok";
-      logo = "${logos}/grok.png";
-      logoScale = 0.026;
-      accent = colors.white;
-    }
-    {
-      name = "meta";
-      logo = "${logos}/meta.png";
-      logoScale = 0.026;
-      accent = colors.blue;
-    }
-    {
-      name = "opencode-go";
-      logo = "${logos}/opencode-go.png";
-      logoScale = 0.025;
-      accent = colors.gray;
-    }
-    {
-      name = "zed";
-      logo = "${logos}/zed.png";
-      logoScale = 0.024;
-      accent = colors.cyan;
-    }
+  # Left-to-right pill order on this bar.
+  providers = map (name: lib.findFirst (p: p.name == name) null aiQuotaPackage.providers) [
+    "claude"
+    "codex"
+    "kimi"
+    "antigravity"
+    "grok"
+    "meta"
+    "opencode-go"
+    "zed"
   ];
+
+  # SketchyBar colors are 0xAARRGGBB.
+  accentColor = p: "0xff${lib.removePrefix "#" p.accent.hex}";
 
   # Right-side items stack from the right edge inwards, so a pill's parts are
   # added in reverse of their visual order. Sliders are the exception: they
@@ -315,13 +261,13 @@ let
   # rather than follow the icon it would otherwise paint over.
   providerItems =
     p:
-    lib.optional showCountdown (mkCountdownItem p.name p.accent)
+    lib.optional showCountdown (mkCountdownItem p.name (accentColor p))
     # Sliders paint their track in the layout flow direction, so every lane is
     # declared before the `slot` that reserves its space.
-    ++ mkLaneItems p.name p.accent
+    ++ mkLaneItems p.name (accentColor p)
     ++ [
       (mkSlotItem p.name)
-      (mkIconItem p.name p)
+      (mkIconItem p)
     ];
 
   providerBracket = p: {

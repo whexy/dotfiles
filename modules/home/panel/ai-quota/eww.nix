@@ -16,6 +16,7 @@ let
   showCountdown = cfg.aiQuota.showCountdown;
 
   inherit (aiQuotaPackage)
+    accents
     apiUrl
     providers
     summaryFilter
@@ -31,7 +32,7 @@ let
   quotaScript = pkgs.writeShellScript "eww-ai-quota" ''
     raw="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0
     ${lib.concatMapStringsSep "\n" (p: ''
-      ${p.variable}="$(printf '%s\n' "$raw" | ${jq} -c -f ${summaryFilter} --arg provider ${p.name} 2>/dev/null)" || exit 0
+      ${p.variable}="$(printf '%s\n' "$raw" | ${jq} -c -f ${summaryFilter} --arg provider ${p.name} --arg accent ${p.accent.name} 2>/dev/null)" || exit 0
     '') providers}
     ${jq} -cn \
       ${
@@ -41,6 +42,30 @@ let
       } \
       '{${lib.concatMapStringsSep ", " (p: ''"${p.name}": $'' + p.variable) providers}}'
   '';
+
+  countdownRules = lib.concatMapStringsSep "\n" (p: ''
+    .quota-${p.name} .quota-countdown {
+      color: ${p.accent.hex};
+    }
+  '') providers;
+
+  # Windows further from binding are drawn in fainter tones of the accent.
+  rgb =
+    hex:
+    lib.concatMapStringsSep ", "
+      (i: toString (lib.fromHexString (builtins.substring (1 + 2 * i) 2 hex)))
+      [
+        0
+        1
+        2
+      ];
+  trackRules = lib.removeSuffix "\n" (
+    lib.concatMapStringsSep "\n" (a: ''
+      .quota-track.${a.name} progress { background-color: ${a.hex}; }
+      .quota-track.${a.name}Dim progress { background-color: rgba(${rgb a.hex}, 0.7); }
+      .quota-track.${a.name}Faint progress { background-color: rgba(${rgb a.hex}, 0.45); }
+    '') accents
+  );
 
   providerDef = p: ''
     (defwidget ai-quota-${p.name} []
@@ -151,38 +176,7 @@ in
           font-weight: bold;
         }
 
-        .quota-claude .quota-countdown {
-          color: #d97757;
-        }
-
-        .quota-kimi .quota-countdown {
-          color: #007cff;
-        }
-
-        .quota-codex .quota-countdown {
-          color: #10a37f;
-        }
-
-        .quota-antigravity .quota-countdown {
-          color: #98989d;
-        }
-
-        .quota-grok .quota-countdown {
-          color: #ffffff;
-        }
-
-        .quota-meta .quota-countdown {
-          color: #007cff;
-        }
-
-        .quota-opencode-go .quota-countdown {
-          color: #98989d;
-        }
-
-        .quota-zed .quota-countdown {
-          color: #22b8cf;
-        }
-
+        ${countdownRules}
         .quota.error {
           color: $on-surface-variant;
         }
@@ -193,29 +187,7 @@ in
 
         .quota-track.missing { opacity: 0; }
 
-        .quota-track.gray progress { background-color: #98989d; }
-        .quota-track.grayDim progress { background-color: rgba(152, 152, 157, 0.7); }
-        .quota-track.grayFaint progress { background-color: rgba(152, 152, 157, 0.45); }
-
-        .quota-track.blue progress { background-color: #007cff; }
-        .quota-track.blueDim progress { background-color: rgba(0, 124, 255, 0.7); }
-        .quota-track.blueFaint progress { background-color: rgba(0, 124, 255, 0.45); }
-
-        .quota-track.green progress { background-color: #10a37f; }
-        .quota-track.greenDim progress { background-color: rgba(16, 163, 127, 0.7); }
-        .quota-track.greenFaint progress { background-color: rgba(16, 163, 127, 0.45); }
-
-        .quota-track.orange progress { background-color: #d97757; }
-        .quota-track.orangeDim progress { background-color: rgba(217, 119, 87, 0.7); }
-        .quota-track.orangeFaint progress { background-color: rgba(217, 119, 87, 0.45); }
-
-        .quota-track.cyan progress { background-color: #22b8cf; }
-        .quota-track.cyanDim progress { background-color: rgba(34, 184, 207, 0.7); }
-        .quota-track.cyanFaint progress { background-color: rgba(34, 184, 207, 0.45); }
-
-        .quota-track.white progress { background-color: #ffffff; }
-        .quota-track.whiteDim progress { background-color: rgba(255, 255, 255, 0.7); }
-        .quota-track.whiteFaint progress { background-color: rgba(255, 255, 255, 0.45); }
+        ${trackRules}
       '';
     };
   };

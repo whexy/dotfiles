@@ -1,6 +1,9 @@
 # Summarize one provider's quota into a status-bar pill record.
 #
-#   jq -c -f summary.jq --arg provider codex ai-quota.json
+#   jq -c -f summary.jq --arg provider codex [--arg accent green] ai-quota.json
+#
+# `accent` names the provider's brand accent (shared.nix), which tags each
+# window's `color`; renderers that ignore colors may leave it out.
 #
 # Emits a single object:
 #   {present, state, label, countdown, lines, compact_lines, compact_meters}
@@ -179,17 +182,6 @@ def matches_provider($target):
   or ($target == "grok" and .provider == "xai")
   or ($target == "xai" and .provider == "grok");
 
-def provider_accent:
-  if . == "claude" then "orange"
-  elif . == "kimi" then "blue"
-  elif . == "codex" then "green"
-  elif . == "antigravity" then "gray"
-  elif . == "grok" or . == "xai" then "white"
-  elif . == "meta" then "blue"
-  elif . == "zed" then "cyan"
-  else "gray"
-  end;
-
 . as $root
 | ([$root.providers[] | select(matches_provider($provider))] | .[0] // null)
 | if . == null then
@@ -199,7 +191,7 @@ def provider_accent:
     # has no quota to show; keeping it would cost the pill an empty column.
     (.accounts |= map(select(.error != null or (.meters | length > 0))))
     | (.accounts | sort_by(.id // .name)) as $accounts
-    | ($provider | provider_accent) as $accent
+    | ($ARGS.named.accent // "gray") as $accent
     | ([$accounts[] | coding[]] | unique_by(.label) | sort_by(window_span, .label) | .[:3] | map(.label)) as $windows
     | [$accounts[] | . as $account | account_info + {
         meters: [$windows[] | . as $window
@@ -246,7 +238,6 @@ def provider_accent:
           elif $remaining <= 50 then "warning"
           else "ok"
           end) as $state
-        | ($provider | provider_accent) as $accent
         | ([$best.account | coding | sort_by(window_span)[] | compact_meter | . + {color: (. | window_color($accent))}]) as $meters
         | ($meters | smart_meter) as $display
         | {

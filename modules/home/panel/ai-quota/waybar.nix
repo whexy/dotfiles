@@ -62,17 +62,6 @@ let
         end'
     '';
 
-  colors = {
-    claude = "#d97757";
-    kimi = "#007cff";
-    codex = "#10a37f";
-    antigravity = "#98989d";
-    grok = "#ffffff";
-    meta = "#007cff";
-    opencode-go = "#98989d";
-    zed = "#22b8cf";
-  };
-
   selectors =
     state: lib.concatMapStringsSep ",\n" (p: "#custom-ai-quota-${p.name}${state}") providers;
 
@@ -126,7 +115,7 @@ in
       ''
       + lib.concatMapStrings (p: ''
         #custom-ai-quota-${p.name} {
-          color: ${colors.${p.name}};
+          color: ${p.accent.hex};
         }
       '') providers
     );

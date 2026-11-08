@@ -30,20 +30,8 @@ let
 
   enabled = config.dotfiles.terminal.tmux.enable && cfg.aiQuota.enable;
 
-  # Catppuccin palette slot used for each provider's name (brand-ish hues).
-  accent = {
-    claude = "peach";
-    kimi = "blue";
-    codex = "green";
-    antigravity = "mauve";
-    grok = "fg";
-    meta = "blue";
-    opencode-go = "fg";
-    zed = "sky";
-  };
-
   providerArgs = lib.concatMapStringsSep " " (
-    p: lib.escapeShellArg "${p.name}:${p.title}:${accent.${p.name} or "fg"}"
+    p: lib.escapeShellArg "${p.name}:${p.title}:${p.tmuxColor}"
   ) providers;
 
   # summary.jq is a whole program over $provider, so it nests as a function

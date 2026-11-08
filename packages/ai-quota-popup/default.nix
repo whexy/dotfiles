@@ -58,6 +58,7 @@ pkgs.stdenvNoCC.mkDerivation {
   # The bar modules render the same providers and quota summary as the app.
   passthru = {
     inherit (shared)
+      accents
       apiUrl
       updateInterval
       providers
