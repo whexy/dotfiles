@@ -10,11 +10,16 @@
   config,
   pkgs,
   lib,
+  flake,
   ...
 }:
 let
   cfg = config.dotfiles.tooling.kube;
   relay = config.dotfiles.tailnetRelay;
+  decrypt = flake.lib.agenixDecrypt {
+    inherit pkgs;
+    inherit (config.age) identityPaths package;
+  };
 
   writeConfig = pkgs.writeShellApplication {
     name = "kube-write-config";
@@ -28,17 +33,11 @@ let
       work=$(mktemp -d)
       trap 'rm -rf "$work"' EXIT
 
-      candidates=(${lib.escapeShellArgs config.age.identityPaths})
-      identities=()
-      for identity in "''${candidates[@]}"; do
-        [ -r "$identity" ] && identities+=(-i "$identity")
-      done
-
       # Checked one by one, so a malformed secret cannot block the merge or
       # shadow another cluster's entries.
       files=()
       add() {
-        if ${lib.getExe config.age.package} --decrypt "''${identities[@]}" -o "$work/$1" "$2" &&
+        if ${lib.getExe decrypt} -o "$work/$1" "$2" &&
           [ "$(KUBECONFIG="$work/$1" kubectl config view --flatten 2>/dev/null \
             -o jsonpath="{.contexts[?(@.name==\"$1\")].context.cluster}/{.contexts[?(@.name==\"$1\")].context.user}")" = "$1/$1" ]; then
           files+=("$work/$1")

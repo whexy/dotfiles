@@ -97,6 +97,8 @@ in
 
   secretEnv = import ./secret-env.nix { inherit lib; };
 
+  agenixDecrypt = import ./agenix-decrypt.nix;
+
   inherit updater;
 
   skillRepo = import ./skill-repo.nix { inherit inputs updater; };
