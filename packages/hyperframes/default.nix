@@ -6,10 +6,6 @@
 
 # HyperFrames: a CLI that renders HTML/CSS/GSAP compositions to video,
 # frame-exact, through a headless Chrome.
-#
-# The npm tarball already ships the compiled `dist/`, so nothing is built
-# here. It carries no lockfile; packages/update generates package-lock.json
-# from the tarball's package.json after `lockfileFilter`.
 let
   inherit (pkgs) lib;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
@@ -18,6 +14,10 @@ let
   # devDependencies only serve upstream's monorepo; its `workspace:*` ones
   # cannot be resolved from the registry, and dist/ already bundles them.
   lockfileFilter = "del(.devDependencies)";
+  npm = flake.lib.npmTarball {
+    inherit pkgs lockfileFilter;
+    lockfile = ./package-lock.json;
+  };
 
   # The init templates load this GSAP from a CDN, which makes every render
   # fetch it. Compositions copy this file instead and render offline.
@@ -96,10 +96,7 @@ pkgs.buildNpmPackage (finalAttrs: {
 
   # `init` copies its templates out of the store with their read-only modes,
   # then fails to rewrite them; the copies get their owner write bit back.
-  postPatch = ''
-    cp ${./package-lock.json} package-lock.json
-    ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
-    mv package.json.new package.json
+  postPatch = npm.postPatch + ''
 
     # Module file names change with every release, and the template copy
     # goes through whichever helper upstream currently uses, so the copy is
@@ -126,7 +123,7 @@ pkgs.buildNpmPackage (finalAttrs: {
     EOF
   '';
 
-  dontNpmBuild = true;
+  inherit (npm) dontNpmBuild;
 
   # sharp's prebuilt addon stays unpatched: it reaches its bundled libvips
   # through $ORIGIN and takes libstdc++ from Node, which already loaded it.

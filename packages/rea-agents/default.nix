@@ -6,10 +6,6 @@
 }:
 
 # REA (Reverse Engineer Anything): a CLI and the stdio MCP server `rea mcp`.
-#
-# The npm tarball already ships the compiled `dist/`, so nothing is built
-# here. It carries no lockfile; packages/update generates package-lock.json
-# from the tarball's package.json after `lockfileFilter`.
 let
   inherit (pkgs) lib stdenv;
   unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
@@ -23,6 +19,10 @@ let
   # devDependencies only serve upstream's source checkout, and the vitepress
   # override belongs to one of them.
   lockfileFilter = "del(.devDependencies, .overrides)";
+  npm = flake.lib.npmTarball {
+    inherit pkgs lockfileFilter;
+    lockfile = ./package-lock.json;
+  };
 
   # frida backs REA's Frida tools. Its install script runs prebuild-install,
   # which downloads this addon unless it finds the archive, under its release
@@ -66,13 +66,7 @@ pkgs.buildNpmPackage (finalAttrs: {
   nodejs = pkgs.nodejs_24;
   npmDepsHash = "sha256-XGu4uNmzDBjm3eE3PXpJGBcz7+vrZK1PnRhJihIQNHo=";
 
-  postPatch = ''
-    cp ${./package-lock.json} package-lock.json
-    ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
-    mv package.json.new package.json
-  '';
-
-  dontNpmBuild = true;
+  inherit (npm) postPatch dontNpmBuild;
 
   # REA reads its skills from its own directory; agents read a copy.
   postInstall = ''

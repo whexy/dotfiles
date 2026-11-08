@@ -3,15 +3,15 @@
 # cf, Cloudflare's unified CLI for its public API and Workers projects
 # (https://developers.cloudflare.com/cf/). nixpkgs' `cloudflare-cli` is an
 # unrelated community tool, and Wrangler and cloudflared are not this CLI.
-#
-# The npm tarball already ships the compiled `dist/`, so nothing is built
-# here. It carries no lockfile; packages/update generates package-lock.json
-# from the tarball's package.json after `lockfileFilter`.
 let
   inherit (pkgs) lib stdenv;
 
   # devDependencies only serve upstream's monorepo, and dist/ bundles them.
   lockfileFilter = "del(.devDependencies)";
+  npm = flake.lib.npmTarball {
+    inherit pkgs lockfileFilter;
+    lockfile = ./package-lock.json;
+  };
 
   # Cloudflare's agent skill for cf, which the npm tarball does not ship. The
   # skills repository has no releases; it moves to the default branch's head
@@ -42,10 +42,7 @@ pkgs.buildNpmPackage (finalAttrs: {
   # `npm install --global cf@latest`, would only install a second one. The
   # check runs only in a terminal and has no switch; stubbing its module
   # turns it off. The module's file name changes with every release.
-  postPatch = ''
-    cp ${./package-lock.json} package-lock.json
-    ${lib.getExe pkgs.jq} ${lib.escapeShellArg lockfileFilter} package.json > package.json.new
-    mv package.json.new package.json
+  postPatch = npm.postPatch + ''
 
     updateCheck=$(grep -l 'as maybeStartBackgroundUpdateCheck' dist/update-check-*.mjs)
     [ "$(printf '%s\n' "$updateCheck" | wc -l)" -eq 1 ]
@@ -55,7 +52,7 @@ pkgs.buildNpmPackage (finalAttrs: {
     EOF
   '';
 
-  dontNpmBuild = true;
+  inherit (npm) dontNpmBuild;
 
   nativeBuildInputs = [
     pkgs.installShellFiles

@@ -803,7 +803,8 @@ The kinds, cheapest first:
   in `sources.json` as `rev`, `hash`, and the commit date as `version`.
 - `npm`: an npm registry tarball. Bumps it with nix-update, regenerates the
   vendored package-lock.json from package.json after `lockfileFilter`, the
-  jq filter the package's `postPatch` also applies, and re-pins `npmDepsHash`.
+  jq filter the package's `postPatch` also applies (`flake.lib.npmTarball`
+  sets both up), and re-pins `npmDepsHash`.
   `prebuilds` names dependencies whose install script downloads a prebuilt
   archive (`urlTemplate`, `platforms`); their pins in `sources.json` follow
   each dependency's version in the lockfile, and the package hands the

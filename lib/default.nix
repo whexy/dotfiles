@@ -103,6 +103,8 @@ in
 
   skillRepo = import ./skill-repo.nix { inherit inputs updater; };
 
+  npmTarball = import ./npm-tarball.nix;
+
   nixosHost =
     {
       system,
