@@ -12,6 +12,7 @@ runner here.
 from __future__ import annotations
 
 import argparse
+import contextlib
 import json
 import os
 import socket
@@ -60,10 +61,8 @@ def pump(source: socket.socket, sink: socket.socket) -> None:
         pass
     finally:
         for end in (source, sink):
-            try:
+            with contextlib.suppress(OSError):
                 end.shutdown(socket.SHUT_RDWR)
-            except OSError:
-                pass
 
 
 class Forward:

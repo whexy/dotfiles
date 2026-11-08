@@ -555,7 +555,7 @@ def process(args, client):
         timings["api_seconds"] = round(time.monotonic() - started, 2)
 
     words, languages = [], []
-    for (offset, _), timed in zip(chunks, results):
+    for (offset, _), timed in zip(chunks, results, strict=True):
         code = timed.get("language")
         if code and code not in languages:
             languages.append(code)

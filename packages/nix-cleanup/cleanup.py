@@ -96,13 +96,16 @@ def discover_profiles(system, profiles_root=Path("/nix/var/nix/profiles"), on_er
         if legacy.is_symlink():
             if legacy in scan(home):
                 profiles.add(legacy)
-            target = Path(os.path.abspath(legacy.parent / os.readlink(legacy)))
+            # pathlib has no abspath: resolve() also follows the profile's own
+            # links, and absolute() keeps `..`.
+            target = Path(os.path.abspath(legacy.parent / legacy.readlink()))  # noqa: PTH100
             # The multi-user installer gives root the global default profile, even
             # when only a standalone Home Manager user job manages that host.
             root_default = os.geteuid() == 0 and target == profiles_root / "default"
-            if target.is_relative_to(home) or target.is_relative_to(own_profiles) or root_default:
-                if target in scan(target.parent):
-                    profiles.add(target)
+            if (
+                target.is_relative_to(home) or target.is_relative_to(own_profiles) or root_default
+            ) and target in scan(target.parent):
+                profiles.add(target)
     except OSError as error:
         report(legacy, error)
     if system:

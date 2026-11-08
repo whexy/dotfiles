@@ -2,11 +2,12 @@
 """Report package version changes between two flake.lock files.
 
 One representative host per platform is evaluated under both lock files, and
-nothing is built. The derivation graph is walked down from each host's root through unversioned configuration glue (etc, units, home
-files, profiles) and stops at the first versioned derivation. That derivation
-is the package a host actually references, whether it arrived through
-systemPackages, home.packages, a `programs.*.package` option, or a service
-unit. Its own build dependencies are not reported.
+nothing is built. The derivation graph is walked down from each host's root
+through unversioned configuration glue (etc, units, home files, profiles) and
+stops at the first versioned derivation. That derivation is the package a host
+actually references, whether it arrived through systemPackages, home.packages,
+a `programs.*.package` option, or a service unit. Its own build dependencies
+are not reported.
 """
 
 import argparse
@@ -17,6 +18,7 @@ import sys
 from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor
 from datetime import UTC, datetime
+from pathlib import Path
 
 NIX = ["nix", "--extra-experimental-features", "nix-command flakes"]
 STORE = "/nix/store/"
@@ -153,7 +155,9 @@ def input_changes(old_lock, new_lock):
 def table(rows, indent="  "):
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]) - 1)]
     return [
-        indent + "  ".join(c.ljust(w) for c, w in zip(row, widths)) + "  " + row[-1] for row in rows
+        # The last column is left unpadded.
+        indent + "  ".join(c.ljust(w) for c, w in zip(row, widths, strict=False)) + "  " + row[-1]
+        for row in rows
     ]
 
 
@@ -212,10 +216,8 @@ def main(argv=None):
     )
     args = parser.parse_args(argv)
 
-    with open(args.old_lock, encoding="utf-8") as f:
-        old_lock = json.load(f)
-    with open(f"{args.flake}/flake.lock", encoding="utf-8") as f:
-        new_lock = json.load(f)
+    old_lock = json.loads(Path(args.old_lock).read_text(encoding="utf-8"))
+    new_lock = json.loads(Path(args.flake, "flake.lock").read_text(encoding="utf-8"))
 
     sides = {"old": ["--reference-lock-file", args.old_lock], "new": []}
 

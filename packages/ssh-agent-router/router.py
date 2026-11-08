@@ -29,7 +29,7 @@ def private_directory(path):
 
 
 def socket_identity(path):
-    info = os.stat(path)
+    info = Path(path).stat()
     if not stat.S_ISSOCK(info.st_mode) or info.st_uid != os.getuid():
         raise ValueError(f"Not a socket owned by this user: {path}")
     return {"path": str(path), "dev": info.st_dev, "ino": info.st_ino}
