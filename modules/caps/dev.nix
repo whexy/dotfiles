@@ -1,43 +1,25 @@
-# dev cap preset: machines used for development.
+# dev cap preset: machines used for development; dev-lite plus heavy
+# services and toolchains.
 #
 # Options whose config only exists on one platform (e.g. virtualization on
 # NixOS, nix.linuxBuilder on Darwin) are no-ops elsewhere, so one preset
 # file serves both platforms.
 { lib, pkgs, ... }:
-let
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
-in
 {
+  imports = [ ./dev-lite.nix ];
+
   dotfiles = {
-    system = {
-      timezone.enable = lib.mkDefault true;
-      docs.enable = lib.mkDefault true;
-      # Xcodes ships as a Homebrew cask, so the option is inert off Darwin.
-      xcodes.enable = lib.mkDefault isDarwin;
-    };
-    nix = {
-      optimise.enable = lib.mkDefault true;
-      linuxBuilder.enable = lib.mkDefault true;
-    };
+    system.docs.enable = lib.mkDefault true;
+    nix.linuxBuilder.enable = lib.mkDefault true;
     compat = {
       nix-ld.enable = lib.mkDefault true;
       binfmt.enable = lib.mkDefault true;
     };
-    security = {
-      agentPolicy.enable = lib.mkDefault true;
-      onepassword.enable = lib.mkDefault true;
-      passwordlessSudo.enable = lib.mkDefault true;
-    };
+    security.passwordlessSudo.enable = lib.mkDefault true;
     network = {
-      tailscale = {
-        enable = lib.mkDefault true;
-        # The home T3 Code server publishes itself with `tailscale serve`.
-        userOperator = lib.mkDefault true;
-        ssh.enable = lib.mkDefault true;
-        # Rex's login server on the tailnet. On Darwin the Rex app is the
-        # server, which the gui cap publishes.
-        rex.enable = lib.mkIf (!isDarwin) (lib.mkDefault true);
-      };
+      # Rex's login server on the tailnet. On Darwin the Rex app is the
+      # server, which the gui cap publishes.
+      tailscale.rex.enable = lib.mkIf (!pkgs.stdenv.hostPlatform.isDarwin) (lib.mkDefault true);
       networkmanager.enable = lib.mkDefault true;
     };
     # Keeps user services such as the T3 Code server up on headless hosts.
@@ -50,12 +32,6 @@ in
     # the browser comes from a Homebrew cask; on NixOS the home browser group
     # installs it.
     browser.firefox.automation.enable = lib.mkDefault true;
-    homebrew.enable = lib.mkDefault true;
-    shell.nushell.enable = lib.mkDefault true;
-    monitoring = {
-      nodeExporter.enable = lib.mkDefault true;
-      beszel.enable = lib.mkDefault true;
-    };
     virtualization = {
       docker = {
         enable = lib.mkDefault true;

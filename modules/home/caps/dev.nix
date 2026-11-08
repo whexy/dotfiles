@@ -1,21 +1,17 @@
-# dev home cap preset: full development environment.
+# dev home cap preset: full development environment; dev-lite plus every
+# language toolchain and the heavy tooling bundles.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with plain assignments.
 { lib, pkgs, ... }:
 {
+  imports = [ ./dev-lite.nix ];
+
   home.packages = [ pkgs.sd ];
 
   dotfiles = {
-    agents.enable = lib.mkDefault true;
     agenticTooling = {
       video.studio.enable = lib.mkDefault true;
       formalVerification.enable = lib.mkDefault true;
-      transcribe.enable = lib.mkDefault true;
-      wechat.enable = lib.mkDefault true;
-    };
-    t3code = {
-      enable = lib.mkDefault true;
-      pair.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser
     # whether or not it has a display.
@@ -23,61 +19,25 @@
       enable = lib.mkDefault true;
       mcp.enable = lib.mkDefault true;
     };
-    ssh.enable = lib.mkDefault true;
-    rclone.enable = lib.mkDefault false;
-    nix.ghTokenFlakes.enable = lib.mkDefault true;
-    vcs = {
-      git.enable = lib.mkDefault true;
-    };
-    terminal = {
-      adopt.enable = lib.mkDefault true;
-    };
-    shell = {
-      zsh.devExtras = lib.mkDefault true;
-      nushell.enable = lib.mkDefault true;
-      nushell.devExtras = lib.mkDefault true;
-    };
+    terminal.adopt.enable = lib.mkDefault true;
     editor = {
-      neovim.dev = lib.mkDefault true;
       # Neovim commit dc89344 added a third `optional` element to `--api-info`
       # parameters, which neovide 0.16.2 refuses to parse, so the GUI cannot
       # start at all on nightly. Re-enable once a neovide release carries
       # neovide#3530.
       neovim.nightly = lib.mkDefault false;
       c.enable = lib.mkDefault true;
-      config.enable = lib.mkDefault true;
       go.enable = lib.mkDefault true;
-      haskell.enable = lib.mkDefault false;
       javascript.enable = lib.mkDefault true;
       lua.enable = lib.mkDefault true;
-      markdown.enable = lib.mkDefault true;
-      nix.enable = lib.mkDefault true;
-      python.enable = lib.mkDefault true;
       rust.enable = lib.mkDefault true;
-      shell.enable = lib.mkDefault true;
-      typst.enable = lib.mkDefault true;
       zig.enable = lib.mkDefault true;
     };
 
     tooling = {
-      cli.enable = lib.mkDefault true;
-      network.enable = lib.mkDefault true;
       extras.enable = lib.mkDefault true;
       debug.enable = lib.mkDefault true;
       woodpecker.enable = lib.mkDefault true;
-      kube.enable = lib.mkDefault true;
-      appStoreConnect.enable = lib.mkDefault true;
-      aws.enable = lib.mkDefault true;
-      cloudflare = {
-        cli.enable = lib.mkDefault true;
-        apiToken.enable = lib.mkDefault true;
-      };
     };
   };
-
-  services.gpg-agent = {
-    enable = lib.mkDefault true;
-  };
-
-  programs.nix-index-database.comma.enable = lib.mkDefault true;
 }
