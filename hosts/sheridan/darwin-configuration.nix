@@ -1,4 +1,4 @@
-{ flake, ... }:
+{ flake, hostName, ... }:
 {
   dotfiles = {
     system.autoUpgrade.enable = true;
@@ -20,7 +20,7 @@
 
   imports = flake.lib.darwinHost {
     system = "aarch64-darwin";
-    hostName = "sheridan";
+    inherit hostName;
     caps = [
       "base"
       "dev-lite"

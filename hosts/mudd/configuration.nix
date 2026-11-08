@@ -1,8 +1,8 @@
-{ flake, ... }:
+{ flake, hostName, ... }:
 {
   imports = flake.lib.nixosHost {
     system = "x86_64-linux";
-    hostName = "mudd";
+    inherit hostName;
     caps = [
       "base"
       "dev"

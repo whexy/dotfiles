@@ -84,7 +84,7 @@ and HM modules, and enables `useGlobalPkgs`/`useUserPackages`. Hosts with only a
 `legacyPackages.<system>.homeConfigurations."<user>@<host>"`.
 
 Host files call `flake.lib.nixosHost` or `flake.lib.darwinHost` with their local
-`system`, `hostName`, `caps`, and optional extra
+`system`, the `hostName` blueprint passes them, `caps`, and optional extra
 `modules`. The helpers import the selected system cap presets, assign host
 metadata to `config.dotfiles.host.*` (declared in `modules/hosts/host`), set
 `nixpkgs.hostPlatform`, apply
