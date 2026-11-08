@@ -1,4 +1,9 @@
-{ config, lib, ... }:
+{
+  config,
+  lib,
+  flake,
+  ...
+}:
 let
   cfg = config.dotfiles.security;
 in
@@ -16,7 +21,7 @@ in
               echo 'Refusing to replace an unmanaged Claude policy: ${policy}' >&2
               exit 1
             fi
-            ln -sfn ${../../home/agents/claude-code/settings.json} '${policy}'
+            ln -sfn ${builtins.toFile "claude-policy.json" (builtins.toJSON flake.lib.agentPolicy.claude)} '${policy}'
           ''
         else
           ''

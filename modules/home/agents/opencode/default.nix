@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  flake,
   ...
 }:
 let
@@ -11,6 +12,7 @@ let
     inherit (cfg.opencode) model smallModel;
     inherit (config.dotfiles.llmGateways) gateways;
     access = config.dotfiles.cloudflareAccess.serviceToken;
+    policy = flake.lib.agentPolicy;
     mcpServers = cfg.mcp.rendered.opencode;
   };
 in

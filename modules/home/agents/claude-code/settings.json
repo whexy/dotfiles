@@ -1,7 +1,0 @@
-{
-  "permissions": {
-    "allow": ["Read(/nix/store/**)"],
-    "deny": ["Edit(/nix/store/**)"]
-  },
-  "promptCacheTtl": "1h"
-}

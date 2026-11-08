@@ -99,6 +99,8 @@ in
 
   agenixDecrypt = import ./agenix-decrypt.nix;
 
+  agentPolicy = import ./agent-policy.nix;
+
   inherit updater;
 
   skillRepo = import ./skill-repo.nix { inherit inputs updater; };

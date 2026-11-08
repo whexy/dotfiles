@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  flake,
   ...
 }:
 let
@@ -86,8 +87,8 @@ in
 {
   config = lib.mkMerge [
     (lib.mkIf cfg.agentPolicy.enable {
-      environment.etc."claude-code/managed-settings.d/50-dotfiles.json".source =
-        ../../home/agents/claude-code/settings.json;
+      environment.etc."claude-code/managed-settings.d/50-dotfiles.json".text =
+        builtins.toJSON flake.lib.agentPolicy.claude;
     })
 
     (lib.mkIf cfg.passwordlessSudo.enable { security.sudo.wheelNeedsPassword = false; })

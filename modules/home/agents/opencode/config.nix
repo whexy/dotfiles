@@ -3,6 +3,7 @@
   lib,
   gateways,
   access,
+  policy,
   model,
   smallModel,
   mcpServers,
@@ -41,23 +42,17 @@
   websearch.provider = "searxng";
   mcp.servers = mcpServers;
 
-  permissions = [
-    {
+  permissions =
+    map (resource: {
       action = "external_directory";
-      resource = "/nix/store/**";
+      inherit resource;
       effect = "allow";
-    }
-    {
-      action = "external_directory";
-      resource = "/tmp/**";
-      effect = "allow";
-    }
-    {
+    }) (policy.readable ++ [ "/tmp/**" ])
+    ++ map (resource: {
       action = "edit";
-      resource = "/nix/store/**";
+      inherit resource;
       effect = "deny";
-    }
-  ];
+    }) policy.readOnly;
 
   # Keep providers auto-detected from ambient credentials (and OpenCode Zen)
   # out of the configured provider set.

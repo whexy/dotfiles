@@ -2,6 +2,7 @@
   config,
   lib,
   pkgs,
+  flake,
   ...
 }:
 {
@@ -30,7 +31,7 @@
         ];
         # Also maintain these rules for standalone Home Manager installations;
         # system-managed hosts additionally enforce them through managed policy.
-        maintainedSettings = builtins.fromJSON (builtins.readFile ./settings.json);
+        maintainedSettings = flake.lib.agentPolicy.claude;
         resetEnv = [
           "ANTHROPIC_AUTH_TOKEN"
           "CLAUDE_CODE_OAUTH_TOKEN"
