@@ -91,6 +91,10 @@ in
 
   importDir = import ./importDir.nix { inherit lib; };
 
+  t3 = import ./t3.nix { inherit tailnetHost; };
+
+  userService = import ./user-service.nix;
+
   inherit updater;
 
   skillRepo = import ./skill-repo.nix { inherit inputs updater; };

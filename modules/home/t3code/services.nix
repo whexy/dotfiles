@@ -4,7 +4,11 @@
 {
   pkgs,
   lib,
+  isDarwin,
   cfg,
+  # flake.lib.t3's ports: the server's loopback port and Tailscale Serve's.
+  port,
+  tailnetPort,
   t3,
   # The policy command that picks the managed policy at each start and
   # restarts the server when it changes (dotfiles.t3code.policy.resolver),
@@ -17,14 +21,8 @@
   gitConfig,
 }:
 let
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
-
-  updatePolicy = cfg.server.enable && policy != null;
-  updateInterval = 120;
-
-  # Tailscale Serve and the Cloudflare tunnel both proxy to this loopback port.
-  port = 3773;
-  tailnetPort = 35338;
+  names = import ./units.nix;
+  userService = import ../../../lib/user-service.nix { inherit lib isDarwin homeDirectory; };
 
   # Service managers start with a bare environment; source the same session
   # variables and profile PATH a login shell would get.
@@ -88,94 +86,33 @@ let
     + builtins.readFile ./tailnet.sh
   );
 in
-{
-  inherit port;
-
-  systemdUserServices =
-    lib.optionalAttrs (cfg.server.enable && !isDarwin) {
-      t3code = {
-        Unit.Description = "T3 Code server";
-        Service = {
-          ExecStart = "${serve}";
-          Restart = "on-failure";
-          RestartSec = 10;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-    }
-    // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable && !isDarwin) {
-      t3code-tailnet = {
-        Unit.Description = "T3 Code Tailscale route";
-        Service = {
-          ExecStart = "${tailnet}";
-          TimeoutStopSec = 30;
-          Restart = "on-failure";
-          RestartSec = 10;
-        };
-        Install.WantedBy = [ "default.target" ];
-      };
-    }
-    // lib.optionalAttrs (updatePolicy && !isDarwin) {
-      t3code-policy-update = {
-        Unit.Description = "Restart the T3 Code server when its policy changes";
-        Service = {
-          Type = "oneshot";
-          ExecStart = "${policy.command} update";
-          Environment = [ "XDG_STATE_HOME=${stateHome}" ];
-        };
+userService.units (
+  lib.optionalAttrs cfg.server.enable {
+    ${names.server} = {
+      description = "T3 Code server";
+      argv = [ "${serve}" ];
+    };
+  }
+  // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable) {
+    ${names.tailnet} = {
+      description = "T3 Code Tailscale route";
+      argv = [ "${tailnet}" ];
+      stopTimeout = 30;
+    };
+  }
+  // lib.optionalAttrs (cfg.server.enable && policy != null) {
+    ${names.policyUpdate} = {
+      description = "Restart the T3 Code server when its policy changes";
+      argv = [
+        policy.command
+        "update"
+      ];
+      environment.XDG_STATE_HOME = stateHome;
+      log = "t3code-policy";
+      interval = {
+        seconds = 120;
+        description = "Check the T3 Code policy for changes";
       };
     };
-
-  systemdUserTimers = lib.optionalAttrs (updatePolicy && !isDarwin) {
-    t3code-policy-update = {
-      Unit.Description = "Check the T3 Code policy for changes";
-      Timer = {
-        OnStartupSec = updateInterval;
-        OnUnitActiveSec = updateInterval;
-      };
-      Install.WantedBy = [ "timers.target" ];
-    };
-  };
-
-  launchdAgents =
-    lib.optionalAttrs (cfg.server.enable && isDarwin) {
-      t3code = {
-        enable = true;
-        config = {
-          ProgramArguments = [ "${serve}" ];
-          RunAtLoad = true;
-          KeepAlive.SuccessfulExit = false;
-          StandardOutPath = "${homeDirectory}/Library/Logs/t3code.log";
-          StandardErrorPath = "${homeDirectory}/Library/Logs/t3code.log";
-        };
-      };
-    }
-    // lib.optionalAttrs (cfg.server.enable && cfg.server.tailnet.enable && isDarwin) {
-      t3code-tailnet = {
-        enable = true;
-        config = {
-          ProgramArguments = [ "${tailnet}" ];
-          ExitTimeOut = 30;
-          RunAtLoad = true;
-          KeepAlive.SuccessfulExit = false;
-          StandardOutPath = "${homeDirectory}/Library/Logs/t3code-tailnet.log";
-          StandardErrorPath = "${homeDirectory}/Library/Logs/t3code-tailnet.log";
-        };
-      };
-    }
-    // lib.optionalAttrs (updatePolicy && isDarwin) {
-      t3code-policy-update = {
-        enable = true;
-        config = {
-          ProgramArguments = [
-            policy.command
-            "update"
-          ];
-          StartInterval = updateInterval;
-          EnvironmentVariables.XDG_STATE_HOME = stateHome;
-          StandardOutPath = "${homeDirectory}/Library/Logs/t3code-policy.log";
-          StandardErrorPath = "${homeDirectory}/Library/Logs/t3code-policy.log";
-        };
-      };
-    };
-}
+  }
+)

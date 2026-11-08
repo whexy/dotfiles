@@ -13,6 +13,8 @@ let
 
   services = import ./services.nix {
     inherit pkgs lib cfg;
+    inherit (pkgs.stdenv.hostPlatform) isDarwin;
+    inherit (flake.lib.t3) port tailnetPort;
     t3 = lib.getExe' cfg.finalPackage "t3";
     policy = cfg.policy.resolver;
     inherit (config.home) profileDirectory homeDirectory;
@@ -35,9 +37,7 @@ in
       }
     ];
 
-    systemd.user.services = services.systemdUserServices;
-    systemd.user.timers = services.systemdUserTimers;
-    launchd.agents = services.launchdAgents;
+    inherit (services) systemd launchd;
 
     dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (
       let
@@ -46,7 +46,7 @@ in
       {
         tunnel = "t3-${hostName}";
         inherit hostname;
-        inherit (services) port;
+        inherit (flake.lib.t3) port;
         description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
       }
     );

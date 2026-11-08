@@ -1,4 +1,9 @@
-{ pkgs, perSystem, ... }:
+{
+  pkgs,
+  perSystem,
+  flake,
+  ...
+}:
 let
   python = pkgs.python3.withPackages (p: [ p.websockets ]);
   fixture = ./test.py;
@@ -21,16 +26,8 @@ let
   };
   moduleFor =
     isDarwin: enabled: tailnetEnabled:
-    import ../../modules/home/t3code/services.nix {
+    import ./services.nix { inherit pkgs flake; } isDarwin {
       inherit policy;
-      pkgs = pkgs // {
-        stdenv = pkgs.stdenv // {
-          hostPlatform = pkgs.stdenv.hostPlatform // {
-            inherit isDarwin;
-          };
-        };
-      };
-      inherit (pkgs) lib;
       cfg.server = {
         enable = enabled;
         tailnet.enable = tailnetEnabled;
@@ -39,17 +36,16 @@ let
       profileDirectory = profile;
       homeDirectory = "/tmp";
       stateHome = "/tmp/.local/state";
-      gitConfig = "/dev/null";
     };
   linux = moduleFor false true true;
   darwin = moduleFor true true true;
-  server = linux.systemdUserServices.t3code.Service.ExecStart;
-  route = linux.systemdUserServices.t3code-tailnet.Service.ExecStart;
+  server = linux.systemd.user.services.t3code.Service.ExecStart;
+  route = linux.systemd.user.services.t3code-tailnet.Service.ExecStart;
 in
-assert darwin.launchdAgents.t3code.config.ProgramArguments == [ server ];
-assert darwin.launchdAgents.t3code-tailnet.config.ProgramArguments == [ route ];
-assert !(moduleFor false true false).systemdUserServices ? t3code-tailnet;
-assert !(moduleFor true false true).launchdAgents ? t3code-tailnet;
+assert darwin.launchd.agents.t3code.config.ProgramArguments == [ server ];
+assert darwin.launchd.agents.t3code-tailnet.config.ProgramArguments == [ route ];
+assert !(moduleFor false true false).systemd.user.services ? t3code-tailnet;
+assert !(moduleFor true false true).launchd.agents ? t3code-tailnet;
 pkgs.runCommand "t3-tailnet"
   {
     __darwinAllowLocalNetworking = true;
@@ -59,6 +55,7 @@ pkgs.runCommand "t3-tailnet"
     ];
   }
   ''
+    export T3_PORT=${toString flake.lib.t3.port} T3_TAILNET_PORT=${toString flake.lib.t3.tailnetPort}
     python ${fixture} test ${server} ${route}
     ${pkgs.lib.optionalString pkgs.stdenv.hostPlatform.isLinux ''
       python ${fixture} actual ${pkgs.lib.getExe perSystem.self.t3code-fork} ${profile}/bin

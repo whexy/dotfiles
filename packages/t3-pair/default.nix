@@ -114,7 +114,7 @@ pkgs.writeShellApplication {
       if [ -n "$peer" ]; then
         read -r peer_id dns_name <<<"$peer"
         if [ -z "$base_url" ]; then
-          base_url="https://$dns_name:35338"
+          base_url="https://$dns_name:${toString flake.lib.t3.tailnetPort}"
         fi
         if [ "$peer_id" = "$(jq -r '.Self.ID' <<<"$status")" ]; then
           here=true

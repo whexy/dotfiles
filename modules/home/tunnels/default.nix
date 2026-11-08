@@ -7,11 +7,11 @@ args@{
   config,
   lib,
   pkgs,
+  flake,
   ...
 }:
 let
   cfg = config.dotfiles.tunnels;
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
   # A tunnel's state lives under its service's name, so renaming a service
   # makes it recover its tunnel's credentials again.
@@ -64,7 +64,11 @@ let
       '';
     };
 
-  log = name: "${config.home.homeDirectory}/Library/Logs/${name}.log";
+  userService = flake.lib.userService {
+    inherit lib;
+    inherit (pkgs.stdenv.hostPlatform) isDarwin;
+    inherit (config.home) homeDirectory;
+  };
 in
 {
   options.dotfiles.tunnels.hostName = lib.mkOption {
@@ -109,38 +113,18 @@ in
     description = "Tunnels by the name of the user service that runs each.";
   };
 
-  config = lib.mkIf (cfg.services != { }) {
-    # `cloudflared tunnel login` cert for the tunnels' zone: it creates
-    # tunnels and edits any DNS record in that zone.
-    age.secrets.cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
-
-    systemd.user.services = lib.mkIf (!isDarwin) (
+  config = lib.mkIf (cfg.services != { }) (
+    {
+      # `cloudflared tunnel login` cert for the tunnels' zone: it creates
+      # tunnels and edits any DNS record in that zone.
+      age.secrets.cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
+    }
+    // userService.units (
       lib.mapAttrs (name: service: {
-        Unit = {
-          Description = service.description;
-          After = [ "agenix.service" ];
-          Wants = [ "agenix.service" ];
-        };
-        Service = {
-          ExecStart = lib.getExe (publish name service);
-          Restart = "on-failure";
-          RestartSec = 10;
-        };
-        Install.WantedBy = [ "default.target" ];
+        inherit (service) description;
+        argv = [ (lib.getExe (publish name service)) ];
+        wants = [ "agenix.service" ];
       }) cfg.services
-    );
-
-    launchd.agents = lib.mkIf isDarwin (
-      lib.mapAttrs (name: service: {
-        enable = true;
-        config = {
-          ProgramArguments = [ (lib.getExe (publish name service)) ];
-          RunAtLoad = true;
-          KeepAlive.SuccessfulExit = false;
-          StandardOutPath = log name;
-          StandardErrorPath = log name;
-        };
-      }) cfg.services
-    );
-  };
+    )
+  );
 }

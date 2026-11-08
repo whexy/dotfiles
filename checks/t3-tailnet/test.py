@@ -14,6 +14,12 @@ import time
 import urllib.request
 from websockets.sync.client import connect
 
+# The server's ports, from flake.lib.t3.
+PORT = os.environ["T3_PORT"]
+TAILNET_PORT = os.environ["T3_TAILNET_PORT"]
+ROUTE = f"fixture.ts.net:{TAILNET_PORT}"
+BACKEND = f"http://127.0.0.1:{PORT}"
+
 
 def read(path, default):
     return json.loads(path.read_text()) if path.exists() else default
@@ -34,16 +40,16 @@ def tailscale(args):
         print(json.dumps({"BackendState": "Running", "Self": {"DNSName": "localhost." if (root / "actual-dns").exists() else "fixture.ts.net."}}))
     elif args == ["serve", "status", "--json"]:
         print(config.read_text())
-    elif args == ["serve", "--https=35338", "--set-path=/", "off"]:
+    elif args == ["serve", f"--https={TAILNET_PORT}", "--set-path=/", "off"]:
         routes = read(config, {})
-        del routes["Web"]["fixture.ts.net:35338"]["Handlers"]["/"]
+        del routes["Web"][ROUTE]["Handlers"]["/"]
         write(config, routes)
     else:
-        assert args == ["serve", "--bg", "--https=35338", "http://127.0.0.1:3773"], args
+        assert args == ["serve", "--bg", f"--https={TAILNET_PORT}", BACKEND], args
         if (root / "fail-serve").exists():
             return 1
         routes = read(config, {})
-        routes.setdefault("Web", {}).setdefault("fixture.ts.net:35338", {}).setdefault("Handlers", {})["/"] = {"Proxy": "http://127.0.0.1:3773"}
+        routes.setdefault("Web", {}).setdefault(ROUTE, {}).setdefault("Handlers", {})["/"] = {"Proxy": BACKEND}
         write(config, routes)
         with (root / "writes").open("a") as output:
             output.write("setup\n")
@@ -53,7 +59,7 @@ def tailscale(args):
 def serve(args):
     assert os.environ["T3_TEST_SESSION"] == "loaded"
     assert os.environ["T3CODE_DEV_MANAGED_POLICY_PATH"] == "/no-policy.json"
-    assert args == ["serve", "--host", "127.0.0.1", "--port", "3773", "--no-browser", "--tailscale-serve", "--tailscale-serve-port", "35338"], args
+    assert args == ["serve", "--host", "127.0.0.1", "--port", PORT, "--no-browser", "--tailscale-serve", "--tailscale-serve-port", TAILNET_PORT], args
     root = Path(os.environ["T3_TEST_ROOT"])
 
     class Handler(BaseHTTPRequestHandler):
@@ -61,8 +67,8 @@ def serve(args):
             assert self.path == "/.well-known/t3/environment"
             routes = read(root / "routes.json", {})
             endpoints = []
-            if (root / "online").exists() and routes.get("Web", {}).get("fixture.ts.net:35338", {}).get("Handlers", {}).get("/", {}).get("Proxy") == "http://127.0.0.1:3773":
-                endpoints.append("https://fixture.ts.net:35338/")
+            if (root / "online").exists() and routes.get("Web", {}).get(ROUTE, {}).get("Handlers", {}).get("/", {}).get("Proxy") == BACKEND:
+                endpoints.append(f"https://{ROUTE}/")
             body = json.dumps({"pid": os.getpid(), "endpoints": endpoints}).encode()
             self.send_response(200)
             self.end_headers()
@@ -79,7 +85,7 @@ def serve(args):
 def test(server_script, route_script):
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        unrelated = {"Web": {"fixture.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:9999"}}}, "fixture.ts.net:35338": {"Handlers": {"/other": {"Proxy": "http://127.0.0.1:9998"}}}}}
+        unrelated = {"Web": {"fixture.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:9999"}}}, ROUTE: {"Handlers": {"/other": {"Proxy": "http://127.0.0.1:9998"}}}}}
         write(root / "routes.json", unrelated)
         env = dict(os.environ, T3_TEST_ROOT=directory)
         server = subprocess.Popen([server_script], env=env, start_new_session=True)
@@ -132,7 +138,7 @@ def test(server_script, route_script):
             assert discovery(proxy.server_port)["pid"] == initial["pid"]
             routes = read(root / "routes.json", {})
             assert routes["Web"]["fixture.ts.net:443"] == unrelated["Web"]["fixture.ts.net:443"]
-            assert routes["Web"]["fixture.ts.net:35338"]["Handlers"]["/other"] == unrelated["Web"]["fixture.ts.net:35338"]["Handlers"]["/other"]
+            assert routes["Web"][ROUTE]["Handlers"]["/other"] == unrelated["Web"][ROUTE]["Handlers"]["/other"]
             writes = (root / "writes").read_text()
             time.sleep(11)
             assert (root / "writes").read_text() == writes
@@ -146,9 +152,9 @@ def test(server_script, route_script):
             assert remaining == unrelated, remaining
             # A replaced handler belongs to its new owner and must survive cleanup.
             route = subprocess.Popen([route_script], env=env, start_new_session=True)
-            wait_for(lambda: read(root / "routes.json", {}).get("Web", {}).get("fixture.ts.net:35338", {}).get("Handlers", {}).get("/", {}).get("Proxy") == "http://127.0.0.1:3773")
+            wait_for(lambda: read(root / "routes.json", {}).get("Web", {}).get(ROUTE, {}).get("Handlers", {}).get("/", {}).get("Proxy") == BACKEND)
             replacement = read(root / "routes.json", {})
-            replacement["Web"]["fixture.ts.net:35338"]["Handlers"]["/"] = {"Proxy": "http://127.0.0.1:9997"}
+            replacement["Web"][ROUTE]["Handlers"]["/"] = {"Proxy": "http://127.0.0.1:9997"}
             write(root / "routes.json", replacement)
             os.killpg(route.pid, signal.SIGTERM)
             route.wait(timeout=3)

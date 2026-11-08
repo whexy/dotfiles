@@ -6,6 +6,7 @@
   t3,
   url,
   editorUrl,
+  alertUrl,
   none,
   # Shell commands that test whether the server service runs, and restart it.
   server,
@@ -24,7 +25,7 @@ pkgs.writeShellApplication {
     no_policy=${none}
     editor_url=${lib.escapeShellArg editorUrl}
     policy_url=''${T3CODE_POLICY_URL:-${lib.escapeShellArg url}}
-    alert_url=''${T3CODE_POLICY_ALERT_URL:-https://n8n.clusters.work/webhook/t3code-alert}
+    alert_url=''${T3CODE_POLICY_ALERT_URL:-${lib.escapeShellArg alertUrl}}
     # Nix's curl knows no CA bundle on macOS or non-NixOS Linux.
     export CURL_CA_BUNDLE=''${CURL_CA_BUNDLE:-${pkgs.cacert}/etc/ssl/certs/ca-bundle.crt}
     server_running() { ${server.running}; }
