@@ -7,16 +7,11 @@
 }:
 let
   cfg = config.dotfiles.panel;
+  inherit (import ../sketchybar-style.nix { inherit config; }) colors;
 
   sketchybar = lib.getExe pkgs.sketchybar;
 
   enabled = cfg.renpho.enable && cfg.renderer == "sketchybar";
-
-  # Subset of the Liquid Glass palette in ../sketchybar.nix.
-  colors = {
-    gray = "0xff98989d"; # systemGray, stale or fetch error
-    purple = "0xffbf5af2"; # systemPurple, neutral reading
-  };
 
   weightScript = import ./weight.nix { inherit config lib pkgs; };
 

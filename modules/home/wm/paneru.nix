@@ -9,10 +9,7 @@ let
   cfg = config.dotfiles.wm;
   enabled = cfg.darwin.enable && cfg.darwin.windowManager == "paneru";
   autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
-  macbookScreen = osConfig.dotfiles.hardware.display.macbookScreen or false;
-  topPadding =
-    if (config.dotfiles.panel.sketchybar.enable && autoHideMenuBar && (!macbookScreen)) then 34 else 0;
-  bottomPadding = if (config.dotfiles.panel.sketchybar.enable && !autoHideMenuBar) then 34 else 0;
+  inherit (config.dotfiles.panel.sketchybar) reserve;
 
   # Paneru key names differ from Ghostty's (see the virtual/literal keycode
   # tables in paneru's src/config.rs).
@@ -90,7 +87,7 @@ in
             reap_empty_workspaces = true,
             ${lib.optionalString autoHideMenuBar "menubar_height = 0,\n"}
           },
-          padding = { top = ${toString topPadding}, bottom = ${toString bottomPadding}, left = 0, right = 0 },
+          padding = { top = ${toString reserve.top}, bottom = ${toString reserve.bottom}, left = 0, right = 0 },
           restore = { enabled = false },
           decorations = {
             -- Native macOS dimming of inactive windows (opacity only, no color).

@@ -1,5 +1,5 @@
 # Aerospace window manager configuration (macOS)
-args@{
+{
   config,
   lib,
   pkgs,
@@ -7,12 +7,7 @@ args@{
 }:
 let
   cfg = config.dotfiles.wm;
-  osConfig = args.osConfig or null;
-  autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
-  # On notched MacBook panels macOS reserves the menu-bar height at the top of
-  # the visible frame even with the menu bar auto-hidden, so a top gap there
-  # would double-count it (see paneru.nix for the same treatment).
-  macbookScreen = osConfig.dotfiles.hardware.display.macbookScreen or false;
+  inherit (config.dotfiles.panel.sketchybar) reserve;
   sketchybar = lib.getExe pkgs.sketchybar;
 in
 {
@@ -79,9 +74,7 @@ in
           outer = {
             left = 0;
             right = 0;
-            top =
-              if (config.dotfiles.panel.sketchybar.enable && autoHideMenuBar && !macbookScreen) then 34 else 0;
-            bottom = if (config.dotfiles.panel.sketchybar.enable && !autoHideMenuBar) then 34 else 0;
+            inherit (reserve) top bottom;
           };
         };
 

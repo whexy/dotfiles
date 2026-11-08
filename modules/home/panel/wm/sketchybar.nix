@@ -14,6 +14,8 @@
 }:
 let
   cfg = config.dotfiles.panel;
+  style = import ../sketchybar-style.nix { inherit config; };
+  inherit (style) colors;
 
   sketchybar = lib.getExe pkgs.sketchybar;
   aerospace = lib.getExe pkgs.unstable.aerospace;
@@ -26,18 +28,6 @@ let
   isPaneru = windowManager == "paneru";
 
   enabled = cfg.renderer == "sketchybar" && wmEnabled;
-
-  # Subset of the Liquid Glass palette in ../sketchybar.nix.
-  colors = {
-    fg = "0xffffffff";
-    fgDim = "0xb3ffffff"; # 70% white, empty workspaces and the front app
-    glass = "0x1affffff"; # 10% white, shared capsule backgrounds
-    glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
-    blue = "0xff0a84ff"; # systemBlue, active workspace pill
-    green = "0xff30d158"; # systemGreen, live SSH context
-    greenGlass = "0x2630d158"; # 15% systemGreen, SSH pill background
-    greenBorder = "0x8030d158"; # 50% systemGreen, SSH pill border
-  };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-wm-${name}";
 
@@ -229,17 +219,6 @@ let
     ++ [ frontAppItem ]
     ++ lib.optional config.programs.ssh-window.enable sshContextItem;
 
-  mkAgent = name: programArguments: {
-    enable = true;
-    config = {
-      ProgramArguments = programArguments;
-      ProcessType = "Interactive";
-      KeepAlive = true;
-      RunAtLoad = true;
-      StandardOutPath = "${config.home.homeDirectory}/Library/Logs/${name}.log";
-      StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/${name}.err.log";
-    };
-  };
 in
 {
   config = lib.mkIf enabled {
@@ -253,20 +232,13 @@ in
         {
           name = "spaces";
           members = map (n: "space.${toString n}") (lib.range 1 9);
-          settings = {
-            "background.drawing" = "on";
-            "background.color" = colors.glass;
-            "background.height" = 26;
-            "background.corner_radius" = 13;
-            "background.border_width" = 1;
-            "background.border_color" = colors.glassBorder;
-          };
+          settings = style.capsuleSettings;
         }
       ];
     };
 
     launchd.agents.sketchybar-paneru-events = lib.mkIf isPaneru (
-      mkAgent "sketchybar-paneru" [ "${paneruEventBridge}" ]
+      style.mkAgent "sketchybar-paneru" [ "${paneruEventBridge}" ]
     );
   };
 }

@@ -10,7 +10,7 @@
 # removing and re-adding the tracks painted one empty frame per refresh.
 # SketchyBar drops property writes that do not change a value, so unchanged
 # quotas now repaint nothing at all.
-args@{
+{
   config,
   lib,
   pkgs,
@@ -18,9 +18,8 @@ args@{
 }:
 let
   cfg = config.dotfiles.panel;
+  style = import ../sketchybar-style.nix { inherit config; };
   showCountdown = cfg.aiQuota.showCountdown;
-  osConfig = args.osConfig or null;
-  barOnTop = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
   shared = import ./shared.nix;
   inherit (shared) apiUrl logos updateInterval;
 
@@ -41,9 +40,6 @@ let
     green = "0xff10a37f";
     cyan = "0xff22b8cf";
     white = "0xffffffff";
-    track = "0x26ffffff";
-    glass = "0x1affffff";
-    glassBorder = "0x40ffffff";
   };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-ai-quota-${name}";
@@ -69,8 +65,7 @@ let
   '';
 
   popupClick =
-    provider:
-    "AI_QUOTA_BAR_EDGE=${if barOnTop then "top" else "bottom"} ${aiQuotaPopup} --toggle ${provider}";
+    provider: "AI_QUOTA_BAR_EDGE=${cfg.sketchybar.position} ${aiQuotaPopup} --toggle ${provider}";
 
   pillPlugin =
     provider: accent:
@@ -210,7 +205,7 @@ let
           padding_left = 0;
           padding_right = laneRightPadding;
           "slider.highlight_color" = accent;
-          "slider.background.color" = colors.track;
+          "slider.background.color" = style.colors.track;
           "slider.background.height" = 4;
           "slider.background.corner_radius" = 2;
           "slider.knob.drawing" = "off";
@@ -332,14 +327,7 @@ let
       "ai_quota.${p.name}.slot"
     ]
     ++ lib.optional showCountdown "ai_quota.${p.name}.countdown";
-    settings = {
-      "background.drawing" = "on";
-      "background.color" = colors.glass;
-      "background.height" = 26;
-      "background.corner_radius" = 13;
-      "background.border_width" = 1;
-      "background.border_color" = colors.glassBorder;
-    };
+    settings = style.capsuleSettings;
   };
 in
 {

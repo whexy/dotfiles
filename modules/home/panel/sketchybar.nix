@@ -4,7 +4,7 @@
 # built-in right-side pills. Feature modules contribute items through
 # `dotfiles.panel.sketchybar.items` and custom events through
 # `dotfiles.panel.sketchybar.events` (see ./wm and ./ai-quota).
-args@{
+{
   config,
   lib,
   pkgs,
@@ -12,26 +12,10 @@ args@{
 }:
 let
   cfg = config.dotfiles.panel;
-  osConfig = args.osConfig or null;
-
-  autoHideMenuBar = osConfig.dotfiles.hardware.display.autoHideMenuBar or true;
-  barPosition = if autoHideMenuBar then "top" else "bottom";
+  style = import ./sketchybar-style.nix { inherit config; };
+  inherit (style) colors capsule;
 
   sketchybar = lib.getExe pkgs.sketchybar;
-
-  # macOS Liquid Glass palette (0xAARRGGBB): dark-variant system colors for
-  # state, translucent white tints for the glass capsules. Status icons stay
-  # monochrome white; color is reserved for state (charging, low, muted) and
-  # the accent-blue active workspace.
-  colors = {
-    bar = "0x00000000"; # fully transparent, wallpaper shows through
-    fg = "0xffffffff"; # primary text/icons
-    glass = "0x1affffff"; # 10% white, default item capsule
-    glassBorder = "0x40ffffff"; # 25% white hairline, capsule edge highlight
-    red = "0xffff453a"; # systemRed: muted, critical
-    yellow = "0xffffd60a"; # systemYellow: battery low, quota warning
-    green = "0xff30d158"; # systemGreen: charging
-  };
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-${name}";
 
@@ -141,7 +125,7 @@ let
 
   sketchybarConfig = pkgs.writeShellScript "sketchybarrc" ''
     bar=(
-      position=${barPosition}
+      position=${cfg.sketchybar.position}
       height=36
       color=${colors.bar}
       margin=0
@@ -172,11 +156,11 @@ let
       label.padding_left=4
       label.padding_right=7
       background.drawing=on
-      background.color=${colors.glass}
-      background.height=26
-      background.corner_radius=13
-      background.border_width=1
-      background.border_color=${colors.glassBorder}
+      background.color=${capsule.color}
+      background.height=${toString capsule.height}
+      background.corner_radius=${toString capsule.corner_radius}
+      background.border_width=${toString capsule.border_width}
+      background.border_color=${capsule.border_color}
     )
     ${sketchybar} --default "''${defaults[@]}"
 
@@ -190,17 +174,6 @@ let
     ${lib.concatMapStringsSep "\n" (event: "${sketchybar} --trigger ${event}") cfg.sketchybar.events}
   '';
 
-  mkAgent = name: programArguments: {
-    enable = true;
-    config = {
-      ProgramArguments = programArguments;
-      ProcessType = "Interactive";
-      KeepAlive = true;
-      RunAtLoad = true;
-      StandardOutPath = "${config.home.homeDirectory}/Library/Logs/${name}.log";
-      StandardErrorPath = "${config.home.homeDirectory}/Library/Logs/${name}.err.log";
-    };
-  };
 in
 {
   config = lib.mkIf (cfg.renderer == "sketchybar") {
@@ -212,7 +185,7 @@ in
     # and cause the clear/refill/clear/refill sequence seen during switches.
     xdg.configFile."sketchybar/sketchybarrc".source = sketchybarConfig;
 
-    launchd.agents.sketchybar = mkAgent "sketchybar" [
+    launchd.agents.sketchybar = style.mkAgent "sketchybar" [
       sketchybar
       "--config"
       "${sketchybarConfig}"

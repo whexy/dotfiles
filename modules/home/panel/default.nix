@@ -4,14 +4,19 @@
 # Feature modules contribute pills through the renderers' extension points
 # declared here (eww.*, sketchybar.*) or, for Waybar, by merging into
 # programs.waybar with mkOrder, so the renderers stay feature-agnostic.
-{
+args@{
   config,
   lib,
   pkgs,
   ...
 }:
 let
+  osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
+  display = osConfig.dotfiles.hardware.display or { };
+  autoHideMenuBar = display.autoHideMenuBar or true;
+  macbookScreen = display.macbookScreen or false;
+  sketchybarReserve = 34;
 
   sketchybarItem = lib.types.submodule {
     options = {
@@ -164,6 +169,37 @@ in
           Brackets rendered after all items, letting feature modules draw one
           shared background behind a group of items they contributed.
         '';
+      };
+
+      # macOS hides its menu bar at the top only when told to, so the bar
+      # takes the top edge then and the bottom otherwise.
+      position = lib.mkOption {
+        type = lib.types.enum [
+          "top"
+          "bottom"
+        ];
+        readOnly = true;
+        default = if autoHideMenuBar then "top" else "bottom";
+        defaultText = lib.literalMD "`top` when the host auto-hides the menu bar, else `bottom`";
+        description = "The screen edge SketchyBar sits on.";
+      };
+
+      # On notched MacBook panels macOS reserves the menu-bar height at the
+      # top of the visible frame even with the menu bar auto-hidden, so a top
+      # reservation there would double-count it.
+      reserve = lib.mkOption {
+        type = lib.types.attrsOf lib.types.int;
+        readOnly = true;
+        default =
+          let
+            shown = cfg.renderer == "sketchybar";
+          in
+          {
+            top = if shown && cfg.sketchybar.position == "top" && !macbookScreen then sketchybarReserve else 0;
+            bottom = if shown && cfg.sketchybar.position == "bottom" then sketchybarReserve else 0;
+          };
+        defaultText = lib.literalMD "the bar's height at its edge while it renders";
+        description = "Pixels a window manager leaves free for the bar at the top and bottom screen edges.";
       };
     };
   };
