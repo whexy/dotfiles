@@ -12,10 +12,8 @@
 # flake output after hosts/<host>/users/<user> but doesn't pass the host
 # name into the module; the real machine hostname may differ).
 #
-# On headless servers the user manager stops when its user logs out, which
-# takes this daemon down with it and silently strands the host on its current
-# generation, so activation turns on lingering for the user. Check
-# convergence in "<stateDir>/status.json".
+# Lingering (dotfiles.linger) keeps the daemon running after its user logs
+# out. Check convergence in "<stateDir>/status.json".
 {
   config,
   flake,
@@ -102,14 +100,14 @@ in
 
     age.secrets = upgrader.secrets;
 
-    # logind's polkit policy lets any user linger without authentication; a
-    # host that tightens it needs `sudo loginctl enable-linger <user>` once.
-    home.activation.enableLinger = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-      if [ ! -e /var/lib/systemd/linger/${config.home.username} ]; then
-        run ${lib.getExe' pkgs.systemd "loginctl"} enable-linger ${lib.escapeShellArg config.home.username} ||
-          warnEcho "Could not enable lingering: the auto-upgrade daemon stops when ${config.home.username} logs out."
-      fi
-    '';
+    assertions = [
+      {
+        assertion = pkgs.stdenv.hostPlatform.isLinux;
+        message = "dotfiles.autoUpgrade runs as a systemd user service; Darwin hosts set dotfiles.system.autoUpgrade.";
+      }
+    ];
+
+    dotfiles.linger.enable = lib.mkDefault true;
 
     systemd.user.services.dotfiles-upgraded = {
       Unit = {

@@ -30,6 +30,7 @@ in
 {
   config = lib.mkIf (cfg.enable && cfg.server.enable) {
     inherit (services) systemd launchd;
+    dotfiles.linger.enable = lib.mkDefault true;
 
     dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable {
       service = "t3";

@@ -135,6 +135,8 @@ in
       # tunnels and edits any DNS record in that zone.
       age.secrets.cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
 
+      dotfiles.linger.enable = lib.mkDefault true;
+
       assertions = [
         {
           assertion = cfg.hostName != null;

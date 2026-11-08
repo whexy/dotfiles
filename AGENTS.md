@@ -403,7 +403,8 @@ internet by its own tunnel (below).
 Standalone homes have no `osConfig`, so a standalone host that runs the
 server enables it, its tailnet route, and `dotfiles.tunnels.hostName` itself
 (b3srv0, off the tailnet; proxmox, on it). Its user services start at boot
-only with lingering, which the auto-upgrade module turns on.
+only with lingering (`dotfiles.linger`), which the server, tunnels, the
+tailnet relay and the auto-upgrade daemon turn on for standalone Linux homes.
 
 ### Public tunnel
 

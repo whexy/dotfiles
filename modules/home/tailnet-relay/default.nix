@@ -181,6 +181,8 @@ in
 
     age.secrets.tailnet-relay-oauth.file = ../../../secrets/tailnet-relay-oauth.age;
 
+    dotfiles.linger.enable = lib.mkDefault true;
+
     # systemd holds each port, so it stays this user's while the relay
     # restarts; a port another user took first fails its socket unit.
     systemd.user.sockets = lib.mapAttrs' (
