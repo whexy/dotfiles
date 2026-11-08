@@ -311,9 +311,10 @@ resolve) resolve ;;
 update) update ;;
 status) status ;;
 *)
-  echo "usage: t3code-policy status" >&2
+  echo "usage: t3code-policy resolve|update|status" >&2
   echo "  resolve  fetch and check the policy, print the path to load (the server's wrapper runs it)" >&2
   echo "  update   restart the running server if the policy changed (its timer runs it)" >&2
+  echo "  status   show what the last start decided, the last update check, and what the server loaded" >&2
   exit 2
   ;;
 esac
