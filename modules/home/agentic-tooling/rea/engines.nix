@@ -12,30 +12,14 @@
 let
   base = perSystem.self.rea-agents;
 
-  # REA checks the exact profile it was verified against and refuses others.
+  # pwntools on the exact profile REA was verified against.
   pwntoolsPython =
     let
-      unicorn = pkgs.unicorn.overrideAttrs (
-        finalAttrs: _: {
-          version = "2.1.2";
-          src = pkgs.fetchFromGitHub {
-            owner = "unicorn-engine";
-            repo = "unicorn";
-            tag = finalAttrs.version;
-            hash = "sha256-qA84xBztyWmt/rUExhhZMkQzvDPx0UE9MAIPG/Su3iE=";
-          };
-        }
-      );
+      unicorn = perSystem.self.rea-unicorn;
       python = pkgs.python3.override {
         self = python;
         packageOverrides = pyself: super: {
-          pyelftools = super.pyelftools.overridePythonAttrs (old: {
-            version = "0.33";
-            src = old.src.override {
-              tag = "v0.33";
-              hash = "sha256-NqF5A6PRl4uncwNS9j44fIV7ovlljiucvV2Msv0LK/w=";
-            };
-          });
+          pyelftools = perSystem.self.rea-pyelftools;
           # This release reads its version from git, absent from the tarball.
           unicorn = (super.unicorn.override { inherit unicorn; }).overridePythonAttrs (old: {
             build-system = old.build-system ++ [ pyself.versioningit ];
@@ -61,11 +45,6 @@ let
     exec ${pwndbgVenv}/bin/gdb "$@"
   '';
 
-  jadxMcpJar = pkgs.fetchurl {
-    url = "https://github.com/1013503897/jadx-headless-mcp/releases/download/v0.7.1/jadx-headless-mcp-0.7.1-all.jar";
-    hash = "sha256-bl6s9QC2QpK/tzxJeXwZWPbuRGRuQ+hoA5rn/rVz/3U=";
-  };
-
   unstable = perSystem.nixpkgs-unstable;
 
   browser = lib.getExe pkgs.chromium;
@@ -77,7 +56,7 @@ let
     // lib.optionalAttrs cfg.android.enable {
       REA_ADB_PATH = lib.getExe' pkgs.android-tools "adb";
       REA_APKTOOL_COMMAND = lib.getExe pkgs.apktool;
-      REA_JADX_MCP_JAR = jadxMcpJar;
+      REA_JADX_MCP_JAR = perSystem.self.jadx-headless-mcp;
     }
     // lib.optionalAttrs cfg.binary.enable {
       REA_PWNTOOLS_PYTHON = lib.getExe pwntoolsPython;
