@@ -11,6 +11,8 @@
   # The names to take, as `npx skills add --skill` takes them; null takes all.
   skills ? null,
   pins,
+  # Packages that read these pins too, built when they move.
+  alsoBuild ? [ ],
 }:
 let
   inherit (pkgs) lib;
@@ -50,10 +52,13 @@ pkgs.stdenvNoCC.mkDerivation {
     cp -r .agents/skills $out/share/skills
   '';
 
-  passthru.updater = updater {
-    kind = "github-branch";
-    inherit owner repo;
-  };
+  passthru.updater = updater (
+    {
+      kind = "github-branch";
+      inherit owner repo;
+    }
+    // lib.optionalAttrs (alsoBuild != [ ]) { inherit alsoBuild; }
+  );
 
   meta = {
     description = "Agent skills from ${owner}/${repo}";

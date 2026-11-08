@@ -20,13 +20,18 @@ let
       "maintain-formal-verification-skill"
       "statechart"
     ];
-    pins = ./sources.json;
+    # pstack takes from the same repository.
+    pins = ../pstack/sources.json;
   };
 in
 pkgs.runCommand "${pname}-${skills.version}"
   {
     inherit pname;
-    inherit (skills) version passthru meta;
+    inherit (skills) version meta;
+    passthru = skills.passthru // {
+      # The pin is pstack's, whose updater builds this package when it moves.
+      updater = null;
+    };
     nativeBuildInputs = [ pkgs.makeWrapper ];
   }
   ''

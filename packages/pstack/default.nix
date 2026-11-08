@@ -13,4 +13,5 @@ flake.lib.skillRepo {
     "ketchup"
   ];
   pins = ./sources.json;
+  alsoBuild = [ "formal-verification" ];
 }

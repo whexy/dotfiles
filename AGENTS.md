@@ -219,7 +219,9 @@ that calls `flake.lib.skillRepo`:
   skill the repository publishes.
 - `sources.json` pins it: `version`, `rev` and `hash`. `nix run .#update --
 <name>` writes it, the first time and whenever the default branch moves,
-  with the commit date as `0-unstable-<date>`.
+  with the commit date as `0-unstable-<date>`. A second package from the
+  same repository reads the first's pin with no updater of its own, and the
+  first builds it through `alsoBuild` (formal-verification and pstack).
 
 `flake.lib.skillRepo` builds what the `skills` CLI installs from the pinned
 source, at `share/skills`, so agents see exactly what `npx skills add` gives
