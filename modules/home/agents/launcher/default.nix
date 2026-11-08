@@ -43,7 +43,7 @@ in
       readOnly = true;
       # The agent and its tool shells inherit what these lines export, so a
       # secret must never go here; a tool that needs one loads it in its own
-      # wrapper (see `transcribe`).
+      # wrapper.
       default = ''
         export GIT_CONFIG_GLOBAL=${cfg.gitConfig}
       ''

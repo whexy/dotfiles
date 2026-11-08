@@ -1,4 +1,4 @@
-# claude-code provider/model entries for the fzf picker wrapper.
+# Claude Code's entries in the agent-settings model picker.
 # claude reads ANTHROPIC_MODEL and authenticates with ANTHROPIC_API_KEY.
 # Compatible providers additionally require ANTHROPIC_BASE_URL.
 { lib, llmGateways }:
