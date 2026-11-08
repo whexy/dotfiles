@@ -5,52 +5,26 @@ import os
 import re
 import shutil
 import tempfile
-from collections.abc import Generator
+from collections.abc import Callable, Generator
 from contextlib import contextmanager
 from pathlib import Path
 from typing import final
 
-from agent_settings.documents import edit_document, read_document
 from agent_settings.errors import SettingsError
 
 
-def muse_config_home() -> Path:
-    """The user's real XDG config home, ignoring a named config's export.
-
-    A launched named config sets XDG_CONFIG_HOME to its own container; that
-    must not move the default config it was forked from.
-    """
-    home = Path.home()
-    config_home = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config")).expanduser()
-    data = Path(os.environ.get("XDG_DATA_HOME", home / ".local/share")).expanduser()
-    configs = data / "agent-settings" / "muse" / "configs"
-    if config_home == configs or configs in config_home.parents:
-        return home / ".config"
-    return config_home
+def configs_directory(agent: str) -> Path:
+    """Where the named configs of `agent` live."""
+    data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share")).expanduser()
+    return data / "agent-settings" / agent / "configs"
 
 
 @final
 class Profiles:
-    def __init__(
-        self,
-        agent: str,
-        config_name: str | None = None,
-        default: Path | None = None,
-        subdir: str = "",
-    ) -> None:
-        self.agent = agent
-        self.config_name = config_name or ("config.toml" if agent == "codex" else "settings.json")
-        # Muse's config directory is `muse` under the XDG config home, and a
-        # named config relocates that home, so its root sits one level deeper.
-        self.subdir = subdir or ("muse" if agent == "muse" else "")
-        if default is not None:
-            self.default = default
-        elif agent == "muse":
-            self.default = muse_config_home() / "muse"
-        else:
-            self.default = Path.home() / f".{agent}"
-        data = Path(os.environ.get("XDG_DATA_HOME", Path.home() / ".local/share"))
-        self.directory = data / "agent-settings" / agent / "configs"
+    def __init__(self, agent: str, default: Path, subdir: str) -> None:
+        self.default = default
+        self.subdir = subdir
+        self.directory = configs_directory(agent)
 
     def root_in(self, container: Path) -> Path:
         return container / self.subdir if self.subdir else container
@@ -85,11 +59,33 @@ class Profiles:
             fcntl.flock(lock, fcntl.LOCK_EX)
             yield
 
-    def fork(self, source: Path, name: str, managed_links: list[str]) -> Path:
-        with self._lock():
-            return self._fork(source, name, managed_links)
+    def fork(
+        self,
+        source: Path,
+        name: str,
+        *,
+        settings: list[str],
+        files: list[str],
+        managed_links: list[str],
+        populate: Callable[[Path, Path], None],
+    ) -> Path:
+        """Copy `source` into a new named config.
 
-    def _fork(self, source: Path, name: str, managed_links: list[str]) -> Path:
+        `settings` are copied as regular files, `files` as they are, and
+        `populate` then completes the new root from the source.
+        """
+        with self._lock():
+            return self._fork(source, name, settings, files, managed_links, populate)
+
+    def _fork(
+        self,
+        source: Path,
+        name: str,
+        settings: list[str],
+        files: list[str],
+        managed_links: list[str],
+        populate: Callable[[Path, Path], None],
+    ) -> Path:
         if not re.fullmatch(r"[A-Za-z0-9][A-Za-z0-9_-]{0,63}", name) or name == "default":
             raise SettingsError(
                 "use 1-64 letters, digits, hyphens or underscores; default is reserved"
@@ -101,21 +97,7 @@ class Profiles:
         root = self.root_in(temporary)
         root.mkdir(parents=True, exist_ok=True)
         try:
-            # An allowlist keeps tokens, transcripts, caches, and trust state out of forks.
-            files = [
-                self.config_name,
-                "dotfiles-settings.json",
-                "CLAUDE.md" if self.agent == "claude" else "AGENTS.md",
-                "skills",
-                "agents",
-                "commands",
-                "hooks",
-                "hooks.json",
-                "rules",
-            ]
-            if self.agent == "codex":
-                files.extend(p.name for p in source.glob("*.config.toml"))
-            for filename in dict.fromkeys([*files, *managed_links]):
+            for filename in dict.fromkeys([*settings, *files, *managed_links]):
                 src, dst = source / filename, root / filename
                 follows_default = source == self.default or (
                     src.is_symlink() and src.readlink() == self.default / filename
@@ -130,18 +112,10 @@ class Profiles:
                     _copy(
                         src,
                         dst,
-                        materialize=filename in files[:2],
+                        materialize=filename in settings,
                         through_source=self.container(source).parent != self.directory,
                     )
-            if self.agent == "claude":
-                registry = (
-                    Path.home() / ".claude.json"
-                    if source == self.default
-                    else source / ".claude.json"
-                )
-                mcp = read_document(registry).get("mcpServers", {})
-                with edit_document(root / ".claude.json") as doc:
-                    doc["mcpServers"] = mcp
+            populate(source, root)
             temporary.rename(target)
             return self.root_in(target)
         finally:

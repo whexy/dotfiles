@@ -10,6 +10,7 @@ from agent_settings.catalog import Entry, Fusion
 from agent_settings.documents import (
     Table,
     child_table,
+    edit_document,
     is_list,
     is_table,
     read_document,
@@ -32,6 +33,7 @@ class ClaudeAgent(Agent):
     name = "claude"
     home_env = "CLAUDE_CONFIG_DIR"
     config_name = "settings.json"
+    instructions_name = "CLAUDE.md"
     extra_managed_env = frozenset({_HEADERS, _SUBAGENT_MODEL, _ALLOW_UNKNOWN_MODELS})
 
     @property
@@ -81,7 +83,14 @@ class ClaudeAgent(Agent):
     @override
     def extra_owned_documents(self) -> dict[str, tuple[Path, Table]]:
         # Claude's user MCP registry is separate from settings.json.
-        return {"ownedMcp": (self._mcp_registry(), {"mcpServers": self.manifest["mcpServers"]})}
+        return {"ownedMcp": (_mcp_registry(self.root), {"mcpServers": self.manifest["mcpServers"]})}
+
+    @override
+    def populate_fork(self, source: Path, root: Path) -> None:
+        # The fork's user MCP servers start as the source's.
+        mcp = read_document(_mcp_registry(source)).get("mcpServers", {})
+        with edit_document(root / ".claude.json") as doc:
+            doc["mcpServers"] = mcp
 
     @override
     def refine_choice(self, entry: Entry) -> Entry:
@@ -147,10 +156,12 @@ class ClaudeAgent(Agent):
             _overlay(settings, source)
         return ["--settings", json.dumps(settings), *forwarded]
 
-    def _mcp_registry(self) -> Path:
-        if self.root != Path.home() / ".claude":
-            return self.root / ".claude.json"
-        return Path.home() / ".claude.json"
+
+def _mcp_registry(root: Path) -> Path:
+    """Claude's user MCP registry, which the default config keeps in the home."""
+    if root != Path.home() / ".claude":
+        return root / ".claude.json"
+    return Path.home() / ".claude.json"
 
 
 def _split_settings_args(args: list[str]) -> tuple[list[Table], list[str]]:

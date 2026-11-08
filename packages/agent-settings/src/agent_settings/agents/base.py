@@ -47,6 +47,8 @@ class Agent(ABC):
     """Variables this agent's selection logic sets beyond the catalog's."""
     config_subdir: ClassVar[str] = ""
     """Named configs hold the root this far below their container directory."""
+    instructions_name: ClassVar[str] = "AGENTS.md"
+    """The agent's user instructions file in its config directory."""
 
     manifest: Manifest
     catalog: Catalog
@@ -74,11 +76,26 @@ class Agent(ABC):
         return Path(os.environ.get(self.home_env, self.default_root())).expanduser().absolute()
 
     def _profiles(self) -> Profiles:
-        return Profiles(
-            self.name,
-            config_name=self.config_name,
-            default=self.default_root(),
-            subdir=self.config_subdir,
+        return Profiles(self.name, default=self.default_root(), subdir=self.config_subdir)
+
+    def _fork(self, profiles: Profiles, name: str) -> Path:
+        # An allowlist keeps tokens, transcripts, caches, and trust state out of forks.
+        return profiles.fork(
+            self.root,
+            name,
+            settings=[self.config_name, "dotfiles-settings.json"],
+            files=[
+                self.instructions_name,
+                "skills",
+                "agents",
+                "commands",
+                "hooks",
+                "hooks.json",
+                "rules",
+                *self.extra_fork_files(self.root),
+            ],
+            managed_links=self.manifest.get("managedLinks", []),
+            populate=self.populate_fork,
         )
 
     # Agent-specific steps.
@@ -105,6 +122,15 @@ class Agent(ABC):
     def extra_owned_documents(self) -> dict[str, tuple[Path, Table]]:
         """Other files Nix maintains values in, keyed by their ownership record."""
         return {}
+
+    def extra_fork_files(self, source: Path) -> list[str]:
+        """Further files of `source` a fork of it copies."""
+        del source
+        return []
+
+    def populate_fork(self, source: Path, root: Path) -> None:
+        """Complete a fork's new `root` with state kept outside `source`."""
+        del source, root
 
     def refine_choice(self, entry: Entry) -> Entry:
         """Complete a picked entry, possibly by asking further questions."""
@@ -202,9 +228,7 @@ class Agent(ABC):
                     self.set_root(configs[selected])
                 elif label == FORK:
                     name = ask("Name for the new config (settings copied; fresh login and history)")
-                    self.set_root(
-                        profiles.fork(self.root, name, self.manifest.get("managedLinks", []))
-                    )
+                    self.set_root(self._fork(profiles, name))
                 else:
                     if not profiles.is_managed(self.root):
                         raise SettingsError("the default and external configs cannot be deleted")

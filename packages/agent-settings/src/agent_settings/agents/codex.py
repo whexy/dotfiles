@@ -1,5 +1,6 @@
 """Codex: TOML config whose top-level keys choose a model provider."""
 
+from pathlib import Path
 from typing import final, override
 
 import tomlkit
@@ -17,6 +18,10 @@ class CodexAgent(Agent):
     name = "codex"
     home_env = "CODEX_HOME"
     config_name = "config.toml"
+
+    @override
+    def extra_fork_files(self, source: Path) -> list[str]:
+        return [p.name for p in source.glob("*.config.toml")]
 
     @override
     def maintained_settings(self, _selection: Entry | None = None) -> Table:

@@ -20,7 +20,7 @@ from agent_settings.documents import (
     table_or_empty,
 )
 from agent_settings.errors import SettingsError
-from agent_settings.profiles import muse_config_home
+from agent_settings.profiles import configs_directory
 
 _MODEL_ENV = "MUSE_MODEL"
 _KEY_ENV = "META_API_KEY"
@@ -58,6 +58,20 @@ _SESSIONLESS_COMMANDS = frozenset(
 )
 
 
+def muse_config_home() -> Path:
+    """The user's real XDG config home, ignoring a named config's export.
+
+    A launched named config sets XDG_CONFIG_HOME to its own container; that
+    must not move the default config it was forked from.
+    """
+    home = Path.home()
+    config_home = Path(os.environ.get("XDG_CONFIG_HOME", home / ".config")).expanduser()
+    configs = configs_directory("muse")
+    if config_home == configs or configs in config_home.parents:
+        return home / ".config"
+    return config_home
+
+
 @final
 class MuseAgent(Agent):
     """Muse, whose credentials live in its own config rather than its environment.
@@ -70,6 +84,8 @@ class MuseAgent(Agent):
     name = "muse"
     home_env = "XDG_CONFIG_HOME"
     config_name = "settings.json"
+    # Muse's config directory is `muse` under the XDG config home, and a
+    # named config relocates that home, so its root sits one level deeper.
     config_subdir = "muse"
     extra_managed_env = frozenset({_MODEL_ENV})
 
