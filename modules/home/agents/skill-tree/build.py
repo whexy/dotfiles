@@ -5,6 +5,8 @@ writes from dotfiles.agents.skills.
 """
 
 import json
+import os
+import re
 import shutil
 import subprocess
 import sys
@@ -133,6 +135,31 @@ for name, (source, origin) in sorted(sources.items()):
     description = meta.get("description")
     if not isinstance(description, str) or not description.strip():
         errors.append(f"skill {name} ({origin}): SKILL.md has no description")
+
+# Agents reach a skill through their own skills root, and some resolve `..`
+# lexically from there, so a relative link resolves only to a skill in this
+# tree. Anything else a skill links to needs an absolute path.
+LINK = re.compile(r"\]\(\s*<?([^)\s<>]+)|^\s*\[[^\]]+\]:\s*<?([^\s<>]+)", re.MULTILINE)
+for name, (_, origin) in sorted(sources.items()):
+    for doc in sorted((skills / name).rglob("*.md")):
+        for match in LINK.finditer(doc.read_text()):
+            target = match.group(1) or match.group(2)
+            if target.startswith(("#", "~")) or re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", target):
+                continue
+            path = target.split("#", 1)[0].split("?", 1)[0]
+            if not path:
+                continue
+            resolved = Path(os.path.normpath(doc.parent / path))
+            where = doc.relative_to(skills)
+            if not resolved.exists():
+                errors.append(
+                    f"skill {name} ({origin}): {where} links to {target}, which does not exist"
+                )
+            elif not path.startswith("/") and not resolved.is_relative_to(skills):
+                errors.append(
+                    f"skill {name} ({origin}): {where} links to {target} outside the skills; "
+                    "link it by absolute path"
+                )
 
 # Home Manager links a recursive source file by file but copies the links it
 # finds there as they are, so a root linked from here holds one link per

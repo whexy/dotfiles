@@ -213,8 +213,11 @@ separate skills repository and none of that repository's product guides.
 `skill-tree/build.nix` assembles the tree in one derivation. It fails on a listed
 package without skills, two sources for one name, an override no package
 provides, a patch that does not apply, a `docs` tree that reads a skill agents
-see, and a `SKILL.md` whose frontmatter `name` is not its directory or whose
-`description` is empty.
+see, a `SKILL.md` whose frontmatter `name` is not its directory or whose
+`description` is empty, and a Markdown link in a skill that does not resolve.
+Agents read a skill through their own skills root, and some resolve `..`
+lexically from there, so a relative link may name only a skill in the tree;
+anything else takes an absolute path.
 
 `checks/agent-skills` builds every skill in the repo at once and compares the
 exposed names with the list written in it, plus what the skill repositories
@@ -242,7 +245,12 @@ that calls `flake.lib.skillRepo`:
 
 `flake.lib.skillRepo` builds what the `skills` CLI installs from the pinned
 source, at `share/skills`, so agents see exactly what `npx skills add` gives
-and nothing is vendored. A pick the repository lacks fails the build, and so
+and nothing is vendored. The CLI copies each skill alone, so a file a skill
+links to beside its `skills/` folder, such as pstack's
+`../../docs/harness/claude-code.md`, is copied to the same place under
+`share/` and the link rewritten to that absolute path
+(`lib/skill-repo-links.py`); a target the repository lacks fails the build.
+A pick the repository lacks fails the build too, and so
 does an unpinned repository, so each new one is pinned before the next is
 added. `modules/home/agents/skills.nix` lists the repositories every agent
 gets, and `nix build .#<name>` shows one.

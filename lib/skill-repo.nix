@@ -1,7 +1,7 @@
 # A repository published for `npx skills`, pinned by `pins` (its sources.json),
 # as a package of the skills taken from it at share/skills. The `skills` CLI
 # installs them from the pinned source, so agents see exactly what
-# `npx skills add` gives.
+# `npx skills add` gives, with the files they link to outside themselves.
 { inputs, updater }:
 {
   pkgs,
@@ -35,7 +35,10 @@ pkgs.stdenvNoCC.mkDerivation {
         inherit (sources) rev hash;
       };
 
-  nativeBuildInputs = [ inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.skills ];
+  nativeBuildInputs = [
+    inputs.llm-agents.packages.${pkgs.stdenv.hostPlatform.system}.skills
+    pkgs.python3
+  ];
   DISABLE_TELEMETRY = "1";
 
   buildCommand = ''
@@ -50,6 +53,8 @@ pkgs.stdenvNoCC.mkDerivation {
     done
     mkdir -p $out/share
     cp -r .agents/skills $out/share/skills
+    chmod -R u+w $out/share/skills
+    python3 ${./skill-repo-links.py} $src $out/share
   '';
 
   passthru.updater = updater (

@@ -9,37 +9,32 @@
 }:
 let
   inherit (pkgs) lib;
-  skills = flake.lib.skillRepo {
-    inherit pkgs pname;
-    owner = "cursor";
-    repo = "plugins";
-    # create-formal-verification-skill links to the other two by relative
-    # path.
-    skills = [
-      "create-formal-verification-skill"
-      "maintain-formal-verification-skill"
-      "statechart"
-    ];
-    # pstack takes from the same repository.
-    pins = ../pstack/sources.json;
-  };
 in
-pkgs.runCommand "${pname}-${skills.version}"
-  {
-    inherit pname;
-    inherit (skills) version meta;
-    passthru = skills.passthru // {
-      # The pin is pstack's, whose updater builds this package when it moves.
+(flake.lib.skillRepo {
+  inherit pkgs pname;
+  owner = "cursor";
+  repo = "plugins";
+  # create-formal-verification-skill links to the other two by relative
+  # path.
+  skills = [
+    "create-formal-verification-skill"
+    "maintain-formal-verification-skill"
+    "statechart"
+  ];
+  # pstack takes from the same repository.
+  pins = ../pstack/sources.json;
+}).overrideAttrs
+  (old: {
+    nativeBuildInputs = old.nativeBuildInputs ++ [ pkgs.makeWrapper ];
+    # statechart.ts is run by the Node on PATH, which must strip types.
+    buildCommand = old.buildCommand + ''
+      wrapProgram $out/share/skills/statechart/scripts/statechart \
+        --prefix PATH : ${lib.makeBinPath [ pkgs.nodejs ]} \
+        --set-default TLA2TOOLS ${pkgs.tlaplus}/share/java/tla2tools.jar \
+        --set-default JAVA ${lib.getExe' pkgs.jre_headless "java"}
+    '';
+    # The pin is pstack's, whose updater builds this package when it moves.
+    passthru = old.passthru // {
       updater = null;
     };
-    nativeBuildInputs = [ pkgs.makeWrapper ];
-  }
-  ''
-    cp -r ${skills} $out
-    chmod -R u+w $out
-    # statechart.ts is run by the Node on PATH, which must strip types.
-    wrapProgram $out/share/skills/statechart/scripts/statechart \
-      --prefix PATH : ${lib.makeBinPath [ pkgs.nodejs ]} \
-      --set-default TLA2TOOLS ${pkgs.tlaplus}/share/java/tla2tools.jar \
-      --set-default JAVA ${lib.getExe' pkgs.jre_headless "java"}
-  ''
+  })
