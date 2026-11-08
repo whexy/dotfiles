@@ -8,7 +8,6 @@
       "base"
       "dev"
     ];
-    modules = [ ./nvidia.nix ];
   };
 
   # Incus guest on venus, sharing its public IP with k8s-4 and the other
@@ -17,6 +16,7 @@
   dotfiles = {
     system.autoUpgrade.enable = true;
     network.tailscale.port = 41642;
+    platform.incusContainer.nvidia.enable = true;
   };
 
   system.stateVersion = "26.05";

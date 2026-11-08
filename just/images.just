@@ -1,11 +1,11 @@
-# Build an encrypted Incus VM image.
 # The passphrase is read without echo and is only copied into the isolated
 # image-builder VM before LUKS formatting; it is not stored in the image.
-build-phobos:
+# Build an encrypted Incus VM image (dotfiles.platform.incusVm.encryptedDisk).
+build-incus-vm HOST:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    mkdir -p result/phobos
+    mkdir -p result/{{HOST}}
 
     PASSPHRASE_FILE=$(mktemp)
     trap 'rm -f "$PASSPHRASE_FILE"' EXIT
@@ -23,152 +23,78 @@ build-phobos:
     printf %s "$PASSPHRASE" > "$PASSPHRASE_FILE"
     unset PASSPHRASE CONFIRM
 
-    echo "Building phobos Disko image script..."
+    echo "Building {{HOST}} Disko image script..."
     nix build \
-        .#nixosConfigurations.phobos.config.system.build.diskoImagesScript \
-        -o result/phobos/build
+        .#nixosConfigurations.{{HOST}}.config.system.build.diskoImagesScript \
+        -o result/{{HOST}}/build
 
-    rm -f result/phobos/phobos.qcow2 phobos.qcow2
+    rm -f result/{{HOST}}/{{HOST}}.qcow2 {{HOST}}.qcow2
     echo "Building encrypted qcow2 image (requires sudo)..."
-    sudo result/phobos/build \
+    sudo result/{{HOST}}/build \
         --build-memory 4096 \
-        --pre-format-files "$PASSPHRASE_FILE" /tmp/phobos-luks-passphrase
-    sudo mv phobos.qcow2 result/phobos/phobos.qcow2
-    sudo chown "$(id -u):$(id -g)" result/phobos/phobos.qcow2
+        --pre-format-files "$PASSPHRASE_FILE" /tmp/{{HOST}}-luks-passphrase
+    sudo mv {{HOST}}.qcow2 result/{{HOST}}/{{HOST}}.qcow2
+    sudo chown "$(id -u):$(id -g)" result/{{HOST}}/{{HOST}}.qcow2
 
     METADATA=$(nix build \
-        .#nixosConfigurations.phobos.config.system.build.images.lxc-metadata \
+        .#nixosConfigurations.{{HOST}}.config.system.build.images.lxc-metadata \
         --no-link \
         --print-out-paths)
     METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
-    cp -L "$METADATA_FILE" result/phobos/incus-metadata.tar.xz
+    cp -L "$METADATA_FILE" result/{{HOST}}/incus-metadata.tar.xz
 
     echo ""
     echo "Build complete!"
-    echo "Disk:     result/phobos/phobos.qcow2"
-    echo "Metadata: result/phobos/incus-metadata.tar.xz"
+    echo "Disk:     result/{{HOST}}/{{HOST}}.qcow2"
+    echo "Metadata: result/{{HOST}}/incus-metadata.tar.xz"
     echo ""
     echo "Import on the Incus host:"
-    echo "  incus image import --alias phobos-image result/phobos/incus-metadata.tar.xz result/phobos/phobos.qcow2"
-    echo "  incus launch phobos-image phobos --vm -c security.secureboot=false"
-    echo "  incus console phobos"
-
-build-zoozve:
-    #!/usr/bin/env bash
-    set -euo pipefail
-
-    mkdir -p result/zoozve
-
-    PASSPHRASE_FILE=$(mktemp)
-    trap 'rm -f "$PASSPHRASE_FILE"' EXIT
-    chmod 600 "$PASSPHRASE_FILE"
-
-    read -r -s -p "LUKS passphrase: " PASSPHRASE
-    echo
-    read -r -s -p "Confirm LUKS passphrase: " CONFIRM
-    echo
-
-    if [ "$PASSPHRASE" != "$CONFIRM" ]; then
-        echo "Passphrases do not match" >&2
-        exit 1
-    fi
-    printf %s "$PASSPHRASE" > "$PASSPHRASE_FILE"
-    unset PASSPHRASE CONFIRM
-
-    echo "Building zoozve Disko image script..."
-    nix build \
-        .#nixosConfigurations.zoozve.config.system.build.diskoImagesScript \
-        -o result/zoozve/build
-
-    rm -f result/zoozve/zoozve.qcow2 zoozve.qcow2
-    echo "Building encrypted qcow2 image (requires sudo)..."
-    sudo result/zoozve/build \
-        --build-memory 4096 \
-        --pre-format-files "$PASSPHRASE_FILE" /tmp/zoozve-luks-passphrase
-    sudo mv zoozve.qcow2 result/zoozve/zoozve.qcow2
-    sudo chown "$(id -u):$(id -g)" result/zoozve/zoozve.qcow2
-
-    METADATA=$(nix build \
-        .#nixosConfigurations.zoozve.config.system.build.images.lxc-metadata \
-        --no-link \
-        --print-out-paths)
-    METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
-    cp -L "$METADATA_FILE" result/zoozve/incus-metadata.tar.xz
-
-    echo ""
-    echo "Build complete!"
-    echo "Disk:     result/zoozve/zoozve.qcow2"
-    echo "Metadata: result/zoozve/incus-metadata.tar.xz"
-    echo ""
-    echo "Import on the Incus host:"
-    echo "  incus image import --alias zoozve-image result/zoozve/incus-metadata.tar.xz result/zoozve/zoozve.qcow2"
-    echo "  incus launch zoozve-image zoozve --vm -c security.secureboot=false"
-    echo "  incus console zoozve"
+    echo "  incus image import --alias {{HOST}}-image result/{{HOST}}/incus-metadata.tar.xz result/{{HOST}}/{{HOST}}.qcow2"
+    echo "  incus launch {{HOST}}-image {{HOST}} --vm -c security.secureboot=false"
+    echo "  incus console {{HOST}}"
 
 # Build an Incus system container image (rootfs + metadata tarballs).
-build-neith:
+build-incus-container HOST:
     #!/usr/bin/env bash
     set -euo pipefail
 
-    mkdir -p result/neith
+    mkdir -p result/{{HOST}}
 
-    echo "Building neith container rootfs..."
+    echo "Building {{HOST}} container rootfs..."
     ROOTFS=$(nix build \
-        .#nixosConfigurations.neith.config.system.build.tarball \
+        .#nixosConfigurations.{{HOST}}.config.system.build.tarball \
         --no-link \
         --print-out-paths)
     ROOTFS_FILE=$(find "$ROOTFS/tarball" -name '*.tar.xz' -type f -print -quit)
-    cp -L "$ROOTFS_FILE" result/neith/neith.tar.xz
+    cp -L "$ROOTFS_FILE" result/{{HOST}}/{{HOST}}.tar.xz
 
     METADATA=$(nix build \
-        .#nixosConfigurations.neith.config.system.build.metadata \
+        .#nixosConfigurations.{{HOST}}.config.system.build.metadata \
         --no-link \
         --print-out-paths)
     METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
-    cp -L "$METADATA_FILE" result/neith/incus-metadata.tar.xz
-    chmod u+w result/neith/*.tar.xz
+    cp -L "$METADATA_FILE" result/{{HOST}}/incus-metadata.tar.xz
+    chmod u+w result/{{HOST}}/*.tar.xz
 
     echo ""
     echo "Build complete!"
-    echo "Rootfs:   result/neith/neith.tar.xz"
-    echo "Metadata: result/neith/incus-metadata.tar.xz"
+    echo "Rootfs:   result/{{HOST}}/{{HOST}}.tar.xz"
+    echo "Metadata: result/{{HOST}}/incus-metadata.tar.xz"
     echo ""
     echo "Import on the Incus host (nesting is needed for Docker/Podman inside):"
-    echo "  incus image import --alias neith-image result/neith/incus-metadata.tar.xz result/neith/neith.tar.xz"
-    echo "  incus launch neith-image neith -c security.nesting=true"
-    echo "  incus exec neith -- login -f whexy"
+    echo "  incus image import --alias {{HOST}}-image result/{{HOST}}/incus-metadata.tar.xz result/{{HOST}}/{{HOST}}.tar.xz"
+    echo "  incus launch {{HOST}}-image {{HOST}} -c security.nesting=true"
+    echo "  incus exec {{HOST}} -- login -f whexy"
 
-build-deimos:
-    #!/usr/bin/env bash
-    set -euo pipefail
+# The docs site's host pages name these per-host recipes.
 
-    mkdir -p result/deimos
+build-phobos: (build-incus-vm "phobos")
 
-    echo "Building deimos container rootfs..."
-    ROOTFS=$(nix build \
-        .#nixosConfigurations.deimos.config.system.build.tarball \
-        --no-link \
-        --print-out-paths)
-    ROOTFS_FILE=$(find "$ROOTFS/tarball" -name '*.tar.xz' -type f -print -quit)
-    cp -L "$ROOTFS_FILE" result/deimos/deimos.tar.xz
+build-zoozve: (build-incus-vm "zoozve")
 
-    METADATA=$(nix build \
-        .#nixosConfigurations.deimos.config.system.build.metadata \
-        --no-link \
-        --print-out-paths)
-    METADATA_FILE=$(find "$METADATA/tarball" -name '*.tar.xz' -type f -print -quit)
-    cp -L "$METADATA_FILE" result/deimos/incus-metadata.tar.xz
-    chmod u+w result/deimos/*.tar.xz
+build-neith: (build-incus-container "neith")
 
-    echo ""
-    echo "Build complete!"
-    echo "Rootfs:   result/deimos/deimos.tar.xz"
-    echo "Metadata: result/deimos/incus-metadata.tar.xz"
-    echo ""
-    echo "Import on the Incus host (nesting is needed for Docker/Podman inside):"
-    echo "  incus image import --alias deimos-image result/deimos/incus-metadata.tar.xz result/deimos/deimos.tar.xz"
-    echo "  incus launch deimos-image deimos -c security.nesting=true"
-    echo "  incus exec deimos -- login -f whexy"
+build-deimos: (build-incus-container "deimos")
 
 # Build WSL tarball for import (requires sudo)
 build-wsl:

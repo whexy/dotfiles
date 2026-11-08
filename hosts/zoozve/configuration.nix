@@ -7,7 +7,6 @@
       "base"
       "dev"
     ];
-    modules = [ ./disk-config.nix ];
   };
 
   # Incus guest on venus, sharing its public IP with k8s-4 and the other
@@ -18,14 +17,8 @@
     network.tailscale.port = 41643;
     platform.incusVm = {
       enable = true;
-      # The hypervisor is not fully trusted. Disable every agent API that can
-      # execute commands or read guest files (which would expose agenix
-      # secrets under /run/agenix), and interface state (VM IPs in incus list).
-      agent.features = {
-        exec = false;
-        files = false;
-        state = false;
-      };
+      untrustedHypervisor = true;
+      encryptedDisk.enable = true;
     };
   };
 

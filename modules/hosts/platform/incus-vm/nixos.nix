@@ -1,6 +1,7 @@
 { config, lib, ... }:
 let
   cfg = config.dotfiles.platform.incusVm;
+  inherit (config.dotfiles.host) hostName;
 
   # All features the Incus 6.20+ guest agent understands. The agent binary is
   # injected by the hypervisor at boot, so the hypervisor's Incus version
@@ -13,11 +14,65 @@ let
     metrics = true; # OpenMetrics endpoint
     state = true; # OS/network state shown by incus list (incl. IPs)
   }
+  // lib.optionalAttrs cfg.untrustedHypervisor {
+    exec = false;
+    files = false;
+    state = false;
+  }
   // cfg.agent.features;
 in
 {
   config = lib.mkIf cfg.enable {
-    disko.imageBuilder.imageFormat = "qcow2";
+    disko = {
+      imageBuilder.imageFormat = "qcow2";
+
+      devices.disk.main = lib.mkIf cfg.encryptedDisk.enable {
+        type = "disk";
+        device = "/dev/sda";
+        imageName = hostName;
+        imageSize = "32G";
+        content = {
+          type = "gpt";
+          partitions = {
+            ESP = {
+              size = "512M";
+              type = "EF00";
+              content = {
+                type = "filesystem";
+                format = "vfat";
+                mountpoint = "/boot";
+                mountOptions = [ "umask=0077" ];
+                extraArgs = [
+                  "-n"
+                  "NIXBOOT"
+                ];
+              };
+            };
+            root = {
+              size = "100%";
+              content = {
+                type = "luks";
+                name = "crypted";
+                # Supplied to the Disko image builder with --pre-format-files.
+                # It is used only to create the image and is not stored in it.
+                passwordFile = "/tmp/${hostName}-luks-passphrase";
+                settings.allowDiscards = true;
+                content = {
+                  type = "filesystem";
+                  format = "ext4";
+                  mountpoint = "/";
+                  mountOptions = [ "noatime" ];
+                  extraArgs = [
+                    "-L"
+                    "NIXROOT"
+                  ];
+                };
+              };
+            };
+          };
+        };
+      };
+    };
 
     boot = {
       loader.systemd-boot.enable = true;
