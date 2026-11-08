@@ -98,8 +98,9 @@ Integrated users import `homeModules.host-user`, which imports
 `flake.lib.homeCapsModules`; cap names arrive as a special argument, not a
 config option. Home modules read global system options directly from
 `osConfig.dotfiles.*`; do not mirror them into separate HM options.
-Standalone homes import `homeModules.all` plus `homeCapsModules [ ... ]`
-directly.
+Standalone homes import `homeModules.standalone` (`homeModules.all`, their
+own nixpkgs settings and overlays, and generic Linux targets) plus
+`homeCapsModules [ ... ]`.
 
 Do not set `nixpkgs.config` in system modules: blueprint configures nixpkgs at
 the flake level (`flake.nix`) and injects `nixpkgs.pkgs`, and the module system

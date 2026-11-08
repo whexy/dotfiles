@@ -1,15 +1,13 @@
 { inputs, ... }:
 {
   imports = [
-    inputs.self.homeModules.all
+    inputs.self.homeModules.standalone
   ]
   ++ inputs.self.lib.homeCapsModules [
     "base"
     "sysadmin"
   ];
 
-  nixpkgs.config.allowUnfree = true;
-  nixpkgs.overlays = inputs.self.lib.commonOverlays;
   dotfiles = {
     autoUpgrade = {
       enable = true;
@@ -26,7 +24,5 @@
     };
   };
 
-  targets.genericLinux.enable = true;
-  targets.genericLinux.gpu.enable = false;
   home.homeDirectory = "/root";
 }

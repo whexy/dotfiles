@@ -1,15 +1,13 @@
 { inputs, ... }:
 {
   imports = [
-    inputs.self.homeModules.all
+    inputs.self.homeModules.standalone
   ]
   ++ inputs.self.lib.homeCapsModules [
     "base"
     "dev"
   ];
 
-  nixpkgs.config.allowUnfree = true;
-  nixpkgs.overlays = inputs.self.lib.commonOverlays;
   dotfiles = {
     autoUpgrade.enable = true;
     # No T3 server runs here, and the fork's t3 comes only from
@@ -24,7 +22,5 @@
     };
   };
 
-  targets.genericLinux.enable = true;
-  targets.genericLinux.gpu.enable = false;
   home.homeDirectory = "/data/wenxuan";
 }
