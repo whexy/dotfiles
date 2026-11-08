@@ -2,13 +2,14 @@
   config,
   lib,
   pkgs,
+  flake,
   ...
 }:
 let
-  # AWS runs credential_process without a shell, so the agenix path, a shell
-  # fragment, expands in this script instead.
+  # AWS runs credential_process without a shell, so the agenix path expands
+  # in this script instead.
   credentials = pkgs.writeShellScript "aws-credentials" ''
-    exec ${pkgs.coreutils}/bin/cat "${config.age.secrets.aws-credentials.path}"
+    exec ${pkgs.coreutils}/bin/cat ${flake.lib.secretEnv.quote config.age.secrets.aws-credentials.path}
   '';
 in
 {

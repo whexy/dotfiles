@@ -95,6 +95,8 @@ in
 
   userService = import ./user-service.nix;
 
+  secretEnv = import ./secret-env.nix { inherit lib; };
+
   inherit updater;
 
   skillRepo = import ./skill-repo.nix { inherit inputs updater; };

@@ -328,7 +328,7 @@ token, `secrets/cloudflare-api-token.age`
   shell or agent environment holds it.
 - A token the caller brings wins: one already in the environment, or one in
   the `.env` that `cf` reads from the current directory.
-- Until the secret exists, `cf` runs signed out and evaluation warns.
+- While the secret is not decrypted, `cf` runs signed out and says so.
 
 Inside a project that depends on `cf`, the global command hands off to the
 project's npm-installed copy. On NixOS its prebuilt workerd (`cf dev`) runs
