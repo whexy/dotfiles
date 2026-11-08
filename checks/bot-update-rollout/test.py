@@ -48,7 +48,20 @@ esac
 STUB_GIT = """#!{bash}
 case "$1" in
 push) echo "git push" >> "$CALLS"; test "$PUSH_OK" = 1; exit ;;
-fetch) echo "git fetch" >> "$CALLS"; exit 0 ;;
+fetch)
+  echo "git fetch" >> "$CALLS"
+  # MASTER_MOVES names a file another commit on master changes meanwhile.
+  if [ -n "$MASTER_MOVES" ] && [ ! -e .git/moved ]; then
+    touch .git/moved
+    export GIT_INDEX_FILE=.git/moved-index
+    base=$({git} rev-parse refs/remotes/origin/master)
+    {git} read-tree "$base"
+    blob=$(echo moved | {git} hash-object -w --stdin)
+    {git} update-index --add --cacheinfo "100644,$blob,$MASTER_MOVES"
+    moved=$({git} commit-tree "$({git} write-tree)" -p "$base" -m moved)
+    {git} update-ref refs/remotes/origin/master "$moved"
+  fi
+  exit 0 ;;
 ls-remote) printf '%s\\trefs/heads/master\\n' "$REMOTE_HEAD"; exit 0 ;;
 esac
 exec {git} "$@"
@@ -99,6 +112,7 @@ def fixture(directory):
         UPDATE_STATUS="0",
         DRY_RUN_PLAN="",
         PUSH_OK="1",
+        MASTER_MOVES="",
         REMOTE_HEAD=REV,
         T3CODE_FORK_REV=REV,
     )
@@ -151,7 +165,17 @@ for name, commands in lanes.items():
     assert result.returncode != 0 and "git push" not in calls, calls
     result, calls, _ = lane(commands, PUSH_OK="0")
     assert result.returncode != 0 and calls.count("git push") == 4, calls
-    assert "git fetch" not in calls, calls
+
+    # When master moved meanwhile, the updates are rebased onto it and the
+    # rebased tree is checked again before the push; a conflict pushes nothing.
+    result, calls, _ = lane(commands, MASTER_MOVES="README")
+    assert result.returncode == 0, result.stderr
+    checks = [i for i, call in enumerate(calls) if call.startswith("nix path-info")]
+    assert len(checks) == 2, calls
+    assert index(calls, "git fetch") < checks[1] < index(calls, "git push"), calls
+    result, calls, _ = lane(commands, MASTER_MOVES="flake.lock")
+    assert result.returncode != 0 and "git push" not in calls, calls
+    assert "do not rebase" in result.stderr, result.stderr
 
     with tempfile.TemporaryDirectory() as directory:
         root, repo, env = fixture(directory)
@@ -161,7 +185,7 @@ for name, commands in lanes.items():
             assert (result.returncode == 0) == (expected == 0), result.stderr
             calls = (root / "calls").read_text()
             assert ("nix build " in calls) == (hit == "0"), calls
-    print(f"{name}: failed updates still pushed, cached success reused, failed checks rejected")
+    print(f"{name}: failed updates still pushed, rebased onto a moved master and rechecked, cached success reused, failed checks rejected")
 
 # The pin lane names the stage of every failure, and pushes only a checked
 # pin, rebased onto master, of a rev that is still the fork's head.

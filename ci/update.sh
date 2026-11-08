@@ -1,8 +1,9 @@
 #!/usr/bin/env bash
 # The update lane: update every flake input and every package that pins an
 # upstream release, one commit each, then check the commits and push them to
-# master. The check runs on the updated tree as it stands; nothing fetches or
-# rebases before the push, which fails if master moved meanwhile.
+# master. Master can move during the hour the lane runs, so each push first
+# rebases the updates onto it and checks the rebased tree again: only a
+# checked tree reaches master.
 set -euo pipefail
 here=$(dirname "${BASH_SOURCE[0]}")
 # shellcheck source=ci/lib.sh
@@ -50,5 +51,18 @@ if [ "$(git rev-parse HEAD)" = "$start" ]; then
   exit "$updated"
 fi
 bash "$here/check.sh"
-push_master 4
+
+rebase_onto_master() {
+  git fetch origin master
+  if git merge-base --is-ancestor origin/master HEAD; then
+    return 0
+  fi
+  if ! git rebase origin/master; then
+    git rebase --abort
+    echo "The updates do not rebase onto master" >&2
+    exit 1
+  fi
+  bash "$here/check.sh"
+}
+push_master 4 rebase_onto_master
 exit "$updated"
