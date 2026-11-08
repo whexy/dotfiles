@@ -93,6 +93,12 @@ in
     };
 
     renpho.enable = lib.mkEnableOption "Renpho smart-scale panel pill";
+    aiQuota.enable = lib.mkOption {
+      type = lib.types.bool;
+      default = config.dotfiles.agents.enable;
+      defaultText = lib.literalExpression "config.dotfiles.agents.enable";
+      description = "Whether to show AI quota pills in the bar and the tmux status line.";
+    };
     aiQuota.showCountdown = lib.mkOption {
       type = lib.types.bool;
       default = false;

@@ -15,7 +15,7 @@ let
   sshWindow = lib.getExe config.programs.ssh-window.package;
   niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
 
-  enabled = cfg.renderer == "eww";
+  enabled = cfg.renderer == "eww" && config.dotfiles.wm.niri.enable;
 
   # One JSON record per workspace so the widget can render per-workspace
   # buttons with focused/occupied/empty states (niri's fields are

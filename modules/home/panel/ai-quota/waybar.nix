@@ -21,7 +21,7 @@ let
   aiQuotaPopup = lib.getExe aiQuotaPackage;
   summaryFilter = ./summary.jq;
 
-  enabled = cfg.renderer == "waybar" && config.dotfiles.agents.enable;
+  enabled = cfg.renderer == "waybar" && cfg.aiQuota.enable;
 
   # Waybar has no generic custom slider, so render a short segmented meter.
   # summary.jq still decides what binds and provides the compact hover details.

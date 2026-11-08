@@ -18,7 +18,7 @@ let
   sshWindow = lib.getExe config.programs.ssh-window.package;
   niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
 
-  enabled = cfg.renderer == "waybar";
+  enabled = cfg.renderer == "waybar" && config.dotfiles.wm.niri.enable;
 in
 {
   config = lib.mkIf enabled {

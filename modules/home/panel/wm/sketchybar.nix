@@ -25,7 +25,7 @@ let
   windowManager = config.dotfiles.wm.darwin.windowManager;
   isPaneru = windowManager == "paneru";
 
-  enabled = cfg.renderer == "sketchybar";
+  enabled = cfg.renderer == "sketchybar" && wmEnabled;
 
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {
@@ -265,7 +265,7 @@ in
       ];
     };
 
-    launchd.agents.sketchybar-paneru-events = lib.mkIf (wmEnabled && isPaneru) (
+    launchd.agents.sketchybar-paneru-events = lib.mkIf isPaneru (
       mkAgent "sketchybar-paneru" [ "${paneruEventBridge}" ]
     );
   };

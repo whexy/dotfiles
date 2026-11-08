@@ -22,7 +22,7 @@ let
   aiQuotaPopup = lib.getExe aiQuotaPackage;
   summaryFilter = ./summary.jq;
 
-  enabled = cfg.renderer == "eww" && config.dotfiles.agents.enable;
+  enabled = cfg.renderer == "eww" && cfg.aiQuota.enable;
 
   quotaScript = pkgs.writeShellScript "eww-ai-quota" ''
     raw="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0

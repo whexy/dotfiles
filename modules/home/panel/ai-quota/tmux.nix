@@ -23,7 +23,7 @@ let
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
 
-  enabled = config.dotfiles.terminal.tmux.enable && config.dotfiles.agents.enable;
+  enabled = config.dotfiles.terminal.tmux.enable && cfg.aiQuota.enable;
 
   # Catppuccin palette slot used for each provider's name (brand-ish hues).
   accent = {

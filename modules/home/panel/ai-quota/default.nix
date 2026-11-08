@@ -19,7 +19,7 @@
           "waybar"
           "eww"
         ]
-        && config.dotfiles.agents.enable
+        && config.dotfiles.panel.aiQuota.enable
       )
       {
         programs.niri.settings.window-rules = lib.mkAfter [
