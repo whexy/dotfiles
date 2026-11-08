@@ -60,6 +60,10 @@ pkgs.symlinkJoin {
     launcher
     selector
   ];
+  # The venv is built at run time, so no build here would catch a
+  # pymobiledevice3 release that breaks launching the runner; the pin moves
+  # by hand, with the command above, once a phone has run the new release.
+  passthru.updater = null;
   meta = {
     description = "Run WebDriverAgent on tailnet iPhones and let agents pick one per session";
     mainProgram = "iphone-wda";
