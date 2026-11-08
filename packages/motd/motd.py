@@ -13,6 +13,7 @@ import subprocess
 import sys
 import threading
 from datetime import datetime
+from pathlib import Path
 
 RESET = "\033[0m"
 BOLD = "\033[1m"
@@ -83,8 +84,8 @@ def human_bytes(value: float) -> str:
     for unit in units:
         if value < 1024.0 or unit == units[-1]:
             if unit in ("B", "KiB", "MiB"):
-                return "%.0f %s" % (value, unit)
-            return "%.1f %s" % (value, unit)
+                return f"{value:.0f} {unit}"
+            return f"{value:.1f} {unit}"
         value /= 1024.0
     return "unknown"
 
@@ -99,9 +100,9 @@ def severity_color(pct: float) -> str:
 
 def meter(pct: float, width: int = 6) -> str:
     pct = max(0.0, min(100.0, pct))
-    filled = int(round(width * pct / 100.0))
+    filled = round(width * pct / 100.0)
     bar = paint("━" * filled, severity_color(pct)) + paint("─" * (width - filled), GRAY)
-    return "%s %s" % (bar, paint("%2.0f%%" % pct, severity_color(pct), BOLD))
+    return f"{bar} {paint(f'{pct:2.0f}%', severity_color(pct), BOLD)}"
 
 
 def command(args, timeout=0.3):
@@ -129,9 +130,10 @@ def background(function, *args):
 def get_system():
     system = platform.system()
     os_name = system
-    if os.path.exists("/etc/os-release"):
+    os_release = Path("/etc/os-release")
+    if os_release.exists():
         try:
-            with open("/etc/os-release", encoding="utf-8") as file:
+            with os_release.open(encoding="utf-8") as file:
                 for line in file:
                     if line.startswith("PRETTY_NAME="):
                         os_name = line.split("=", 1)[1].strip().strip("\"'")
@@ -142,24 +144,25 @@ def get_system():
         version = platform.mac_ver()[0]
         os_name = "macOS " + version if version else "macOS"
 
-    kernel = "%s %s %s" % (system, platform.release(), platform.machine())
+    kernel = f"{system} {platform.release()} {platform.machine()}"
     return socket.gethostname().split(".")[0], os_name, kernel
 
 
 def get_uptime():
-    if os.path.exists("/proc/uptime"):
+    proc_uptime = Path("/proc/uptime")
+    if proc_uptime.exists():
         try:
-            with open("/proc/uptime", encoding="utf-8") as file:
+            with proc_uptime.open(encoding="utf-8") as file:
                 seconds = int(float(file.readline().split()[0]))
             days, remainder = divmod(seconds, 86400)
             hours, remainder = divmod(remainder, 3600)
             minutes = remainder // 60
             parts = []
             if days:
-                parts.append("%dd" % days)
+                parts.append(f"{days}d")
             if hours:
-                parts.append("%dh" % hours)
-            parts.append("%dm" % minutes)
+                parts.append(f"{hours}h")
+            parts.append(f"{minutes}m")
             return " ".join(parts)
         except Exception:
             pass
@@ -174,18 +177,19 @@ def get_load():
         one, five, fifteen = os.getloadavg()
         cores = os.cpu_count() or 1
         pressure = one / cores * 100.0
-        text = "%.2f  %.2f  %.2f" % (one, five, fifteen)
+        text = f"{one:.2f}  {five:.2f}  {fifteen:.2f}"
         return paint(text, severity_color(pressure)), pressure
     except Exception:
         return "unknown", None
 
 
 def linux_memory():
-    if not os.path.exists("/proc/meminfo"):
+    meminfo = Path("/proc/meminfo")
+    if not meminfo.exists():
         return None
     try:
         values = {}
-        with open("/proc/meminfo", encoding="utf-8") as file:
+        with meminfo.open(encoding="utf-8") as file:
             for line in file:
                 key, value = line.split(":", 1)
                 values[key] = int(value.split()[0]) * 1024
@@ -224,7 +228,7 @@ def get_memory():
         return "unknown", None
     used, total = usage
     pct = used / total * 100.0
-    text = "%s / %s  %s" % (human_bytes(used), human_bytes(total), meter(pct))
+    text = f"{human_bytes(used)} / {human_bytes(total)}  {meter(pct)}"
     return text, pct
 
 
@@ -235,7 +239,7 @@ def get_root_disk():
         available = stats.f_bavail * stats.f_frsize
         used = max(0, total - available)
         pct = used / total * 100.0
-        text = "%s / %s  %s" % (human_bytes(used), human_bytes(total), meter(pct))
+        text = f"{human_bytes(used)} / {human_bytes(total)}  {meter(pct)}"
         return text, pct
     except Exception:
         return "unknown", None
@@ -254,7 +258,7 @@ def span(seconds: float) -> str:
     for unit, size, limit in scale:
         if limit is None or seconds < limit:
             count = seconds // size
-            return "%d %s%s" % (count, unit, "" if count == 1 else "s")
+            return f"{count} {unit}{'' if count == 1 else 's'}"
 
 
 def relative_age(timestamp: float) -> str:
@@ -268,18 +272,18 @@ def activated_at(profile: str):
     # Home Manager keeps its profile in the first of these two directories
     # that exists, so a home without the XDG one uses the global per-user one.
     if profile == "system":
-        paths = ("/nix/var/nix/profiles/system", "/run/current-system")
+        paths = (Path("/nix/var/nix/profiles/system"), Path("/run/current-system"))
     else:
-        state_home = os.environ.get("XDG_STATE_HOME") or os.path.expanduser("~/.local/state")
+        state_home = os.environ.get("XDG_STATE_HOME") or Path("~/.local/state").expanduser()
         paths = (
-            os.path.join(state_home, "nix/profiles/home-manager"),
-            "/nix/var/nix/profiles/per-user/%s/home-manager" % getpass.getuser(),
+            Path(state_home, "nix/profiles/home-manager"),
+            Path(f"/nix/var/nix/profiles/per-user/{getpass.getuser()}/home-manager"),
         )
     for path in paths:
-        if not os.path.islink(path):
+        if not path.is_symlink():
             continue
         try:
-            return os.lstat(path).st_mtime
+            return path.lstat().st_mtime
         except Exception:
             pass
     return None
@@ -287,7 +291,7 @@ def activated_at(profile: str):
 
 def get_activation(profile: str) -> str:
     activated = activated_at(profile)
-    return "unavailable" if activated is None else "%s %s" % (profile, relative_age(activated))
+    return "unavailable" if activated is None else f"{profile} {relative_age(activated)}"
 
 
 def timestamp(value):
@@ -345,7 +349,7 @@ def describe_update(status, activated):
 def get_updates(status_path: str, profile: str):
     """Return the updater's state and how urgent it is (0 to 2)."""
     try:
-        with open(status_path, encoding="utf-8") as file:
+        with Path(status_path).open(encoding="utf-8") as file:
             return describe_update(json.load(file), activated_at(profile))
     except FileNotFoundError:
         # The daemon first writes its status once its first check completes.
@@ -354,35 +358,36 @@ def get_updates(status_path: str, profile: str):
         return "unavailable", 0
 
 
-def nix_store_cache_fresh(cache_path: str) -> bool:
-    return datetime.now().timestamp() - os.path.getmtime(cache_path) <= 86400
+def nix_store_cache_fresh(cache_path: Path) -> bool:
+    return datetime.now().timestamp() - cache_path.stat().st_mtime <= 86400
 
 
-def refresh_nix_store(cache_path: str):
-    if not os.path.exists("/nix/store"):
+def refresh_nix_store(cache_path: Path):
+    if not Path("/nix/store").exists():
         return
     try:
-        os.makedirs(os.path.dirname(cache_path), exist_ok=True)
-        lock = os.open(cache_path + ".lock", os.O_WRONLY | os.O_CREAT, 0o600)
+        cache_path.parent.mkdir(parents=True, exist_ok=True)
+        lock = os.open(f"{cache_path}.lock", os.O_WRONLY | os.O_CREAT, 0o600)
         try:
             # The scan inherits the lock and holds it until it exits, so
             # shells started meanwhile skip the refresh and a crashed scan
             # releases it. A scan may have finished since the caller looked.
             fcntl.flock(lock, fcntl.LOCK_EX | fcntl.LOCK_NB)
-            if os.path.exists(cache_path) and nix_store_cache_fresh(cache_path):
+            if cache_path.exists() and nix_store_cache_fresh(cache_path):
                 return
             scan = ["du", "-sh", "/nix/store"]
             if shutil.which("ionice"):
-                scan = ["ionice", "-c3", "nice"] + scan
+                scan = ["ionice", "-c3", "nice", *scan]
             subprocess.Popen(
                 [
                     "sh",
                     "-c",
-                    'cache=$1; shift; tmp=$(mktemp "$cache.XXXXXX") || exit; "$@" 2>/dev/null | cut -f1 > "$tmp" && mv "$tmp" "$cache" || rm -f "$tmp"',
+                    'cache=$1; shift; tmp=$(mktemp "$cache.XXXXXX") || exit; '
+                    '"$@" 2>/dev/null | cut -f1 > "$tmp" && mv "$tmp" "$cache" || rm -f "$tmp"',
                     "sh",
                     cache_path,
-                ]
-                + scan,
+                    *scan,
+                ],
                 stdout=subprocess.DEVNULL,
                 stderr=subprocess.DEVNULL,
                 stdin=subprocess.DEVNULL,
@@ -396,22 +401,21 @@ def refresh_nix_store(cache_path: str):
 
 
 def get_nix_store():
-    if not os.path.exists("/nix/store"):
+    if not Path("/nix/store").exists():
         return "not mounted"
     try:
-        if os.stat("/").st_dev != os.stat("/nix/store").st_dev:
+        if Path("/").stat().st_dev != Path("/nix/store").stat().st_dev:
             stats = os.statvfs("/nix/store")
             total = stats.f_blocks * stats.f_frsize
             used = max(0, total - stats.f_bavail * stats.f_frsize)
-            return "%s / %s" % (human_bytes(used), human_bytes(total))
+            return f"{human_bytes(used)} / {human_bytes(total)}"
 
-        cache_path = os.path.expanduser("~/.cache/nix-store-size")
-        if os.path.exists(cache_path):
+        cache_path = Path("~/.cache/nix-store-size").expanduser()
+        if cache_path.exists():
             if not nix_store_cache_fresh(cache_path):
                 refresh_nix_store(cache_path)
-            with open(cache_path, encoding="utf-8") as file:
-                size = file.read().strip()
-            return "%s, shared with /" % size if size else "shared with /"
+            size = cache_path.read_text(encoding="utf-8").strip()
+            return f"{size}, shared with /" if size else "shared with /"
 
         refresh_nix_store(cache_path)
         return "shared with /"
@@ -436,7 +440,7 @@ def tailscale_ips():
     # directly skips ~40 ms of CLI startup. None defers to the CLI, which
     # also knows non-default sockets and the macOS app's transport.
     for path in ("/var/run/tailscaled.socket", "/var/run/tailscale/tailscaled.sock"):
-        if not os.path.exists(path):
+        if not Path(path).exists():
             continue
         sock = socket.socket(socket.AF_UNIX, socket.SOCK_STREAM)
         try:
@@ -480,7 +484,7 @@ def get_sessions():
         if len(parts) < 2:
             continue
         origin = parts[-1].strip("()") if len(parts) >= 5 and parts[-1].startswith("(") else ""
-        sessions.append("%s@%s%s" % (parts[0], parts[1], " (%s)" % origin if origin else ""))
+        sessions.append(f"{parts[0]}@{parts[1]}{f' ({origin})' if origin else ''}")
     return ", ".join(sessions) if sessions else "none"
 
 
@@ -501,7 +505,7 @@ def get_tmux_info():
             continue
         name, windows, state = parts
         state_color = GREEN if state == "attached" else GRAY
-        sessions.append("%s %sw %s" % (paint(name, BOLD), windows, paint(state, state_color)))
+        sessions.append(f"{paint(name, BOLD)} {windows}w {paint(state, state_color)}")
     return ", ".join(sessions) if sessions else paint("inactive", DIM)
 
 
@@ -519,13 +523,13 @@ def get_zellij_info():
             state = paint("attached", GREEN)
         else:
             state = paint("detached", GRAY)
-        sessions.append("%s %s" % (paint(name, BOLD), state))
+        sessions.append(f"{paint(name, BOLD)} {state}")
     return ", ".join(sessions) if sessions else paint("inactive", DIM)
 
 
 def card(title: str, rows, width: int):
     inner_width = width - 4
-    title_text = "─ %s " % paint(title.upper(), BOLD, CYAN)
+    title_text = f"─ {paint(title.upper(), BOLD, CYAN)} "
     top = (
         paint("╭", GRAY)
         + title_text
@@ -536,7 +540,7 @@ def card(title: str, rows, width: int):
     label_width = min(11, max(len(label) for label, _ in rows))
     lines = [top]
     for label, value in rows:
-        prefix = "%s %s" % (paint("◆", MAGENTA), paint(label.ljust(label_width), DIM))
+        prefix = f"{paint('◆', MAGENTA)} {paint(label.ljust(label_width), DIM)}"
         content = prefix + "  " + value
         lines.append(paint("│ ", GRAY) + fit(content, inner_width) + paint(" │", GRAY))
     lines.append(bottom)
@@ -572,7 +576,7 @@ def print_pair(left, right, gap=2):
     right_blank = paint("│" + " " * (right_width - 2) + "│", GRAY)
     left = left[:-1] + [left_blank] * (height - len(left)) + left[-1:]
     right = right[:-1] + [right_blank] * (height - len(right)) + right[-1:]
-    for left_line, right_line in zip(left, right):
+    for left_line, right_line in zip(left, right, strict=True):
         print(fit(left_line, left_width) + " " * gap + right_line)
 
 
@@ -586,7 +590,10 @@ def main():
     parser.add_argument(
         "--updater-status",
         metavar="FILE",
-        help="status.json of the dotfiles-upgraded daemon; shows its state instead of the last activation",
+        help=(
+            "status.json of the dotfiles-upgraded daemon; "
+            "shows its state instead of the last activation"
+        ),
     )
     args = parser.parse_args()
     profile = args.profile or ("system" if activated_at("system") is not None else "home-manager")
@@ -686,7 +693,7 @@ def main():
         paint("● WATCH", YELLOW, BOLD),
         paint("● ATTENTION", RED, BOLD),
     )[level]
-    print("\n  %s  %s\n" % (status, paint(message, DIM)))
+    print(f"\n  {status}  {paint(message, DIM)}\n")
 
 
 if __name__ == "__main__":
