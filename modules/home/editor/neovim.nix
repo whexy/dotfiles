@@ -1,42 +1,23 @@
 # Minimal Nixvim configuration shared by base and development profiles.
 {
   config,
-  inputs,
   lib,
   pkgs,
-  vimPkgs,
   ...
 }:
 let
   cfg = config.dotfiles.editor;
   style = import ../terminal/style.nix;
-  modernBorland = vimPkgs.vimUtils.buildVimPlugin {
+  modernBorland = pkgs.vimUtils.buildVimPlugin {
     pname = "vim-colors-modern-borland";
     version = "2024-03-03";
-    src = vimPkgs.fetchFromGitHub {
+    src = pkgs.fetchFromGitHub {
       owner = "letorbi";
       repo = "vim-colors-modern-borland";
       rev = "9da28b3049481ac098f555834db1607a265eb7bc";
       hash = "sha256-ybSdRHuNOTLGo39B5Q4oJLjqYlwa3pm85eVfrFcrOL8=";
     };
   };
-  # Only the package comes from the nightly flake; nixvim still builds plugins
-  # and the wrapper from vimPkgs.
-  #
-  # The neovim wrapper derives its Lua environment from `neovim-unwrapped.lua`,
-  # but the Lua rocks it collects propagate that nixpkgs' LuaJIT, so the two
-  # LuaJIT versions collide in buildEnv. passthru does not affect the
-  # derivation hash, so realigning it keeps the substitutable nightly build.
-  neovimPackage =
-    if cfg.neovim.nightly then
-      inputs.neovim-nightly.packages.${pkgs.stdenv.hostPlatform.system}.default.overrideAttrs (old: {
-        passthru = old.passthru // {
-          inherit (pkgs.unstable) luajit;
-          lua = pkgs.unstable.luajit;
-        };
-      })
-    else
-      pkgs.neovim-unwrapped;
 in
 {
   config = lib.mkIf cfg.neovim.enable {
@@ -44,11 +25,8 @@ in
       (import ./neovim-core.nix { })
       {
         enable = true;
-        package = neovimPackage;
-        nixpkgs.pkgs = vimPkgs;
-        # Nixvim tracks the stable release while the nightly plugin set comes from
-        # nixpkgs-unstable, so its release check always reports a mismatch here.
-        version.enableNixpkgsReleaseCheck = !cfg.neovim.nightly;
+        package = pkgs.neovim-unwrapped;
+        nixpkgs.pkgs = pkgs;
         # The nixvim option man page comes from a second, complete nixvim
         # evaluation against nixvim's own nixpkgs, which every host evaluation
         # would otherwise pay for.

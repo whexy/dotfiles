@@ -1,19 +1,12 @@
 # Editor group: Neovim, Neovide, VS Code, and per-language editing support. Each
 # `editor.<language>.enable` installs the language toolchain together with
 # its language servers and formatters.
-{
-  config,
-  inputs,
-  lib,
-  pkgs,
-  ...
-}:
+{ inputs, lib, ... }:
 {
   options.dotfiles.editor = {
     neovim = {
       enable = lib.mkEnableOption "Neovim";
       dev = lib.mkEnableOption "the full-featured development Neovim setup";
-      nightly = lib.mkEnableOption "the nightly Neovim build from neovim-nightly-overlay";
     };
     neovide.enable = lib.mkEnableOption "Neovide (Neovim GUI)";
     vscode.enable = lib.mkEnableOption "VS Code with Neovim as its editor";
@@ -53,12 +46,4 @@
     ./typst.nix
     ./zig.nix
   ];
-
-  # Nightly Neovim tracks master, so plugins pinned by the stable channel can
-  # be older than the core changes they depend on (flash.nvim's FFI hooks, for
-  # example, break until the plugin adapts to a Neovim refactor). Nixvim and
-  # the plugins built outside its option set all come from this package set,
-  # so the whole plugin set follows nixpkgs-unstable whenever the editor
-  # follows nightly; the stable channel stays authoritative for release Neovim.
-  config._module.args.vimPkgs = if config.dotfiles.editor.neovim.nightly then pkgs.unstable else pkgs;
 }

@@ -23,11 +23,6 @@ in
     };
     terminal.adopt.enable = lib.mkDefault true;
     editor = {
-      # Neovim commit dc89344 added a third `optional` element to `--api-info`
-      # parameters, which neovide 0.16.2 refuses to parse, so the GUI cannot
-      # start at all on nightly. Re-enable once a neovide release carries
-      # neovide#3530.
-      neovim.nightly = lib.mkDefault false;
       c.enable = lib.mkDefault true;
       go.enable = lib.mkDefault true;
       javascript.enable = lib.mkDefault true;

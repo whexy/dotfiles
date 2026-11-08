@@ -6,7 +6,6 @@
   inputs,
   lib,
   pkgs,
-  vimPkgs,
   ...
 }@args:
 let
@@ -29,7 +28,7 @@ let
         ./neovim-editing.nix
         (import ./neovim-core.nix { remapWindowKeys = true; })
         {
-          nixpkgs.pkgs = vimPkgs;
+          nixpkgs.pkgs = pkgs;
           inherit (config.programs.nixvim) package;
           enableMan = false;
           luaLoader.enable = true;
