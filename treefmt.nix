@@ -10,6 +10,8 @@ _: {
   programs = {
     nixfmt.enable = true; # .nix          (nixfmt-rfc-style)
     prettier.enable = true; # css, html, json, md, yaml
+    ruff-check.enable = true; # .py lint, with safe fixes (ruff.toml)
+    ruff-format.enable = true; # .py
     stylua.enable = true; # .lua
     shfmt.enable = true; # shell scripts
     taplo.enable = true; # .toml

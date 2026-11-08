@@ -906,7 +906,7 @@ Run `just check` to run formatters and linters checklists.
 ## Dev environment
 
 A `devShell` provides the formatters and linters on `PATH` (treefmt, nixfmt,
-statix, nil, nixd, deadnix, stylua, prettier, shfmt, taplo).
+statix, nil, nixd, deadnix, stylua, prettier, shfmt, taplo, ruff).
 
 Enter it with `nix develop`, or automatically via `direnv allow` (uses
 `.envrc`). Entering the shell installs git pre-commit hooks (`git-hooks.nix`)
@@ -915,4 +915,7 @@ runs them as `checks.<system>.pre-commit`. CI (`ci/check.sh`) builds every
 check but the host closures, which it only evaluates (`ci/eval-all.sh`).
 
 Formatter definitions live in `treefmt.nix` (single source of truth, shared by
-`nix fmt`, the pre-commit hook, and the pre-commit check).
+`nix fmt`, the pre-commit hook, and the pre-commit check). Every Python file
+is formatted and linted with ruff, whose settings live in the root
+`ruff.toml`; Python packages' pyproject.toml extend it through
+`lib/python-checks/pyproject.toml`.
