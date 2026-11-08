@@ -6,19 +6,17 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.go.enable {
-    home.packages = with pkgs; [
+  config = import ./language.nix { inherit config lib; } "go" {
+    packages = with pkgs; [
       go
     ];
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
-          go
-          gomod
-          gosum
-          gowork
-        ];
+    grammars = [
+      "go"
+      "gomod"
+      "gosum"
+      "gowork"
+    ];
+    nixvim = {
       lsp.servers.gopls = {
         enable = true;
         config.settings.gopls = {

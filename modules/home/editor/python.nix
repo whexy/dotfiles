@@ -6,15 +6,13 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.python.enable {
-    home.packages = with pkgs; [
+  config = import ./language.nix { inherit config lib; } "python" {
+    packages = with pkgs; [
       python3 # whatever version the channel provides
       uv
     ];
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [ python ];
+    grammars = [ "python" ];
+    nixvim = {
       lsp.servers = {
         basedpyright = {
           enable = true;

@@ -5,17 +5,17 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.config.enable {
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
+  config = import ./language.nix { inherit config lib; } "config" {
+    grammars = [
+      "css"
+      "html"
+      "json"
+      "json5"
+      "toml"
+      "yaml"
+    ];
+    nixvim = {
       plugins = {
-        treesitter.grammarPackages = with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
-          css
-          html
-          json
-          json5
-          toml
-          yaml
-        ];
         conform-nvim.settings.formatters_by_ft = {
           html = [ "prettier" ];
           json = [ "prettier" ];

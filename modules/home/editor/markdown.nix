@@ -6,15 +6,14 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.markdown.enable {
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
+  config = import ./language.nix { inherit config lib; } "markdown" {
+    grammars = [
+      "markdown"
+      "markdown_inline"
+    ];
+    nixvim = {
       extraPackages = [ pkgs.mdx-language-server ];
       filetype.extension.mdx = "mdx";
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
-          markdown
-          markdown_inline
-        ];
       lsp.servers.mdx_analyzer = {
         enable = true;
         package = null;

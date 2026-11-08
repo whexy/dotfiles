@@ -6,21 +6,19 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.javascript.enable {
-    home.packages = with pkgs; [
+  config = import ./language.nix { inherit config lib; } "javascript" {
+    packages = with pkgs; [
       bun
       deno
       nodejs
     ];
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
-          javascript
-          jsdoc
-          tsx
-          typescript
-        ];
+    grammars = [
+      "javascript"
+      "jsdoc"
+      "tsx"
+      "typescript"
+    ];
+    nixvim = {
       lsp.servers = {
         vtsls = {
           enable = true;

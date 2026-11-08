@@ -16,14 +16,12 @@ let
     || !(osConfig.dotfiles.desktop.enable || isWsl);
 in
 {
-  config = lib.mkIf config.dotfiles.editor.typst.enable {
-    home.packages = with pkgs; [
+  config = import ./language.nix { inherit config lib; } "typst" {
+    packages = with pkgs; [
       typst
     ];
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [ typst ];
+    grammars = [ "typst" ];
+    nixvim = {
       lsp.servers.tinymist = {
         enable = true;
         config.settings.formatterMode = "typstyle";

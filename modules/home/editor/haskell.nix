@@ -6,18 +6,14 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.haskell.enable {
-    home.packages = with pkgs; [
+  config = import ./language.nix { inherit config lib; } "haskell" {
+    packages = with pkgs; [
       cabal-install
       ghc
     ];
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [ haskell ];
-      lsp.servers.hls = {
-        enable = true;
-      };
+    grammars = [ "haskell" ];
+    nixvim.lsp.servers.hls = {
+      enable = true;
     };
   };
 }

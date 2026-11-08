@@ -6,17 +6,15 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.rust.enable {
-    home.packages = with pkgs; [
+  config = import ./language.nix { inherit config lib; } "rust" {
+    packages = with pkgs; [
       rustup
     ];
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
-          ron
-          rust
-        ];
+    grammars = [
+      "ron"
+      "rust"
+    ];
+    nixvim = {
       plugins = {
         rustaceanvim = {
           enable = true;

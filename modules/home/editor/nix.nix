@@ -5,10 +5,9 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.nix.enable {
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [ nix ];
+  config = import ./language.nix { inherit config lib; } "nix" {
+    grammars = [ "nix" ];
+    nixvim = {
       lsp.servers.nixd = {
         enable = true;
       };

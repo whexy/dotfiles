@@ -5,10 +5,9 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.lua.enable {
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [ lua ];
+  config = import ./language.nix { inherit config lib; } "lua" {
+    grammars = [ "lua" ];
+    nixvim = {
       lsp.servers.lua_ls = {
         enable = true;
         config.settings.Lua = {

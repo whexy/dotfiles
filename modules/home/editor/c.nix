@@ -7,8 +7,8 @@
   ...
 }:
 {
-  config = lib.mkIf config.dotfiles.editor.c.enable {
-    home.packages =
+  config = import ./language.nix { inherit config lib; } "c" {
+    packages =
       with pkgs;
       [
         clang
@@ -21,18 +21,14 @@
       ]
       # GDB does not run on Apple silicon.
       ++ lib.optional stdenv.hostPlatform.isLinux perSystem.pwndbg.pwndbg;
-
-    programs.nixvim = lib.mkIf config.dotfiles.editor.neovim.dev {
-      plugins.treesitter.grammarPackages =
-        with config.programs.nixvim.plugins.treesitter.package.builtGrammars; [
-          c
-          cpp
-          glsl
-          ninja
-        ];
-      lsp.servers.clangd = {
-        enable = true;
-      };
+    grammars = [
+      "c"
+      "cpp"
+      "glsl"
+      "ninja"
+    ];
+    nixvim.lsp.servers.clangd = {
+      enable = true;
     };
   };
 }
