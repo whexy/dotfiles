@@ -2,7 +2,10 @@
 # language toolchain and the heavy tooling bundles.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with plain assignments.
-{ lib, ... }:
+args@{ lib, ... }:
+let
+  osConfig = args.osConfig or null;
+in
 {
   imports = [ ./dev-lite.nix ];
 
@@ -14,7 +17,8 @@
     # Agents drive Firefox headlessly, so a dev machine needs the browser
     # whether or not it has a display.
     browser.firefox.automation = {
-      enable = lib.mkDefault true;
+      # Integrated homes follow the system dev cap.
+      enable = lib.mkIf (osConfig == null) (lib.mkDefault true);
       mcp.enable = lib.mkDefault true;
     };
     terminal.adopt.enable = lib.mkDefault true;

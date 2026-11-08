@@ -28,9 +28,8 @@
       enable = lib.mkDefault true;
       hardened = lib.mkDefault true;
     };
-    # Agents drive Firefox headlessly. Only has an effect on Darwin, where
-    # the browser comes from a Homebrew cask; on NixOS the home browser group
-    # installs it.
+    # Agents drive Firefox headlessly. The home browser group follows this;
+    # on Darwin the browser comes from a Homebrew cask.
     browser.firefox.automation.enable = lib.mkDefault true;
     virtualization = {
       docker = {

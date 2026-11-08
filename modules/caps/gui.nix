@@ -10,8 +10,8 @@
       rex.enable = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.mkDefault true);
     };
     fonts.enable = lib.mkDefault true;
-    # Firefox Homebrew cask; only has an effect on Darwin (on NixOS,
-    # Firefox is installed by the home browser group).
+    # The home browser group follows this; on Darwin it also installs the
+    # Firefox Homebrew cask.
     browser.firefox.enable = lib.mkDefault true;
     # PipeWire audio stack; only has an effect on NixOS.
     audio.enable = lib.mkDefault true;
