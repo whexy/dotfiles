@@ -24,5 +24,6 @@
   config = lib.mkIf config.dotfiles.agents.enable {
     dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
     age.secrets = config.dotfiles.llmGateways.secrets;
+    dotfiles.cloudflareAccess.serviceToken.enable = true;
   };
 }

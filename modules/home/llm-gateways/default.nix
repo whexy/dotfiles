@@ -1,11 +1,12 @@
 # The model gateways agents reach: CLIProxyAPI and magpie.
 #
 # Both are published on the public internet behind one Cloudflare Access
-# application, so every request needs its service-token headers in addition
-# to the gateway's own API key. Homes with a tailnet relay (`relay`) reach
-# their tailnet origins instead, where only the API key applies. The keys are agenix secrets; each consumer
-# declares `secrets` in its own gate, reads the files at run time, and sends
-# them its own way.
+# application, so every request needs its service-token headers
+# (`dotfiles.cloudflareAccess.serviceToken`) in addition to the gateway's own
+# API key. Homes with a tailnet relay (`relay`) reach their tailnet origins
+# instead, where only the API key applies. The keys are agenix secrets; each
+# consumer declares `secrets` in its own gate, reads the files at run time,
+# and sends them its own way.
 {
   config,
   lib,
@@ -117,27 +118,6 @@ in
       };
     };
 
-    accessToken = lib.mkOption {
-      type = lib.types.submodule {
-        options = {
-          idPath = lib.mkOption {
-            type = lib.types.str;
-            description = "agenix path of the service token's client ID.";
-          };
-          secretPath = lib.mkOption {
-            type = lib.types.str;
-            description = "agenix path of the service token's client secret.";
-          };
-        };
-      };
-      readOnly = true;
-      default = {
-        idPath = secretPath "cf-access-dotfiles-id";
-        secretPath = secretPath "cf-access-dotfiles-secret";
-      };
-      description = "The Cloudflare Access service token in front of every gateway.";
-    };
-
     secrets = lib.mkOption {
       type = lib.types.attrsOf lib.types.attrs;
       readOnly = true;
@@ -146,8 +126,6 @@ in
         ai-proxy-api-key.file = ../../../secrets/ai-proxy-api-key.age;
         # A magpie gateway key, made under Gateway → Gateway keys in its web UI.
         magpie-api-key.file = ../../../secrets/magpie-api-key.age;
-        cf-access-dotfiles-id.file = ../../../secrets/cf-access-dotfiles-id.age;
-        cf-access-dotfiles-secret.file = ../../../secrets/cf-access-dotfiles-secret.age;
       };
     };
 

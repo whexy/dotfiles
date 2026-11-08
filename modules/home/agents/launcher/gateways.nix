@@ -1,7 +1,8 @@
 # The gateways in the shape model-picker entries take their credentials.
 { config }:
 let
-  inherit (config.dotfiles.llmGateways) gateways accessToken relay;
+  inherit (config.dotfiles.llmGateways) gateways relay;
+  accessToken = config.dotfiles.cloudflareAccess.serviceToken;
 
   # env var -> agenix path of its value, for the launcher wrappers
   accessSecrets = {

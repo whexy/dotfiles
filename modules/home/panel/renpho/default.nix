@@ -13,10 +13,7 @@
 }:
 {
   config = lib.mkIf config.dotfiles.panel.renpho.enable {
-    age.secrets = {
-      cf-access-dotfiles-id.file = ../../../../secrets/cf-access-dotfiles-id.age;
-      cf-access-dotfiles-secret.file = ../../../../secrets/cf-access-dotfiles-secret.age;
-    };
+    dotfiles.cloudflareAccess.serviceToken.enable = true;
   };
 
   imports = [
