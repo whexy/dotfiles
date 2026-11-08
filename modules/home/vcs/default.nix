@@ -1,9 +1,19 @@
 # VCS group: git and git-adjacent tools.
-{ lib, ... }:
+{
+  config,
+  lib,
+  pkgs,
+  ...
+}:
 {
   options.dotfiles.vcs = {
     git = {
       enable = lib.mkEnableOption "git";
+      command.enable = lib.mkEnableOption ''
+        the git command on Linux, also in homes where `git.enable` does not
+        configure git. macOS keeps Apple's git, which avoids a keychain
+        prompt
+      '';
       opSshSigning = lib.mkEnableOption "1Password SSH signing (op-ssh-sign) on Linux";
 
       identity = {
@@ -31,4 +41,8 @@
     ./git.nix
     ./git-signing.nix
   ];
+
+  config = lib.mkIf (config.dotfiles.vcs.git.command.enable && pkgs.stdenv.hostPlatform.isLinux) {
+    home.packages = [ pkgs.git ];
+  };
 }

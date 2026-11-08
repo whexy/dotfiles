@@ -33,6 +33,7 @@ in
           launcher.vicinae.enable = lib.mkDefault true;
           keyboard.fcitx5.enable = lib.mkDefault true;
           desktop = {
+            xdg.enable = lib.mkDefault true;
             mako.enable = lib.mkDefault true;
             udiskie.enable = lib.mkDefault true;
             macbookScreenDensity.enable = lib.mkDefault true;
@@ -66,23 +67,4 @@ in
       # x86-64 Linux only
       zoom-us
     ];
-
-  xdg = lib.mkIf (!isDarwin) {
-    userDirs = {
-      enable = true;
-      createDirectories = true;
-    };
-
-    mimeApps = {
-      enable = true;
-      defaultApplications = {
-        "application/pdf" = "firefox.desktop";
-        "inode/directory" = "org.gnome.Nautilus.desktop";
-        "text/html" = "firefox.desktop";
-        "x-scheme-handler/http" = "firefox.desktop";
-        "x-scheme-handler/https" = "firefox.desktop";
-      };
-      defaultApplicationPackages = [ pkgs.vlc ];
-    };
-  };
 }

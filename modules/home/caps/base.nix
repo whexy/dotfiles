@@ -6,17 +6,12 @@ args@{
   pkgs,
   lib,
   inputs,
-  config,
   ...
 }:
 let
   osConfig = args.osConfig or null;
   p = pkgs.unstable;
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
-  isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
   witr-pkg = p.witr;
-  ghostty-pkg = if isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
-  ghostty-terminfo = ghostty-pkg.terminfo;
 in
 {
   dotfiles = {
@@ -28,25 +23,23 @@ in
     };
     monitors.htop.enable = lib.mkDefault true;
     monitors.btop.enable = lib.mkDefault true;
-    terminal.tmux.enable = lib.mkDefault true;
-    terminal.rex.terminfo.enable = lib.mkDefault true;
+    terminal = {
+      tmux.enable = lib.mkDefault true;
+      ghostty.terminfo.enable = lib.mkDefault true;
+      rex.terminfo.enable = lib.mkDefault true;
+    };
+    ssh.client.enable = lib.mkDefault true;
+    vcs.git.command.enable = lib.mkDefault true;
     shell.zsh.enable = lib.mkDefault true;
     shell.motd.enable = lib.mkDefault true;
     editor.neovim.enable = lib.mkDefault true;
   };
 
   home = {
-    shellAliases = lib.mkIf config.dotfiles.editor.neovim.enable {
-      e = "nvim";
-      r = "nvim -RM";
-    };
-
     packages =
       with pkgs;
       [
-        ghostty-terminfo
         witr-pkg
-        (if isWsl then openssh-wsl else openssh)
         curl
         inputs.home-manager.packages.${pkgs.stdenv.hostPlatform.system}.home-manager
         jq
@@ -61,9 +54,6 @@ in
         p.tailcat
       ]
       # macOS ships the BSD userland, which lacks GNU tools like `timeout`.
-      ++ lib.optionals isDarwin [ coreutils ]
-      ++ lib.optionals (!isDarwin) [
-        git # macOS: use native git to avoid keychain prompt
-      ];
+      ++ lib.optionals pkgs.stdenv.hostPlatform.isDarwin [ coreutils ];
   };
 }

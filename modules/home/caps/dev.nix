@@ -2,11 +2,9 @@
 # language toolchain and the heavy tooling bundles.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with plain assignments.
-{ lib, pkgs, ... }:
+{ lib, ... }:
 {
   imports = [ ./dev-lite.nix ];
-
-  home.packages = [ pkgs.sd ];
 
   dotfiles = {
     agenticTooling = {

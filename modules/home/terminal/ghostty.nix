@@ -14,7 +14,7 @@ in
 {
   config = lib.mkIf cfg.ghostty.enable (
     let
-      ghostty-pkg = if isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
+      ghostty-pkg = cfg.ghostty.package;
       macbookScreen = osConfig.dotfiles.hardware.display.macbookScreen or false;
 
       # Ghostty has no action to switch themes, and its built-in light/dark

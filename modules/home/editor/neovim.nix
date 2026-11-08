@@ -196,5 +196,10 @@ in
         VISUAL = nvim;
         SUDO_EDITOR = nvim;
       };
+
+    home.shellAliases = {
+      e = "nvim";
+      r = "nvim -RM";
+    };
   };
 }

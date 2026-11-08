@@ -7,12 +7,11 @@
 }:
 let
   cfg = config.dotfiles.shell;
-  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 in
 {
   config = lib.mkIf cfg.zsh.enable (
     let
-      ghostty-pkg = if isDarwin then pkgs.ghostty-bin else pkgs.ghostty;
+      ghostty-pkg = config.dotfiles.terminal.ghostty.package;
     in
     {
       programs.zsh = {

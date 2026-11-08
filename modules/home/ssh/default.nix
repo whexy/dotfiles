@@ -58,6 +58,10 @@ in
 
   options.dotfiles.ssh = {
     enable = lib.mkEnableOption "ssh";
+    client.enable = lib.mkEnableOption ''
+      the OpenSSH client commands. Under WSL they are Windows' own, so
+      1Password's Windows SSH agent serves them
+    '';
     windowMultiplexing.enable = lib.mkEnableOption ''
       WM-scoped SSH terminal multiplexing (oh-my-ghostty): the wrapped ssh
       binds each Ghostty window to its SSH context, and `ssh-window launch`
@@ -67,6 +71,10 @@ in
   };
 
   config = lib.mkMerge [
+    (lib.mkIf cfg.client.enable {
+      home.packages = [ (if isWsl then pkgs.openssh-wsl else pkgs.openssh) ];
+    })
+
     (lib.mkIf cfg.enable (
       let
         identityAgent =

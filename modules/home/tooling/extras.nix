@@ -10,6 +10,7 @@
     home.packages = with pkgs; [
       devenv
       qemu
+      sd
       sqlite
       watchexec
       xh
