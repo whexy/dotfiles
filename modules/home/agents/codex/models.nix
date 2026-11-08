@@ -14,9 +14,9 @@ let
       gateway = llm.gateways.${id};
       endpoint = llm.endpoint id;
     in
-    {
+    endpoint.relayCheck
+    // {
       label = "${id} (default models)";
-      inherit (endpoint) listeners;
       secrets = endpoint.secrets // {
         OPENAI_API_KEY = gateway.apiKeyPath;
       };

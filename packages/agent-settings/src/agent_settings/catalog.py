@@ -53,6 +53,9 @@ class Entry(TypedDict):
     listeners: NotRequired[list[str]]
     """`127.0.0.1:<port>` addresses the endpoint is served on, which this user
     must hold before credentials are sent to them (listeners.py)."""
+    listenerCheck: NotRequired[str]
+    """Command that exits non-zero unless this user holds every listener
+    given to it."""
     replacedBaseUrls: NotRequired[list[str]]
     """Base URLs Nix writes for this entry on another route, which a saved
     selection may still name without the user having edited it."""

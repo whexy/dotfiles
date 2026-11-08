@@ -700,22 +700,30 @@ puts a home that runs no Tailscale daemon, such as the shared servers mars and
 venus, on the tailnet as a userspace (tsnet) node, `<hostName>` tagged
 `tag:tailnet-relay`, without root. Each forward relays plain HTTP from a
 loopback port to a tailnet HTTPS origin, opening the TLS itself. A feature adds
-its forwards; the gateways are the first (`dotfiles.llmGateways.relay`).
+its forward where the relay is enabled:
 
-Through it, Claude Code and Codex reach CLIProxyAPI and magpie at their
-tailnet origins, with no Cloudflare Access. Muse Code stays on the public
-origin, which alone rewrites `/muse-code/models`, and so do OpenCode and its
-search.
+- `dotfiles.llmGateways.relay`: Claude Code and Codex reach CLIProxyAPI and
+  magpie at their tailnet origins, with no Cloudflare Access. Muse Code stays
+  on the public origin, which alone rewrites `/muse-code/models`, and so do
+  OpenCode and its search.
+- Atuin syncs with `atuin.at-basking.ts.net`.
+- The `wechat` CLI reaches the WeChat relay.
+- Agents register the tldraw MCP server.
 
-- Every user on the host can connect to a loopback port, so the relay admits
-  only connections whose client socket the kernel (sock_diag) reports as its
-  own user's, and closes the rest before reading them. Anything running as
-  that user is trusted, including a forwarder other users can reach.
-- systemd user sockets hold the ports across relay restarts. Before
-  agent-settings sends credentials to a relay port, at launch and for model
-  discovery, it checks in `/proc/net/tcp` that this user holds it, so another
-  user who took the port gets nothing. While the relay is down, agents refuse
-  to start; they never fall back to the public origin.
+Every user on the host can connect to a loopback port, and any user can bind
+one the relay does not hold, so the check runs in both directions:
+
+- The relay admits only connections whose client socket the kernel
+  (sock_diag) reports as its own user's, and closes the rest before reading
+  them. Anything running as that user is trusted, including a forwarder other
+  users can reach.
+- systemd user sockets hold the ports across relay restarts, and every client
+  runs `tailnet-relay-check` (`dotfiles.tailnetRelay.checker`) before it
+  connects, so another user who took a port gets nothing: agent-settings
+  before it sends a gateway key, every agent launcher for the MCP servers,
+  and the `atuin` and `wechat` wrappers. While the relay is down, agents and
+  `wechat` refuse to start, and Atuin keeps its history locally with sync off;
+  none of them fall back to a public origin.
 - Root on the host can take the node's identity from
   `~/.local/state/tailnet-relay` and reach whatever the tailnet policy grants
   the tag.

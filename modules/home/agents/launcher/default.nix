@@ -28,6 +28,16 @@ in
       description = "Global git config of every agent session.";
     };
 
+    relayListeners = lib.mkOption {
+      type = lib.types.listOf lib.types.str;
+      default = [ ];
+      description = ''
+        Tailnet relay addresses the agents connect to directly, such as MCP
+        servers'. Every launcher refuses to start its agent unless this user
+        holds them (`dotfiles.tailnetRelay.checker`).
+      '';
+    };
+
     prelude = lib.mkOption {
       type = lib.types.lines;
       readOnly = true;
@@ -36,8 +46,11 @@ in
       # wrapper (see `transcribe`).
       default = ''
         export GIT_CONFIG_GLOBAL=${cfg.gitConfig}
+      ''
+      + lib.optionalString (cfg.relayListeners != [ ]) ''
+        ${config.dotfiles.tailnetRelay.checker} ${lib.escapeShellArgs cfg.relayListeners} || exit 1
       '';
-      defaultText = lib.literalMD "an export of `gitConfig` as `GIT_CONFIG_GLOBAL`";
+      defaultText = lib.literalMD "an export of `gitConfig` as `GIT_CONFIG_GLOBAL`, and the check of `relayListeners`";
       description = "Shell lines every agent launcher runs before starting its agent.";
     };
   };

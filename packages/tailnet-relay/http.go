@@ -2,10 +2,13 @@ package main
 
 import (
 	"context"
+	"errors"
+	"fmt"
 	"log"
 	"net"
 	"net/http"
 	"net/http/httputil"
+	"net/netip"
 	"net/url"
 	"time"
 
@@ -16,23 +19,30 @@ import (
 // tailnet, in TLS the relay opens itself, so clients that only take an HTTP
 // base URL reach a tailnet HTTPS service. Requests are passed on unchanged
 // apart from the Host header.
-func serveHTTP(ln net.Listener, f forward, srv *tsnet.Server) error {
+func serveHTTP(ln net.Listener, f forward, srv *tsnet.Server, up <-chan struct{}) error {
 	target, err := url.Parse(f.Upstream)
 	if err != nil {
 		return err
 	}
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			// tsnet waits for the node to come up; a node that cannot fails
-			// the request instead of holding it.
+			// A node that cannot come up fails requests instead of holding them.
 			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
 			defer cancel()
-			return srv.Dial(ctx, network, addr)
+			// tsnet's Dial fails at once while the node is still starting.
+			select {
+			case <-up:
+			case <-ctx.Done():
+				return nil, fmt.Errorf("tailnet is not up: %w", ctx.Err())
+			}
+			return dialTailnet(ctx, srv, network, addr)
 		},
-		ForceAttemptHTTP2:     true,
-		MaxIdleConns:          100,
-		IdleConnTimeout:       90 * time.Second,
-		TLSHandshakeTimeout:   10 * time.Second,
+		ForceAttemptHTTP2: true,
+		MaxIdleConns:      100,
+		IdleConnTimeout:   90 * time.Second,
+		// The first handshake after the node starts waits for its path to
+		// the peer, about 7 s from venus; net/http's default is 10 s.
+		TLSHandshakeTimeout:   30 * time.Second,
 		ExpectContinueTimeout: 1 * time.Second,
 	}
 	proxy := &httputil.ReverseProxy{
@@ -48,4 +58,41 @@ func serveHTTP(ln net.Listener, f forward, srv *tsnet.Server) error {
 	}
 	server := &http.Server{Handler: proxy, ReadHeaderTimeout: 30 * time.Second}
 	return server.Serve(ln)
+}
+
+// dialTailnet dials addr over the tailnet only. tsnet dials an address no
+// peer it knows of serves through the host's own network instead, which it
+// does for a Tailscale Service's address until the netmap names the peer
+// that serves it, shortly after the node comes up. A connection that did
+// not leave from the node's own address is closed before TLS, so no request
+// is sent on it, and the dial is retried.
+func dialTailnet(ctx context.Context, srv *tsnet.Server, network, addr string) (net.Conn, error) {
+	for {
+		conn, err := srv.Dial(ctx, network, addr)
+		if err == nil {
+			if fromNode(srv, conn) {
+				return conn, nil
+			}
+			conn.Close()
+			err = errors.New("not routed over the tailnet yet")
+		}
+		select {
+		case <-ctx.Done():
+			return nil, fmt.Errorf("%s: %w", addr, err)
+		case <-time.After(250 * time.Millisecond):
+		}
+	}
+}
+
+func fromNode(srv *tsnet.Server, conn net.Conn) bool {
+	local, ok := conn.LocalAddr().(*net.TCPAddr)
+	if !ok {
+		return false
+	}
+	ip, ok := netip.AddrFromSlice(local.IP)
+	if !ok {
+		return false
+	}
+	v4, v6 := srv.TailscaleIPs()
+	return ip.Unmap() == v4 || ip == v6
 }

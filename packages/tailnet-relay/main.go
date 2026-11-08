@@ -75,21 +75,25 @@ func run(configPath string) error {
 	if err != nil {
 		return err
 	}
-	uid := uint32(os.Getuid())
-	errs := make(chan error, len(cfg.Forwards))
-	for _, f := range cfg.Forwards {
-		ln := ownerOnly{Listener: listeners[f.Name], uid: uid, name: f.Name}
-		go func() { errs <- fmt.Errorf("%s: %w", f.Name, serveHTTP(ln, f, srv)) }()
-	}
-
+	// A node that failed to come up never will, so the process exits and
+	// systemd starts it again.
+	errs := make(chan error, len(cfg.Forwards)+1)
+	up := make(chan struct{})
 	go func() {
 		status, err := srv.Up(context.Background())
 		if err != nil {
-			log.Printf("tailnet: %v", err)
+			errs <- fmt.Errorf("tailnet: %w", err)
 			return
 		}
 		log.Printf("tailnet: up as %s", status.Self.DNSName)
+		close(up)
 	}()
+
+	uid := uint32(os.Getuid())
+	for _, f := range cfg.Forwards {
+		ln := ownerOnly{Listener: listeners[f.Name], uid: uid, name: f.Name}
+		go func() { errs <- fmt.Errorf("%s: %w", f.Name, serveHTTP(ln, f, srv, up)) }()
+	}
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)

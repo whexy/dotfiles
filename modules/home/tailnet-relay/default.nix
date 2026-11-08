@@ -52,7 +52,11 @@ in
 
     forwards = lib.mkOption {
       default = { };
-      description = "Tailnet HTTPS origins relayed from loopback ports, as plain HTTP.";
+      description = ''
+        Tailnet HTTPS origins relayed from loopback ports, as plain HTTP. A
+        feature adds its own while `enable` is set, and runs `checker` before
+        each client connects.
+      '';
       type = lib.types.attrsOf (
         lib.types.submodule (
           { config, ... }:
@@ -75,10 +79,29 @@ in
                 default = "127.0.0.1:${toString config.port}";
                 description = "Address clients connect to.";
               };
+              url = lib.mkOption {
+                type = lib.types.str;
+                readOnly = true;
+                default = "http://${config.address}";
+                description = "Origin clients send requests to.";
+              };
             };
           }
         )
       );
+    };
+
+    checker = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = lib.getExe' perSystem.self.tailnet-relay "tailnet-relay-check";
+      defaultText = lib.literalMD "`tailnet-relay-check` of `packages/tailnet-relay`";
+      description = ''
+        Command that exits non-zero unless this user holds every forward
+        address it is given. Any port is free for another user to take while
+        the relay does not hold it, so every client runs this before it sends
+        anything to a forward.
+      '';
     };
   };
 
@@ -91,6 +114,10 @@ in
       {
         assertion = cfg.forwards != { };
         message = "dotfiles.tailnetRelay is enabled with no forwards.";
+      }
+      {
+        assertion = lib.allUnique (lib.mapAttrsToList (_: forward: forward.port) cfg.forwards);
+        message = "dotfiles.tailnetRelay.forwards share a port.";
       }
     ];
 

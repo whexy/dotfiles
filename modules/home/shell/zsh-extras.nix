@@ -129,7 +129,6 @@ in
           enableZshIntegration = false;
           settings = {
             auto_sync = true;
-            sync_address = "https://atuin.at-basking.ts.net";
             update_check = false;
             search_mode = "fuzzy";
             search_mode_shell_up_key_binding = "prefix";

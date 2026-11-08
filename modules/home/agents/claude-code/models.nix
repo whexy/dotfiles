@@ -38,9 +38,9 @@ let
       endpoint = llm.endpoint id;
     in
     rec {
-      default = {
+      default = endpoint.relayCheck // {
         label = "${id} (default models)";
-        inherit (endpoint) listeners replacedBaseUrls;
+        inherit (endpoint) replacedBaseUrls;
         env = {
           ANTHROPIC_BASE_URL = endpoint.baseUrl;
           # Context usage of a model Claude Code does not know comes from the

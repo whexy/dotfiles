@@ -27,9 +27,10 @@ in
 
   # How the agents agent-settings launches reach gateway `id`: through the
   # tailnet relay where this home runs one, otherwise at the public origin
-  # behind Cloudflare Access. `listeners` are the relay ports agent-settings
-  # checks this user holds before sending credentials, and `replacedBaseUrls`
-  # the other route's origin, which a saved selection may still name.
+  # behind Cloudflare Access. `listenerCheck` runs on the relay ports
+  # (`listeners`) before agent-settings sends credentials there, and
+  # `replacedBaseUrls` is the other route's origin, which a saved selection
+  # may still name.
   endpoint =
     id:
     let
@@ -41,7 +42,10 @@ in
         catalogUrl = relayUrl id + gateway.catalogPath;
         secrets = { };
         secretHeaders = { };
-        listeners = [ "127.0.0.1:${toString relay.ports.${id}}" ];
+        relayCheck = {
+          listeners = [ config.dotfiles.tailnetRelay.forwards.${id}.address ];
+          listenerCheck = config.dotfiles.tailnetRelay.checker;
+        };
         replacedBaseUrls = [ gateway.baseUrl ];
       }
     else
@@ -49,7 +53,7 @@ in
         inherit (gateway) baseUrl catalogUrl;
         secrets = accessSecrets;
         secretHeaders = accessHeaderEnv;
-        listeners = [ ];
+        relayCheck = { };
         replacedBaseUrls = [ (relayUrl id) ];
       };
 }
