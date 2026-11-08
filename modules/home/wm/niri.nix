@@ -1,6 +1,6 @@
 # Niri Wayland compositor configuration (Linux)
-# Note: inputs.niri.homeModules.niri is imported by ./default.nix
-# (this file is gated on dotfiles.gui.enable and cannot declare imports).
+# inputs.niri.homeModules.niri is imported by ./default.nix: its options must
+# exist on every home, since other groups add to programs.niri.settings.
 args@{
   config,
   pkgs,
@@ -16,7 +16,6 @@ in
   config = lib.mkIf cfg.niri.enable (
     let
       monitors = osConfig.dotfiles.hardware.monitors or [ ];
-      networkManagerEnabled = osConfig.dotfiles.network.networkmanager.enable or false;
       swaylock = lib.getExe config.programs.swaylock.package;
 
       # Build programs.niri.settings.outputs from dotfiles.hardware.monitors entries.
@@ -78,33 +77,14 @@ in
       };
     in
     {
-      home.packages = with pkgs; [
-        wl-clipboard
-      ];
-
-      programs = {
-        niri = {
-          enable = true;
-          # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
-          # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
-          # avoid pulling an extra rebuild-from-source derivation into the closure.
-          package = pkgs.niri;
-        };
-        swaylock = {
-          enable = true;
-          settings = {
-            color = "282828";
-            font = "JetBrainsMono Nerd Font";
-            indicator-radius = 100;
-            show-failed-attempts = true;
-          };
-        };
+      programs.niri = {
+        enable = true;
+        # Use the niri from our nixpkgs (currently 25.11) instead of the niri-flake's
+        # pinned niri-stable (currently 25.08), so we get a single cache-hit niri and
+        # avoid pulling an extra rebuild-from-source derivation into the closure.
+        package = pkgs.niri;
       };
       services = {
-        wl-clip-persist.enable = true;
-        blueman-applet.enable = true;
-        network-manager-applet.enable = networkManagerEnabled;
-
         # Lock after 5 minutes, blank the displays shortly afterward, and always
         # lock before suspend. Any input event powers the monitors back on.
         swayidle = {
@@ -150,14 +130,6 @@ in
           # On machines with full dotfiles.hardware.monitors declarations this loop is a no-op.
           {
             command = [ "${fallbackScaleScript}/bin/niri-fallback-scale" ];
-          }
-          # Input method framework (fcitx5) – needs explicit launch since niri
-          # doesn't process XDG autostart entries.
-          {
-            command = [
-              "fcitx5"
-              "-d"
-            ];
           }
         ];
 
