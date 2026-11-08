@@ -356,6 +356,37 @@ steps:
       # wrangler is a docs devDependency, installed by build-docs.
       - npx wrangler deploy
       - echo "OK - deployed"
+  # Announce the commit to the hosts (flake.lib.rollout,
+  # packages/dotfiles-upgraded/README.md). No step sets depends_on, so this
+  # runs only once every step before it passed, and a failed announcement
+  # fails the push pipeline: GitHub then never reports success on a commit the
+  # hosts were not told about. Only the tip of master is announced, since a
+  # rerun of an older pipeline would hand hosts an older commit under a newer
+  # pipeline number.
+  announce:
+    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
+    when:
+      event: push
+      branch: master
+    backend_options: *k8s_heavy
+    environment:
+      <<: *ci_cache
+      ROLLOUT_SIGNING_KEY:
+        from_secret: rollout_signing_key
+      NTFY_ROLLOUT_TOKEN:
+        from_secret: ntfy_rollout_token
+    commands:
+      - |
+        head=$(git ls-remote --exit-code https://github.com/whexy/dotfiles refs/heads/master | cut -f1)
+        if [ "$head" != "$CI_COMMIT_SHA" ]; then
+          echo "SUPERSEDED - $CI_COMMIT_SHA is no longer the tip of master"
+          exit 0
+        fi
+        topic=$(nix eval --raw .#lib.rollout.topic)
+        public_key=$(nix eval --raw .#lib.rollout.publicKey)
+        nix run --accept-flake-config .#dotfiles-upgraded -- announce \
+          --url "http://ntfy.ntfy.svc.cluster.local/$topic" --public-key "$public_key" \
+          --sha "$CI_COMMIT_SHA" --seq "$CI_PIPELINE_NUMBER"
   # Report a failure on master to the T3 Code task that repairs it (see
   # AGENTS.md). It runs last and no step sets depends_on, so the steps run in
   # order and a failure in any of them reaches this one. Should the task not

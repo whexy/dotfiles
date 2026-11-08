@@ -2,8 +2,9 @@
 # upstream repo, via the dotfiles-upgraded daemon running as a long-lived user
 # service (packages/dotfiles-upgraded).
 #
-# The daemon polls upstream, waits for CI to pass on the new commit, and then
-# runs the same command documented for manual use, plus --refresh:
+# The daemon learns of each commit that passes CI, from CI's announcements or
+# by polling upstream, and then runs the same command documented for manual
+# use, plus --refresh:
 #   nh home switch <upstreamRef>/<sha> --refresh --no-nom -c <user>@<host> -b backup
 #
 # The <user>@<host> configuration name is deduced from the path of the
@@ -26,7 +27,14 @@
 }:
 let
   cfg = config.dotfiles.autoUpgrade;
-  inherit (flake.lib) upstreamRef;
+  relay = config.dotfiles.tailnetRelay;
+  inherit (flake.lib) upstreamRef rollout;
+
+  # Homes without a Tailscale daemon reach the relay through their tailnet
+  # relay. The daemon runs no tailnet-relay-check: announcements are signed,
+  # so whoever holds the port can only withhold them.
+  notifyURL =
+    (if relay.enable then relay.forwards.rollout.url else rollout.relay) + "/${rollout.topic}";
 
   # Find the file that set dotfiles.autoUpgrade.enable = true and parse
   # "<user>@<host>" out of its path:
@@ -73,11 +81,37 @@ in
       type = lib.types.str;
       default = "10m";
       description = ''
-        Base interval between upstream ref checks, as a Go duration. The
-        daemon jitters each tick so the fleet does not poll in lockstep,
-        and raises the floor when GitHub asks it to.
+        Base interval between upstream ref checks while no announcement
+        stream is up (`notify`), as a Go duration. The daemon jitters each
+        tick so the fleet does not poll in lockstep, and raises the floor
+        when GitHub asks it to.
       '';
       example = "30m";
+    };
+
+    notify = {
+      enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = ''
+          Subscribe to CI's signed announcements of commits that pass
+          (flake.lib.rollout), so the home switches as soon as CI passes and
+          asks GitHub only every `notify.pollInterval`. The relay is on the
+          tailnet, reached through `dotfiles.tailnetRelay` where that is
+          enabled; while it cannot be reached, the daemon polls GitHub every
+          `pollInterval`, as it does without this.
+        '';
+      };
+
+      pollInterval = lib.mkOption {
+        type = lib.types.str;
+        default = "6h";
+        description = ''
+          Base interval between upstream ref checks while the announcement
+          stream is up, as a Go duration. GitHub is then only the fallback
+          for an announcement the home missed.
+        '';
+      };
     };
 
     stateDir = lib.mkOption {
@@ -143,6 +177,11 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    dotfiles.tailnetRelay.forwards.rollout = lib.mkIf (cfg.notify.enable && relay.enable) {
+      port = 47306;
+      upstream = rollout.relay;
+    };
+
     age.secrets.upgrade-webhook-token = lib.mkIf cfg.reportFailures {
       file = ../../../secrets/upgrade-webhook-token.age;
     };
@@ -208,6 +247,11 @@ in
             "--poll-interval=${cfg.pollInterval}"
             "--max-attempts=${toString cfg.maxAttempts}"
             "--require-ci-pass=${lib.boolToString cfg.requireCiPass}"
+          ]
+          ++ lib.optionals cfg.notify.enable [
+            "--notify-url=${notifyURL}"
+            "--notify-public-key=${rollout.publicKey}"
+            "--notified-poll-interval=${cfg.notify.pollInterval}"
           ]
           ++ lib.optionals cfg.reportFailures [
             "--failure-webhook=${flake.lib.upgradeFailureWebhook}"

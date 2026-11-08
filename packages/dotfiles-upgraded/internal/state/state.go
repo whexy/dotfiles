@@ -48,6 +48,9 @@ type State struct {
 	LastSuccessSha string     `json:"lastSuccessSha"`
 	LastSuccessAt  *time.Time `json:"lastSuccessAt"`
 	IgnoredShas    []string   `json:"ignoredShas"`
+	// AnnouncedSeq is the Seq of the last CI announcement taken; an
+	// announcement at or below it is a replay.
+	AnnouncedSeq int64 `json:"announcedSeq,omitempty"`
 	// IgnoreReasons keeps the phase each ignored SHA was given up in, so a
 	// restarted daemon still reports why the host is held back.
 	IgnoreReasons map[string]Phase `json:"ignoreReasons"`
@@ -120,6 +123,16 @@ type Status struct {
 	LastError           *string    `json:"lastError"`
 	ConsecutiveFailures int        `json:"consecutiveFailures"`
 	IgnoredShas         []string   `json:"ignoredShas"`
+	// Notify is present when the daemon subscribes to CI's announcements.
+	Notify *NotifyStatus `json:"notify,omitempty"`
+}
+
+// NotifyStatus reports the announcement stream. A host whose stream is down
+// still converges, by polling GitHub at the shorter interval.
+type NotifyStatus struct {
+	Connected    bool       `json:"connected"`
+	LastEventAt  *time.Time `json:"lastEventAt"`
+	AnnouncedSeq int64      `json:"announcedSeq"`
 }
 
 // Store reads and writes the files under a single state directory.

@@ -1,7 +1,7 @@
 // Package engine implements the poll → gate → switch → record loop.
 //
-// Every effect the loop depends on (time, GitHub, the rebuild itself) arrives
-// through an interface.
+// Every effect the loop depends on (time, GitHub, CI's announcements, the
+// rebuild itself) arrives through an interface.
 package engine
 
 import (
@@ -12,6 +12,7 @@ import (
 	"log/slog"
 	"time"
 
+	"dotfiles-upgraded/internal/announce"
 	"dotfiles-upgraded/internal/github"
 	"dotfiles-upgraded/internal/state"
 )
@@ -34,6 +35,18 @@ type Switcher interface {
 	Switch(ctx context.Context, sha string) error
 }
 
+// Notifier delivers CI's signed announcements of commits that passed.
+type Notifier interface {
+	// Wake fires when an announcement arrives or the stream turns unhealthy.
+	Wake() <-chan struct{}
+	// Take returns the newest verified announcement not yet taken.
+	Take() (announce.Announcement, bool)
+	// Healthy reports whether announcements can be relied on to arrive, so
+	// GitHub need only be asked at NotifiedPollInterval.
+	Healthy() bool
+	Status() announce.Status
+}
+
 // Reporter delivers a commit this host gave up on. An error whose Permanent
 // method reports true drops the report; any other error retries it next cycle.
 type Reporter interface {
@@ -46,9 +59,12 @@ type Config struct {
 	ExitAfterSwitch bool
 	Ref             string
 	PollInterval    time.Duration
-	MaxAttempts     int
-	RequireCIPass   bool
-	PendingTimeout  time.Duration
+	// NotifiedPollInterval replaces PollInterval while the Notifier is
+	// healthy; GitHub is then only the fallback for a lost announcement.
+	NotifiedPollInterval time.Duration
+	MaxAttempts          int
+	RequireCIPass        bool
+	PendingTimeout       time.Duration
 	// JitterSeed keeps each host's tick offset stable and distinct, so the
 	// fleet does not converge on a synchronised poll.
 	JitterSeed string
@@ -84,6 +100,8 @@ type Engine struct {
 	// Reporter is optional; without one, failures stay in the log and
 	// status.json.
 	Reporter Reporter
+	// Notifier is optional; without one, the engine only polls GitHub.
+	Notifier Notifier
 
 	st state.State
 	// pendingSince tracks how long the current candidate has sat in CI, so a
@@ -123,10 +141,32 @@ func (e *Engine) Run(ctx context.Context) {
 		if ctx.Err() != nil {
 			return
 		}
-		if !e.Clock.Sleep(ctx, wait) {
+		if !e.wait(ctx, wait) {
 			return
 		}
 	}
+}
+
+// wait sleeps for d, ending early when the Notifier wakes. It returns false
+// once ctx has ended.
+func (e *Engine) wait(ctx context.Context, d time.Duration) bool {
+	if e.Notifier == nil {
+		return e.Clock.Sleep(ctx, d)
+	}
+	sleepCtx, cancel := context.WithCancel(ctx)
+	exited := make(chan struct{})
+	go func() {
+		defer close(exited)
+		select {
+		case <-e.Notifier.Wake():
+			cancel()
+		case <-sleepCtx.Done():
+		}
+	}()
+	e.Clock.Sleep(sleepCtx, d)
+	cancel()
+	<-exited
+	return ctx.Err() == nil
 }
 
 // RunOnce performs one cycle and returns how long to wait before the next.
@@ -141,6 +181,12 @@ func (e *Engine) RunOnce(ctx context.Context) time.Duration {
 // before the next poll.
 func (e *Engine) cycle(ctx context.Context) time.Duration {
 	e.deliverFailure(ctx)
+
+	if e.Notifier != nil {
+		if a, ok := e.Notifier.Take(); ok {
+			return e.applyAnnouncement(ctx, a)
+		}
+	}
 
 	head, err := e.Refs.Head(ctx, e.Config.Ref, e.st.ETag)
 	if err != nil {
@@ -240,6 +286,40 @@ func (e *Engine) cycle(ctx context.Context) time.Duration {
 	}
 
 	e.attemptSwitch(ctx, sha)
+	return e.nextInterval()
+}
+
+// applyAnnouncement switches to an announced commit. The signature already
+// stands for the push pipeline's success, so GitHub is not asked. Announcing is
+// a step of that pipeline, so GitHub never reports success on a commit whose
+// announcement was not published, and a later announcement than the last one
+// taken is never older than a commit the GitHub path switched to.
+func (e *Engine) applyAnnouncement(ctx context.Context, a announce.Announcement) time.Duration {
+	if a.Seq <= e.st.AnnouncedSeq {
+		e.Log.Debug("announcement already taken", "seq", a.Seq, "sha", a.Sha)
+		return e.nextInterval()
+	}
+	e.Log.Info("announced", "sha", a.Sha, "seq", a.Seq)
+	e.st.AnnouncedSeq = a.Seq
+	if a.Sha != e.st.LastSeenSha {
+		clear(e.pendingSince)
+		e.st.LastSeenSha = a.Sha
+		// The stored ETag names an older tip; a 304 against it would now be
+		// read as this commit.
+		e.st.ETag = ""
+	}
+	e.persist()
+
+	if a.Sha == e.st.LastSuccessSha {
+		e.clearFailures()
+		e.setPhase(state.PhaseUpToDate)
+		return e.nextInterval()
+	}
+	if e.st.Ignored(a.Sha) {
+		e.setPhase(e.st.IgnoreReasons[a.Sha])
+		return e.nextInterval()
+	}
+	e.attemptSwitch(ctx, a.Sha)
 	return e.nextInterval()
 }
 
@@ -402,6 +482,14 @@ func (e *Engine) writeStatus(nextCheck *time.Time) {
 		ConsecutiveFailures: e.consecutiveFail,
 		IgnoredShas:         e.st.IgnoredShas,
 	}
+	if e.Notifier != nil {
+		ns := e.Notifier.Status()
+		st.Notify = &state.NotifyStatus{
+			Connected:    ns.Connected,
+			LastEventAt:  ns.LastEventAt,
+			AnnouncedSeq: e.st.AnnouncedSeq,
+		}
+	}
 	if err := e.Store.WriteStatus(st); err != nil {
 		e.Log.Warn("could not write status", "error", err)
 	}
@@ -410,6 +498,9 @@ func (e *Engine) writeStatus(nextCheck *time.Time) {
 // nextInterval applies per-host jitter and respects a server-requested floor.
 func (e *Engine) nextInterval() time.Duration {
 	base := e.Config.PollInterval
+	if e.Notifier != nil && e.Config.NotifiedPollInterval > base && e.Notifier.Healthy() {
+		base = e.Config.NotifiedPollInterval
+	}
 	if e.serverInterval > base {
 		base = e.serverInterval
 	}

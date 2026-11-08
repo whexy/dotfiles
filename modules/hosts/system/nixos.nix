@@ -74,6 +74,11 @@ in
               "--max-attempts=${toString cfg.autoUpgrade.maxAttempts}"
               "--require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}"
             ]
+            ++ lib.optionals cfg.autoUpgrade.notify.enable [
+              "--notify-url=${flake.lib.rollout.relay}/${flake.lib.rollout.topic}"
+              "--notify-public-key=${flake.lib.rollout.publicKey}"
+              "--notified-poll-interval=${cfg.autoUpgrade.notify.pollInterval}"
+            ]
             ++ lib.optionals cfg.autoUpgrade.reportFailures [
               "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
               "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"

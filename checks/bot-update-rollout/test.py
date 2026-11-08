@@ -46,6 +46,7 @@ esac
 
 STUB_GIT = """#!{bash}
 if [ "$1" = push ]; then echo "git push" >> "$CALLS"; exit 0; fi
+if [ "$1" = ls-remote ]; then printf '%s\\trefs/heads/master\\n' "$REMOTE_HEAD"; exit 0; fi
 exec {git} "$@"
 """
 
@@ -126,3 +127,25 @@ for lane, commands in lanes.items():
             calls = (root / "calls").read_text()
             assert ("build " in calls) == (hit == "0"), calls
     print(f"{lane}: push enabled, failed updates still pushed, cached success reused, failed checks rejected")
+
+# The announcement is the push pipeline's last passing step: it runs only on
+# master pushes, after every other step, and announces only the tip.
+names = list(pipeline["steps"])
+announce = pipeline["steps"]["announce"]
+assert announce["when"] == {"event": "push", "branch": "master"}, announce["when"]
+assert not any("depends_on" in step for step in pipeline["steps"].values())
+assert names.index("announce") == names.index("report-failure") - 1, names
+for name in ("check", "build-docs", "deploy-docs"):
+    assert names.index(name) < names.index("announce"), name
+script = "\n".join(announce["commands"])
+for head, announced in (("a" * 40, True), ("b" * 40, False)):
+    with tempfile.TemporaryDirectory() as directory:
+        root, repo, env = fixture(directory)
+        env.update(REMOTE_HEAD=head, CI_COMMIT_SHA="a" * 40, CI_PIPELINE_NUMBER="42")
+        result = run(script, repo, env)
+        assert result.returncode == 0, result.stderr
+        calls = (root / "calls").read_text() if (root / "calls").exists() else ""
+        assert ("announce" in calls) == announced, calls
+        if announced:
+            assert "--sha " + "a" * 40 in calls and "--seq 42" in calls, calls
+print("announce: last step on master pushes, tip only")

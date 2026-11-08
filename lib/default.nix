@@ -16,6 +16,17 @@ let
   # secrets/upgrade-webhook-token.age.
   upgradeFailureWebhook = "https://n8n.clusters.work/webhook/dotfiles-upgrade-failure";
 
+  # When a push to master passes CI, the pipeline announces the commit on this
+  # ntfy topic (clusters-work, docs/ntfy.md), signed with the key whose public
+  # half is below; the private half is the Woodpecker secret
+  # rollout_signing_key. dotfiles-upgraded daemons subscribe to it instead of
+  # polling GitHub (packages/dotfiles-upgraded/README.md).
+  rollout = {
+    relay = "https://ntfy.at-basking.ts.net";
+    topic = "dotfiles-rollout";
+    publicKey = "9TsY4W+qgm9Lz07eKWbRMUiLQwB8j3E1M0sPVpZS+FE=";
+  };
+
   # Public name of a service a host publishes through its own Cloudflare
   # tunnel; the tunnel services and t3-pair all derive names from here.
   # Keep it one label below the zone: Cloudflare's free certificate covers
@@ -119,6 +130,7 @@ in
   inherit
     upstreamRef
     upgradeFailureWebhook
+    rollout
     publicHost
     upgraderReload
     overlays

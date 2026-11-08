@@ -272,6 +272,27 @@ agenix -r -i ~/.ssh/agenix_ed25519
 Dropping a recipient does not revoke what that machine already decrypted;
 rotate the secret too.
 
+## Auto-upgrade
+
+Hosts with `dotfiles.system.autoUpgrade` (or the home's
+`dotfiles.autoUpgrade`) run `dotfiles-upgraded`, which switches them to each
+master commit that passes CI. CI's last passing step on a master push,
+`announce`, signs the commit and publishes it to the ntfy topic in
+`flake.lib.rollout`, on the cluster's tailnet relay. Daemons subscribe and
+switch at once, and poll GitHub only every 6 hours while the stream is up
+(every 10 minutes while it is down), so hosts behind one NAT stay within
+GitHub's unauthenticated rate limit. b3srv0, off the tailnet, polls only.
+
+- Woodpecker secrets, push events only: `rollout_signing_key` (the ed25519
+  seed whose public key is `flake.lib.rollout.publicKey`) and
+  `ntfy_rollout_token` (the relay's publish token, also sealed in
+  clusters-work's `ntfy/ntfy`).
+- `checks/bot-update-rollout` holds the step's place in the pipeline.
+- `status.json` reports the stream under `notify`.
+
+`packages/dotfiles-upgraded/README.md` holds the design, the trust model, and
+key rotation.
+
 ## Private flake fetches
 
 `dotfiles.nix.ghTokenFlakes` (home, on the `dev` and `dev-lite` caps) lets
@@ -708,6 +729,9 @@ its forward where the relay is enabled:
   OpenCode and its search.
 - Atuin syncs with `atuin.at-basking.ts.net`.
 - The `wechat` CLI reaches the WeChat relay.
+- `dotfiles-upgraded` subscribes to CI's announcements, with no
+  `tailnet-relay-check`: they are signed, so whoever holds the port can only
+  withhold them.
 - Agents register the tldraw MCP server.
 
 For other protocols the relay also runs a SOCKS5 proxy

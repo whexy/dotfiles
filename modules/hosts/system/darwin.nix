@@ -31,6 +31,14 @@ let
       --poll-interval=${lib.escapeShellArg cfg.autoUpgrade.pollInterval} \
       --max-attempts=${toString cfg.autoUpgrade.maxAttempts} \
       --require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass} ${
+        lib.optionalString cfg.autoUpgrade.notify.enable (
+          lib.escapeShellArgs [
+            "--notify-url=${flake.lib.rollout.relay}/${flake.lib.rollout.topic}"
+            "--notify-public-key=${flake.lib.rollout.publicKey}"
+            "--notified-poll-interval=${cfg.autoUpgrade.notify.pollInterval}"
+          ]
+        )
+      } ${
         lib.optionalString cfg.autoUpgrade.reportFailures (
           lib.escapeShellArgs [
             "--failure-webhook=${flake.lib.upgradeFailureWebhook}"

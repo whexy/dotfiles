@@ -1,18 +1,54 @@
 # Auto-upgrade daemon
 
 `dotfiles-upgraded` keeps one host converged on the upstream dotfiles
-repository. It polls `refs/heads/master` over HTTPS, waits for that commit's CI
-verdict, and runs the platform's rebuild command. It never accepts an inbound
-connection, so it reaches NAT'd laptops, Cloudflare-only hosts, and machines
-that were asleep when a commit landed.
+repository. CI announces each commit that passes on master, and the daemon
+switches to it as soon as the announcement arrives; it also polls
+`refs/heads/master` over HTTPS, waits for that commit's CI verdict, and runs the
+platform's rebuild command. It never accepts an inbound connection, so it
+reaches NAT'd laptops, Cloudflare-only hosts, and machines that were asleep
+when a commit landed.
 
 One daemon replaces the three per-platform timers that previously implemented
 scheduling, jitter, locking, and retry separately. Worst-case latency from push
 to convergence drops from about a day to about ten minutes.
 
+## Announcements
+
+Polling GitHub from every host spends GitHub's 60 unauthenticated requests an
+hour per IP, which hosts behind one NAT share. So CI tells the hosts instead:
+
+1. The `announce` step of the push pipeline on master runs after every other
+   step has passed. It signs `{repo, ref, sha, seq, time}` with an ed25519
+   key (the Woodpecker secret `rollout_signing_key`), `seq` being the
+   pipeline number, and publishes it with `dotfiles-upgraded announce` to the
+   ntfy topic in `flake.lib.rollout`. The relay runs in the cluster
+   (clusters-work, `docs/ntfy.md`); only the CI token may publish.
+2. Each daemon holds a stream to the topic (`--notify-url`, with
+   `since=latest`, so a host that reconnects gets the newest announcement it
+   missed). It checks the signature against `--notify-public-key`, the repo
+   and the ref, and switches without asking GitHub.
+
+The relay is untrusted. It can delay or drop announcements but not forge one,
+and it cannot roll a host back: the daemon takes an announcement only when its
+`seq` is above the last one it took (`announcedSeq` in `state.json`), and CI
+announces a commit only while it is still the tip of master, so a rerun of an
+older pipeline is not announced under a newer number.
+
+Announcing is a step of the push pipeline, so a failed announcement fails the
+pipeline. GitHub therefore never reports success on a commit that was not
+announced, and the two paths cannot disagree: the newest announcement is never
+older than a commit the GitHub path switched to.
+
+While the stream is up, GitHub is only the fallback for a lost announcement and
+is asked every `--notified-poll-interval` (6h). Once the stream has been down
+for 5 minutes (a relay restart stays under that), the daemon is woken and polls
+every `--poll-interval` until the stream returns. Hosts off the tailnet turn
+announcements off and poll as before.
+
 ## Cycle
 
-Each tick asks GitHub for the tip of the tracked branch, sending the stored
+An announcement taken since the last tick switches the host and ends the
+cycle, as described above. Otherwise each tick asks GitHub for the tip of the tracked branch, sending the stored
 `ETag` as `If-None-Match`. A `304` or an unchanged SHA ends the cycle without
 further requests. A new SHA is gated on the commit statuses of its push
 pipeline (`ci/woodpecker/push/*`). The cron and manual pipelines report on the
@@ -51,8 +87,10 @@ it record that rebuild.
 ## Rate limits
 
 Conditional requests are used whether or not a credential is present.
-Unauthenticated operation is a supported mode, not a degraded fallback: at the
-default interval the daemon fits comfortably inside the 60/hr per-IP budget.
+Unauthenticated operation is a supported mode, not a degraded fallback. With
+announcements a host makes a request every 6 hours, plus one each time the
+daemon restarts; without them, one every 10 minutes, which several hosts
+behind one address can exhaust.
 Setting `GITHUB_TOKEN` raises the budget to 5000/hr per token and makes
 steady-state `304`s free, which matters when several hosts share one address.
 
@@ -93,7 +131,12 @@ temporary file and renamed, so a crash mid-write cannot truncate them.
   "lastSuccessAt": "2026-09-17T04:12:03Z",
   "lastError": null,
   "consecutiveFailures": 0,
-  "ignoredShas": []
+  "ignoredShas": [],
+  "notify": {
+    "connected": true,
+    "lastEventAt": "2026-09-17T04:21:58Z",
+    "announcedSeq": 4321
+  }
 }
 ```
 
@@ -114,6 +157,11 @@ branch, and `phaseSince` when it started:
 The last three ignore the tip, so the host stays where it is until a newer
 commit lands. The reason is persisted with the ignore set, so a restarted
 daemon still reports it.
+
+`notify` is present when the daemon subscribes to announcements. `lastEventAt`
+is the last line the relay sent, keepalives included (every 45 seconds), so
+one more than a few minutes old with `connected` true means a stalled stream
+the daemon has yet to replace.
 
 `nextCheck` is when the daemon next acts, and is null while a rebuild runs. A
 `nextCheck` well in the past means the daemon has stopped, or the host has just
@@ -195,6 +243,9 @@ match, reports wait in `state.json`.
 | `--pending-timeout`            | `2h`                    | give up on a commit whose CI stays pending       |
 | `--failure-webhook`            | none                    | URL to post a commit the host gave up on         |
 | `--failure-webhook-token-file` | none                    | file holding that webhook's bearer token         |
+| `--notify-url`                 | none                    | ntfy topic URL carrying CI's announcements       |
+| `--notify-public-key`          | none                    | base64 ed25519 key announcements are signed with |
+| `--notified-poll-interval`     | `6h`                    | ref check interval while the stream is healthy   |
 
 The mode is configured rather than autodetected, so a misdetection cannot
 switch a host the wrong way. The flake ref is pinned to the gated commit so
@@ -218,6 +269,30 @@ Manager the builds run inside the daemon's own unit, which the modules give a
 low CPU and I/O weight. `darwin-rebuild` and an unprivileged user go through
 `nix-daemon` instead, which receives the settings over the socket and runs the
 builds itself; only evaluation stays with the daemon.
+
+`dotfiles-upgraded announce --url <topic URL> --sha <sha> --seq <n>
+[--public-key <key>]` is the CI side. It reads the signing key (a base64
+32-byte ed25519 seed) from `ROLLOUT_SIGNING_KEY` and the relay's token from
+`NTFY_ROLLOUT_TOKEN`, and refuses to publish when `--public-key` does not
+match the key, since hosts would reject what it signs.
+
+### Rotate the signing key
+
+Generate a seed and its public key, update the Woodpecker secret, then at once
+commit the public key to `flake.lib.rollout.publicKey` and push: `announce`
+checks the secret against the key of the commit it announces, so a commit that
+lands between the two fails its pipeline. Hosts verify with
+the key their current generation carries, so the commit that changes it is
+not announced to them in a form they accept; they reach it through the GitHub
+fallback (6h at most), and take announcements again from then on.
+
+```sh
+umask 077; head -c 32 /dev/urandom | base64 -w0 > seed
+{ printf '\x30\x2e\x02\x01\x00\x30\x05\x06\x03\x2b\x65\x70\x04\x22\x04\x20'; base64 -d seed; } |
+  openssl pkey -inform DER -pubout -outform DER | tail -c 32 | base64 -w0   # public key
+woodpecker-cli repo secret update --repository whexy/dotfiles --name rollout_signing_key --value @seed
+rm seed
+```
 
 ## Verification
 

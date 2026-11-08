@@ -28,11 +28,36 @@ in
         type = lib.types.str;
         default = "10m";
         description = ''
-          Base interval between upstream ref checks, as a Go duration. The
-          daemon jitters each tick so the fleet does not poll in lockstep,
-          and raises the floor when GitHub asks it to.
+          Base interval between upstream ref checks while no announcement
+          stream is up (`notify`), as a Go duration. The daemon jitters each
+          tick so the fleet does not poll in lockstep, and raises the floor
+          when GitHub asks it to.
         '';
         example = "30m";
+      };
+
+      notify = {
+        enable = lib.mkOption {
+          type = lib.types.bool;
+          default = true;
+          description = ''
+            Subscribe to CI's signed announcements of commits that pass
+            (flake.lib.rollout), so the host switches as soon as CI passes and
+            asks GitHub only every `notify.pollInterval`. The relay is on the
+            tailnet; while it cannot be reached, the daemon polls GitHub every
+            `pollInterval`, as it does without this.
+          '';
+        };
+
+        pollInterval = lib.mkOption {
+          type = lib.types.str;
+          default = "6h";
+          description = ''
+            Base interval between upstream ref checks while the announcement
+            stream is up, as a Go duration. GitHub is then only the fallback
+            for an announcement the host missed.
+          '';
+        };
       };
 
       stateDir = lib.mkOption {

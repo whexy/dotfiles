@@ -10,7 +10,7 @@ pkgs.buildGoModule {
   __darwinAllowLocalNetworking = true;
 
   meta = {
-    description = "Polls the upstream dotfiles repo and switches this host once CI passes";
+    description = "Switches this host to each upstream dotfiles commit that passes CI";
     mainProgram = "dotfiles-upgraded";
     platforms = pkgs.lib.platforms.unix;
   };
