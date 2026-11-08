@@ -1,4 +1,5 @@
-# Markdown: language server (prettier, in the web bundle, formats Markdown).
+# Markdown and MDX: Tree-sitter grammars, and MDX's language server and
+# formatter.
 {
   config,
   pkgs,

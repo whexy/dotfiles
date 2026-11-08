@@ -58,11 +58,7 @@ in
           show_start = false;
           show_end = false;
         };
-        exclude.filetypes = [
-          "help"
-          "lazy"
-          "mason"
-        ];
+        exclude.filetypes = [ "help" ];
       };
     };
     firenvim = {
