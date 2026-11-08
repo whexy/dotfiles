@@ -6,25 +6,27 @@
 
 let
   inherit (pkgs) lib;
-  inherit (pkgs.stdenv.hostPlatform) system;
   sources = lib.importJSON ./sources.json;
   platforms = {
     aarch64-darwin = "darwin-arm64";
     x86_64-linux = "linux-amd64";
   };
-  platform = platforms.${system} or (throw "doordash-cli: unsupported system ${system}");
   urlTemplate = "https://github.com/doordash-oss/doordash-cli/releases/download/v{version}/dd-cli-v{version}-{platform}.tar.gz";
+  binary = flake.lib.platformBinary {
+    inherit
+      pkgs
+      sources
+      urlTemplate
+      platforms
+      ;
+  };
+  inherit (binary) platform;
 in
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "doordash-cli";
   inherit (sources) version;
 
-  src = pkgs.fetchurl {
-    url =
-      builtins.replaceStrings [ "{version}" "{platform}" ] [ finalAttrs.version platform ]
-        urlTemplate;
-    hash = sources.hashes.${system};
-  };
+  inherit (binary) src;
 
   sourceRoot = "dd-cli-v${finalAttrs.version}-${platform}";
 
@@ -56,7 +58,7 @@ pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
     changelog = "https://github.com/doordash-oss/doordash-cli/releases/tag/v${finalAttrs.version}";
     license = licenses.unfree;
     mainProgram = "dd-cli";
-    platforms = lib.attrNames sources.hashes;
+    platforms = binary.metaPlatforms;
     sourceProvenance = [ sourceTypes.binaryNativeCode ];
   };
 })

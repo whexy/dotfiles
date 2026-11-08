@@ -35,18 +35,12 @@ let
       aarch64-darwin = "darwin-arm64";
     };
   };
-  fridaPin = (lib.importJSON ./sources.json).frida;
-  fridaPrebuild = pkgs.fetchurl {
-    url =
-      builtins.replaceStrings
-        [ "{version}" "{platform}" ]
-        [
-          fridaPin.version
-          prebuilds.frida.platforms.${system}
-        ]
-        prebuilds.frida.urlTemplate;
-    hash = fridaPin.hashes.${system};
-  };
+  fridaPrebuild =
+    (flake.lib.platformBinary {
+      inherit pkgs;
+      sources = (lib.importJSON ./sources.json).frida;
+      inherit (prebuilds.frida) urlTemplate platforms;
+    }).src;
   fridaPrebuilds = pkgs.linkFarm "frida-prebuilds" [
     {
       inherit (fridaPrebuild) name;

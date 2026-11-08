@@ -4,25 +4,26 @@
 # modules from bundles. Upstream ships prebuilt Linux binaries only.
 let
   inherit (pkgs) lib stdenv;
-  inherit (stdenv.hostPlatform) system;
   sources = lib.importJSON ./sources.json;
   platforms = {
     x86_64-linux = "linux-x64";
     aarch64-linux = "linux-arm64";
   };
-  platform = platforms.${system} or (throw "wakaru: no release binary for ${system}");
   urlTemplate = "https://github.com/pionxzh/wakaru/releases/download/v{version}/wakaru-{platform}.tar.gz";
+  binary = flake.lib.platformBinary {
+    inherit
+      pkgs
+      sources
+      urlTemplate
+      platforms
+      ;
+  };
 in
 stdenv.mkDerivation (finalAttrs: {
   pname = "wakaru";
   inherit (sources) version;
 
-  src = pkgs.fetchurl {
-    url =
-      builtins.replaceStrings [ "{version}" "{platform}" ] [ finalAttrs.version platform ]
-        urlTemplate;
-    hash = sources.hashes.${system};
-  };
+  inherit (binary) src;
   sourceRoot = ".";
 
   nativeBuildInputs = [ pkgs.autoPatchelfHook ];
@@ -51,6 +52,6 @@ stdenv.mkDerivation (finalAttrs: {
     license = lib.licenses.mit;
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
     mainProgram = "wakaru";
-    platforms = lib.attrNames sources.hashes;
+    platforms = binary.metaPlatforms;
   };
 })

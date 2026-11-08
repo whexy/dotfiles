@@ -819,7 +819,8 @@ The kinds, cheapest first:
   in `packages/update`; it reads its `settings` from the config.
 
 `github-branch` and the last three write `sources.json`, which the package
-reads with `lib.importJSON`. Any kind can also take `subpackages` (passthru fetchers
+reads with `lib.importJSON`; `flake.lib.platformBinary` fetches a per-platform
+pin from it with the `urlTemplate` and `platforms` the updater gets. Any kind can also take `subpackages` (passthru fetchers
 whose hash follows the version), `followBranch` (passthru git fetchers that
 move to their default branch's head with the package), `alsoBuild` (packages
 that read this one's pins, or attributes such as `iphone-use.tests.preview`)

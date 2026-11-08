@@ -10,9 +10,10 @@ let
     x86_64-darwin = "x86-macos";
     x86_64-linux = "x86-linux";
   };
-  platform =
-    platforms.${pkgs.stdenv.hostPlatform.system}
-      or (throw "muse-code: unsupported system ${pkgs.stdenv.hostPlatform.system}");
+  binary = flake.lib.platformBinary {
+    inherit pkgs sources platforms;
+    urlTemplate = "https://lookaside.facebook.com/lookaside/muse/download/?channel=muse&version={version}&file=muse-{platform}";
+  };
 in
 # Meta publishes only a launcher that downloads the real binary outside the
 # store and self-updates it, so package the binary the launcher would fetch.
@@ -21,10 +22,7 @@ pkgs.stdenvNoCC.mkDerivation {
   pname = "muse-code";
   inherit (sources) version;
 
-  src = pkgs.fetchurl {
-    url = "https://lookaside.facebook.com/lookaside/muse/download/?channel=muse&version=${sources.version}&file=muse-${platform}";
-    hash = sources.hashes.${pkgs.stdenv.hostPlatform.system};
-  };
+  inherit (binary) src;
 
   dontUnpack = true;
 
@@ -54,7 +52,7 @@ pkgs.stdenvNoCC.mkDerivation {
     homepage = "https://dev.meta.ai/docs/muse-code";
     mainProgram = "muse";
     changelog = "https://dev.meta.ai/docs/muse-code/changelog";
-    platforms = lib.attrNames sources.hashes;
+    platforms = binary.metaPlatforms;
     sourceProvenance = [ lib.sourceTypes.binaryNativeCode ];
   };
 }

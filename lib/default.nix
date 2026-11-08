@@ -107,6 +107,8 @@ in
 
   pythonChecks = import ./python-checks;
 
+  platformBinary = import ./platform-binary.nix;
+
   nixosHost =
     {
       system,
