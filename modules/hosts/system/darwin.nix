@@ -10,6 +10,17 @@
 }:
 let
   cfg = config.dotfiles.system;
+  upgrader = import ../../../packages/dotfiles-upgraded/args.nix {
+    inherit lib;
+    fleet = flake.lib;
+    package = perSystem.self.dotfiles-upgraded;
+    mode = "darwin";
+    # launchd starts the system's current entrypoint again after each switch
+    # (the signed launcher in darwin-launcher).
+    modeFlags = [ "--exit-after-switch" ];
+    cfg = cfg.autoUpgrade;
+    ageSecrets = config.age.secrets;
+  };
   service = pkgs.writeShellScriptBin "dotfiles-upgraded-service" ''
     export PATH=${
       lib.makeBinPath [
@@ -22,30 +33,7 @@ let
     # Throttles only this daemon's builds; the settings reach the nix-daemon
     # over the socket, which is what actually schedules them.
     export NIX_CONFIG=$'max-jobs = ${toString cfg.autoUpgrade.maxJobs}\ncores = ${toString cfg.autoUpgrade.cores}'
-    exec ${lib.getExe perSystem.self.dotfiles-upgraded} \
-      --mode=darwin \
-      --exit-after-switch \
-      --configuration=${lib.escapeShellArg cfg.autoUpgrade.configuration} \
-      --flake=${lib.escapeShellArg flake.lib.upstreamRef} \
-      --state-dir=${lib.escapeShellArg cfg.autoUpgrade.stateDir} \
-      --poll-interval=${lib.escapeShellArg cfg.autoUpgrade.pollInterval} \
-      --max-attempts=${toString cfg.autoUpgrade.maxAttempts} \
-      --require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass} ${
-        lib.optionalString cfg.autoUpgrade.notify.enable (
-          lib.escapeShellArgs [
-            "--notify-url=${flake.lib.rollout.relay}/${flake.lib.rollout.topic}"
-            "--notify-public-key=${flake.lib.rollout.publicKey}"
-            "--notified-poll-interval=${cfg.autoUpgrade.notify.pollInterval}"
-          ]
-        )
-      } ${
-        lib.optionalString cfg.autoUpgrade.reportFailures (
-          lib.escapeShellArgs [
-            "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
-            "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"
-          ]
-        )
-      }
+    exec ${lib.escapeShellArgs upgrader.argv}
   '';
 in
 {
@@ -57,9 +45,7 @@ in
     (lib.mkIf cfg.autoUpgrade.enable {
       environment.systemPackages = [ service ];
 
-      age.secrets.upgrade-webhook-token = lib.mkIf cfg.autoUpgrade.reportFailures {
-        file = ../../../secrets/upgrade-webhook-token.age;
-      };
+      age.secrets = upgrader.secrets;
 
       # No store paths in this plist: changing it during activation would
       # unload the daemon and kill the switch it is supervising. The signed

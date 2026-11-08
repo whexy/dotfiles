@@ -30,12 +30,6 @@ let
   relay = config.dotfiles.tailnetRelay;
   inherit (flake.lib) upstreamRef rollout;
 
-  # Homes without a Tailscale daemon reach the relay through their tailnet
-  # relay. The daemon runs no tailnet-relay-check: announcements are signed,
-  # so whoever holds the port can only withhold them.
-  notifyURL =
-    (if relay.enable then relay.forwards.rollout.url else rollout.relay) + "/${rollout.topic}";
-
   # Find the file that set dotfiles.autoUpgrade.enable = true and parse
   # "<user>@<host>" out of its path:
   #   hosts/<host>/users/<user>/home-configuration.nix
@@ -59,10 +53,24 @@ let
         the enabling file's path (expected hosts/<host>/users/<user>/home-configuration.nix).
         Set dotfiles.autoUpgrade.configuration explicitly.
       '';
+
+  upgrader = import ../../../packages/dotfiles-upgraded/args.nix {
+    inherit lib configuration cfg;
+    fleet = flake.lib;
+    package = perSystem.self.dotfiles-upgraded;
+    mode = "home-manager";
+    # Homes without a Tailscale daemon reach the relay through their tailnet
+    # relay. The daemon runs no tailnet-relay-check: announcements are signed,
+    # so whoever holds the port can only withhold them.
+    relay = if relay.enable then relay.forwards.rollout.url else rollout.relay;
+    ageSecrets = config.age.secrets;
+  };
 in
 {
-  options.dotfiles.autoUpgrade = {
-    enable = lib.mkEnableOption "the dotfiles-upgraded daemon, which switches this Home Manager configuration to each upstream commit that passes CI";
+  options.dotfiles.autoUpgrade = import ../../../packages/dotfiles-upgraded/options.nix {
+    inherit lib;
+    subject = "home";
+    relayRoute = "is on the tailnet, reached through `dotfiles.tailnetRelay` where that is enabled";
 
     configuration = lib.mkOption {
       type = lib.types.nullOr lib.types.str;
@@ -77,102 +85,12 @@ in
       example = "wenxuan@mars";
     };
 
-    pollInterval = lib.mkOption {
-      type = lib.types.str;
-      default = "10m";
-      description = ''
-        Base interval between upstream ref checks while no announcement
-        stream is up (`notify`), as a Go duration. The daemon jitters each
-        tick so the fleet does not poll in lockstep, and raises the floor
-        when GitHub asks it to.
-      '';
-      example = "30m";
-    };
-
-    notify = {
-      enable = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Subscribe to CI's signed announcements of commits that pass
-          (flake.lib.rollout), so the home switches as soon as CI passes and
-          asks GitHub only every `notify.pollInterval`. The relay is on the
-          tailnet, reached through `dotfiles.tailnetRelay` where that is
-          enabled; while it cannot be reached, the daemon polls GitHub every
-          `pollInterval`, as it does without this.
-        '';
-      };
-
-      pollInterval = lib.mkOption {
-        type = lib.types.str;
-        default = "6h";
-        description = ''
-          Base interval between upstream ref checks while the announcement
-          stream is up, as a Go duration. GitHub is then only the fallback
-          for an announcement the home missed.
-        '';
-      };
-    };
-
     stateDir = lib.mkOption {
       type = lib.types.str;
       default = "${config.xdg.stateHome}/dotfiles-upgraded";
       defaultText = lib.literalExpression ''"''${config.xdg.stateHome}/dotfiles-upgraded"'';
       readOnly = true;
       description = "Where the daemon keeps its state and publishes its health signal, status.json.";
-    };
-
-    maxAttempts = lib.mkOption {
-      type = lib.types.int;
-      default = 3;
-      description = ''
-        Switch attempts, with exponential backoff, before the daemon gives
-        up on a commit and waits for a newer one. A transient fault and a
-        genuinely broken commit are indistinguishable by exit code, so
-        retrying lets transients heal without blocking later commits.
-      '';
-    };
-
-    requireCiPass = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        Only switch to commits whose GitHub commit status is success.
-        Disabling this removes the only gate on what reaches this host.
-      '';
-    };
-
-    reportFailures = lib.mkOption {
-      type = lib.types.bool;
-      default = true;
-      description = ''
-        Post each commit the daemon gives up switching to, with the end of
-        the rebuild output, to the fleet's failure webhook
-        (flake.lib.upgradeFailureWebhook), which opens a GitHub issue for
-        the commit or adds this host to the open one.
-      '';
-    };
-
-    maxJobs = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 2;
-      description = ''
-        Derivations the daemon's rebuild may build concurrently
-        (Nix's max-jobs). Unattended builds land at arbitrary times, so
-        they are throttled below the machine's capacity to leave room for
-        whatever else the host is doing; a manual `nh home switch` is
-        unaffected and still uses the system-wide default.
-      '';
-    };
-
-    cores = lib.mkOption {
-      type = lib.types.ints.positive;
-      default = 2;
-      description = ''
-        Cores offered to each individual derivation the daemon builds
-        (Nix's cores, i.e. $NIX_BUILD_CORES). Peak load is roughly
-        maxJobs * cores, since a parallel build takes both.
-      '';
     };
   };
 
@@ -182,9 +100,7 @@ in
       upstream = rollout.relay;
     };
 
-    age.secrets.upgrade-webhook-token = lib.mkIf cfg.reportFailures {
-      file = ../../../secrets/upgrade-webhook-token.age;
-    };
+    age.secrets = upgrader.secrets;
 
     # logind's polkit policy lets any user linger without authentication; a
     # host that tightens it needs `sudo loginctl enable-linger <user>` once.
@@ -237,27 +153,7 @@ in
         ];
         # On Linux the token's path holds a literal ${XDG_RUNTIME_DIR}, which
         # systemd expands, quoted or not, from the user manager's environment.
-        ExecStart = lib.escapeShellArgs (
-          [
-            (lib.getExe perSystem.self.dotfiles-upgraded)
-            "--mode=home-manager"
-            "--configuration=${configuration}"
-            "--flake=${upstreamRef}"
-            "--state-dir=${cfg.stateDir}"
-            "--poll-interval=${cfg.pollInterval}"
-            "--max-attempts=${toString cfg.maxAttempts}"
-            "--require-ci-pass=${lib.boolToString cfg.requireCiPass}"
-          ]
-          ++ lib.optionals cfg.notify.enable [
-            "--notify-url=${notifyURL}"
-            "--notify-public-key=${rollout.publicKey}"
-            "--notified-poll-interval=${cfg.notify.pollInterval}"
-          ]
-          ++ lib.optionals cfg.reportFailures [
-            "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
-            "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"
-          ]
-        );
+        ExecStart = lib.escapeShellArgs upgrader.argv;
         ExecReload = flake.lib.upgraderReload {
           inherit (pkgs) systemd util-linux;
           inherit (cfg) stateDir;

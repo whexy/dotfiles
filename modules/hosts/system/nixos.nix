@@ -8,6 +8,15 @@
 }:
 let
   cfg = config.dotfiles.system;
+
+  upgrader = import ../../../packages/dotfiles-upgraded/args.nix {
+    inherit lib;
+    fleet = flake.lib;
+    package = perSystem.self.dotfiles-upgraded;
+    mode = "nixos";
+    cfg = cfg.autoUpgrade;
+    ageSecrets = config.age.secrets;
+  };
 in
 {
   config = lib.mkMerge [
@@ -22,9 +31,7 @@ in
     # It replaces the stock nixos-upgrade.timer rather than joining it: two
     # concurrent rebuilds would contend on the Nix store lock.
     (lib.mkIf cfg.autoUpgrade.enable {
-      age.secrets.upgrade-webhook-token = lib.mkIf cfg.autoUpgrade.reportFailures {
-        file = ../../../secrets/upgrade-webhook-token.age;
-      };
+      age.secrets = upgrader.secrets;
 
       systemd.services.dotfiles-upgraded = {
         description = "Auto-upgrade this host from ${flake.lib.upstreamRef}";
@@ -63,27 +70,7 @@ in
           // config.networking.proxy.envVars;
 
         serviceConfig = {
-          ExecStart = lib.escapeShellArgs (
-            [
-              (lib.getExe perSystem.self.dotfiles-upgraded)
-              "--mode=nixos"
-              "--configuration=${cfg.autoUpgrade.configuration}"
-              "--flake=${flake.lib.upstreamRef}"
-              "--state-dir=${cfg.autoUpgrade.stateDir}"
-              "--poll-interval=${cfg.autoUpgrade.pollInterval}"
-              "--max-attempts=${toString cfg.autoUpgrade.maxAttempts}"
-              "--require-ci-pass=${lib.boolToString cfg.autoUpgrade.requireCiPass}"
-            ]
-            ++ lib.optionals cfg.autoUpgrade.notify.enable [
-              "--notify-url=${flake.lib.rollout.relay}/${flake.lib.rollout.topic}"
-              "--notify-public-key=${flake.lib.rollout.publicKey}"
-              "--notified-poll-interval=${cfg.autoUpgrade.notify.pollInterval}"
-            ]
-            ++ lib.optionals cfg.autoUpgrade.reportFailures [
-              "--failure-webhook=${flake.lib.upgradeFailureWebhook}"
-              "--failure-webhook-token-file=${config.age.secrets.upgrade-webhook-token.path}"
-            ]
-          );
+          ExecStart = lib.escapeShellArgs upgrader.argv;
           ExecReload = flake.lib.upgraderReload {
             systemd = config.systemd.package;
             inherit (pkgs) util-linux;
