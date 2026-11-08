@@ -26,11 +26,10 @@ in
       type = lib.types.enum [
         "zsh"
         "nushell"
-        "none"
       ];
       default = if osConfig != null then osConfig.dotfiles.shell.default else "zsh";
       defaultText = lib.literalExpression ''osConfig.dotfiles.shell.default, or "zsh" without osConfig'';
-      description = "Default user shell. `none` configures no interactive shell, for homes only driven through `/bin/sh -c`.";
+      description = "Default user shell.";
     };
     motd = {
       enable = lib.mkEnableOption "system status message of the day (motd)";
