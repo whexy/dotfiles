@@ -16,8 +16,8 @@ let
   coreutils = "${pkgs.coreutils}/bin";
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
-  cfIdFile = config.age.secrets.cf-access-dotfiles-id.path;
-  cfSecretFile = config.age.secrets.cf-access-dotfiles-secret.path;
+  cfIdFile = config.dotfiles.cloudflareAccess.serviceToken.idPath;
+  cfSecretFile = config.dotfiles.cloudflareAccess.serviceToken.secretPath;
   dataUrl = "https://zepbound.whexy.com/api/data.json";
 in
 pkgs.writeShellScript "renpho-weight" ''
