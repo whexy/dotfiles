@@ -1,10 +1,13 @@
 # VCS group: git and git-adjacent tools.
-{
+args@{
   config,
   lib,
   pkgs,
   ...
 }:
+let
+  osConfig = args.osConfig or null;
+in
 {
   options.dotfiles.vcs = {
     git = {
@@ -14,7 +17,13 @@
         configure git. macOS keeps Apple's git, which avoids a keychain
         prompt
       '';
-      opSshSigning = lib.mkEnableOption "1Password SSH signing (op-ssh-sign) on Linux";
+      # Integrated homes sign with the 1Password app the system installs.
+      opSshSigning = lib.mkOption {
+        type = lib.types.bool;
+        default = if osConfig != null then osConfig.dotfiles.security.onepasswordGui.enable else false;
+        defaultText = lib.literalExpression "osConfig.dotfiles.security.onepasswordGui.enable, or false without osConfig";
+        description = "Whether to enable 1Password SSH signing (op-ssh-sign) on Linux.";
+      };
 
       identity = {
         name = lib.mkOption {

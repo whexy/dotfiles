@@ -1,17 +1,20 @@
 # Use forwarded agents over SSH and the 1Password integration on local desktops.
-{
+args@{
   config,
   lib,
   pkgs,
   ...
 }:
 let
+  osConfig = args.osConfig or null;
   cfg = config.dotfiles.vcs;
+  onepassword =
+    if osConfig != null then osConfig.programs._1password-gui.package else pkgs._1password-gui;
   localSigner =
     if pkgs.stdenv.hostPlatform.isDarwin then
       "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
     else
-      "${pkgs._1password-gui}/bin/op-ssh-sign";
+      "${onepassword}/bin/op-ssh-sign";
   signer = pkgs.writeShellScript "ssh-sign" ''
     if [ -n "''${SSH_CONNECTION:-}" ]; then
       exec ${pkgs.openssh}/bin/ssh-keygen "$@"

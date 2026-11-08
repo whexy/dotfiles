@@ -30,9 +30,10 @@
     # expansion; only has an effect on NixOS.
     launcher.inputServer.enable = lib.mkDefault true;
     security = {
-      # Desktop authentication services and 1Password GUI; only have an effect on NixOS.
+      # Desktop authentication services; only have an effect on NixOS.
       keyring.enable = lib.mkDefault true;
       soteria.enable = lib.mkDefault true;
+      # The 1Password app, which home git signs with on Linux.
       onepasswordGui.enable = lib.mkDefault true;
       # Touch ID / Apple Watch sudo; only has an effect on Darwin.
       biometricSudo.enable = lib.mkDefault true;
