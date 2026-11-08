@@ -1,8 +1,7 @@
 {
   pkgs,
-  inputs,
+  perSystem,
   flake,
-  system,
 }:
 let
   inherit (pkgs) lib python3;
@@ -18,8 +17,7 @@ let
   };
 
   # Formats what an updater writes the way the pre-commit check expects.
-  treefmt =
-    (import ../../lib/dev-tools.nix { inherit inputs flake; } system).treefmtEval.config.build.wrapper;
+  treefmt = perSystem.self.formatter;
 
   # The CI image lacks most tools. `nix` stays on the caller's PATH so
   # evaluation uses the caller's store and settings.
