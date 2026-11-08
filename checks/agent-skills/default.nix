@@ -54,10 +54,8 @@ let
     iphone-use-setup
     knowledge
     maintain-formal-verification-skill
-    nix-blueprint
     reverse-engineer-anything
     review-loop
-    ship-pr
     spark
     statechart
     t3-setup
