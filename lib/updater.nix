@@ -52,7 +52,8 @@ let
   # Every kind takes these.
   common = [
     "kind"
-    # Packages that read this package's pins, built along with it.
+    # Packages that read this package's pins, or attributes such as a
+    # package's tests, built along with it.
     "alsoBuild"
     # The upstream moves its pointer back, and the pin follows it.
     "allowDowngrade"

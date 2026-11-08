@@ -669,7 +669,8 @@ reach the phone on port 9100.
 - Before the user enters a password or uses Face ID, the agent pauses the
   preview. The pause is in the host's own state file, so a panel open on
   another host keeps streaming the phone's screen.
-- `checks/iphone-preview` model-checks the preview's stream around a pause.
+- `checks/iphone-preview` model-checks the preview's stream around a pause,
+  and so does every iphone-use bump.
   The `verify-iphone-preview` project skill says what it covers.
 
 `iphone-wda` launches the runner. It needs a host that reaches the phone's
@@ -818,7 +819,8 @@ The kinds, cheapest first:
 reads with `lib.importJSON`. Any kind can also take `subpackages` (passthru fetchers
 whose hash follows the version), `followBranch` (passthru git fetchers that
 move to their default branch's head with the package), `alsoBuild` (packages
-that read this one's pins) and `allowDowngrade`.
+that read this one's pins, or attributes such as `iphone-use.tests.preview`)
+and `allowDowngrade`.
 
 `checks.<system>.package-updaters`, which CI and `just verify` build, fails
 when a package fetches an upstream source without a `passthru.updater`, or
@@ -882,8 +884,9 @@ statix, nil, nixd, deadnix, stylua, prettier, shfmt, taplo).
 
 Enter it with `nix develop`, or automatically via `direnv allow` (uses
 `.envrc`). Entering the shell installs git pre-commit hooks (`git-hooks.nix`)
-that run treefmt + statix + nil + deadnix before each commit. The same checks
-run in CI via `nix flake check` / `just check` (`checks.<system>.pre-commit`).
+that run treefmt + statix + nil + deadnix before each commit; `just check`
+runs them as `checks.<system>.pre-commit`. CI (`ci/check.sh`) builds every
+check but the host closures, which it only evaluates (`ci/eval-all.sh`).
 
 Formatter definitions live in `treefmt.nix` (single source of truth, shared by
-`nix fmt`, the pre-commit hook, and the flake check).
+`nix fmt`, the pre-commit hook, and the pre-commit check).

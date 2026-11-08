@@ -61,7 +61,17 @@ pkgs.stdenv.mkDerivation (finalAttrs: {
     runHook postInstall
   '';
 
-  passthru.updater = flake.lib.updater { kind = "nix-update"; };
+  passthru = {
+    tests.preview = import ./preview.nix {
+      inherit pkgs;
+      iphone-use = finalAttrs.finalPackage;
+    };
+    # A bump can change the preview's stream, so it is model-checked too.
+    updater = flake.lib.updater {
+      kind = "nix-update";
+      alsoBuild = [ "iphone-use.tests.preview" ];
+    };
+  };
 
   meta = {
     description = "Drive an iPhone through WebDriverAgent";

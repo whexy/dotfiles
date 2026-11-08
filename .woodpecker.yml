@@ -44,48 +44,8 @@ variables:
     printf 'machine pkgs.superlogical.com login rex password %s\n' "$REX_PACKAGE_TOKEN" >"$netrc"
     export NIX_CONFIG="$NIX_CONFIG
     netrc-file = $netrc"
-  # Lint, then evaluate every host and standalone home without building it,
-  # each in its own process (ci/eval-all.sh). `nix flake check --all-systems`
-  # is too memory-heavy for this repo after Blueprint host discovery. A tree that passes is recorded in the CI cache,
-  # so a pull request that lands on master unchanged is not checked again.
-  # Woodpecker substitutes braced variables anywhere in this file, so the
-  # script refers to shell variables only as bare $name.
-  - &check |
-    tree=$(git rev-parse 'HEAD^{tree}')
-    passed=$(nix eval --raw --expr "builtins.toFile \"dotfiles-ci-passed\" \"$tree\"")
-    if nix path-info --store "$CI_CACHE_ENDPOINT/nix" "$passed" >/dev/null 2>&1; then
-      echo "OK - tree $tree already passed"
-    else
-      system=$(nix eval --raw --impure --expr builtins.currentSystem)
-      nix build --accept-flake-config ".#checks.$system.pre-commit" ".#checks.$system.bot-update-rollout" ".#checks.$system.package-updaters" ".#checks.$system.agent-skills" ".#packages.$system.dotfiles-upgraded" -L --no-link
-
-      # A skill edit can break its frontmatter or a patch over it, which the
-      # agent-skills check above has already caught. Beyond that, Nix passes
-      # skills through as paths and reads markdown only as text, so editing
-      # them can break evaluation only by removing a file.
-      docs_only=$(nix eval --impure --expr '
-        let files = builtins.fromJSON (builtins.getEnv "CI_PIPELINE_FILES"); in
-        files != [ ] && builtins.all (f:
-          builtins.match "docs/.*|.*[.]md|modules/home/agents/skills/.*" f != null
-          && builtins.pathExists (./. + ("/" + f))
-        ) files' 2>/dev/null) || docs_only=false
-      nix build --accept-flake-config ".#checks.$system.t3-tailnet" -L --no-link
-      if [ "$docs_only" = true ]; then
-        echo "OK - only docs, markdown and skills changed"
-      else
-        EVAL_JOBS=3 bash ci/eval-all.sh
-
-        # nix-ci uploads only what it builds, so every Pod would otherwise
-        # fetch the flake inputs from GitHub and cache.nixos.org again.
-        keyfile=$(mktemp)
-        printf '%s' "$NIX_CACHE_SIGNING_KEY" | tr -d '[:space:]' >"$keyfile"
-        store="s3://nix?endpoint=$CI_CACHE_ENDPOINT&region=us-east-1&compression=zstd&multipart-upload=true&secret-key=$keyfile"
-        timeout 300 nix flake archive --accept-flake-config --to "$store" ||
-          echo "Could not upload the flake inputs"
-        nix copy --to "$store" "$passed" || echo "Could not record that tree $tree passed"
-        rm -f "$keyfile"
-      fi
-    fi
+  # Build every check and evaluate every configuration (ci/check.sh).
+  - &check bash ci/check.sh
   # Push the update lane's checked commits to the primary branch as the
   # GitHub App, retrying a failed push 3 times.
   - &push |

@@ -12,12 +12,8 @@ pipeline = yaml.safe_load(Path(sys.argv[1]).read_text())
 scripts = Path(sys.argv[2])
 assert {"event": "push", "branch": "master"} in pipeline["when"]
 assert "push" in pipeline["steps"]["check"]["when"]["event"]
-check = next(
-    c
-    for c in pipeline["steps"]["check"]["commands"]
-    if ".#checks.$system.bot-update-rollout" in c
-)
-assert ".#packages.$system.dotfiles-upgraded" in check
+check = "bash ci/check.sh"
+assert check in pipeline["steps"]["check"]["commands"]
 
 # An update lane is a step that commits the package updater's work.
 lanes = {
