@@ -1,23 +1,21 @@
 # Eww window-manager widgets (Linux, niri).
 #
 # Eww counterpart of ./waybar.nix: contributes workspace and focused-window
-# widgets through the extension points in ../eww.nix (defs, left slot).
-args@{
+# widgets through the extension points in ../default.nix (defs, left slot).
+{
   config,
   lib,
   pkgs,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   niri = lib.getExe config.programs.niri.package;
   sshWindow = lib.getExe config.programs.ssh-window.package;
   niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
 
-  enabled = cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
+  enabled = cfg.renderer == "eww";
 
   # One JSON record per workspace so the widget can render per-workspace
   # buttons with focused/occupied/empty states (niri's fields are

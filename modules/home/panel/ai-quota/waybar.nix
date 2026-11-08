@@ -2,17 +2,15 @@
 #
 # Each visible custom module retrieves current quota data on Waybar's own
 # interval and renders its provider directly.
-args@{
+{
   config,
   lib,
   pkgs,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
   showCountdown = cfg.aiQuota.showCountdown;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   shared = import ./shared.nix;
   inherit (shared) apiUrl providers updateInterval;
@@ -23,8 +21,7 @@ let
   aiQuotaPopup = lib.getExe aiQuotaPackage;
   summaryFilter = ./summary.jq;
 
-  enabled =
-    cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin) && config.dotfiles.agents.enable;
+  enabled = cfg.renderer == "waybar" && config.dotfiles.agents.enable;
 
   # Waybar has no generic custom slider, so render a short segmented meter.
   # summary.jq still decides what binds and provides the compact hover details.

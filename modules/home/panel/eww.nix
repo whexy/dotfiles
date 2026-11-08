@@ -2,8 +2,8 @@
 #
 # Renderer counterpart of ./waybar.nix, selected by
 # dotfiles.panel.linuxBar. Feature modules contribute through the
-# extension points below instead of editing the window definition:
-# defs appends yuck definitions (defpoll/defvar/defwidget), styles
+# dotfiles.panel.eww extension points instead of editing the window
+# definition: defs appends yuck definitions (defpoll/defvar/defwidget), styles
 # appends SCSS (palette variables stay in scope), and left/center/right
 # name the widgets placed in the bar's three slots.
 args@{
@@ -15,9 +15,8 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
-  enabled = cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin);
+  enabled = cfg.renderer == "eww";
   audioEnabled = osConfig.dotfiles.audio.enable or false;
 
   eww = lib.getExe pkgs.eww;
@@ -302,38 +301,6 @@ let
   scssFile = pkgs.writeText "eww.scss" scss;
 in
 {
-  options.dotfiles.panel.eww = {
-    defs = lib.mkOption {
-      type = lib.types.lines;
-      default = "";
-      description = "Extra yuck definitions (defpoll/defvar/defwidget) merged into eww.yuck.";
-    };
-
-    styles = lib.mkOption {
-      type = lib.types.lines;
-      default = "";
-      description = "Extra SCSS appended to eww.scss after the base styles, so the Material You palette variables stay in scope.";
-    };
-
-    left = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Widget names shown on the bar's left slot.";
-    };
-
-    center = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Widget names shown on the bar's center slot.";
-    };
-
-    right = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = "Widget names shown on the bar's right slot.";
-    };
-  };
-
   config = lib.mkIf enabled {
     programs.eww = {
       enable = true;

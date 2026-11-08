@@ -3,21 +3,14 @@
 # One of the two renderers for the Linux bar, selected by
 # dotfiles.panel.linuxBar. Feature modules (wm, ai-quota, renpho) merge
 # their settings in with mkOrder, so this file stays feature-agnostic.
-args@{
+{
   config,
   lib,
   pkgs,
   ...
 }:
-let
-  osConfig = args.osConfig or null;
-  cfg = config.dotfiles.panel;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
-
-  enabled = cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
-in
 {
-  config = lib.mkIf enabled {
+  config = lib.mkIf (config.dotfiles.panel.renderer == "waybar") {
     programs.waybar = {
       enable = true;
       systemd.enable = true;

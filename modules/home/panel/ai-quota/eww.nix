@@ -3,17 +3,15 @@
 # One poll fetches every provider. Compact Material 3 capsules show all quota
 # windows as stacked tracks plus the reset that can next restore availability;
 # clicking a capsule toggles the shared detail app.
-args@{
+{
   config,
   lib,
   pkgs,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
   showCountdown = cfg.aiQuota.showCountdown;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   shared = import ./shared.nix;
   inherit (shared) apiUrl providers updateInterval;
@@ -24,8 +22,7 @@ let
   aiQuotaPopup = lib.getExe aiQuotaPackage;
   summaryFilter = ./summary.jq;
 
-  enabled =
-    cfg.waybar.enable && cfg.linuxBar == "eww" && (!isDarwin) && config.dotfiles.agents.enable;
+  enabled = cfg.renderer == "eww" && config.dotfiles.agents.enable;
 
   quotaScript = pkgs.writeShellScript "eww-ai-quota" ''
     raw="$(${curl} -fsS --max-time 10 ${lib.escapeShellArg apiUrl} 2>/dev/null)" || exit 0

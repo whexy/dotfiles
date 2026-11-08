@@ -32,8 +32,7 @@ let
   summaryFilter = ./summary.jq;
   cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
-  enabled =
-    cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin && config.dotfiles.agents.enable;
+  enabled = cfg.renderer == "sketchybar" && config.dotfiles.agents.enable;
 
   colors = {
     gray = "0xff98989d";

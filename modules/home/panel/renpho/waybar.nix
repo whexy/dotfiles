@@ -1,19 +1,17 @@
 # Renpho weight pill for Waybar (Linux).
-args@{
+{
   config,
   lib,
   pkgs,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
 
   jq = lib.getExe pkgs.jq;
   icon = "󰓅";
 
-  enabled = cfg.renpho.enable && cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
+  enabled = cfg.renpho.enable && cfg.renderer == "waybar";
 
   weightScript = import ./weight.nix { inherit config lib pkgs; };
 

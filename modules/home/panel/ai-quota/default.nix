@@ -15,7 +15,10 @@
     lib.mkIf
       (
         config.dotfiles.wm.niri.enable
-        && config.dotfiles.panel.waybar.enable
+        && lib.elem config.dotfiles.panel.renderer [
+          "waybar"
+          "eww"
+        ]
         && config.dotfiles.agents.enable
       )
       {

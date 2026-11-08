@@ -35,55 +35,6 @@ let
 
   mkPlugin = name: pkgs.writeShellScript "sketchybar-${name}";
 
-  # Extension point so other feature modules (e.g. the ai-quota pills) can
-  # contribute bar items without touching this file's rendering logic.
-  itemType = lib.types.submodule {
-    options = {
-      name = lib.mkOption { type = lib.types.str; };
-      kind = lib.mkOption {
-        type = lib.types.enum [
-          "item"
-          "slider"
-        ];
-        default = "item";
-      };
-      width = lib.mkOption {
-        type = lib.types.ints.positive;
-        default = 40;
-      };
-      side = lib.mkOption {
-        # "left", "right", or "popup.<item>" to nest inside an item's popup.
-        type = lib.types.strMatching "left|right|popup\\..+";
-      };
-      settings = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-      clickScript = lib.mkOption {
-        type = lib.types.nullOr lib.types.str;
-        default = null;
-      };
-      subscribe = lib.mkOption {
-        type = lib.types.listOf lib.types.str;
-        default = [ ];
-      };
-    };
-  };
-
-  # A bracket draws one shared background behind a set of member items (the
-  # `stats` capsule is a hardcoded example below). Feature modules use this to
-  # group their own items, e.g. the wm module's workspace capsule.
-  bracketType = lib.types.submodule {
-    options = {
-      name = lib.mkOption { type = lib.types.str; };
-      members = lib.mkOption { type = lib.types.listOf lib.types.str; };
-      settings = lib.mkOption {
-        type = lib.types.attrsOf lib.types.anything;
-        default = { };
-      };
-    };
-  };
-
   clockPlugin = mkPlugin "clock" ''
     ${sketchybar} --set "$NAME" label="$(/bin/date '+%b %d %H:%M')"
   '';
@@ -252,37 +203,7 @@ let
   };
 in
 {
-  options.dotfiles.panel.sketchybar = {
-    items = lib.mkOption {
-      type = lib.types.listOf itemType;
-      default = [ ];
-      description = ''
-        Extra bar items rendered after the built-in ones, letting feature
-        modules contribute items without touching the sketchybar renderer.
-      '';
-    };
-
-    events = lib.mkOption {
-      type = lib.types.listOf lib.types.str;
-      default = [ ];
-      description = ''
-        Custom sketchybar events to register before items are added. Each
-        event is triggered once at the end of the config so subscribers
-        render their initial state.
-      '';
-    };
-
-    brackets = lib.mkOption {
-      type = lib.types.listOf bracketType;
-      default = [ ];
-      description = ''
-        Brackets rendered after all items, letting feature modules draw one
-        shared background behind a group of items they contributed.
-      '';
-    };
-  };
-
-  config = lib.mkIf (cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin) {
+  config = lib.mkIf (cfg.renderer == "sketchybar") {
     home.packages = [ pkgs.sketchybar ];
 
     # The LaunchAgent runs the immutable generated config directly. Its plist

@@ -10,7 +10,7 @@ let
 
   sketchybar = lib.getExe pkgs.sketchybar;
 
-  enabled = cfg.renpho.enable && cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin;
+  enabled = cfg.renpho.enable && cfg.renderer == "sketchybar";
 
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {

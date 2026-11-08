@@ -3,7 +3,7 @@
 # Renders one item per workspace plus a front-app item, driven by AeroSpace
 # or Paneru depending on dotfiles.wm.darwin.windowManager. Both WMs signal
 # changes through the shared `wm_state_change` event (registered via the
-# events extension point in ../sketchybar.nix): AeroSpace triggers it from
+# events extension point in ../default.nix): AeroSpace triggers it from
 # its own hooks, while the paneru-events launchd agent bridges
 # `paneru subscribe` into it.
 {
@@ -25,7 +25,7 @@ let
   windowManager = config.dotfiles.wm.darwin.windowManager;
   isPaneru = windowManager == "paneru";
 
-  enabled = cfg.sketchybar.enable && pkgs.stdenv.hostPlatform.isDarwin;
+  enabled = cfg.renderer == "sketchybar";
 
   # Subset of the Liquid Glass palette in ../sketchybar.nix.
   colors = {

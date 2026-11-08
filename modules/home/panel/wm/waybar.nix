@@ -1,26 +1,24 @@
 # Waybar window-manager modules (Linux, niri). The Eww counterpart lives
-# in ../eww.nix; both are selected by dotfiles.panel.linuxBar.
+# in ./eww.nix; both are selected by dotfiles.panel.linuxBar.
 #
 # Contributes niri/workspaces and niri/window around the core bar's
 # idle_inhibitor in modules-left: mkBefore lands workspaces before it and
 # mkAfter lands the window title after it, preserving the original layout.
 # Settings and style merge in with mkAfter, so ../waybar.nix stays
 # WM-agnostic.
-args@{
+{
   config,
   lib,
   pkgs,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
   niri = lib.getExe config.programs.niri.package;
   sshWindow = lib.getExe config.programs.ssh-window.package;
   niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
 
-  enabled = cfg.waybar.enable && cfg.linuxBar == "waybar" && (!isDarwin);
+  enabled = cfg.renderer == "waybar";
 in
 {
   config = lib.mkIf enabled {
