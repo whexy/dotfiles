@@ -19,7 +19,6 @@ in
   imports = [
     ./policy.nix
     ./server.nix
-    ./retired-claude-models.nix
     ./desktop.nix
   ];
 
