@@ -50,7 +50,7 @@ are imported selectively.
 ## Capabilities
 
 Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, and the
-home-only `sysadmin` and `agent`), but **caps are not options or
+home-only `sysadmin`), but **caps are not options or
 features**. They are preset modules:
 
 - `modules/caps/<cap>.nix` assigns system `dotfiles.*` options

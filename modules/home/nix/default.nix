@@ -26,21 +26,7 @@ in
   imports = [ ./nh.nix ];
 
   options.dotfiles.nix = {
-    caches = {
-      enable = lib.mkEnableOption "shared Nix client settings and binary caches (cache overrides require daemon trust)";
-
-      acceptFlakeConfig = lib.mkOption {
-        type = lib.types.bool;
-        default = true;
-        description = ''
-          Whether flakes may set their own `nixConfig` without asking.
-
-          Where the user owns the store (no daemon), an accepted flake can add
-          substituters and trusted keys or a `post-build-hook` for every later
-          build, so homes running untrusted code turn this off.
-        '';
-      };
-    };
+    caches.enable = lib.mkEnableOption "shared Nix client settings and binary caches (cache overrides require daemon trust)";
     ciCache.enable = lib.mkEnableOption ''
       substituting from whexy/ci-cache's cache of CI builds through this user's
       nix.conf. Integrated homes get it from the system daemon instead; a
@@ -90,9 +76,7 @@ in
       nix.package = lib.mkDefault pkgs.nix;
     })
     (lib.mkIf cfg.caches.enable {
-      nix.settings = import ../../../lib/nix-settings.nix // {
-        accept-flake-config = cfg.caches.acceptFlakeConfig;
-      };
+      nix.settings = import ../../../lib/nix-settings.nix;
     })
     (lib.mkIf cfg.ciCache.enable {
       nix.settings = import ../../../lib/ci-cache-settings.nix;
