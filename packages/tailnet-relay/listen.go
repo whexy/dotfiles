@@ -10,36 +10,36 @@ import (
 	"syscall"
 )
 
-// openListeners takes each forward's listener from systemd socket
-// activation, matched by FileDescriptorName, or binds it itself when the
-// process was not socket-activated.
-func openListeners(forwards []forward) (map[string]net.Listener, error) {
+// openListeners takes the listener for each name's address from systemd
+// socket activation, matched by FileDescriptorName, or binds it itself when
+// the process was not socket-activated.
+func openListeners(addresses map[string]string) (map[string]net.Listener, error) {
 	activated, err := activatedListeners()
 	if err != nil {
 		return nil, err
 	}
 	listeners := map[string]net.Listener{}
-	for _, f := range forwards {
+	for name, address := range addresses {
 		if activated != nil {
-			ln, ok := activated[f.Name]
+			ln, ok := activated[name]
 			if !ok {
-				return nil, fmt.Errorf("forward %s: no socket named %q was passed", f.Name, f.Name)
+				return nil, fmt.Errorf("%s: no socket named %q was passed", name, name)
 			}
-			if ln.Addr().String() != f.Listen {
-				return nil, fmt.Errorf("forward %s: socket listens on %s, not %s", f.Name, ln.Addr(), f.Listen)
+			if ln.Addr().String() != address {
+				return nil, fmt.Errorf("%s: socket listens on %s, not %s", name, ln.Addr(), address)
 			}
-			listeners[f.Name] = ln
+			listeners[name] = ln
 			continue
 		}
-		ln, err := net.Listen("tcp", f.Listen)
+		ln, err := net.Listen("tcp", address)
 		if err != nil {
 			return nil, err
 		}
-		listeners[f.Name] = ln
+		listeners[name] = ln
 	}
 	for name, ln := range activated {
 		if _, ok := listeners[name]; !ok {
-			log.Printf("closing socket %q, which no forward names", name)
+			log.Printf("closing socket %q, which the configuration does not name", name)
 			ln.Close()
 		}
 	}

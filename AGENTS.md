@@ -710,6 +710,16 @@ its forward where the relay is enabled:
 - The `wechat` CLI reaches the WeChat relay.
 - Agents register the tldraw MCP server.
 
+For other protocols the relay also runs a SOCKS5 proxy
+(`dotfiles.tailnetRelay.proxy`, `127.0.0.1:47300`) to any tailnet address the
+tag reaches, by MagicDNS name or address, TCP only:
+
+- kubectl reaches the clusters: activation sets each cluster's `proxy-url` in
+  `~/.kube/config`.
+- ssh reaches the flake hosts by their bare names (except mars and venus) and
+  any `*.at-basking.ts.net` host, through the `tailnet-relay-connect`
+  `ProxyCommand` (`dotfiles.tailnetRelay.connect`).
+
 Every user on the host can connect to a loopback port, and any user can bind
 one the relay does not hold, so the check runs in both directions:
 
@@ -721,7 +731,9 @@ one the relay does not hold, so the check runs in both directions:
   runs `tailnet-relay-check` (`dotfiles.tailnetRelay.checker`) before it
   connects, so another user who took a port gets nothing: agent-settings
   before it sends a gateway key, every agent launcher for the MCP servers,
-  and the `atuin` and `wechat` wrappers. While the relay is down, agents and
+  the `atuin` and `wechat` wrappers, and `tailnet-relay-connect`, since ssh
+  trusts a new host's key on first use. kubectl runs no check: it verifies
+  the API server against the kubeconfig's CA. While the relay is down, agents and
   `wechat` refuse to start, and Atuin keeps its history locally with sync off;
   none of them fall back to a public origin.
 - Root on the host can take the node's identity from
@@ -731,10 +743,12 @@ one the relay does not hold, so the check runs in both directions:
 To add a home:
 
 1. Once per tailnet, in the Tailscale admin console: add
-   `"tag:tailnet-relay": ["autogroup:admin"]` to `tagOwners` and the grant
-   `{ "src": ["tag:tailnet-relay"], "dst": ["tag:services"], "ip": ["tcp:443"] }`.
+   `"tag:tailnet-relay": ["autogroup:admin"]` to `tagOwners` and the grants
+   `{ "src": ["tag:tailnet-relay"], "dst": ["tag:services"], "ip": ["tcp:443", "tcp:6443"] }`
+   and `{ "src": ["tag:tailnet-relay"], "dst": ["whexy@github"], "ip": ["tcp:22"] }`.
    Nodes and ingress proxies share `tag:services`, so the relay reaches every
-   tailnet UI on 443. Create an OAuth client that writes auth keys for the
+   tailnet UI on 443 and the Kubernetes API on 6443; the second grant is ssh
+   to the owner's machines. Create an OAuth client that writes auth keys for the
    tag; its secret is `secrets/tailnet-relay-oauth.age`.
 2. Add the home to that secret's recipients and rekey (see
    [Secrets](#secrets)).

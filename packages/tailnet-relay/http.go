@@ -26,16 +26,9 @@ func serveHTTP(ln net.Listener, f forward, srv *tsnet.Server, up <-chan struct{}
 	}
 	transport := &http.Transport{
 		DialContext: func(ctx context.Context, network, addr string) (net.Conn, error) {
-			// A node that cannot come up fails requests instead of holding them.
-			ctx, cancel := context.WithTimeout(ctx, 30*time.Second)
+			ctx, cancel := context.WithTimeout(ctx, dialTimeout)
 			defer cancel()
-			// tsnet's Dial fails at once while the node is still starting.
-			select {
-			case <-up:
-			case <-ctx.Done():
-				return nil, fmt.Errorf("tailnet is not up: %w", ctx.Err())
-			}
-			return dialTailnet(ctx, srv, network, addr)
+			return dialTailnet(ctx, srv, up, network, addr)
 		},
 		ForceAttemptHTTP2: true,
 		MaxIdleConns:      100,
@@ -60,13 +53,23 @@ func serveHTTP(ln net.Listener, f forward, srv *tsnet.Server, up <-chan struct{}
 	return server.Serve(ln)
 }
 
-// dialTailnet dials addr over the tailnet only. tsnet dials an address no
-// peer it knows of serves through the host's own network instead, which it
-// does for a Tailscale Service's address until the netmap names the peer
-// that serves it, shortly after the node comes up. A connection that did
-// not leave from the node's own address is closed before TLS, so no request
-// is sent on it, and the dial is retried.
-func dialTailnet(ctx context.Context, srv *tsnet.Server, network, addr string) (net.Conn, error) {
+// dialTimeout bounds a dial, including the wait for the node to come up, so
+// a node that cannot come up fails connections instead of holding them.
+const dialTimeout = 30 * time.Second
+
+// dialTailnet dials addr over the tailnet only, once the node is up: tsnet's
+// Dial fails at once while the node is still starting. tsnet dials an
+// address no peer it knows of serves through the host's own network instead,
+// which it does for a Tailscale Service's address until the netmap names the
+// peer that serves it, shortly after the node comes up. A connection that did
+// not leave from the node's own address is closed before any byte is sent on
+// it, and the dial is retried.
+func dialTailnet(ctx context.Context, srv *tsnet.Server, up <-chan struct{}, network, addr string) (net.Conn, error) {
+	select {
+	case <-up:
+	case <-ctx.Done():
+		return nil, fmt.Errorf("tailnet is not up: %w", ctx.Err())
+	}
 	for {
 		conn, err := srv.Dial(ctx, network, addr)
 		if err == nil {

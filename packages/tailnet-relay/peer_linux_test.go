@@ -66,3 +66,18 @@ func TestLoadConfigRejectsNonLoopbackListener(t *testing.T) {
 		t.Fatal("0.0.0.0 accepted")
 	}
 }
+
+func TestLoadConfigRejectsBadProxy(t *testing.T) {
+	for name, body := range map[string]string{
+		"non-loopback proxy":  `{"hostname":"h","stateDir":"/tmp/s","proxy":"0.0.0.0:2","forwards":[{"name":"a","listen":"127.0.0.1:1","upstream":"https://a.example"}]}`,
+		"forward named proxy": `{"hostname":"h","stateDir":"/tmp/s","proxy":"127.0.0.1:2","forwards":[{"name":"proxy","listen":"127.0.0.1:1","upstream":"https://a.example"}]}`,
+	} {
+		path := t.TempDir() + "/config.json"
+		if err := os.WriteFile(path, []byte(body), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadConfig(path); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+}

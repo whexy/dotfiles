@@ -14,6 +14,7 @@
 }:
 let
   cfg = config.dotfiles.tooling.kube;
+  relay = config.dotfiles.tailnetRelay;
 
   writeConfig = pkgs.writeShellApplication {
     name = "kube-write-config";
@@ -62,7 +63,13 @@ let
 
       KUBECONFIG=$(IFS=:; echo "''${files[*]}") kubectl config view --flatten >"$work/config"
       export KUBECONFIG="$work/config"
-      if [ -n "$current" ] && kubectl config get-contexts "$current" >/dev/null 2>&1; then
+      ${lib.optionalString relay.enable ''
+        # The API servers are tailnet hosts. Their certificates are checked
+        # against the kubeconfig's CA, so the proxy port needs no check.
+        for file in "''${files[@]}"; do
+          kubectl config set-cluster "$(basename "$file")" --proxy-url=${relay.proxy.url} >/dev/null
+        done
+      ''}      if [ -n "$current" ] && kubectl config get-contexts "$current" >/dev/null 2>&1; then
         kubectl config use-context "$current" >/dev/null
         [ -z "$namespace" ] || kubectl config set-context "$current" --namespace "$namespace" >/dev/null
       else

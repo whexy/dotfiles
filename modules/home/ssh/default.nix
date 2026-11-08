@@ -28,18 +28,24 @@ let
   # Every home in this flake installs xterm-rex (base cap), so Rex terminals
   # keep it for these destinations. Other hosts get xterm-256color, unless
   # `rex terminfo host` recorded them, the same rule as Rex's own guard.
+  hostNames = lib.attrNames (
+    lib.filterAttrs (_: type: type == "directory") (builtins.readDir ../../../hosts)
+  );
   flakeHosts =
-    lib.concatMap
-      (host: [
-        host
-        "${host}.at-basking.ts.net"
-      ])
-      (lib.attrNames (lib.filterAttrs (_: type: type == "directory") (builtins.readDir ../../../hosts)))
+    lib.concatMap (host: [
+      host
+      "${host}.at-basking.ts.net"
+    ]) hostNames
     ++ [
       "mars.cs.northwestern.edu"
       "venus.cs.northwestern.edu"
     ];
   rexTerminfoHosts = "${config.xdg.configHome}/rex/terminfo-hosts";
+
+  relay = config.dotfiles.tailnetRelay;
+  # The flake hosts by their bare names, which only MagicDNS resolves, apart
+  # from the shared servers that their own blocks name publicly.
+  tailnetHosts = lib.subtractLists [ "mars" "venus" ] hostNames ++ [ "*.at-basking.ts.net" ];
 in
 {
   imports = [
@@ -96,6 +102,12 @@ in
             rex-terminfo = {
               header = "Match !host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ] && ! grep -qxF -- %h ${rexTerminfoHosts} 2>/dev/null'\"";
               SetEnv.TERM = "xterm-256color";
+            };
+
+            # A home with a tailnet relay reaches tailnet hosts through it.
+            tailnet-relay = lib.mkIf relay.enable {
+              header = "Match host ${lib.concatStringsSep "," tailnetHosts}";
+              ProxyCommand = "${relay.connect} %h %p";
             };
 
             # Hosts that run Rex's login server also have its guard in

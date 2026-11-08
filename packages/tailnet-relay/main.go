@@ -28,7 +28,13 @@ type config struct {
 	ClientSecretFile string    `json:"clientSecretFile"`
 	Tags             []string  `json:"tags"`
 	Forwards         []forward `json:"forwards"`
+	// Proxy is the loopback address of a SOCKS5 proxy to tailnet addresses,
+	// for clients of protocols other than HTTP; empty for none.
+	Proxy string `json:"proxy"`
 }
+
+// proxyName names the proxy's listener among the forwards'.
+const proxyName = "proxy"
 
 // A forward relays HTTP from a loopback listener to one tailnet origin.
 type forward struct {
@@ -71,13 +77,20 @@ func run(configPath string) error {
 	}
 	defer srv.Close()
 
-	listeners, err := openListeners(cfg.Forwards)
+	addresses := map[string]string{}
+	for _, f := range cfg.Forwards {
+		addresses[f.Name] = f.Listen
+	}
+	if cfg.Proxy != "" {
+		addresses[proxyName] = cfg.Proxy
+	}
+	listeners, err := openListeners(addresses)
 	if err != nil {
 		return err
 	}
 	// A node that failed to come up never will, so the process exits and
 	// systemd starts it again.
-	errs := make(chan error, len(cfg.Forwards)+1)
+	errs := make(chan error, len(listeners)+1)
 	up := make(chan struct{})
 	go func() {
 		status, err := srv.Up(context.Background())
@@ -93,6 +106,10 @@ func run(configPath string) error {
 	for _, f := range cfg.Forwards {
 		ln := ownerOnly{Listener: listeners[f.Name], uid: uid, name: f.Name}
 		go func() { errs <- fmt.Errorf("%s: %w", f.Name, serveHTTP(ln, f, srv, up)) }()
+	}
+	if cfg.Proxy != "" {
+		ln := ownerOnly{Listener: listeners[proxyName], uid: uid, name: proxyName}
+		go func() { errs <- fmt.Errorf("%s: %w", proxyName, serveProxy(ln, srv, up)) }()
 	}
 
 	signals := make(chan os.Signal, 1)
@@ -117,19 +134,19 @@ func loadConfig(path string) (*config, error) {
 	if cfg.Hostname == "" || cfg.StateDir == "" || len(cfg.Forwards) == 0 {
 		return nil, fmt.Errorf("%s: hostname, stateDir and forwards are required", path)
 	}
-	seen := map[string]bool{}
+	if cfg.Proxy != "" {
+		if err := checkLoopback(cfg.Proxy); err != nil {
+			return nil, fmt.Errorf("proxy: %w", err)
+		}
+	}
+	seen := map[string]bool{proxyName: true}
 	for _, f := range cfg.Forwards {
 		if seen[f.Name] {
-			return nil, fmt.Errorf("%s: forward %q is listed twice", path, f.Name)
+			return nil, fmt.Errorf("%s: forward name %q is taken", path, f.Name)
 		}
 		seen[f.Name] = true
-		host, _, err := net.SplitHostPort(f.Listen)
-		if err != nil {
+		if err := checkLoopback(f.Listen); err != nil {
 			return nil, fmt.Errorf("forward %s: %w", f.Name, err)
-		}
-		// The peer check only knows loopback peers.
-		if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
-			return nil, fmt.Errorf("forward %s: %s is not a loopback address", f.Name, f.Listen)
 		}
 		u, err := url.Parse(f.Upstream)
 		if err != nil || u.Scheme != "https" || u.Host == "" || (u.Path != "" && u.Path != "/") {
@@ -137,6 +154,19 @@ func loadConfig(path string) (*config, error) {
 		}
 	}
 	return &cfg, nil
+}
+
+// checkLoopback fails unless address is a loopback one, the only peers the
+// owner check knows.
+func checkLoopback(address string) error {
+	host, _, err := net.SplitHostPort(address)
+	if err != nil {
+		return err
+	}
+	if ip := net.ParseIP(host); ip == nil || !ip.IsLoopback() {
+		return fmt.Errorf("%s is not a loopback address", address)
+	}
+	return nil
 }
 
 // clientSecret is the OAuth client secret the node first joins with, as

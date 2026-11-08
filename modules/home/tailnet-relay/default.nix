@@ -1,6 +1,8 @@
 # A userspace tailnet node for hosts that run no Tailscale daemon, such as
 # shared servers: it relays loopback connections to tailnet services, and
-# only from processes of this home's user (packages/tailnet-relay).
+# only from processes of this home's user (packages/tailnet-relay). HTTP
+# forwards serve clients that take a base URL; a SOCKS5 proxy serves the
+# rest.
 #
 # The node joins as `tags` with an OAuth client secret, so the tailnet
 # policy decides what it reaches; it serves nothing on the tailnet.
@@ -15,7 +17,19 @@ let
   cfg = config.dotfiles.tailnetRelay;
 
   socketUnit = name: "tailnet-relay-${name}";
-  sockets = map (name: "${socketUnit name}.socket") (lib.attrNames cfg.forwards);
+  # What each socket unit listens on, by the name the relay knows it by.
+  listeners =
+    lib.mapAttrs (_: forward: {
+      inherit (forward) address;
+      description = "Tailnet relay to ${forward.upstream}";
+    }) cfg.forwards
+    // {
+      proxy = {
+        inherit (cfg.proxy) address;
+        description = "Tailnet relay's SOCKS5 proxy";
+      };
+    };
+  sockets = map (name: "${socketUnit name}.socket") (lib.attrNames listeners);
 
   relayConfig = pkgs.writeText "tailnet-relay.json" (
     builtins.toJSON {
@@ -28,6 +42,7 @@ let
         listen = forward.address;
         inherit (forward) upstream;
       }) cfg.forwards;
+      proxy = cfg.proxy.address;
     }
   );
 in
@@ -91,14 +106,51 @@ in
       );
     };
 
+    proxy = {
+      port = lib.mkOption {
+        type = lib.types.port;
+        default = 47300;
+        description = ''
+          Loopback port of the relay's SOCKS5 proxy, which connects to any
+          tailnet address the node's tags reach. Clients whose protocol does
+          not authenticate the far end run `checker` on its address first;
+          `connect` does for ssh.
+        '';
+      };
+      address = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = "127.0.0.1:${toString cfg.proxy.port}";
+        description = "Address SOCKS5 clients connect to.";
+      };
+      url = lib.mkOption {
+        type = lib.types.str;
+        readOnly = true;
+        default = "socks5://${cfg.proxy.address}";
+        description = "The proxy as a URL, such as a kubeconfig's `proxy-url`.";
+      };
+    };
+
+    connect = lib.mkOption {
+      type = lib.types.str;
+      readOnly = true;
+      default = "${lib.getExe' perSystem.self.tailnet-relay "tailnet-relay-connect"} ${cfg.proxy.address}";
+      defaultText = lib.literalMD "`tailnet-relay-connect` of `packages/tailnet-relay`, with the proxy's address";
+      description = ''
+        Command that connects standard input and output to the host and port
+        it is given, through the proxy, after `checker`'s test of the proxy:
+        an ssh `ProxyCommand` when followed by `%h %p`.
+      '';
+    };
+
     checker = lib.mkOption {
       type = lib.types.str;
       readOnly = true;
       default = lib.getExe' perSystem.self.tailnet-relay "tailnet-relay-check";
       defaultText = lib.literalMD "`tailnet-relay-check` of `packages/tailnet-relay`";
       description = ''
-        Command that exits non-zero unless this user holds every forward
-        address it is given. Any port is free for another user to take while
+        Command that exits non-zero unless this user holds every forward or
+        proxy address it is given. Any port is free for another user to take while
         the relay does not hold it, so every client runs this before it sends
         anything to a forward.
       '';
@@ -116,8 +168,14 @@ in
         message = "dotfiles.tailnetRelay is enabled with no forwards.";
       }
       {
-        assertion = lib.allUnique (lib.mapAttrsToList (_: forward: forward.port) cfg.forwards);
-        message = "dotfiles.tailnetRelay.forwards share a port.";
+        assertion = !(cfg.forwards ? proxy);
+        message = "dotfiles.tailnetRelay.forwards.proxy is the name of the relay's proxy.";
+      }
+      {
+        assertion = lib.allUnique (
+          [ cfg.proxy.port ] ++ lib.mapAttrsToList (_: forward: forward.port) cfg.forwards
+        );
+        message = "dotfiles.tailnetRelay's forwards and proxy share a port.";
       }
     ];
 
@@ -126,17 +184,17 @@ in
     # systemd holds each port, so it stays this user's while the relay
     # restarts; a port another user took first fails its socket unit.
     systemd.user.sockets = lib.mapAttrs' (
-      name: forward:
+      name: listener:
       lib.nameValuePair (socketUnit name) {
-        Unit.Description = "Tailnet relay to ${forward.upstream}";
+        Unit.Description = listener.description;
         Socket = {
-          ListenStream = forward.address;
+          ListenStream = listener.address;
           FileDescriptorName = name;
           Service = "tailnet-relay.service";
         };
         Install.WantedBy = [ "sockets.target" ];
       }
-    ) cfg.forwards;
+    ) listeners;
 
     systemd.user.services.tailnet-relay = {
       Unit = {
