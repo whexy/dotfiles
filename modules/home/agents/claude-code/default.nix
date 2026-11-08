@@ -39,10 +39,6 @@
           "CLAUDE_CODE_USE_VERTEX"
           "CLAUDE_CODE_USE_FOUNDRY"
         ];
-        # Before the link step, so a settings.json Home Manager still links
-        # from a generation older than agent-settings is turned into the
-        # user's own file instead of being removed with that generation.
-        syncBeforeLinks = true;
       };
     };
   };

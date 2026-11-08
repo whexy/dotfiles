@@ -83,11 +83,6 @@ let
                   default = [ ];
                   description = "Files in the config directory a forked config links back to the default's.";
                 };
-                syncBeforeLinks = lib.mkOption {
-                  type = lib.types.bool;
-                  default = false;
-                  description = "Whether activation reconciles the settings before Home Manager links the new generation, rather than after.";
-                };
               };
             }
           );
@@ -176,17 +171,11 @@ in
       ) cfg.harnesses;
 
       activation = lib.mapAttrs' (
-        name: h:
+        name: _:
         lib.nameValuePair "${name}Settings" (
-          (
-            if h.settings.syncBeforeLinks then
-              lib.hm.dag.entryBetween [ "linkGeneration" ] [ "writeBoundary" ]
-            else
-              lib.hm.dag.entryAfter [ "linkGeneration" ]
-          )
-            ''
-              run ${wrapped.${name}}/bin/${name}-settings-sync
-            ''
+          lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+            run ${wrapped.${name}}/bin/${name}-settings-sync
+          ''
         )
       ) managed;
     };
