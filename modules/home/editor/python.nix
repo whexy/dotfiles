@@ -11,6 +11,7 @@
       python3 # whatever version the channel provides
       uv
     ];
+    textWidth = 88;
     grammars = [ "python" ];
     nixvim = {
       lsp.servers = {

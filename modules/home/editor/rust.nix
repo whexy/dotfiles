@@ -10,6 +10,7 @@
     packages = with pkgs; [
       rustup
     ];
+    textWidth = 100;
     grammars = [
       "ron"
       "rust"

@@ -10,6 +10,7 @@
     packages = with pkgs; [
       zig
     ];
+    textWidth = 100;
     grammars = [ "zig" ];
     nixvim.lsp.servers.zls = {
       enable = true;

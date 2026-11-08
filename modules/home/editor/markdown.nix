@@ -14,6 +14,7 @@
     nixvim = {
       extraPackages = [ pkgs.mdx-language-server ];
       filetype.extension.mdx = "mdx";
+      plugins.treesitter.languageRegister.markdown = "mdx";
       lsp.servers.mdx_analyzer = {
         enable = true;
         package = null;
