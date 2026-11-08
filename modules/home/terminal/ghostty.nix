@@ -26,7 +26,7 @@ in
       inherit (style) darkTheme lightTheme;
       themeFile = "${config.xdg.configHome}/ghostty/theme.conf";
       modeFile = "${config.xdg.configHome}/ghostty/mode.conf";
-      nostalgiaModeFile = "${config.xdg.stateHome}/dotfiles/nostalgia";
+      nostalgiaModeFile = style.nostalgia.file config.xdg.stateHome;
       modernFont = style.font;
       nostalgiaFont = "Perfect DOS VGA 437 Nerd Font";
 
@@ -47,40 +47,32 @@ in
             | while IFS= read -r -d "" socket; do
                 pid="''${socket##*.}"
                 if [[ "$pid" =~ ^[0-9]+$ ]]; then
-                  kill -USR1 "$pid" 2>/dev/null || true
+                  kill -${style.nostalgia.signal} "$pid" 2>/dev/null || true
                 fi
               done
         fi
       '';
 
-      ghostty-nostalgia = pkgs.writeShellScriptBin "ghostty-nostalgia" ''
-        mode_file="''${GHOSTTY_MODE_FILE:-$HOME/.config/ghostty/mode.conf}"
-        state_file="''${NOSTALGIA_MODE_FILE:-${nostalgiaModeFile}}"
+      # The nostalgia file switches Neovim's colors along with Ghostty's font.
+      ghosttyMode =
+        name: font: setState:
+        pkgs.writeShellScriptBin "ghostty-${name}" ''
+          mode_file="''${GHOSTTY_MODE_FILE:-${modeFile}}"
+          state_file="''${NOSTALGIA_MODE_FILE:-${nostalgiaModeFile}}"
 
-        mkdir -p "$(dirname "$mode_file")" "$(dirname "$state_file")"
-        printf 'font-family = %s\n' "${nostalgiaFont}" > "$mode_file"
-        : > "$state_file"
-        echo "ghostty mode -> nostalgia"
+          mkdir -p "$(dirname "$mode_file")" "$(dirname "$state_file")"
+          printf 'font-family = %s\n' "${font}" > "$mode_file"
+          ${setState}
+          echo "ghostty mode -> ${name}"
 
-        ${reloadGhostty}
-        ${notifyNeovim}
-      '';
-
-      ghostty-modern = pkgs.writeShellScriptBin "ghostty-modern" ''
-        mode_file="''${GHOSTTY_MODE_FILE:-$HOME/.config/ghostty/mode.conf}"
-        state_file="''${NOSTALGIA_MODE_FILE:-${nostalgiaModeFile}}"
-
-        mkdir -p "$(dirname "$mode_file")"
-        printf 'font-family = %s\n' "${modernFont}" > "$mode_file"
-        rm -f "$state_file"
-        echo "ghostty mode -> modern"
-
-        ${reloadGhostty}
-        ${notifyNeovim}
-      '';
+          ${reloadGhostty}
+          ${notifyNeovim}
+        '';
+      ghostty-nostalgia = ghosttyMode "nostalgia" nostalgiaFont '': > "$state_file"'';
+      ghostty-modern = ghosttyMode "modern" modernFont ''rm -f "$state_file"'';
 
       ghostty-toggle-theme = pkgs.writeShellScriptBin "ghostty-toggle-theme" ''
-        theme_file="''${GHOSTTY_THEME_FILE:-$HOME/.config/ghostty/theme.conf}"
+        theme_file="''${GHOSTTY_THEME_FILE:-${themeFile}}"
         dark="${darkTheme}"
         light="${lightTheme}"
 
@@ -129,7 +121,7 @@ in
             modeFile
           ];
           font-size = style.fontSize macbookScreen;
-          background-opacity = 0.90;
+          background-opacity = style.opacity;
           background-blur = true;
 
           # Allow OSC 9 / OSC 777 sequences (emitted by tools like OpenCode over SSH)

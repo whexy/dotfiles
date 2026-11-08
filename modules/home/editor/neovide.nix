@@ -2,12 +2,13 @@
 args@{
   config,
   lib,
+  pkgs,
   ...
 }:
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.editor;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  style = import ../terminal/style.nix;
 in
 {
   config = lib.mkIf cfg.neovide.enable (
@@ -19,14 +20,14 @@ in
         enable = true;
         settings = {
           font = {
-            normal = [ "FiraCode Nerd Font" ];
-            size = if macbookScreen then 16.0 else 14.0;
+            normal = [ style.font ];
+            # Neovide's font size is a float.
+            size = 0.0 + style.fontSize macbookScreen;
           };
-          # Same translucency as Ghostty (background-opacity = 0.90)
-          transparency = 0.9;
+          transparency = style.opacity;
         }
         # Same as Ghostty's background-blur; Neovide only supports blur on macOS
-        // lib.optionalAttrs isDarwin { background-blur-radius = 20; };
+        // lib.optionalAttrs pkgs.stdenv.hostPlatform.isDarwin { background-blur-radius = 20; };
       };
     }
   );

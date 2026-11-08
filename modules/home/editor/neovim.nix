@@ -9,7 +9,7 @@
 }:
 let
   cfg = config.dotfiles.editor;
-  nostalgiaModeFile = "${config.xdg.stateHome}/dotfiles/nostalgia";
+  style = import ../terminal/style.nix;
   modernBorland = vimPkgs.vimUtils.buildVimPlugin {
     pname = "vim-colors-modern-borland";
     version = "2024-03-03";
@@ -210,7 +210,7 @@ in
       '';
 
       extraConfigLuaPost = ''
-        local nostalgia_mode_file = ${lib.generators.toLua { } nostalgiaModeFile}
+        local nostalgia_mode_file = ${lib.generators.toLua { } (style.nostalgia.file config.xdg.stateHome)}
 
         local function apply_dotfiles_mode()
           if vim.fn.filereadable(nostalgia_mode_file) == 1 then
@@ -226,7 +226,7 @@ in
 
         apply_dotfiles_mode()
         vim.api.nvim_create_autocmd("Signal", {
-          pattern = "SIGUSR1",
+          pattern = "SIG${style.nostalgia.signal}",
           callback = apply_dotfiles_mode,
           desc = "Reload the dotfiles visual mode",
         })
