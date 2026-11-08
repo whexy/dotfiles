@@ -701,9 +701,10 @@ To add a phone:
 Each service a host publishes on the public internet gets its own Cloudflare
 tunnel, at `https://<host>-<service>.clusters.work` (`flake.lib.publicHost`,
 the single place these names are defined). A feature adds its tunnel to
-`dotfiles.tunnels.services`, and `modules/home/tunnels` runs each as a user
-service to the service's loopback port, so traffic never passes through the
-cluster. Tunnel names derive from `dotfiles.tunnels.hostName`, which a
+`dotfiles.tunnels.services` by `service` name and loopback port, and
+`modules/home/tunnels` derives the tunnel, `<service>-<host>`, and the public
+name, and runs each as a user service to that port, so traffic never passes
+through the cluster. The host is `dotfiles.tunnels.hostName`, which a
 standalone home sets itself.
 
 No host is set up by hand. Every host decrypts the same `cloudflared-cert`

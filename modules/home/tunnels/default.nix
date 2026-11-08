@@ -83,31 +83,47 @@ in
 
   options.dotfiles.tunnels.services = lib.mkOption {
     type = lib.types.attrsOf (
-      lib.types.submodule {
-        options = {
-          tunnel = lib.mkOption {
-            type = lib.types.str;
-            description = "Cloudflare tunnel name, unique across every host and service.";
+      lib.types.submodule (
+        { config, ... }:
+        {
+          options = {
+            service = lib.mkOption {
+              type = lib.types.str;
+              example = "t3";
+              description = ''
+                Short name of the published service. The public name is
+                `flake.lib.publicHost` of it, and the tunnel is named
+                `<service>-<hostName>`, unique across every host.
+              '';
+            };
+            port = lib.mkOption {
+              type = lib.types.port;
+              description = "Loopback port of the published service.";
+            };
+            path = lib.mkOption {
+              type = lib.types.nullOr lib.types.str;
+              default = null;
+              description = "cloudflared path regex; requests for any other path get a 404 at the edge.";
+            };
+            description = lib.mkOption {
+              type = lib.types.str;
+              description = "What the tunnel publishes, completing \"Cloudflare tunnel publishing …\".";
+            };
+            tunnel = lib.mkOption {
+              type = lib.types.str;
+              readOnly = true;
+              default = "${config.service}-${cfg.hostName}";
+              description = "Cloudflare tunnel name.";
+            };
+            hostname = lib.mkOption {
+              type = lib.types.str;
+              readOnly = true;
+              default = flake.lib.publicHost config.service cfg.hostName;
+              description = "Public hostname.";
+            };
           };
-          hostname = lib.mkOption {
-            type = lib.types.str;
-            description = "Public hostname, from `flake.lib.publicHost`.";
-          };
-          port = lib.mkOption {
-            type = lib.types.port;
-            description = "Loopback port of the published service.";
-          };
-          path = lib.mkOption {
-            type = lib.types.nullOr lib.types.str;
-            default = null;
-            description = "cloudflared path regex; requests for any other path get a 404 at the edge.";
-          };
-          description = lib.mkOption {
-            type = lib.types.str;
-            description = "Description of the user service.";
-          };
-        };
-      }
+        }
+      )
     );
     default = { };
     description = "Tunnels by the name of the user service that runs each.";
@@ -118,10 +134,17 @@ in
       # `cloudflared tunnel login` cert for the tunnels' zone: it creates
       # tunnels and edits any DNS record in that zone.
       age.secrets.cloudflared-cert.file = ../../../secrets/cloudflared-cert.age;
+
+      assertions = [
+        {
+          assertion = cfg.hostName != null;
+          message = "dotfiles.tunnels.services requires dotfiles.tunnels.hostName, which standalone homes set themselves.";
+        }
+      ];
     }
     // userService.units (
       lib.mapAttrs (name: service: {
-        inherit (service) description;
+        description = "Cloudflare tunnel publishing ${service.description} at ${service.hostname}";
         argv = [ (lib.getExe (publish name service)) ];
         wants = [ "agenix.service" ];
       }) cfg.services

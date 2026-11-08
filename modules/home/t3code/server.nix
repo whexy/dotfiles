@@ -9,7 +9,6 @@
 }:
 let
   cfg = config.dotfiles.t3code;
-  inherit (config.dotfiles.tunnels) hostName;
 
   services = import ./services.nix {
     inherit pkgs lib cfg;
@@ -30,26 +29,13 @@ let
 in
 {
   config = lib.mkIf (cfg.enable && cfg.server.enable) {
-    assertions = [
-      {
-        assertion = cfg.server.tunnel.enable -> hostName != null;
-        message = "dotfiles.t3code.server.tunnel.enable requires the server and dotfiles.tunnels.hostName.";
-      }
-    ];
-
     inherit (services) systemd launchd;
 
-    dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable (
-      let
-        hostname = flake.lib.publicHost "t3" hostName;
-      in
-      {
-        tunnel = "t3-${hostName}";
-        inherit hostname;
-        inherit (flake.lib.t3) port;
-        description = "Cloudflare tunnel publishing the T3 Code server at ${hostname}";
-      }
-    );
+    dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable {
+      service = "t3";
+      inherit (flake.lib.t3) port;
+      description = "the T3 Code server";
+    };
 
     home = lib.mkIf linkBrowser {
       file.${browserDir}.source = browser;

@@ -4,12 +4,10 @@ args@{
   config,
   lib,
   perSystem,
-  flake,
   ...
 }:
 let
   cfg = config.dotfiles.agenticTooling.spark;
-  inherit (config.dotfiles.tunnels) hostName;
 
   # The Cloudflare tunnel proxies to this loopback port.
   port = 8765;
@@ -67,17 +65,13 @@ in
         };
       };
 
-      dotfiles.tunnels.services.spark-mcp-tunnel =
-        let
-          hostname = flake.lib.publicHost "spark" hostName;
-        in
-        {
-          tunnel = "spark-${hostName}";
-          inherit hostname port;
-          # Clients use only the MCP endpoint, so nothing else is published.
-          path = "^/mcp$";
-          description = "Cloudflare tunnel publishing spark-mcp at ${hostname}";
-        };
+      dotfiles.tunnels.services.spark-mcp-tunnel = {
+        service = "spark";
+        inherit port;
+        # Clients use only the MCP endpoint, so nothing else is published.
+        path = "^/mcp$";
+        description = "spark-mcp";
+      };
     })
   ];
 }
