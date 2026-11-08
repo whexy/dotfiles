@@ -107,8 +107,6 @@ in
 
     (lib.mkIf cfg.soteria.enable { security.soteria.enable = true; })
 
-    (lib.mkIf cfg.fail2ban.enable { services.fail2ban.enable = true; })
-
     # The PIN applies to the swaylock service only; login, sudo, and polkit
     # still require the account password. A rejected PIN falls through to
     # pam_unix, which reuses the token pam_exec stored because swaylock

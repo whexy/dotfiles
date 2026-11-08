@@ -17,7 +17,7 @@ The repo contains NixOS, nix-darwin, and Home Manager configs.
 System features are grouped semantically, like settings categories. A group
 may contain related options for both platforms; platform-specific behavior
 still belongs to that semantic group. For example, passwordless sudo,
-1Password, fail2ban, and macOS biometric sudo all belong to `security`.
+1Password, and macOS biometric sudo all belong to `security`.
 
 Each group follows this pattern:
 
@@ -49,8 +49,8 @@ are imported selectively.
 
 ## Capabilities
 
-Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, `service`, and
-the home-only `sysadmin` and `agent`), but **caps are not options or
+Caps describe machine roles (`base`, `dev`, `dev-lite`, `gui`, and the
+home-only `sysadmin` and `agent`), but **caps are not options or
 features**. They are preset modules:
 
 - `modules/caps/<cap>.nix` assigns system `dotfiles.*` options

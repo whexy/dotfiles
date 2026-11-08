@@ -1,4 +1,4 @@
-# Services group: OpenSSH server, Caddy web server.
+# Services group: OpenSSH server.
 { lib, ... }:
 {
   options.dotfiles.services = {
@@ -23,7 +23,5 @@
         short-lived user certificates issued by Cloudflare Zero Trust are
         accepted for authentication'';
     };
-
-    caddy.enable = lib.mkEnableOption "the Caddy web server with a user-managed /etc/caddy/Caddyfile";
   };
 }

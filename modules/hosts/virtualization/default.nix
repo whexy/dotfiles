@@ -15,10 +15,6 @@
         a weekly `docker system prune` of stopped containers, unused
         networks, dangling images and dangling build cache; tagged images
         and volumes are kept'';
-
-      serverHygiene = lib.mkEnableOption ''
-        server-oriented Docker hygiene: automatic image pruning and
-        bounded json-file container logs'';
     };
 
     podman.enable = lib.mkEnableOption "Podman";

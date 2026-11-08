@@ -1,4 +1,4 @@
-export type Cap = "base" | "dev" | "dev-lite" | "gui" | "service" | "sysadmin";
+export type Cap = "base" | "dev" | "dev-lite" | "gui" | "sysadmin";
 
 export interface Host {
   /** Display name (flake target where applicable). */
@@ -218,10 +218,6 @@ export const capNotes: Record<Cap, { name: string; blurb: string }> = {
     name: "gui",
     blurb:
       "Desktop environments. ghostty, firefox, niri, fonts — plus dock, finder and Touch ID on macOS.",
-  },
-  service: {
-    name: "service",
-    blurb: "Headless service hosts. Minimal, hardened, always on.",
   },
   sysadmin: {
     name: "sysadmin",
