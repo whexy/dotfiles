@@ -37,7 +37,7 @@ def _frames(rt, fps):
     if not isinstance(rt, dict):
         return None
     rate = float(rt.get("rate") or fps)
-    return int(round(float(rt.get("value", 0)) * fps / rate))
+    return round(float(rt.get("value", 0)) * fps / rate)
 
 
 def _timeline(data):
@@ -153,7 +153,13 @@ def diff_plan(plan, readback, limit=40):
         matcher = SequenceMatcher(None, ekeys, akeys, autojunk=False)
         missing, extra = [], []
         for op, i1, i2, j1, j2 in matcher.get_opcodes():
-            pairs = list(zip(range(i1, i2), range(j1, j2))) if op in ("equal", "replace") else []
+            # A replace opcode's two ranges can differ in length; the rest of
+            # the longer one is reported as missing or extra below.
+            pairs = (
+                list(zip(range(i1, i2), range(j1, j2), strict=False))
+                if op in ("equal", "replace")
+                else []
+            )
             for i, j in pairs:
                 e, a = expected[i], actual[j]
                 notes = []
@@ -168,7 +174,8 @@ def diff_plan(plan, readback, limit=40):
                     notes.append(f"length {length:+d}")
                 if notes:
                     problems.append(
-                        f"{key} item {i} ({_describe(e)}): found {_describe(a)} [{', '.join(notes)}]"
+                        f"{key} item {i} ({_describe(e)}): "
+                        f"found {_describe(a)} [{', '.join(notes)}]"
                     )
             if op in ("delete", "replace"):
                 missing += [expected[i] for i in range(i1 + len(pairs), i2)]

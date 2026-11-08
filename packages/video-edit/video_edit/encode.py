@@ -177,7 +177,8 @@ def encode_args(spec, fps, frames, encoder):
         if encoder == "libx265":
             codec += ["-preset", "ultrafast", "-x265-params", "log-level=error"]
     tag = ["-tag:v", "hvc1"] if "265" in encoder or "hevc" in encoder else []
-    return codec + [
+    return [
+        *codec,
         "-fps_mode",
         "cfr",
         "-r",
@@ -371,7 +372,7 @@ def text_findings(src_dir, whitelist, limit=20):
                     findings.append(f"{rel}:{line}: visible text {value.strip()[:60]!r}")
     unique = list(dict.fromkeys(findings))
     if len(unique) > limit:
-        unique = unique[:limit] + [f"... and {len(unique) - limit} more"]
+        unique = [*unique[:limit], f"... and {len(unique) - limit} more"]
     return unique
 
 
@@ -419,7 +420,7 @@ def contact_sheet(path, total, fps, out, count=12, cols=4, tile_w=480):
         for x in range(0, tile_w, 16):
             if (x // 16 + y // 16) % 2:
                 checker.rectangle((x, y, x + 15, y + 15), fill=(38, 38, 44, 255))
-    for k, (frame, pick) in enumerate(zip(frames, picks)):
+    for k, (frame, pick) in enumerate(zip(frames, picks, strict=False)):
         x, y = (k % cols) * tile_w, (k // cols) * (tile_h + label_h)
         tile = Image.alpha_composite(check, frame.resize((tile_w, tile_h)))
         sheet.paste(tile.convert("RGB"), (x, y))

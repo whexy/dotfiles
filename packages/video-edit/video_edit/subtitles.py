@@ -77,7 +77,7 @@ def apply_glossary(text, glossary):
 
 
 def stamp(seconds):
-    ms = int(round(seconds * 1000))
+    ms = round(seconds * 1000)
     hours, ms = divmod(ms, 3_600_000)
     minutes, ms = divmod(ms, 60_000)
     secs, ms = divmod(ms, 1000)
@@ -146,7 +146,7 @@ def build_cues(cues, words, settings, glossary):
         )
     if expected <= last:
         errors.append(f"words {expected}-{last} are in no cue")
-    for cue, nxt in zip(timed, timed[1:] + [None]):
+    for cue, nxt in zip(timed, [*timed[1:], None], strict=False):
         end = cue["end"]
         if nxt is not None:
             gap = nxt["start"] - end

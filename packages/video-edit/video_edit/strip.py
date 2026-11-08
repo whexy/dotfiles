@@ -9,6 +9,7 @@ plan), bins the waveform on exact time edges, and takes fonts from a Nix
 store path.
 """
 
+import contextlib
 import subprocess
 import tempfile
 import wave
@@ -60,10 +61,10 @@ def pcm(video, start, end, wav=None):
     waveform on the same clock as the silences detected from it, which an
     ffmpeg seek into compressed audio does not.
     """
-    n = int(round((end - start) * RATE))
+    n = round((end - start) * RATE)
     if wav is not None:
         with wave.open(str(wav), "rb") as w:
-            w.setpos(min(int(round(start * RATE)), w.getnframes()))
+            w.setpos(min(round(start * RATE), w.getnframes()))
             data = np.frombuffer(w.readframes(n), dtype=np.int16)
         data = data.astype(np.float32) / 32768.0
         return np.pad(data, (0, max(0, n - data.size)))[:n]
@@ -220,10 +221,8 @@ def run_strip(
     if not video.is_file():
         raise MediaError(f"not a file: {video}")
     root = None
-    try:
+    with contextlib.suppress(UsageError):
         root = find_root(root_arg)
-    except UsageError:
-        pass
     words, spans, wav = [], [], None
     if root:
         path = root.transcript_path(video)

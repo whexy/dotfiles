@@ -98,7 +98,7 @@ def detect(wav, threshold_db, min_duration, duration=None):
     ends = [float(x) for x in re.findall(r"silence_end: ([\d.]+)", log)]
     if len(ends) < len(starts) and duration is not None:
         ends.append(duration)
-    return [[round(s, 4), round(e, 4)] for s, e in zip(starts, ends) if e > s]
+    return [[round(s, 4), round(e, 4)] for s, e in zip(starts, ends, strict=False) if e > s]
 
 
 def load(root, main, spec, refresh=False):

@@ -16,6 +16,7 @@ cuts (median 94 ms before onset, 283 ms after offset).
 """
 
 import bisect
+import itertools
 import math
 import re
 import statistics
@@ -201,13 +202,13 @@ def check_edges(ranges, index, silences, fps, cuts):
 def check_overlaps(ranges):
     errors, warnings = [], []
     by_src = sorted(ranges, key=lambda r: r["src_in"])
-    for a, b in zip(by_src, by_src[1:]):
+    for a, b in itertools.pairwise(by_src):
         if b["src_in"] < a["src_out"]:
             errors.append(
                 f"ranges {a['edl_index']} and {b['edl_index']} overlap in the "
                 f"source ([{a['start']}, {a['end']}] and [{b['start']}, {b['end']}])"
             )
-    for a, b in zip(ranges, ranges[1:]):
+    for a, b in itertools.pairwise(ranges):
         if a["src_out"] == b["src_in"]:
             warnings.append(
                 f"ranges {a['edl_index']} and {b['edl_index']} are contiguous "
@@ -301,7 +302,7 @@ def place_overlays(overlays, assembled, fps, total):
             }
         )
     placed.sort(key=lambda o: o["rec_in"])
-    for a, b in zip(placed, placed[1:]):
+    for a, b in itertools.pairwise(placed):
         if b["rec_in"] < a["rec_out"]:
             errors.append(f"overlays {a['slot']} and {b['slot']} overlap on V3")
     return errors, placed
@@ -421,7 +422,7 @@ def snap(edl, words, silences, fps, cuts=None):
     # join them near the silence's middle instead, on a frame both edges
     # accept when the silence has one.
     order = sorted(range(len(frames)), key=lambda i: frames[i][0])
-    for a, b in zip(order, order[1:]):
+    for a, b in itertools.pairwise(order):
         if frames[a][1] > frames[b][0] >= frames[a][0]:
             span = silences.containing(frames[b][0] / fps)
             if span and not (new["ranges"][a].get("lock") or new["ranges"][b].get("lock")):
@@ -498,7 +499,7 @@ def camera_items(assembled, camera, fps):
         cuts = [r["src_in"]]
         cuts += [at for at, _ in changes if r["src_in"] < at < r["src_out"]]
         cuts.append(r["src_out"])
-        for a, b in zip(cuts, cuts[1:]):
+        for a, b in itertools.pairwise(cuts):
             offset = offset_at(a)
             cam_in, cam_out = a - offset, b - offset
             lo, hi = max(cam_in, 0), min(cam_out, camera["frames"])

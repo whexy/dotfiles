@@ -159,7 +159,7 @@ def check_record(path):
 def passing_output(slot_dir, slot_id, sig):
     """(newest output that passed `check` for this slot definition, why not)."""
     reasons = []
-    for n, path in reversed(outputs(slot_dir, slot_id)):
+    for _n, path in reversed(outputs(slot_dir, slot_id)):
         record = check_record(path)
         if not record.exists():
             reasons.append(f"{path.name} not checked")

@@ -69,13 +69,15 @@ def resolve_path(path):
     Resolve runs beside this tool on macOS. Under WSL it is the Windows app,
     so the path is Windows': `wslpath -w`, else the /mnt/<drive> rule.
     """
-    path = os.path.abspath(str(path))
+    # pathlib has no abspath: resolve() also follows symlinks, and
+    # absolute() keeps `..`.
+    path = os.path.abspath(str(path))  # noqa: PTH100
     if MACOS:
         return path
     # Agents under systemd user services lack /bin on PATH, so try the
     # interop binary by absolute path first.
     for exe in ("/bin/wslpath", shutil.which("wslpath")):
-        if exe and os.path.exists(exe):
+        if exe and Path(exe).exists():
             result = subprocess.run([exe, "-w", path], capture_output=True, text=True)
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()

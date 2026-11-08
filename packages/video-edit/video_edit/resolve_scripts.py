@@ -93,7 +93,9 @@ EPILOGUE = """
 try:
     result = json.dumps(_main(resolve, project), ensure_ascii=True)
 except Exception as exc:
-    result = json.dumps({"ok": False, "error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=True)
+    result = json.dumps(
+        {"ok": False, "error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=True
+    )
 """
 
 SYNC_MAIN = """
@@ -174,7 +176,8 @@ def _main(resolve, project):
     appended = {}
     main = clips[_norm(MAIN)]
     appended["V1+A1"] = len(mp.AppendToTimeline([
-        {"mediaPoolItem": main, "startFrame": a, "endFrame": b, "trackIndex": 1, "recordFrame": base + r}
+        {"mediaPoolItem": main, "startFrame": a, "endFrame": b, "trackIndex": 1,
+         "recordFrame": base + r}
         for a, b, r in V1
     ]) or [])
     if V2:
@@ -206,7 +209,10 @@ def _main(resolve, project):
         "planned": {"V1": len(V1), "V2": len(V2), "V3": len(V3)},
         "markers": [markers, len(MARKERS)],
         "imported": len(imported),
-        "resolution": [_setting(tl, "timelineResolutionWidth"), _setting(tl, "timelineResolutionHeight")],
+        "resolution": [
+            _setting(tl, "timelineResolutionWidth"),
+            _setting(tl, "timelineResolutionHeight"),
+        ],
     }
 """
 

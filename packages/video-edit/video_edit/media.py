@@ -57,7 +57,7 @@ def _clock(text):
 
 def frames_of(seconds, fps):
     """Nearest frame, rounding halves up (never banker's rounding)."""
-    return int(math.floor(seconds * fps + 0.5 + 1e-9))
+    return math.floor(seconds * fps + 0.5 + 1e-9)
 
 
 def probe_source(path):
@@ -159,7 +159,7 @@ def probe_video(path, count="frames"):
 
 def sniff_encoder(path, limit=8 * 1024 * 1024):
     """Encoder library named in the stream's SEI/headers, if any."""
-    with open(path, "rb") as fh:
+    with Path(path).open("rb") as fh:
         head = fh.read(limit)
     for marker, name in (
         (b"x264 - core", "libx264"),
