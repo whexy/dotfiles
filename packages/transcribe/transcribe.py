@@ -18,11 +18,9 @@ a `--from-json` file that is not transcribe JSON), 3 media/ffmpeg, 4 API,
 """
 
 import argparse
-from concurrent.futures import ThreadPoolExecutor
 import json
 import math
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
@@ -32,6 +30,8 @@ import unicodedata
 import urllib.error
 import urllib.request
 import uuid
+from concurrent.futures import ThreadPoolExecutor
+from pathlib import Path
 
 API_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
 AUDIO_FORMATS = {"mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"}
@@ -59,8 +59,22 @@ MODEL = "whisper-1"
 PRICE_PER_MIN = 0.006
 
 FILLERS_EN = {
-    "um", "uh", "uhm", "umm", "uhh", "er", "erm", "hmm", "mm", "mhm",
-    "ah", "eh", "like", "basically", "actually", "literally",
+    "um",
+    "uh",
+    "uhm",
+    "umm",
+    "uhh",
+    "er",
+    "erm",
+    "hmm",
+    "mm",
+    "mhm",
+    "ah",
+    "eh",
+    "like",
+    "basically",
+    "actually",
+    "literally",
 }
 FILLERS_ZH = {"嗯", "呃", "啊", "那个", "就是", "然后"}
 
@@ -92,10 +106,16 @@ def run(cmd, **kwargs):
 def probe(path):
     out = run(
         [
-            "ffprobe", "-v", "error", "-show_entries",
+            "ffprobe",
+            "-v",
+            "error",
+            "-show_entries",
             "stream=codec_type,duration",
-            "-show_entries", "format=duration",
-            "-of", "json", str(path),
+            "-show_entries",
+            "format=duration",
+            "-of",
+            "json",
+            str(path),
         ]
     ).stdout
     info = json.loads(out)
@@ -104,9 +124,7 @@ def probe(path):
         raise MediaError(f"no audio stream in {path}")
     duration = info.get("format", {}).get("duration")
     if duration is None:
-        duration = next(
-            (s["duration"] for s in streams if s.get("duration")), None
-        )
+        duration = next((s["duration"] for s in streams if s.get("duration")), None)
     if duration is None:
         raise MediaError(f"cannot determine duration of {path}")
     return float(duration)
@@ -117,9 +135,22 @@ def extract_audio(path, out):
     # while staying transparent for speech recognition.
     run(
         [
-            "ffmpeg", "-y", "-v", "error", "-i", str(path),
-            "-vn", "-ac", "1", "-ar", "16000", "-c:a", "libmp3lame",
-            "-b:a", "64k", str(out),
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            "16000",
+            "-c:a",
+            "libmp3lame",
+            "-b:a",
+            "64k",
+            str(out),
         ]
     )
 
@@ -134,14 +165,22 @@ def noise_floor(path):
     """
     result = subprocess.run(
         [
-            "ffmpeg", "-v", "error", "-i", str(path), "-af",
+            "ffmpeg",
+            "-v",
+            "error",
+            "-i",
+            str(path),
+            "-af",
             f"{ANALYSIS_FORMAT},asetnsamples=n=800:p=0,"
             "astats=metadata=1:reset=1:measure_perchannel=none:"
             "measure_overall=RMS_level,"
             "ametadata=print:key=lavfi.astats.Overall.RMS_level:file=-",
-            "-f", "null", "-",
+            "-f",
+            "null",
+            "-",
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     levels = sorted(
         level
@@ -159,11 +198,7 @@ def silence_settings(path, requested):
     floor = None
     if requested == "auto":
         floor = noise_floor(path)
-        threshold = (
-            SILENCE_FALLBACK_DB
-            if floor is None
-            else round(floor + FLOOR_MARGIN_DB, 2)
-        )
+        threshold = SILENCE_FALLBACK_DB if floor is None else round(floor + FLOOR_MARGIN_DB, 2)
     else:
         threshold = requested
     return {
@@ -177,12 +212,20 @@ def detect_silences(path, settings, duration):
     """Sorted [(start, end), ...] silence intervals from ffmpeg silencedetect."""
     result = subprocess.run(
         [
-            "ffmpeg", "-v", "info", "-i", str(path), "-af",
+            "ffmpeg",
+            "-v",
+            "info",
+            "-i",
+            str(path),
+            "-af",
             f"{ANALYSIS_FORMAT},silencedetect="
             f"noise={settings['threshold_db']}dB:d={settings['min_duration']}",
-            "-f", "null", "-",
+            "-f",
+            "null",
+            "-",
         ],
-        capture_output=True, text=True,
+        capture_output=True,
+        text=True,
     )
     # A silence at t=0 can be reported slightly negative, and one still
     # running at EOF may never get its silence_end.
@@ -222,10 +265,25 @@ def split_audio(audio, chunks, workdir):
         # input and exact boundaries, at negligible cost for speech audio.
         run(
             [
-                "ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}",
-                "-to", f"{end:.3f}", "-i", str(audio),
-                "-ac", "1", "-ar", "16000", "-c:a", "libmp3lame",
-                "-b:a", "64k", str(out),
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                f"{start:.3f}",
+                "-to",
+                f"{end:.3f}",
+                "-i",
+                str(audio),
+                "-ac",
+                "1",
+                "-ar",
+                "16000",
+                "-c:a",
+                "libmp3lame",
+                "-b:a",
+                "64k",
+                str(out),
             ]
         )
         if out.stat().st_size > MAX_FILE:
@@ -328,9 +386,7 @@ def annotate(words):
     """
     for i, word in enumerate(words):
         word["gap_after"] = (
-            round(words[i + 1]["start"] - word["end"], 3)
-            if i + 1 < len(words)
-            else None
+            round(words[i + 1]["start"] - word["end"], 3) if i + 1 < len(words) else None
         )
         word["filler"] = is_filler(word["word"])
         word["stumble"] = False
@@ -351,8 +407,7 @@ def annotate(words):
                     break
                 if (
                     again == take
-                    and words[second[0]]["start"] - words[first[-1]]["end"]
-                    < STUMBLE_GAP
+                    and words[second[0]]["start"] - words[first[-1]]["end"] < STUMBLE_GAP
                 ):
                     for i in first + second:
                         words[i]["stumble"] = True
@@ -375,9 +430,7 @@ def collapse_silences(silences, words):
     return [
         (s, e)
         for s, e in silences
-        if not any(
-            s >= gs - EDGE_SLOP and e <= ge + EDGE_SLOP for gs, ge in gaps
-        )
+        if not any(s >= gs - EDGE_SLOP and e <= ge + EDGE_SLOP for gs, ge in gaps)
     ]
 
 
@@ -403,11 +456,7 @@ def group_segments(words, pause_min):
                     else round(seg[0]["start"], 3)
                 ),
                 "text": " ".join(w["word"] for w in seg),
-                "flags": [
-                    name
-                    for name in ("filler", "stumble")
-                    if any(w[name] for w in seg)
-                ],
+                "flags": [name for name in ("filler", "stumble") if any(w[name] for w in seg)],
                 "words": seg,
             }
         )
@@ -423,8 +472,7 @@ def render_text(result):
     lines = [
         f"# transcribe {result['source']} "
         f"model={result['model']} duration={result['duration']:.1f}s",
-        "# [MM:SS.ss-MM:SS.ss] segments split on pauses; "
-        "(pause Xs) = silence before segment",
+        "# [MM:SS.ss-MM:SS.ss] segments split on pauses; (pause Xs) = silence before segment",
         "# {word} = filler, {{word}} = stumble (word or phrase said twice; "
         "both takes marked), <pause 1.2s> inline = long pause inside a segment",
         "# whisper-1 text: read word errors against context; word edges "
@@ -442,14 +490,8 @@ def render_text(result):
             body.append(text)
             if word["gap_after"] is not None and word["gap_after"] >= 1.0:
                 body.append(f"<pause {word['gap_after']:.1f}s>")
-        pause = (
-            f" (pause {seg['pause_before']:.1f}s)"
-            if seg["pause_before"] >= 0.05
-            else ""
-        )
-        lines.append(
-            f"[{ts(seg['start'])}-{ts(seg['end'])}]{pause} {' '.join(body)}"
-        )
+        pause = f" (pause {seg['pause_before']:.1f}s)" if seg["pause_before"] >= 0.05 else ""
+        lines.append(f"[{ts(seg['start'])}-{ts(seg['end'])}]{pause} {' '.join(body)}")
     for s, e in result["silences"]:
         lines.append(f"# silence without speech: [{ts(s)}-{ts(e)}] {e - s:.1f}s")
     return "\n".join(lines) + "\n"
@@ -465,9 +507,7 @@ def render_srt(segments):
 
     cues = []
     for i, seg in enumerate(segments, 1):
-        cues.append(
-            f"{i}\n{stamp(seg['start'])} --> {stamp(seg['end'])}\n{seg['text']}\n"
-        )
+        cues.append(f"{i}\n{stamp(seg['start'])} --> {stamp(seg['end'])}\n{seg['text']}\n")
     return "\n".join(cues)
 
 
@@ -511,9 +551,7 @@ def process(args, client):
 
         started = time.monotonic()
         with ThreadPoolExecutor(max_workers=4) as pool:
-            results = list(
-                pool.map(lambda f: transcribe_chunk(client, f, args), files)
-            )
+            results = list(pool.map(lambda f: transcribe_chunk(client, f, args), files))
         timings["api_seconds"] = round(time.monotonic() - started, 2)
 
     words, languages = [], []
@@ -625,9 +663,7 @@ def silence_db(value):
     except ValueError:
         db = math.nan
     if not (math.isfinite(db) and db < 0):
-        raise argparse.ArgumentTypeError(
-            f"expected a negative dBFS number or auto, got {value!r}"
-        )
+        raise argparse.ArgumentTypeError(f"expected a negative dBFS number or auto, got {value!r}")
     return db
 
 
@@ -643,56 +679,63 @@ def parse_args(argv=None):
         help="audio or video file to transcribe (with --from-json: an earlier "
         "--format json output)",
     )
+    parser.add_argument("-o", "--output", help="write to this file instead of stdout")
     parser.add_argument(
-        "-o", "--output", help="write to this file instead of stdout"
+        "--format",
+        choices=["text", "json", "srt"],
+        default="text",
+        help="default text; json includes every word with start/end/gap and filler/stumble flags",
     )
     parser.add_argument(
-        "--format", choices=["text", "json", "srt"], default="text",
-        help="default text; json includes every word with start/end/gap "
-        "and filler/stumble flags",
-    )
-    parser.add_argument(
-        "--language", metavar="CODE",
+        "--language",
+        metavar="CODE",
         help="language hint (ISO 639-1, e.g. zh or en); omit to auto-detect "
         "(better for code-switching)",
     )
     parser.add_argument(
-        "--context", metavar="TEXT",
+        "--context",
+        metavar="TEXT",
         help="glossary/context prompt to bias names and jargon "
         "(whisper-1 accepts up to 224 tokens)",
     )
     parser.add_argument(
-        "--pause", type=float, default=0.6, metavar="SECONDS",
+        "--pause",
+        type=float,
+        default=0.6,
+        metavar="SECONDS",
         help="gap that starts a new segment (default 0.6)",
     )
     parser.add_argument(
-        "--no-silence", action="store_true",
+        "--no-silence",
+        action="store_true",
         help="skip ffmpeg silence detection (chunking and reporting)",
     )
     parser.add_argument(
-        "--silence-db", type=silence_db, metavar="DB",
+        "--silence-db",
+        type=silence_db,
+        metavar="DB",
         help="silence threshold in dBFS, or auto (default): the audio's "
         f"measured noise floor + {FLOOR_MARGIN_DB:g} dB, "
         f"{SILENCE_FALLBACK_DB:g} dB if it has none",
     )
     parser.add_argument(
-        "--estimate", action="store_true",
-        help="print duration and estimated API cost as JSON, then exit "
-        "(no key or API calls)",
+        "--estimate",
+        action="store_true",
+        help="print duration and estimated API cost as JSON, then exit (no key or API calls)",
     )
     parser.add_argument(
-        "--from-json", action="store_true",
+        "--from-json",
+        action="store_true",
         help="re-render FILE, a --format json output, in --format with this "
         "--pause/--no-silence (no key, API calls, or ffmpeg)",
     )
     parser.add_argument(
-        "--yes", action="store_true",
+        "--yes",
+        action="store_true",
         help="skip the cost confirmation prompt on a TTY",
     )
     args = parser.parse_args(argv)
-    if args.from_json and (
-        args.estimate or args.language or args.context or args.silence_db
-    ):
+    if args.from_json and (args.estimate or args.language or args.context or args.silence_db):
         parser.error(
             "--from-json makes no API call or ffmpeg run; --estimate, "
             "--language, --context and --silence-db do not apply"

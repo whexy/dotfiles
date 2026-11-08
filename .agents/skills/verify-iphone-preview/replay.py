@@ -2,6 +2,7 @@
 
 argv: <patched server dir> <iphone_use_select.py> <phone host> <mjpeg port>
 """
+
 import importlib.util
 import os
 import sys
@@ -56,8 +57,10 @@ pauser = wda_screen.ScreenHub(this_host)
 pauser.set_paused(True)
 time.sleep(0.5)
 got, wire = frames_for(viewer)
-print(f"   viewer frames while paused: {got}, paused={wire['paused']}, "
-      f"frame_available={wire['frame_available']}, curl alive={viewer._child is not None}")
+print(
+    f"   viewer frames while paused: {got}, paused={wire['paused']}, "
+    f"frame_available={wire['frame_available']}, curl alive={viewer._child is not None}"
+)
 pauser.set_paused(False)
 got, wire = frames_for(viewer, 4.0)
 print(f"   viewer frames after resume: {got}")

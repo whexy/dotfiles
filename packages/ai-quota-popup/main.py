@@ -3,25 +3,33 @@
 
 import argparse
 import ctypes
-from datetime import datetime, timedelta, timezone
 import hashlib
 import json
 import math
 import os
-from pathlib import Path
 import re
 import subprocess
 import sys
 import tempfile
 import threading
 import time
+from datetime import UTC, datetime, timedelta
+from pathlib import Path
 
-from PySide6.QtCore import QCoreApplication, QLockFile, QObject, Property, QTimer, QUrl, Signal, Slot
-from PySide6.QtNetwork import QLocalServer, QLocalSocket
+from PySide6.QtCore import (
+    Property,
+    QCoreApplication,
+    QLockFile,
+    QObject,
+    QTimer,
+    QUrl,
+    Signal,
+    Slot,
+)
 from PySide6.QtGui import QCursor, QGuiApplication
+from PySide6.QtNetwork import QLocalServer, QLocalSocket
 from PySide6.QtQml import QQmlApplicationEngine
 from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
-
 
 RESOURCES = Path(os.environ.get("AI_QUOTA_POPUP_RESOURCES", Path(__file__).resolve().parent))
 CONFIG = json.loads((RESOURCES / "config.json").read_text())
@@ -33,7 +41,7 @@ def parse_time(value):
         return None
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=timezone.utc)
+        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
     except ValueError:
         return None
 
@@ -82,25 +90,39 @@ def project_meter(meter, observed, now):
     timed = bool(reset and math.isfinite(duration) and 0 < duration < 366 * 86400)
     start = reset.timestamp() - duration if timed else 0
     expired = bool(reset and reset <= now)
-    elapsed = max(0, min(1, (now.timestamp() - start) / duration)) if timed and not expired else None
+    elapsed = (
+        max(0, min(1, (now.timestamp() - start) / duration)) if timed and not expired else None
+    )
 
     # Linear pace from the observation time: an aging sample isn't new usage.
     projection = None
-    if (timed and used is not None and observed and now < reset
-            and observed <= now + timedelta(seconds=60)
-            and (now - observed).total_seconds() <= 1800
-            and observed < reset
-            and observed.timestamp() - start >= max(300, duration * 0.01)):
+    if (
+        timed
+        and used is not None
+        and observed
+        and now < reset
+        and observed <= now + timedelta(seconds=60)
+        and (now - observed).total_seconds() <= 1800
+        and observed < reset
+        and observed.timestamp() - start >= max(300, duration * 0.01)
+    ):
         projection = used / ((observed.timestamp() - start) / duration)
 
     divisions = 7 if duration > 86400 else 4
-    axis = [
-        {
-            "fraction": index / divisions,
-            "label": axis_label(datetime.fromtimestamp(start + duration * index / divisions, now.tzinfo), duration > 86400),
-        }
-        for index in range(divisions + 1)
-    ] if timed else []
+    axis = (
+        [
+            {
+                "fraction": index / divisions,
+                "label": axis_label(
+                    datetime.fromtimestamp(start + duration * index / divisions, now.tzinfo),
+                    duration > 86400,
+                ),
+            }
+            for index in range(divisions + 1)
+        ]
+        if timed
+        else []
+    )
     return {
         "label": display_label(str(meter.get("label") or "Window")),
         "raw_label": str(meter.get("label") or "").lower(),
@@ -110,7 +132,11 @@ def project_meter(meter, observed, now):
         "elapsed": elapsed,
         "projection": projection,
         "projectionFraction": min(1, projection / 100) if projection is not None else None,
-        "tint": "muted" if expired else "amber" if (projection if projection is not None else used or 0) > 100 else "green",
+        "tint": "muted"
+        if expired
+        else "amber"
+        if (projection if projection is not None else used or 0) > 100
+        else "green",
         "axis": axis,
     }
 
@@ -118,8 +144,14 @@ def project_meter(meter, observed, now):
 def project_account(account, fallback_observed, now):
     observed = parse_time(account.get("observed_at")) or fallback_observed
     error = str(account.get("error") or "")
-    meters = [project_meter(meter, None if error else observed, now) for meter in account.get("meters") or [] if meter]
-    preferred = next((m for m in meters if m["raw_label"] == "weekly"), meters[0] if meters else None)
+    meters = [
+        project_meter(meter, None if error else observed, now)
+        for meter in account.get("meters") or []
+        if meter
+    ]
+    preferred = next(
+        (m for m in meters if m["raw_label"] == "weekly"), meters[0] if meters else None
+    )
     forecast = None
     if not error and preferred and preferred["projection"] is not None:
         over = preferred["projection"] > 100
@@ -147,12 +179,19 @@ def project(raw, config=CONFIG, now=None):
         record = raw.get(provider["name"], {"present": False})
         if not record.get("present"):
             continue
-        cards.append({
-            "id": provider["name"],
-            "title": provider["title"],
-            "logo": QUrl.fromLocalFile(str(RESOURCES / "logos" / (provider["name"] + ".png"))).toString(),
-            "accounts": [project_account(account, updated, now) for account in record.get("accounts") or []],
-        })
+        cards.append(
+            {
+                "id": provider["name"],
+                "title": provider["title"],
+                "logo": QUrl.fromLocalFile(
+                    str(RESOURCES / "logos" / (provider["name"] + ".png"))
+                ).toString(),
+                "accounts": [
+                    project_account(account, updated, now)
+                    for account in record.get("accounts") or []
+                ],
+            }
+        )
     return cards
 
 
@@ -162,7 +201,10 @@ def fetch(config=CONFIG, fixture=None):
     else:
         raw = subprocess.run(
             ["curl", "-fsS", "--max-time", "10", config["apiUrl"]],
-            text=True, capture_output=True, timeout=12, check=True,
+            text=True,
+            capture_output=True,
+            timeout=12,
+            check=True,
         ).stdout
         if len(raw) > 2_000_000:
             raise ValueError("Quota response is too large")
@@ -172,7 +214,15 @@ def fetch(config=CONFIG, fixture=None):
     summaries = {"_updated_at": parsed.get("updated_at")}
     for provider in config["providers"]:
         result = subprocess.run(
-            ["jq", "-c", "-f", str(RESOURCES / "summary.jq"), "--arg", "provider", provider["name"]],
+            [
+                "jq",
+                "-c",
+                "-f",
+                str(RESOURCES / "summary.jq"),
+                "--arg",
+                "provider",
+                provider["name"],
+            ],
             input=raw,
             text=True,
             capture_output=True,
@@ -211,17 +261,20 @@ class Controller(QObject):
 
     @Property(str, notify=changed)
     def payload(self):
-        return json.dumps({
-            "cards": [
-                {"title": card["title"], "logo": card["logo"], **account}
-                for card in self.cards if card["id"] == self.selected
-                for account in card["accounts"]
-            ],
-            "error": self.error,
-            "stale": self.stale,
-            "loadedAt": self.loaded_at,
-            "loading": self.loading,
-        })
+        return json.dumps(
+            {
+                "cards": [
+                    {"title": card["title"], "logo": card["logo"], **account}
+                    for card in self.cards
+                    if card["id"] == self.selected
+                    for account in card["accounts"]
+                ],
+                "error": self.error,
+                "stale": self.stale,
+                "loadedAt": self.loaded_at,
+                "loading": self.loading,
+            }
+        )
 
     @Property(bool, constant=True)
     def screenshotMode(self):
@@ -310,14 +363,25 @@ def hide_dock_icon():
     objc = ctypes.cdll.LoadLibrary("/usr/lib/libobjc.A.dylib")
     objc.objc_getClass.restype = ctypes.c_void_p
     objc.sel_registerName.restype = ctypes.c_void_p
-    get = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(("objc_msgSend", objc))
-    set_policy = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long)(("objc_msgSend", objc))
+    get = ctypes.CFUNCTYPE(ctypes.c_void_p, ctypes.c_void_p, ctypes.c_void_p)(
+        ("objc_msgSend", objc)
+    )
+    set_policy = ctypes.CFUNCTYPE(ctypes.c_bool, ctypes.c_void_p, ctypes.c_void_p, ctypes.c_long)(
+        ("objc_msgSend", objc)
+    )
     ns_app = get(objc.objc_getClass(b"NSApplication"), objc.sel_registerName(b"sharedApplication"))
-    set_policy(ns_app, objc.sel_registerName(b"setActivationPolicy:"), 1)  # NSApplicationActivationPolicyAccessory
+    set_policy(
+        ns_app, objc.sel_registerName(b"setActivationPolicy:"), 1
+    )  # NSApplicationActivationPolicyAccessory
 
 
 def server_name():
-    session = os.environ.get("XDG_SESSION_ID") or os.environ.get("WAYLAND_DISPLAY") or os.environ.get("DISPLAY") or "desktop"
+    session = (
+        os.environ.get("XDG_SESSION_ID")
+        or os.environ.get("WAYLAND_DISPLAY")
+        or os.environ.get("DISPLAY")
+        or "desktop"
+    )
     identity = f"{os.getuid()}:{os.environ.get('XDG_RUNTIME_DIR', '')}:{session}"
     return "ai-quota-popup-" + hashlib.sha256(identity.encode()).hexdigest()[:20]
 
@@ -351,17 +415,28 @@ def main():
     edge = os.environ.get("AI_QUOTA_BAR_EDGE", "bottom")
     if not args.serve and not args.screenshot:
         app = QCoreApplication(sys.argv)
-        lock = QLockFile(str(Path(os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir())) / (name + ".lock")))
+        lock = QLockFile(
+            str(Path(os.environ.get("XDG_RUNTIME_DIR", tempfile.gettempdir())) / (name + ".lock"))
+        )
         if not lock.tryLock(3000):
             raise RuntimeError("Could not acquire quota popup launch lock")
         try:
             if not send_command(name, selected, edge):
-                command = [sys.executable, str(RESOURCES / "main.py"), "--serve", "--toggle", selected]
+                command = [
+                    sys.executable,
+                    str(RESOURCES / "main.py"),
+                    "--serve",
+                    "--toggle",
+                    selected,
+                ]
                 if args.fixture:
                     command.extend(["--fixture", str(args.fixture.resolve())])
                 subprocess.Popen(
-                    command, stdin=subprocess.DEVNULL, stdout=subprocess.DEVNULL,
-                    stderr=subprocess.DEVNULL, start_new_session=True,
+                    command,
+                    stdin=subprocess.DEVNULL,
+                    stdout=subprocess.DEVNULL,
+                    stderr=subprocess.DEVNULL,
+                    start_new_session=True,
                 )
                 deadline = time.monotonic() + 3
                 while time.monotonic() < deadline:
@@ -428,6 +503,7 @@ def main():
     server.newConnection.connect(accept)
     controller.toggle(selected, edge)
     if args.screenshot:
+
         def save():
             if controller.loading:
                 QTimer.singleShot(100, save)
@@ -438,6 +514,7 @@ def main():
                 app.exit(1)
             else:
                 app.exit(0)
+
         QTimer.singleShot(700, save)
     return app.exec()
 

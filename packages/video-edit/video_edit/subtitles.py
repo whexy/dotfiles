@@ -1,8 +1,8 @@
 """`words` (kept words in output order) and `srt` (cues to a checked SRT)."""
 
+import re
 from difflib import SequenceMatcher
 from pathlib import Path
-import re
 
 from . import transcript
 from .common import UsageError, read_json, safe_name
@@ -54,8 +54,7 @@ def render_words(plan, words):
             flush()
             r = plan["ranges"][w["range"]]
             lines.append(
-                f"## cut {w['range']} · {r['section'] or '-'} · "
-                f"{clock(r['rec_in'] / plan['fps'])}"
+                f"## cut {w['range']} · {r['section'] or '-'} · {clock(r['rec_in'] / plan['fps'])}"
             )
         elif phrase and w["out_start"] - phrase[-1]["out_end"] >= PHRASE_GAP:
             flush()
@@ -136,7 +135,14 @@ def build_cues(cues, words, settings, glossary):
                     f"cue {n}: line {line!r} is {width:g} wide, max {settings['maxChars']}"
                 )
         timed.append(
-            {"n": n, "from": a, "to": b, "text": text, "start": by_i[a]["out_start"], "end": by_i[b]["out_end"]}
+            {
+                "n": n,
+                "from": a,
+                "to": b,
+                "text": text,
+                "start": by_i[a]["out_start"],
+                "end": by_i[b]["out_end"],
+            }
         )
     if expected <= last:
         errors.append(f"words {expected}-{last} are in no cue")

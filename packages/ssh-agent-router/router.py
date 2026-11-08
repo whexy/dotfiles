@@ -6,13 +6,13 @@ import errno
 import fcntl
 import json
 import os
-from pathlib import Path
 import select
 import socket
 import stat
 import subprocess
 import sys
 import threading
+from pathlib import Path
 
 
 def locations():
@@ -89,9 +89,7 @@ def ensure_daemon(state, proxy):
         try:
             ready, _, _ = select.select([child.stdout], [], [], 5)
             if not ready or child.stdout.readline() != b"ready\n":
-                raise RuntimeError(
-                    f"Agent router failed to start; see {state / 'daemon.log'}"
-                )
+                raise RuntimeError(f"Agent router failed to start; see {state / 'daemon.log'}")
         except BaseException:
             child.terminate()
             child.wait()
@@ -122,9 +120,8 @@ def connect_upstream(state):
                 upstream.close()
                 # Only definitive disappearance is evicted. Busy or denied agents
                 # must not silently send authorization to another laptop.
-                if (
-                    error.errno in (errno.ENOENT, errno.ECONNREFUSED, errno.ENOTDIR)
-                    or isinstance(error, FileNotFoundError)
+                if error.errno in (errno.ENOENT, errno.ECONNREFUSED, errno.ENOTDIR) or isinstance(
+                    error, FileNotFoundError
                 ):
                     agents.remove(agent)
                     write_agents(state, agents)
@@ -176,9 +173,7 @@ def serve(state, proxy, lock_fd):
         sys.stdout.close()
         while True:
             client, _ = listener.accept()
-            threading.Thread(
-                target=handle_client, args=(client, state), daemon=True
-            ).start()
+            threading.Thread(target=handle_client, args=(client, state), daemon=True).start()
 
 
 def in_multiplexer():

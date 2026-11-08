@@ -2,11 +2,11 @@
 
 import json
 import os
-from pathlib import Path
 import re
 import shutil
 import subprocess
 import sys
+from pathlib import Path
 
 EXIT_OK, EXIT_FAIL, EXIT_USAGE, EXIT_MEDIA, EXIT_TRANSCRIBE, EXIT_NOKEY = range(6)
 
@@ -50,9 +50,7 @@ def write_json(path, data):
     path = Path(path)
     path.parent.mkdir(parents=True, exist_ok=True)
     tmp = path.with_name(f".{path.name}.tmp")
-    tmp.write_text(
-        json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8"
-    )
+    tmp.write_text(json.dumps(data, ensure_ascii=False, indent=2) + "\n", encoding="utf-8")
     tmp.replace(path)
 
 
@@ -78,9 +76,7 @@ def resolve_path(path):
     # interop binary by absolute path first.
     for exe in ("/bin/wslpath", shutil.which("wslpath")):
         if exe and os.path.exists(exe):
-            result = subprocess.run(
-                [exe, "-w", path], capture_output=True, text=True
-            )
+            result = subprocess.run([exe, "-w", path], capture_output=True, text=True)
             if result.returncode == 0 and result.stdout.strip():
                 return result.stdout.strip()
     return mnt_to_windows(path)
@@ -99,7 +95,7 @@ def mnt_to_windows(path):
 
 def exec_line(path):
     """The one-line run_script_unsafe body that runs a generated script."""
-    return f"exec(open({ascii(path)}, encoding='utf-8').read())"
+    return f"exec(open({path!a}, encoding='utf-8').read())"
 
 
 class Root:
@@ -178,9 +174,7 @@ def find_root(explicit=None):
         return Root(root)
     here = Path.cwd().absolute()
     for candidate in (here, *here.parents):
-        if (candidate / "spec.json").exists() and (
-            candidate / "sources.json"
-        ).exists():
+        if (candidate / "spec.json").exists() and (candidate / "sources.json").exists():
             return Root(candidate)
     raise UsageError(
         "not inside an edit root (no spec.json + sources.json here or above); "

@@ -1,13 +1,14 @@
-{ pkgs }:
+{ pkgs, flake }:
 let
   inherit (pkgs) lib python3;
 
+  fileset = lib.fileset.unions [
+    ./pyproject.toml
+    ./src
+  ];
   src = lib.fileset.toSource {
     root = ./.;
-    fileset = lib.fileset.unions [
-      ./pyproject.toml
-      ./src
-    ];
+    inherit fileset;
   };
 
   # The interpreter basedpyright resolves imports against.
@@ -16,14 +17,11 @@ let
     p.tomlkit
   ]);
 
-  sourceCheck =
-    name: nativeBuildInputs: script:
-    pkgs.runCommand "agent-settings-${name}" { inherit nativeBuildInputs; } ''
-      cp -r ${src} source && chmod -R u+w source && cd source
-      export HOME=$TMPDIR
-      ${script}
-      touch $out
-    '';
+  checks = flake.lib.pythonChecks {
+    inherit pkgs fileset;
+    dir = ./.;
+    python = devPython;
+  };
 in
 python3.pkgs.buildPythonApplication {
   pname = "agent-settings";
@@ -39,15 +37,7 @@ python3.pkgs.buildPythonApplication {
 
   passthru = {
     inherit devPython;
-    tests = {
-      typecheck = sourceCheck "typecheck" [ pkgs.basedpyright ] ''
-        basedpyright --pythonpath ${devPython}/bin/python3
-      '';
-      lint = sourceCheck "lint" [ pkgs.ruff ] ''
-        ruff check --no-cache .
-        ruff format --no-cache --check .
-      '';
-    };
+    tests = { inherit (checks) lint typecheck; };
   };
 
   meta = {

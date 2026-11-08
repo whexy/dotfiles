@@ -1,13 +1,13 @@
 import fcntl
 import hashlib
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
-from pathlib import Path
 import subprocess
 import sys
 import tempfile
 import threading
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
 
 VALID_A = b'{"valid": true, "rev": "a"}\n'
 VALID_B = b'{"valid": true, "rev": "b"}\n'
@@ -52,7 +52,9 @@ class Fixture:
 
             def do_POST(self):
                 assert self.path == "/alert", self.path
-                fixture.alerts.append(json.loads(self.rfile.read(int(self.headers["Content-Length"]))))
+                fixture.alerts.append(
+                    json.loads(self.rfile.read(int(self.headers["Content-Length"])))
+                )
                 self.send_response(200)
                 self.end_headers()
 
@@ -82,7 +84,9 @@ def test(command):
             run_env = dict(env, **extra)
             if url:
                 run_env["T3CODE_POLICY_URL"] = url
-            result = subprocess.run([command, *args], env=run_env, text=True, capture_output=True, timeout=60)
+            result = subprocess.run(
+                [command, *args], env=run_env, text=True, capture_output=True, timeout=60
+            )
             assert result.returncode == 0, result
             return result
 
@@ -209,7 +213,9 @@ def test(command):
         log = run("update").stderr
         assert "t3code-policy: update=restarted" in log, log
         assert restarts() == 3
-    print("t3code-policy: stopped, stopped mid-fetch, 304, restart, backoff, invalid, missing, unreachable and lock passed")
+    print(
+        "t3code-policy: stopped, stopped mid-fetch, 304, restart, backoff, invalid, missing, unreachable and lock passed"
+    )
 
 
 if __name__ == "__main__":

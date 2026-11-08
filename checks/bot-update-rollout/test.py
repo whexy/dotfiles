@@ -185,7 +185,9 @@ for name, commands in lanes.items():
             assert (result.returncode == 0) == (expected == 0), result.stderr
             calls = (root / "calls").read_text()
             assert ("nix build " in calls) == (hit == "0"), calls
-    print(f"{name}: failed updates still pushed, rebased onto a moved master and rechecked, cached success reused, failed checks rejected")
+    print(
+        f"{name}: failed updates still pushed, rebased onto a moved master and rechecked, cached success reused, failed checks rejected"
+    )
 
 # The pin lane names the stage of every failure, and pushes only a checked
 # pin, rebased onto master, of a rev that is still the fork's head.

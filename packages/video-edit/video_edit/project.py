@@ -1,8 +1,8 @@
 """`init`, `sync-script` and `set-offset`: setting up an edit root."""
 
-from pathlib import Path
 import shlex
 import shutil
+from pathlib import Path
 
 from . import resolve_scripts, silence, timeline
 from .common import (
@@ -187,9 +187,7 @@ def run_set_offset(root, frames, at=None):
     else:
         if camera.get("offset_frames") is None:
             raise UsageError("set the base offset first: video-edit set-offset N")
-        changes = [
-            c for c in camera.get("offset_changes") or [] if abs(c["at"] - at) > 1e-6
-        ]
+        changes = [c for c in camera.get("offset_changes") or [] if abs(c["at"] - at) > 1e-6]
         changes.append({"at": at, "offset_frames": frames})
         camera["offset_changes"] = sorted(changes, key=lambda c: c["at"])
     write_json(root.sources_path, sources)

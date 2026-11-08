@@ -47,7 +47,9 @@ patches = {}
 for name, override in spec["override"].items():
     modes = [m for m in ("patches", "replace", "ignore") if override[m]]
     if len(modes) != 1:
-        errors.append(f"override.{name} sets {modes or 'nothing'}; set exactly one of patches, replace or ignore")
+        errors.append(
+            f"override.{name} sets {modes or 'nothing'}; set exactly one of patches, replace or ignore"
+        )
         continue
     if name not in from_packages:
         errors.append(f"override.{name} names no skill a listed package provides")
@@ -63,7 +65,11 @@ for name, override in spec["override"].items():
 for doc, path in spec["docs"].items():
     for name, (source, _) in sorted(sources.items()):
         skill = str(source)
-        if path == skill or skill.startswith(path.rstrip("/") + "/") or path.startswith(skill + "/"):
+        if (
+            path == skill
+            or skill.startswith(path.rstrip("/") + "/")
+            or path.startswith(skill + "/")
+        ):
             errors.append(f"docs.{doc} reads skill {name}, which agents also see")
 
 # Claude Code keeps the skills it downloads from the account there.
@@ -81,13 +87,25 @@ for name, (source, origin) in sorted(sources.items()):
 
     for patch in patches.get(name, []):
         result = subprocess.run(
-            ["patch", "-p1", "--fuzz=0", "--forward", "--no-backup-if-mismatch", "-d", str(target), "-i", patch],
+            [
+                "patch",
+                "-p1",
+                "--fuzz=0",
+                "--forward",
+                "--no-backup-if-mismatch",
+                "-d",
+                str(target),
+                "-i",
+                patch,
+            ],
             stdin=subprocess.DEVNULL,
             capture_output=True,
             text=True,
         )
         if result.returncode != 0:
-            errors.append(f"{patch} does not apply to skill {name}:\n{result.stdout}{result.stderr}")
+            errors.append(
+                f"{patch} does not apply to skill {name}:\n{result.stdout}{result.stderr}"
+            )
 
     manifest = target / "SKILL.md"
     if not manifest.is_file():
@@ -108,7 +126,9 @@ for name, (source, origin) in sorted(sources.items()):
         errors.append(f"skill {name} ({origin}): SKILL.md frontmatter is not a mapping")
         continue
     if meta.get("name") != name:
-        errors.append(f"skill {name} ({origin}): SKILL.md names it {meta.get('name')!r}, not its directory")
+        errors.append(
+            f"skill {name} ({origin}): SKILL.md names it {meta.get('name')!r}, not its directory"
+        )
     description = meta.get("description")
     if not isinstance(description, str) or not description.strip():
         errors.append(f"skill {name} ({origin}): SKILL.md has no description")

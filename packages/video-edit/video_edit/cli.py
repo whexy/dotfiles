@@ -2,8 +2,8 @@
 
 import argparse
 import json
-from pathlib import Path
 import sys
+from pathlib import Path
 
 from .common import EXIT_FAIL, Root, ToolError, UsageError, eprint, find_root, read_json
 
@@ -44,7 +44,9 @@ def parser():
 
     p = cmd("set-offset", "record the camera offset from the sync result")
     p.add_argument("frames", type=int, help="camera frame = main frame - FRAMES")
-    p.add_argument("--at", type=float, metavar="SECONDS", help="from this main-source time on (drift)")
+    p.add_argument(
+        "--at", type=float, metavar="SECONDS", help="from this main-source time on (drift)"
+    )
 
     p = cmd("build", "validate edl.json, write resolve/plan_vN.json and build_vN.py")
     p.add_argument("--section", help="only this section's ranges, as its own timeline")
@@ -56,13 +58,24 @@ def parser():
     p = cmd("finalize", "encode a raw render to the slot's final spec on the GPU")
     p.add_argument("raw", help="raw render (any format ffmpeg reads)")
     p.add_argument("--slot", required=True, help="slots/<id> directory")
-    p.add_argument("--input-matrix", choices=["auto", "bt601", "bt709"], default="auto",
-                   help="YUV matrix of the raw render (auto: its tag; untagged = bt601)")
-    p.add_argument("--input-range", choices=["auto", "tv", "pc"], default="auto",
-                   help="YUV range of the raw render (auto: its tag; untagged = tv)")
-    p.add_argument("--footage", action="store_true",
-                   help="the raw is footage, not a render made for the slot: cut it to "
-                   "the slot's length and centre-crop it to the slot's aspect")
+    p.add_argument(
+        "--input-matrix",
+        choices=["auto", "bt601", "bt709"],
+        default="auto",
+        help="YUV matrix of the raw render (auto: its tag; untagged = bt601)",
+    )
+    p.add_argument(
+        "--input-range",
+        choices=["auto", "tv", "pc"],
+        default="auto",
+        help="YUV range of the raw render (auto: its tag; untagged = tv)",
+    )
+    p.add_argument(
+        "--footage",
+        action="store_true",
+        help="the raw is footage, not a render made for the slot: cut it to "
+        "the slot's length and centre-crop it to the slot's aspect",
+    )
     p.add_argument("--dry-run", action="store_true", help="print the ffmpeg command only")
 
     p = cmd("check", "verify a render against its slot; writes a contact sheet")
@@ -124,14 +137,26 @@ def dispatch(args):
         root = _slot_root(args)
         if c == "finalize":
             return encode.run_finalize(
-                root, args.raw, args.slot, args.input_matrix, args.input_range,
-                args.footage, args.dry_run,
+                root,
+                args.raw,
+                args.slot,
+                args.input_matrix,
+                args.input_range,
+                args.footage,
+                args.dry_run,
             )
         return encode.run_check(root, args.file, args.slot, args.draft)
     if c == "strip":
         return strip.run_strip(
-            args.video, args.start, args.end, args.output, args.frames,
-            args.cut, args.around, args.version, args.root,
+            args.video,
+            args.start,
+            args.end,
+            args.output,
+            args.frames,
+            args.cut,
+            args.around,
+            args.version,
+            args.root,
         )
     root = find_root(args.root)
     if c == "silences":

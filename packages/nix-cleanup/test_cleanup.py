@@ -1,9 +1,9 @@
-from datetime import datetime, timedelta
-from pathlib import Path
 import subprocess
 import tempfile
-from types import SimpleNamespace
 import unittest
+from datetime import datetime, timedelta
+from pathlib import Path
+from types import SimpleNamespace
 from unittest.mock import patch
 
 import cleanup
@@ -13,9 +13,7 @@ from cleanup import Generation, parse_generations, profiles_in, retained
 class RetentionTest(unittest.TestCase):
     def test_dense_history_and_calendar_boundaries(self):
         start = datetime(2026, 1, 10, 12)
-        generations = [
-            Generation(i + 1, start - timedelta(days=i)) for i in range(150)
-        ]
+        generations = [Generation(i + 1, start - timedelta(days=i)) for i in range(150)]
         # Five recent; newest in ISO weeks Jan 5, Dec 29, Dec 22, Dec 15;
         # newest in calendar months January, December, November.
         self.assertEqual(retained(generations), {1, 2, 3, 4, 5, 7, 14, 21, 11, 42})
@@ -79,7 +77,9 @@ class RetentionTest(unittest.TestCase):
             home = root / "home"
             home.mkdir()
             profiles_root = root / "global"
-            own_profiles = profiles_root / "per-user" / cleanup.pwd.getpwuid(cleanup.os.geteuid()).pw_name
+            own_profiles = (
+                profiles_root / "per-user" / cleanup.pwd.getpwuid(cleanup.os.geteuid()).pw_name
+            )
 
             def profile(directory, name):
                 directory.mkdir(parents=True, exist_ok=True)
@@ -128,7 +128,9 @@ class RetentionTest(unittest.TestCase):
             with (
                 patch.object(Path, "home", return_value=home),
                 patch.dict(cleanup.os.environ, {"XDG_STATE_HOME": str(home / "state")}),
-                patch.object(cleanup.pwd, "getpwuid", return_value=SimpleNamespace(pw_name="tester")),
+                patch.object(
+                    cleanup.pwd, "getpwuid", return_value=SimpleNamespace(pw_name="tester")
+                ),
             ):
                 with patch.object(cleanup.os, "geteuid", return_value=12345):
                     self.assertEqual(cleanup.discover_profiles(False, profiles_root), [])
@@ -140,7 +142,9 @@ class RetentionTest(unittest.TestCase):
                 legacy.symlink_to("/nix/store/missing")
                 with patch.object(cleanup, "profiles_in", wraps=profiles_in) as scan:
                     self.assertEqual(cleanup.discover_profiles(False, profiles_root), [])
-                    self.assertNotIn(Path("/nix/store"), [call.args[0] for call in scan.call_args_list])
+                    self.assertNotIn(
+                        Path("/nix/store"), [call.args[0] for call in scan.call_args_list]
+                    )
 
     def test_gc_and_other_profiles_after_current_generation_rejection(self):
         listing = "".join(
@@ -150,11 +154,20 @@ class RetentionTest(unittest.TestCase):
         with (
             patch("sys.argv", ["nix-cleanup"]),
             patch.object(cleanup, "discover_profiles", return_value=[Path("/bad"), Path("/good")]),
-            patch.object(cleanup.subprocess, "check_output", side_effect=[listing, "1 2026-10-31 12:00:01 (current)"]) as listing_call,
+            patch.object(
+                cleanup.subprocess,
+                "check_output",
+                side_effect=[listing, "1 2026-10-31 12:00:01 (current)"],
+            ) as listing_call,
             patch.object(
                 cleanup.subprocess,
                 "run",
-                side_effect=[subprocess.CalledProcessError(1, "nix-env", stderr="Cannot delete current generation"), None],
+                side_effect=[
+                    subprocess.CalledProcessError(
+                        1, "nix-env", stderr="Cannot delete current generation"
+                    ),
+                    None,
+                ],
             ) as run,
         ):
             self.assertEqual(cleanup.main(), 1)
@@ -167,7 +180,11 @@ class RetentionTest(unittest.TestCase):
         with (
             patch("sys.argv", ["nix-cleanup"]),
             patch.object(cleanup, "discover_profiles", return_value=[Path("/bad"), Path("/good")]),
-            patch.object(cleanup.subprocess, "check_output", side_effect=["unexpected output", "1 2026-10-31 12:00:01 (current)"]) as listing_call,
+            patch.object(
+                cleanup.subprocess,
+                "check_output",
+                side_effect=["unexpected output", "1 2026-10-31 12:00:01 (current)"],
+            ) as listing_call,
             patch.object(cleanup.subprocess, "run") as run,
         ):
             self.assertEqual(cleanup.main(), 1)
@@ -207,8 +224,18 @@ class RetentionTest(unittest.TestCase):
                 patch.object(Path, "home", return_value=home),
                 patch.dict(cleanup.os.environ, {"XDG_STATE_HOME": str(home / "state")}),
                 patch.object(cleanup, "profiles_in", side_effect=scan),
-                patch.object(cleanup, "discover_profiles", side_effect=lambda system, on_error: discover(system, home / "global", on_error)),
-                patch.object(cleanup.subprocess, "check_output", return_value="1 2026-10-31 12:00:01 (current)") as listing,
+                patch.object(
+                    cleanup,
+                    "discover_profiles",
+                    side_effect=lambda system, on_error: discover(
+                        system, home / "global", on_error
+                    ),
+                ),
+                patch.object(
+                    cleanup.subprocess,
+                    "check_output",
+                    return_value="1 2026-10-31 12:00:01 (current)",
+                ) as listing,
                 patch.object(cleanup.subprocess, "run") as run,
             ):
                 self.assertEqual(cleanup.main(), 1)

@@ -1,8 +1,6 @@
 import http.client
-from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
 import json
 import os
-from pathlib import Path
 import signal
 import socket
 import ssl
@@ -12,6 +10,9 @@ import tempfile
 import threading
 import time
 import urllib.request
+from http.server import BaseHTTPRequestHandler, ThreadingHTTPServer
+from pathlib import Path
+
 from websockets.sync.client import connect
 
 # The server's ports, from flake.lib.t3.
@@ -37,7 +38,18 @@ def tailscale(args):
         return 1
     config = root / "routes.json"
     if args == ["status", "--json"]:
-        print(json.dumps({"BackendState": "Running", "Self": {"DNSName": "localhost." if (root / "actual-dns").exists() else "fixture.ts.net."}}))
+        print(
+            json.dumps(
+                {
+                    "BackendState": "Running",
+                    "Self": {
+                        "DNSName": "localhost."
+                        if (root / "actual-dns").exists()
+                        else "fixture.ts.net."
+                    },
+                }
+            )
+        )
     elif args == ["serve", "status", "--json"]:
         print(config.read_text())
     elif args == ["serve", f"--https={TAILNET_PORT}", "--set-path=/", "off"]:
@@ -49,7 +61,9 @@ def tailscale(args):
         if (root / "fail-serve").exists():
             return 1
         routes = read(config, {})
-        routes.setdefault("Web", {}).setdefault(ROUTE, {}).setdefault("Handlers", {})["/"] = {"Proxy": BACKEND}
+        routes.setdefault("Web", {}).setdefault(ROUTE, {}).setdefault("Handlers", {})["/"] = {
+            "Proxy": BACKEND
+        }
         write(config, routes)
         with (root / "writes").open("a") as output:
             output.write("setup\n")
@@ -59,7 +73,17 @@ def tailscale(args):
 def serve(args):
     assert os.environ["T3_TEST_SESSION"] == "loaded"
     assert os.environ["T3CODE_DEV_MANAGED_POLICY_PATH"] == "/no-policy.json"
-    assert args == ["serve", "--host", "127.0.0.1", "--port", PORT, "--no-browser", "--tailscale-serve", "--tailscale-serve-port", TAILNET_PORT], args
+    assert args == [
+        "serve",
+        "--host",
+        "127.0.0.1",
+        "--port",
+        PORT,
+        "--no-browser",
+        "--tailscale-serve",
+        "--tailscale-serve-port",
+        TAILNET_PORT,
+    ], args
     root = Path(os.environ["T3_TEST_ROOT"])
 
     class Handler(BaseHTTPRequestHandler):
@@ -67,7 +91,9 @@ def serve(args):
             assert self.path == "/.well-known/t3/environment"
             routes = read(root / "routes.json", {})
             endpoints = []
-            if (root / "online").exists() and routes.get("Web", {}).get(ROUTE, {}).get("Handlers", {}).get("/", {}).get("Proxy") == BACKEND:
+            if (root / "online").exists() and routes.get("Web", {}).get(ROUTE, {}).get(
+                "Handlers", {}
+            ).get("/", {}).get("Proxy") == BACKEND:
                 endpoints.append(f"https://{ROUTE}/")
             body = json.dumps({"pid": os.getpid(), "endpoints": endpoints}).encode()
             self.send_response(200)
@@ -85,13 +111,19 @@ def serve(args):
 def test(server_script, route_script):
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
-        unrelated = {"Web": {"fixture.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:9999"}}}, ROUTE: {"Handlers": {"/other": {"Proxy": "http://127.0.0.1:9998"}}}}}
+        unrelated = {
+            "Web": {
+                "fixture.ts.net:443": {"Handlers": {"/": {"Proxy": "http://127.0.0.1:9999"}}},
+                ROUTE: {"Handlers": {"/other": {"Proxy": "http://127.0.0.1:9998"}}},
+            }
+        }
         write(root / "routes.json", unrelated)
         env = dict(os.environ, T3_TEST_ROOT=directory)
         server = subprocess.Popen([server_script], env=env, start_new_session=True)
         route = subprocess.Popen([route_script], env=env, start_new_session=True)
         proxy = None
         try:
+
             def wait_for(fn, seconds=35):
                 deadline = time.monotonic() + seconds
                 while time.monotonic() < deadline:
@@ -123,7 +155,9 @@ def test(server_script, route_script):
             threading.Thread(target=proxy.serve_forever, daemon=True).start()
 
             def discovery(target_port):
-                with urllib.request.urlopen(f"http://127.0.0.1:{target_port}/.well-known/t3/environment", timeout=2) as response:
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{target_port}/.well-known/t3/environment", timeout=2
+                ) as response:
                     return json.load(response)
 
             initial = discovery(port)
@@ -138,7 +172,10 @@ def test(server_script, route_script):
             assert discovery(proxy.server_port)["pid"] == initial["pid"]
             routes = read(root / "routes.json", {})
             assert routes["Web"]["fixture.ts.net:443"] == unrelated["Web"]["fixture.ts.net:443"]
-            assert routes["Web"][ROUTE]["Handlers"]["/other"] == unrelated["Web"][ROUTE]["Handlers"]["/other"]
+            assert (
+                routes["Web"][ROUTE]["Handlers"]["/other"]
+                == unrelated["Web"][ROUTE]["Handlers"]["/other"]
+            )
             writes = (root / "writes").read_text()
             time.sleep(11)
             assert (root / "writes").read_text() == writes
@@ -152,14 +189,26 @@ def test(server_script, route_script):
             assert remaining == unrelated, remaining
             # A replaced handler belongs to its new owner and must survive cleanup.
             route = subprocess.Popen([route_script], env=env, start_new_session=True)
-            wait_for(lambda: read(root / "routes.json", {}).get("Web", {}).get(ROUTE, {}).get("Handlers", {}).get("/", {}).get("Proxy") == BACKEND)
+            wait_for(
+                lambda: (
+                    read(root / "routes.json", {})
+                    .get("Web", {})
+                    .get(ROUTE, {})
+                    .get("Handlers", {})
+                    .get("/", {})
+                    .get("Proxy")
+                    == BACKEND
+                )
+            )
             replacement = read(root / "routes.json", {})
             replacement["Web"][ROUTE]["Handlers"]["/"] = {"Proxy": "http://127.0.0.1:9997"}
             write(root / "routes.json", replacement)
             os.killpg(route.pid, signal.SIGTERM)
             route.wait(timeout=3)
             assert read(root / "routes.json", {}) == replacement
-            print("offline loopback/public backend, recovery/discovery, route ownership and cleanup, Linux/Darwin parity: passed")
+            print(
+                "offline loopback/public backend, recovery/discovery, route ownership and cleanup, Linux/Darwin parity: passed"
+            )
         finally:
             if proxy:
                 proxy.shutdown()
@@ -177,13 +226,36 @@ def test(server_script, route_script):
 def actual(binary, fixture_bin):
     with tempfile.TemporaryDirectory() as directory:
         root = Path(directory)
+
         def unused_port():
             with socket.socket() as sock:
                 sock.bind(("127.0.0.1", 0))
                 return sock.getsockname()[1]
+
         port = unused_port()
         (root / "openssl.cnf").write_text("")
-        subprocess.run(["openssl", "req", "-x509", "-newkey", "rsa:2048", "-nodes", "-keyout", str(root / "key.pem"), "-out", str(root / "cert.pem"), "-days", "1", "-subj", "/CN=localhost", "-addext", "subjectAltName=DNS:localhost"], check=True, capture_output=True)
+        subprocess.run(
+            [
+                "openssl",
+                "req",
+                "-x509",
+                "-newkey",
+                "rsa:2048",
+                "-nodes",
+                "-keyout",
+                str(root / "key.pem"),
+                "-out",
+                str(root / "cert.pem"),
+                "-days",
+                "1",
+                "-subj",
+                "/CN=localhost",
+                "-addext",
+                "subjectAltName=DNS:localhost",
+            ],
+            check=True,
+            capture_output=True,
+        )
 
         class Proxy(BaseHTTPRequestHandler):
             def do_GET(self):
@@ -195,6 +267,7 @@ def actual(binary, fixture_bin):
                 self.end_headers()
                 self.wfile.write(body)
                 connection.close()
+
             def log_message(self, *args):
                 pass
 
@@ -203,13 +276,46 @@ def actual(binary, fixture_bin):
         context.load_cert_chain(root / "cert.pem", root / "key.pem")
         proxy.socket = context.wrap_socket(proxy.socket, server_side=True)
         # Start the TLS route only after T3 has already started offline.
-        env = dict(os.environ, HOME=directory, T3_TEST_ROOT=directory, PATH=f"{fixture_bin}:{os.environ['PATH']}", NODE_EXTRA_CA_CERTS=str(root / "cert.pem"), T3CODE_TELEMETRY_ENABLED="false", T3CODE_OTEL_SDK_DISABLED="true", OPENSSL_CONF=str(root / "openssl.cnf"))
+        env = dict(
+            os.environ,
+            HOME=directory,
+            T3_TEST_ROOT=directory,
+            PATH=f"{fixture_bin}:{os.environ['PATH']}",
+            NODE_EXTRA_CA_CERTS=str(root / "cert.pem"),
+            T3CODE_TELEMETRY_ENABLED="false",
+            T3CODE_OTEL_SDK_DISABLED="true",
+            OPENSSL_CONF=str(root / "openssl.cnf"),
+        )
         log = (root / "server.log").open("w+")
-        process = subprocess.Popen([binary, "serve", "--base-dir", str(root / "data"), "--host", "127.0.0.1", "--port", str(port), "--tailscale-serve", "--tailscale-serve-port", str(proxy.server_port), "--no-browser"], env=env, cwd=directory, stdout=log, stderr=log, start_new_session=True)
+        process = subprocess.Popen(
+            [
+                binary,
+                "serve",
+                "--base-dir",
+                str(root / "data"),
+                "--host",
+                "127.0.0.1",
+                "--port",
+                str(port),
+                "--tailscale-serve",
+                "--tailscale-serve-port",
+                str(proxy.server_port),
+                "--no-browser",
+            ],
+            env=env,
+            cwd=directory,
+            stdout=log,
+            stderr=log,
+            start_new_session=True,
+        )
         try:
+
             def discovery():
-                with urllib.request.urlopen(f"http://127.0.0.1:{port}/.well-known/t3/environment", timeout=5) as response:
+                with urllib.request.urlopen(
+                    f"http://127.0.0.1:{port}/.well-known/t3/environment", timeout=5
+                ) as response:
                     return json.load(response)
+
             deadline = time.monotonic() + 25
             while True:
                 try:
@@ -220,12 +326,44 @@ def actual(binary, fixture_bin):
                         log.seek(0)
                         raise AssertionError(log.read())
                     time.sleep(0.1)
-            token = subprocess.run([binary, "auth", "session", "issue", "--base-dir", str(root / "data"), "--token-only"], env=env, cwd=directory, text=True, capture_output=True, check=True, timeout=10).stdout.strip()
+            token = subprocess.run(
+                [
+                    binary,
+                    "auth",
+                    "session",
+                    "issue",
+                    "--base-dir",
+                    str(root / "data"),
+                    "--token-only",
+                ],
+                env=env,
+                cwd=directory,
+                text=True,
+                capture_output=True,
+                check=True,
+                timeout=10,
+            ).stdout.strip()
+
             def config():
-                with connect(f"ws://127.0.0.1:{port}/ws?orchestrationProtocol=2", additional_headers={"Authorization": f"Bearer {token}"}, open_timeout=5) as ws:
-                    ws.send(json.dumps({"_tag": "Request", "id": "0", "tag": "server.getConfig", "payload": {}, "headers": []}))
+                with connect(
+                    f"ws://127.0.0.1:{port}/ws?orchestrationProtocol=2",
+                    additional_headers={"Authorization": f"Bearer {token}"},
+                    open_timeout=5,
+                ) as ws:
+                    ws.send(
+                        json.dumps(
+                            {
+                                "_tag": "Request",
+                                "id": "0",
+                                "tag": "server.getConfig",
+                                "payload": {},
+                                "headers": [],
+                            }
+                        )
+                    )
                     result = ws.recv(timeout=8)
                     return json.loads(result)
+
             initial = config()
             expected = f"https://localhost:{proxy.server_port}/"
             assert expected not in json.dumps(initial), initial
@@ -240,7 +378,9 @@ def actual(binary, fixture_bin):
                     break
                 if time.monotonic() > deadline:
                     log.seek(0)
-                    raise AssertionError(f"discovery did not advertise route: {found}\n{log.read()}")
+                    raise AssertionError(
+                        f"discovery did not advertise route: {found}\n{log.read()}"
+                    )
                 time.sleep(0.2)
             assert process.poll() is None
             print("pinned T3 executable: offline startup and dynamic tailnet discovery passed")
@@ -257,6 +397,7 @@ def actual(binary, fixture_bin):
                     process.wait(timeout=3)
             proxy.server_close()
             log.close()
+
 
 if __name__ == "__main__":
     if sys.argv[1] == "tailscale":

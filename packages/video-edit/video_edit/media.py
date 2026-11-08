@@ -1,10 +1,10 @@
 """ffprobe/ffmpeg wrappers."""
 
-from fractions import Fraction
 import json
 import math
-from pathlib import Path
 import subprocess
+from fractions import Fraction
+from pathlib import Path
 
 from .common import MediaError
 
@@ -90,9 +90,7 @@ def probe_source(path):
     duration = float(duration)
     nb_frames = video.get("nb_frames")
     frames = int(nb_frames) if nb_frames else frames_of(duration, fps)
-    timecode = tags.get("timecode") or (info.get("format", {}).get("tags") or {}).get(
-        "timecode"
-    )
+    timecode = tags.get("timecode") or (info.get("format", {}).get("tags") or {}).get("timecode")
     return {
         "path": str(Path(path).absolute()),
         "file_name": Path(path).name,

@@ -1,6 +1,7 @@
 # The lint and typecheck tests of a Python package, for its passthru.tests.
-# Its pyproject.toml extends ./pyproject.toml by relative path, so each test
-# runs in a copy of the repository holding only `fileset` and that file.
+# Its pyproject.toml extends ./pyproject.toml, which extends the root
+# ruff.toml, by relative path, so each test runs in a copy of the repository
+# holding only `fileset` and those files.
 let
   root = ../..;
 in
@@ -25,6 +26,7 @@ let
       [
         fileset
         ./pyproject.toml
+        ../../ruff.toml
       ]
       ++ extraFiles
     );

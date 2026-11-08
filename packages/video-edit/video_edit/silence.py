@@ -8,8 +8,8 @@ mic's floor is about -44.5 dB and pauses sit at -38 to -42 dB).
 """
 
 import bisect
-from pathlib import Path
 import re
+from pathlib import Path
 
 from .common import eprint, read_json, write_json
 from .media import run
@@ -36,8 +36,20 @@ def audio_cache(root, source):
     partial = wav.with_name(f".{wav.name}.partial.wav")
     run(
         [
-            "ffmpeg", "-y", "-v", "error", "-i", str(source), "-vn", "-ac", "1",
-            "-ar", str(SAMPLE_RATE), "-c:a", "pcm_s16le", str(partial),
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-i",
+            str(source),
+            "-vn",
+            "-ac",
+            "1",
+            "-ar",
+            str(SAMPLE_RATE),
+            "-c:a",
+            "pcm_s16le",
+            str(partial),
         ]
     )
     partial.replace(wav)
@@ -49,9 +61,16 @@ def noise_floor(wav):
     """ffmpeg astats' overall noise floor in dBFS, or None."""
     log = run(
         [
-            "ffmpeg", "-hide_banner", "-nostats", "-i", str(wav), "-af",
+            "ffmpeg",
+            "-hide_banner",
+            "-nostats",
+            "-i",
+            str(wav),
+            "-af",
             "astats=measure_perchannel=none:measure_overall=Noise_floor",
-            "-f", "null", "-",
+            "-f",
+            "null",
+            "-",
         ]
     ).stderr
     m = re.search(r"Noise floor dB: (-?[\d.]+|-inf)", log)
@@ -63,9 +82,16 @@ def noise_floor(wav):
 def detect(wav, threshold_db, min_duration, duration=None):
     log = run(
         [
-            "ffmpeg", "-hide_banner", "-nostats", "-i", str(wav), "-af",
+            "ffmpeg",
+            "-hide_banner",
+            "-nostats",
+            "-i",
+            str(wav),
+            "-af",
             f"silencedetect=noise={threshold_db}dB:d={min_duration}",
-            "-f", "null", "-",
+            "-f",
+            "null",
+            "-",
         ]
     ).stderr
     starts = [max(0.0, float(x)) for x in re.findall(r"silence_start: (-?[\d.]+)", log)]

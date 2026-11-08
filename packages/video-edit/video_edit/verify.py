@@ -1,13 +1,13 @@
 """`verify-timeline` (plan vs Resolve's OTIO readback) and `verify-audio`."""
 
 import bisect
-from difflib import SequenceMatcher
 import hashlib
 import json
-from pathlib import Path
 import subprocess
-from urllib.parse import unquote
 import wave
+from difflib import SequenceMatcher
+from pathlib import Path
+from urllib.parse import unquote
 
 from . import silence, transcript
 from .common import (
@@ -213,7 +213,9 @@ def diff_plan(plan, readback, limit=40):
                 "pass the real start to `video-edit srt --start-tc`"
             )
     if len(readback["markers"]) != len(plan["markers"]):
-        notes.append(f"{len(readback['markers'])} markers read back, {len(plan['markers'])} planned")
+        notes.append(
+            f"{len(readback['markers'])} markers read back, {len(plan['markers'])} planned"
+        )
     more = max(0, len(problems) - limit)
     return {
         "ok": not problems,
@@ -351,9 +353,7 @@ def run_verify_audio(root, version=None):
     heard_path = root / "verify" / f"audio_v{n}.transcript.json"
     meta_path = root / "verify" / f"audio_v{n}.meta.json"
     sha = _plan_sha(plan)
-    cached = (
-        heard_path.exists() and meta_path.exists() and read_json(meta_path).get("plan") == sha
-    )
+    cached = heard_path.exists() and meta_path.exists() and read_json(meta_path).get("plan") == sha
     if not cached:
         source = silence.audio_cache(root, Path(edit.main["path"]))
         audio.parent.mkdir(parents=True, exist_ok=True)
@@ -401,7 +401,9 @@ def run_verify_audio(root, version=None):
             {
                 "cut": cut,
                 "at": round(cut_times[cut], 2),
-                "issues": [f"{i['kind']}: expected {i['expected']!r} heard {i['heard']!r}" for i in found],
+                "issues": [
+                    f"{i['kind']}: expected {i['expected']!r} heard {i['heard']!r}" for i in found
+                ],
                 "look": f"video-edit strip --cut {cut} --version {n}",
             }
             for cut, found in sorted(flagged.items())

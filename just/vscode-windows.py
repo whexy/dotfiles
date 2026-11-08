@@ -62,8 +62,7 @@ def main():
     if had_comments:
         sys.exit(
             f"error: {path} has comments, which this would drop; "
-            "remove them or add these settings by hand:\n"
-            + json.dumps(wanted, indent=4)
+            "remove them or add these settings by hand:\n" + json.dumps(wanted, indent=4)
         )
     settings = json.loads(text) if text.strip() else {}
 

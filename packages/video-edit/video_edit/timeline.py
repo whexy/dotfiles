@@ -45,9 +45,7 @@ def check_fps(spec, sources):
     errors = []
     fps = spec["timeline"]["fps"]
     if float(fps) != int(fps):
-        errors.append(
-            f"timeline fps {fps} is fractional; v1 supports whole frame rates only"
-        )
+        errors.append(f"timeline fps {fps} is fractional; v1 supports whole frame rates only")
     main_fps = sources["main"]["fps"]
     if abs(float(main_fps) - float(fps)) > 1e-6:
         errors.append(
@@ -86,9 +84,7 @@ class Words:
         """Words whose midpoint lies in [t0, t1), in source order."""
         lo = bisect.bisect_left(self.mids, t0)
         hi = bisect.bisect_left(self.mids, t1)
-        return sorted(
-            (self.words[i] for i in self.mid_order[lo:hi]), key=lambda w: w["index"]
-        )
+        return sorted((self.words[i] for i in self.mid_order[lo:hi]), key=lambda w: w["index"])
 
 
 def _frame_window(lo, hi, fps):
@@ -154,8 +150,7 @@ def judge_edge(kind, frame, fps, silences, index, cuts):
         window, _ = edge_window(kind, span, fps, cuts)
         if window is None:
             return "warning", (
-                f"sits in a {1000 * (span[1] - span[0]):.0f} ms silence, too short "
-                "to pad"
+                f"sits in a {1000 * (span[1] - span[0]):.0f} ms silence, too short to pad"
             )
         if window[0] <= frame <= window[1]:
             return None
@@ -282,8 +277,7 @@ def place_overlays(overlays, assembled, fps, total):
         hit = locate(assembled, frames_of(o["anchor"], fps))
         if hit is None:
             errors.append(
-                f"overlay {o['slot']}: anchor {o['anchor']}s is in a cut, not in "
-                "kept output"
+                f"overlay {o['slot']}: anchor {o['anchor']}s is in a cut, not in kept output"
             )
             continue
         r, anchor_rec = hit

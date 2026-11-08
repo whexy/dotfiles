@@ -97,9 +97,7 @@ def run_build(root, section=None, version=None, no_camera=False):
         warnings += more
 
     inside = [
-        o
-        for o in validation["overlays"]
-        if timeline.locate(assembled, frames_of(o["anchor"], fps))
+        o for o in validation["overlays"] if timeline.locate(assembled, frames_of(o["anchor"], fps))
     ]
     errors, placed = timeline.place_overlays(inside, assembled, fps, total)
     warnings += [f"{e}; not placed in this build" for e in errors]
@@ -198,9 +196,7 @@ def run_build(root, section=None, version=None, no_camera=False):
     script_path = root / "resolve" / f"build_v{version}.py"
     run = exec_line(root.resolve_path(script_path))
     write_json(plan_path, plan)
-    script_path.write_text(
-        resolve_scripts.build_script(plan, paths, run), encoding="ascii"
-    )
+    script_path.write_text(resolve_scripts.build_script(plan, paths, run), encoding="ascii")
     return 0, {
         "ok": True,
         "version": version,

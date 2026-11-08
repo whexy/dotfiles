@@ -1,10 +1,10 @@
 """`finalize` (GPU encode to the slot spec) and `check` (verify a render)."""
 
-from fractions import Fraction
 import os
-from pathlib import Path
 import re
 import tempfile
+from fractions import Fraction
+from pathlib import Path
 
 from .common import MediaError, UsageError, write_json
 from .media import frames_of, probe_video, rate, run, sniff_encoder
@@ -12,9 +12,7 @@ from .slots import check_record, load_slot, outputs
 
 # Pixel formats the `colorspace` filter accepts; other YUV input goes
 # through `scale`, which converts matrices slightly less accurately.
-COLORSPACE_FORMATS = {
-    f"yuv{s}p{d}" for s in ("420", "422", "444") for d in ("", "10le", "12le")
-}
+COLORSPACE_FORMATS = {f"yuv{s}p{d}" for s in ("420", "422", "444") for d in ("", "10le", "12le")}
 MATRIX_TAGS = {"bt709": "bt709", "bt470bg": "bt601", "smpte170m": "bt601"}
 UNTAGGED = {None, "", "unknown", "unspecified", "reserved"}
 COLORSPACE_NAME = {"bt709": "bt709", "bt601": "bt470bg"}
@@ -121,9 +119,7 @@ def filter_graph(colour, info, width, height, fps, raw_fps, pad, crop=None):
             f":{SCALE_FLAGS}"
         )
     else:
-        parts.append(
-            f"scale={width}:{height}:out_color_matrix=bt709:out_range=tv:{SCALE_FLAGS}"
-        )
+        parts.append(f"scale={width}:{height}:out_color_matrix=bt709:out_range=tv:{SCALE_FLAGS}")
     parts.append("format=yuv420p")
     if raw_fps != fps:
         parts.append(f"fps={fps}")
@@ -137,16 +133,44 @@ def encode_args(spec, fps, frames, encoder):
     if encoder.endswith("_nvenc"):
         nv = spec["final"]["nvenc"]
         codec = [
-            "-c:v", encoder, "-preset", nv["preset"], "-tune", nv["tune"],
-            "-rc", "vbr", "-cq", str(nv["cq"]), "-b:v", "0",
-            "-maxrate", nv["maxrate"], "-bufsize", nv["bufsize"],
-            "-profile:v", spec["final"]["profile"], "-g", str(fps), "-bf", "2",
+            "-c:v",
+            encoder,
+            "-preset",
+            nv["preset"],
+            "-tune",
+            nv["tune"],
+            "-rc",
+            "vbr",
+            "-cq",
+            str(nv["cq"]),
+            "-b:v",
+            "0",
+            "-maxrate",
+            nv["maxrate"],
+            "-bufsize",
+            nv["bufsize"],
+            "-profile:v",
+            spec["final"]["profile"],
+            "-g",
+            str(fps),
+            "-bf",
+            "2",
         ]
     elif encoder.endswith("_videotoolbox"):
         vt = spec["final"]["videotoolbox"]
         codec = [
-            "-c:v", encoder, "-q:v", str(vt["quality"]), "-prio_speed", "0",
-            "-profile:v", spec["final"]["profile"], "-g", str(fps), "-bf", "2",
+            "-c:v",
+            encoder,
+            "-q:v",
+            str(vt["quality"]),
+            "-prio_speed",
+            "0",
+            "-profile:v",
+            spec["final"]["profile"],
+            "-g",
+            str(fps),
+            "-bf",
+            "2",
         ]
     else:
         codec = ["-c:v", encoder]
@@ -154,10 +178,24 @@ def encode_args(spec, fps, frames, encoder):
             codec += ["-preset", "ultrafast", "-x265-params", "log-level=error"]
     tag = ["-tag:v", "hvc1"] if "265" in encoder or "hevc" in encoder else []
     return codec + [
-        "-fps_mode", "cfr", "-r", str(fps), "-frames:v", str(frames),
-        "-color_primaries", "bt709", "-color_trc", "bt709",
-        "-colorspace", "bt709", "-color_range", "tv",
-        *tag, "-movflags", "+faststart", "-an",
+        "-fps_mode",
+        "cfr",
+        "-r",
+        str(fps),
+        "-frames:v",
+        str(frames),
+        "-color_primaries",
+        "bt709",
+        "-color_trc",
+        "bt709",
+        "-colorspace",
+        "bt709",
+        "-color_range",
+        "tv",
+        *tag,
+        "-movflags",
+        "+faststart",
+        "-an",
     ]
 
 
@@ -167,9 +205,7 @@ def next_output(slot_dir, slot_id):
     return Path(slot_dir) / "out" / f"{slot_id}_v{n}.mp4"
 
 
-def run_finalize(
-    root, raw, slot_arg, matrix="auto", rng="auto", footage=False, dry_run=False
-):
+def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", footage=False, dry_run=False):
     slot, slot_dir = load_slot(slot_arg)
     if slot.get("alpha"):
         raise UsageError("alpha slots can't be finalized: the final spec is 4:2:0 HEVC")
@@ -206,8 +242,17 @@ def run_finalize(
     out = next_output(slot_dir, slot["id"])
     partial = out.with_name(f".{out.stem}.partial.mp4")
     cmd = [
-        "ffmpeg", "-hide_banner", "-v", "error", "-y", "-i", str(raw), "-vf", vf,
-        *encode_args(spec, fps, slot["frames"], encoder), str(partial),
+        "ffmpeg",
+        "-hide_banner",
+        "-v",
+        "error",
+        "-y",
+        "-i",
+        str(raw),
+        "-vf",
+        vf,
+        *encode_args(spec, fps, slot["frames"], encoder),
+        str(partial),
     ]
     notes = list(colour["notes"])
     if crop:
@@ -245,8 +290,18 @@ def run_finalize(
 
 
 TEXT_SUFFIXES = {
-    ".html", ".htm", ".svg", ".js", ".mjs", ".cjs", ".ts", ".tsx", ".jsx",
-    ".vue", ".py", ".css",
+    ".html",
+    ".htm",
+    ".svg",
+    ".js",
+    ".mjs",
+    ".cjs",
+    ".ts",
+    ".tsx",
+    ".jsx",
+    ".vue",
+    ".py",
+    ".css",
 }
 CJK = re.compile("[぀-ヿ㐀-䶿一-鿿豈-﫿가-힯]")
 BLOCKS = re.compile(r"<script\b.*?</script>|<style\b.*?</style>|<!--.*?-->", re.S | re.I)
@@ -335,9 +390,17 @@ def contact_sheet(path, total, fps, out, count=12, cols=4, tile_w=480):
     with tempfile.TemporaryDirectory(prefix="video-edit-sheet-") as tmp:
         run(
             [
-                "ffmpeg", "-v", "error", "-i", str(path), "-vf",
+                "ffmpeg",
+                "-v",
+                "error",
+                "-i",
+                str(path),
+                "-vf",
                 f"fps={fps},select='{expr}',scale={tile_w}:-2,format=rgba",
-                "-fps_mode", "passthrough", "-frames:v", str(len(picks)),
+                "-fps_mode",
+                "passthrough",
+                "-frames:v",
+                str(len(picks)),
                 f"{tmp}/f_%03d.png",
             ]
         )
@@ -446,9 +509,18 @@ def run_check(root, file, slot_arg, draft=False):
         "probe": {
             k: info[k]
             for k in (
-                "codec", "encoder", "pix_fmt", "width", "height", "r_frame_rate",
-                "avg_frame_rate", "frames", "color_primaries", "color_transfer",
-                "color_space", "color_range",
+                "codec",
+                "encoder",
+                "pix_fmt",
+                "width",
+                "height",
+                "r_frame_rate",
+                "avg_frame_rate",
+                "frames",
+                "color_primaries",
+                "color_transfer",
+                "color_space",
+                "color_range",
             )
         },
     }

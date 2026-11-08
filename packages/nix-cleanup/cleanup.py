@@ -1,14 +1,14 @@
 """Thin Nix profile history before collecting unreferenced store paths."""
 
 import argparse
-from dataclasses import dataclass
-from datetime import datetime
 import os
-from pathlib import Path
 import pwd
 import re
 import subprocess
 import sys
+from dataclasses import dataclass
+from datetime import datetime
+from pathlib import Path
 
 
 @dataclass(frozen=True)
@@ -48,9 +48,7 @@ def parse_generations(output):
         if match is None:
             raise ValueError(f"Unrecognised generation listing: {line!r}")
         generations.append(
-            Generation(
-                int(match[1]), datetime.fromisoformat(match[2]), bool(match[3])
-            )
+            Generation(int(match[1]), datetime.fromisoformat(match[2]), bool(match[3]))
         )
     if generations and sum(g.current for g in generations) != 1:
         raise ValueError("Expected exactly one current generation")

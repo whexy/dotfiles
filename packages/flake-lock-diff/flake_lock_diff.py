@@ -10,13 +10,13 @@ unit. Its own build dependencies are not reported.
 """
 
 import argparse
-from collections import defaultdict
-from concurrent.futures import ThreadPoolExecutor
-from datetime import datetime, timezone
 import json
 import re
 import subprocess
 import sys
+from collections import defaultdict
+from concurrent.futures import ThreadPoolExecutor
+from datetime import UTC, datetime
 
 NIX = ["nix", "--extra-experimental-features", "nix-command flakes"]
 STORE = "/nix/store/"
@@ -31,9 +31,7 @@ def split_name(name):
 
 
 def nix(*args):
-    result = subprocess.run(
-        [*NIX, *args], capture_output=True, text=True, check=False
-    )
+    result = subprocess.run([*NIX, *args], capture_output=True, text=True, check=False)
     if result.returncode != 0:
         lines = result.stderr.strip().splitlines()
         raise RuntimeError(lines[-1] if lines else f"nix exited {result.returncode}")
@@ -126,7 +124,7 @@ def describe_input(node):
     ref = locked.get("rev", "")[:7] or locked.get("narHash", "")[7:14] or "?"
     stamp = locked.get("lastModified")
     if stamp is not None:
-        day = datetime.fromtimestamp(stamp, timezone.utc).strftime("%Y-%m-%d")
+        day = datetime.fromtimestamp(stamp, UTC).strftime("%Y-%m-%d")
         return ref, day
     return ref, None
 
@@ -138,9 +136,7 @@ def input_changes(old_lock, new_lock):
         nodes = lock["nodes"]
         inputs = nodes[lock["root"]].get("inputs", {})
         # A list is a `follows` path, which has no lock entry of its own.
-        return {
-            name: nodes[ref] for name, ref in inputs.items() if isinstance(ref, str)
-        }
+        return {name: nodes[ref] for name, ref in inputs.items() if isinstance(ref, str)}
 
     old, new = direct(old_lock), direct(new_lock)
     for name in sorted(old.keys() | new.keys()):
@@ -157,8 +153,7 @@ def input_changes(old_lock, new_lock):
 def table(rows, indent="  "):
     widths = [max(len(r[i]) for r in rows) for i in range(len(rows[0]) - 1)]
     return [
-        indent + "  ".join(c.ljust(w) for c, w in zip(row, widths)) + "  " + row[-1]
-        for row in rows
+        indent + "  ".join(c.ljust(w) for c, w in zip(row, widths)) + "  " + row[-1] for row in rows
     ]
 
 

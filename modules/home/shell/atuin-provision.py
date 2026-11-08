@@ -25,7 +25,12 @@ if not key or not token:
     raise SystemExit("Atuin credentials are empty")
 key_path = root / "key"
 session_path = root / "session"
-if key_path.exists() and key_path.read_bytes() == key and session_path.exists() and session_path.read_bytes() == token.encode():
+if (
+    key_path.exists()
+    and key_path.read_bytes() == key
+    and session_path.exists()
+    and session_path.read_bytes() == token.encode()
+):
     sys.exit()
 root.mkdir(parents=True, exist_ok=True, mode=0o700)
 if key_path.exists() and key_path.read_bytes() != key:

@@ -9,10 +9,10 @@ plan), bins the waveform on exact time edges, and takes fonts from a Nix
 store path.
 """
 
-from pathlib import Path
 import subprocess
 import tempfile
 import wave
+from pathlib import Path
 
 import numpy as np
 from PIL import Image, ImageDraw
@@ -34,8 +34,21 @@ RATE = 16000
 def extract_frame(video, t, out):
     run(
         [
-            "ffmpeg", "-y", "-v", "error", "-ss", f"{max(t, 0):.3f}", "-i", str(video),
-            "-frames:v", "1", "-q:v", "4", "-vf", "scale=320:-2", str(out),
+            "ffmpeg",
+            "-y",
+            "-v",
+            "error",
+            "-ss",
+            f"{max(t, 0):.3f}",
+            "-i",
+            str(video),
+            "-frames:v",
+            "1",
+            "-q:v",
+            "4",
+            "-vf",
+            "scale=320:-2",
+            str(out),
         ]
     )
 
@@ -57,9 +70,24 @@ def pcm(video, start, end, wav=None):
     with tempfile.NamedTemporaryFile(suffix=".wav") as f:
         result = subprocess.run(
             [
-                "ffmpeg", "-y", "-v", "error", "-ss", f"{start:.3f}", "-i", str(video),
-                "-t", f"{end - start:.3f}", "-vn", "-ac", "1", "-ar", str(RATE),
-                "-c:a", "pcm_s16le", f.name,
+                "ffmpeg",
+                "-y",
+                "-v",
+                "error",
+                "-ss",
+                f"{start:.3f}",
+                "-i",
+                str(video),
+                "-t",
+                f"{end - start:.3f}",
+                "-vn",
+                "-ac",
+                "1",
+                "-ar",
+                str(RATE),
+                "-c:a",
+                "pcm_s16le",
+                f.name,
             ],
             capture_output=True,
         )
@@ -106,11 +134,7 @@ def render(pieces, words, silences, cuts, title, out, n_frames=10, wav=None):
         video, a, b, s = pieces[-1]
         return video, b
 
-    times = (
-        [length / 2]
-        if n_frames < 2
-        else [i * length / (n_frames - 1) for i in range(n_frames)]
-    )
+    times = [length / 2] if n_frames < 2 else [i * length / (n_frames - 1) for i in range(n_frames)]
     frame_h = 180
     strip_y, wave_y, wave_h = 50, 50 + frame_h + 34, 220
     canvas_h = wave_y + wave_h + 70
@@ -183,7 +207,9 @@ def _clip(spans, a, b, shift):
     return [(max(s, a) + shift, min(e, b) + shift) for s, e in spans if e > a and s < b]
 
 
-def run_strip(video, start, end, output=None, n_frames=10, cut=None, around=2.0, version=None, root_arg=None):
+def run_strip(
+    video, start, end, output=None, n_frames=10, cut=None, around=2.0, version=None, root_arg=None
+):
     if cut is not None:
         return _cut_strip(cut, around, output, n_frames, version, root_arg)
     if video is None or start is None or end is None:
@@ -217,9 +243,7 @@ def run_strip(video, start, end, output=None, n_frames=10, cut=None, around=2.0,
         base = root / "verify" if root else video.parent
         output = base / f"strip_{video.stem}_{start:.2f}-{end:.2f}.png"
     title = f"{video.name}   {start:.2f}s -> {end:.2f}s   ({end - start:.2f}s)"
-    out = render(
-        [(video, start, end, 0.0)], words, spans, [], title, Path(output), n_frames, wav
-    )
+    out = render([(video, start, end, 0.0)], words, spans, [], title, Path(output), n_frames, wav)
     return 0, {"ok": True, "png": str(out)}
 
 
@@ -255,10 +279,7 @@ def _cut_strip(cut, around, output, n_frames, version, root_arg):
     ]
     if output is None:
         output = root / "verify" / f"strip_v{plan['version']}_cut{cut}.png"
-    title = (
-        f"v{plan['version']} cut {cut} at {at:.2f}s output   "
-        f"{lo:.2f}s -> {hi:.2f}s (assembled)"
-    )
+    title = f"v{plan['version']} cut {cut} at {at:.2f}s output   {lo:.2f}s -> {hi:.2f}s (assembled)"
     wav = silence.audio_cache(root, main)
     out = render(pieces, words, spans, cuts, title, Path(output), n_frames, wav)
     return 0, {"ok": True, "png": root.rel(out)}

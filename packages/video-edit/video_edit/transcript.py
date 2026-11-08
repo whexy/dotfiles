@@ -1,7 +1,7 @@
 """Reading `transcribe --format json` output and comparing spoken text."""
 
-from pathlib import Path
 import unicodedata
+from pathlib import Path
 
 from .common import UsageError, read_json
 
@@ -15,8 +15,7 @@ def load(path):
     path = Path(path)
     if not path.exists():
         raise UsageError(
-            f"no transcript at {path}: run `transcribe <main> --format json "
-            f"-o {path}` once"
+            f"no transcript at {path}: run `transcribe <main> --format json -o {path}` once"
         )
     data = read_json(path)
     try:
@@ -76,7 +75,5 @@ def units(text):
 def display_width(text):
     """Subtitle width: full-width characters count 1, half-width 0.5."""
     return sum(
-        1.0 if unicodedata.east_asian_width(ch) in ("W", "F") else 0.5
-        for ch in text
-        if ch != "\n"
+        1.0 if unicodedata.east_asian_width(ch) in ("W", "F") else 0.5 for ch in text if ch != "\n"
     )

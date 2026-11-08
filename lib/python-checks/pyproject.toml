@@ -1,13 +1,10 @@
-# The ruff and basedpyright settings every Python package here shares. Each
-# package's pyproject.toml extends this file by its relative path, so the
-# checks (default.nix) lay the source out as the repository does.
+# The basedpyright settings every Python package here shares, and the
+# repository's ruff settings. Each package's pyproject.toml extends this file
+# by its relative path, so the checks (default.nix) lay the source out as the
+# repository does.
 
 [tool.ruff]
-line-length = 100
-target-version = "py313"
-
-[tool.ruff.lint]
-select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]
+extend = "../../ruff.toml"
 
 [tool.basedpyright]
 pythonVersion = "3.13"

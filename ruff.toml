@@ -1,0 +1,7 @@
+# The Python style of every file in the repository. Packages with their own
+# pyproject.toml extend this file by its relative path.
+line-length = 100
+target-version = "py313"
+
+[lint]
+select = ["E", "W", "F", "I", "B", "UP", "SIM", "PTH", "RUF"]

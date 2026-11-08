@@ -15,7 +15,7 @@ Resolve Studio 21.1:
 - scripts only create timelines; they never modify an existing one.
 """
 
-PRELUDE = '''\
+PRELUDE = """\
 import json
 
 
@@ -86,17 +86,17 @@ def _new_timeline(project, mp, name):
     if not current or current.GetName() != name:
         raise RuntimeError("could not make %s the current timeline" % name)
     return tl
-'''
+"""
 
-EPILOGUE = '''
+EPILOGUE = """
 
 try:
     result = json.dumps(_main(resolve, project), ensure_ascii=True)
 except Exception as exc:
     result = json.dumps({"ok": False, "error": "%s: %s" % (type(exc).__name__, exc)}, ensure_ascii=True)
-'''
+"""
 
-SYNC_MAIN = '''
+SYNC_MAIN = """
 
 def _main(resolve, project):
     names = set(t.GetName() for t in _timelines(project))
@@ -148,9 +148,9 @@ def _main(resolve, project):
         "derivation": "camera frame = main frame - N, "
         "N = (main.left_offset - main.start) - (camera.left_offset - camera.start)",
     }
-'''
+"""
 
-BUILD_MAIN = '''
+BUILD_MAIN = """
 
 def _main(resolve, project):
     fps = float(_setting(project, "timelineFrameRate") or 0)
@@ -208,9 +208,9 @@ def _main(resolve, project):
         "imported": len(imported),
         "resolution": [_setting(tl, "timelineResolutionWidth"), _setting(tl, "timelineResolutionHeight")],
     }
-'''
+"""
 
-READBACK_MAIN = '''
+READBACK_MAIN = """
 
 def _main(resolve, project):
     import os
@@ -230,17 +230,17 @@ def _main(resolve, project):
         "start_timecode": tl.GetStartTimecode(),
         "tracks": {"video": tl.GetTrackCount("video"), "audio": tl.GetTrackCount("audio")},
     }
-'''
+"""
 
 
 def _assign(name, value):
-    return f"{name} = {ascii(value)}\n"
+    return f"{name} = {value!a}\n"
 
 
 def _assign_rows(name, rows):
     if not rows:
         return f"{name} = []\n"
-    body = "".join(f"    {ascii(tuple(row))},\n" for row in rows)
+    body = "".join(f"    {tuple(row)!a},\n" for row in rows)
     return f"{name} = [\n{body}]\n"
 
 
@@ -274,9 +274,7 @@ def build_script(plan, paths, run_line):
         + _assign("BROLL_BIN", f"{plan['name']} B-roll")
         + _assign("BROLL", {slot: paths[slot] for slot, _ in v3})
         + _assign("TRACK_NAMES", ((1, "Main"), (2, "Camera"), (3, "B-roll")))
-        + _assign_rows(
-            "V1", [(i["src_in"], i["src_out"], i["rec_in"]) for i in tracks["V1"]]
-        )
+        + _assign_rows("V1", [(i["src_in"], i["src_out"], i["rec_in"]) for i in tracks["V1"]])
         + _assign_rows(
             "V2",
             [(i["src_in"], i["src_out"], i["rec_in"]) for i in tracks.get("V2", [])],
@@ -290,13 +288,7 @@ def build_script(plan, paths, run_line):
             ],
         )
     )
-    return (
-        _header(f"build v{plan['version']}", run_line)
-        + data
-        + PRELUDE
-        + BUILD_MAIN
-        + EPILOGUE
-    )
+    return _header(f"build v{plan['version']}", run_line) + data + PRELUDE + BUILD_MAIN + EPILOGUE
 
 
 def readback_script(plan, otio_path, run_line):

@@ -55,7 +55,7 @@ def truncate(text: str, width: int) -> str:
     visible = 0
     position = 0
     for match in ANSI_RE.finditer(text):
-        plain = text[position:match.start()]
+        plain = text[position : match.start()]
         remaining = width - 1 - visible
         if len(plain) > remaining:
             result.append(plain[:remaining])
@@ -67,7 +67,7 @@ def truncate(text: str, width: int) -> str:
         position = match.end()
     else:
         remaining = width - 1 - visible
-        result.append(text[position:position + remaining])
+        result.append(text[position : position + remaining])
 
     return "".join(result) + "…" + (RESET if COLOR else "")
 
@@ -211,8 +211,7 @@ def darwin_memory():
             if match:
                 pages[match.group(1)] = int(match.group(2))
         available_pages = sum(
-            pages.get(name, 0)
-            for name in ("Pages free", "Pages inactive", "Pages speculative")
+            pages.get(name, 0) for name in ("Pages free", "Pages inactive", "Pages speculative")
         )
         return max(0, total - available_pages * page_size), total
     except Exception:
@@ -487,7 +486,12 @@ def get_sessions():
 
 def get_tmux_info():
     output = command(
-        ["tmux", "list-sessions", "-F", "#{session_name}\t#{session_windows}\t#{?session_attached,attached,detached}"],
+        [
+            "tmux",
+            "list-sessions",
+            "-F",
+            "#{session_name}\t#{session_windows}\t#{?session_attached,attached,detached}",
+        ],
         timeout=0.3,
     )
     sessions = []
@@ -522,7 +526,12 @@ def get_zellij_info():
 def card(title: str, rows, width: int):
     inner_width = width - 4
     title_text = "─ %s " % paint(title.upper(), BOLD, CYAN)
-    top = paint("╭", GRAY) + title_text + paint("─" * max(0, width - 2 - visible_len(title_text)), GRAY) + paint("╮", GRAY)
+    top = (
+        paint("╭", GRAY)
+        + title_text
+        + paint("─" * max(0, width - 2 - visible_len(title_text)), GRAY)
+        + paint("╮", GRAY)
+    )
     bottom = paint("╰" + "─" * (width - 2) + "╯", GRAY)
     label_width = min(11, max(len(label) for label, _ in rows))
     lines = [top]
@@ -540,7 +549,12 @@ def header(hostname: str, os_name: str, kernel: str, width: int):
     subtitle = paint(os_name, WHITE) + paint("  //  " + kernel, DIM)
     timestamp = datetime.now().astimezone().strftime("%A, %d %B %H:%M %Z")
     eyebrow = paint(" NIX // SYSTEM STATUS ", BOLD, MAGENTA)
-    top = paint("╭", GRAY) + eyebrow + paint("─" * max(0, width - 2 - visible_len(eyebrow)), GRAY) + paint("╮", GRAY)
+    top = (
+        paint("╭", GRAY)
+        + eyebrow
+        + paint("─" * max(0, width - 2 - visible_len(eyebrow)), GRAY)
+        + paint("╮", GRAY)
+    )
     return [
         top,
         paint("│ ", GRAY) + fit(title, inner_width) + paint(" │", GRAY),
@@ -633,9 +647,15 @@ def main():
 
     if wide:
         card_width = min(44, (width - 2) // 2)
-        print_pair(card("Overview", overview, card_width), card("Resources", resources, width - card_width - 2))
+        print_pair(
+            card("Overview", overview, card_width),
+            card("Resources", resources, width - card_width - 2),
+        )
         print()
-        print_pair(card("Connectivity", connectivity, card_width), card("Workspaces", workspaces, width - card_width - 2))
+        print_pair(
+            card("Connectivity", connectivity, card_width),
+            card("Workspaces", workspaces, width - card_width - 2),
+        )
     else:
         sections = (
             card("Overview", overview, width),
@@ -657,7 +677,9 @@ def main():
     elif peak >= 75:
         concerns.append((1, "resource pressure is elevated"))
     if update_level:
-        concerns.append((update_level, "updates are failing" if update_level == 2 else "updates are delayed"))
+        concerns.append(
+            (update_level, "updates are failing" if update_level == 2 else "updates are delayed")
+        )
     level, message = max(concerns, key=lambda concern: concern[0])
     status = (
         paint("● NOMINAL", GREEN, BOLD),

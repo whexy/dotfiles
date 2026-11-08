@@ -8,8 +8,8 @@ worker never maps transcript or timeline times itself.
 import hashlib
 import json
 import math
-from pathlib import Path
 import re
+from pathlib import Path
 
 from .common import UsageError, read_json, write_json
 from .context import Edit
