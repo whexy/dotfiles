@@ -11,6 +11,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -24,7 +25,7 @@ let
 in
 {
   config = lib.mkIf cfg.enable {
-    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
     home.packages = [ perSystem.self.asc ];
 
     age.secrets.app-store-connect-api-key = {

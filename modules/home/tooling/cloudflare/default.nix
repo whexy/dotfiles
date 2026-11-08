@@ -54,7 +54,7 @@ in
 {
   config = lib.mkIf cfg.cli.enable {
     home.packages = [ package ];
-    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem; };
+    dotfiles.agents.skills = import ./skills.nix { inherit pkgs perSystem flake; };
     age.secrets.cloudflare-api-token = lib.mkIf cfg.apiToken.enable {
       file = ../../../../secrets/cloudflare-api-token.age;
     };
