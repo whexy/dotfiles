@@ -837,9 +837,11 @@ exits non-zero. To test an updater, downgrade the package's pin and run it:
 nix run .#update -- muse-code
 ```
 
-The nightly `update` step in `.woodpecker.yml` runs `nix flake update`, then
-`nix run .#update -- --commit`, which commits each package as
-`chore(<name>): <old> -> <new>`, and pushes after the shared check.
+The nightly `update` step in `.woodpecker.yml` (`ci/update.sh`) runs
+`nix flake update`, then `nix run .#update -- --commit`, which commits each
+package as `chore(<name>): <old> -> <new>`, and pushes after the shared check
+(`ci/check.sh`). Both lanes push through `push_master` in `ci/lib.sh`;
+`checks/bot-update-rollout` runs them against stub `nix` and `git`.
 
 ## CI repair
 

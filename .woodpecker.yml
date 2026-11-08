@@ -1,3 +1,6 @@
+# Woodpecker substitutes braced variables anywhere in this file, so inline
+# scripts refer to shell variables only as bare $name; the lanes' scripts
+# live in ci/.
 variables:
   # Run the heavy Nix steps on k8s-3, beside the CI cache. They take less than
   # half as long there as on k8s-4 or k8s-5, which have as much memory, so the
@@ -44,21 +47,6 @@ variables:
     printf 'machine pkgs.superlogical.com login rex password %s\n' "$REX_PACKAGE_TOKEN" >"$netrc"
     export NIX_CONFIG="$NIX_CONFIG
     netrc-file = $netrc"
-  # Build every check and evaluate every configuration (ci/check.sh).
-  - &check bash ci/check.sh
-  # Push the update lane's checked commits to the primary branch as the
-  # GitHub App, retrying a failed push 3 times.
-  - &push |
-    GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
-    origin_url="$(git remote get-url origin)"
-    trap 'git remote set-url origin "$origin_url"' EXIT
-    git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
-    attempt=1
-    until git push origin HEAD:master; do
-      [ "$attempt" -le 3 ] || exit 1
-      sleep $((attempt * 10))
-      attempt=$((attempt + 1))
-    done
 # Branches other than master are checked through their pull requests.
 when:
   - event: push
@@ -91,49 +79,7 @@ steps:
     environment: *github_app
     commands:
       - *rex_netrc
-      - git config user.name "whexy-bot[bot]"
-      - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
-      - start=$(git rev-parse HEAD)
-      # The input and release lookups below make more GitHub API calls than
-      # the 60 an hour an unauthenticated runner IP gets, so they run as the
-      # GitHub App: Nix through access-tokens, the updater through
-      # GITHUB_TOKEN. The token expires within the hour, so the check and
-      # push go without it.
-      - |
-        nix_config=$NIX_CONFIG
-        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
-        export GITHUB_TOKEN
-        export NIX_CONFIG="$NIX_CONFIG
-        access-tokens = github.com=$GITHUB_TOKEN"
-      - cp flake.lock /tmp/flake.lock.old
-      - nix flake update
-      - |
-        if git diff --quiet -- flake.lock; then
-          echo "No changes to flake.lock"
-        else
-          git add flake.lock
-          # The package report is informational; a failure must not block the update.
-          report="$(nix run --accept-flake-config .#flake-lock-diff -- --jobs 2 /tmp/flake.lock.old)" ||
-            report="Package report unavailable; see the CI log."
-          # The push records a rollout status; the tree cache reuses this check.
-          git commit -m "chore: update flake inputs" -m "$report"
-        fi
-      # The driver reverts a package it cannot update and exits non-zero at
-      # the end, so the other updates are still checked and pushed before the
-      # step fails and report-failure runs.
-      - updated=0
-      - nix run --accept-flake-config .#update -- --commit || updated=$?
-      - |
-        export NIX_CONFIG="$nix_config"
-        unset GITHUB_TOKEN
-      - |
-        if [ "$(git rev-parse HEAD)" = "$start" ]; then
-          echo "Nothing to update"
-          exit "$updated"
-        fi
-      - *check
-      - *push
-      - exit "$updated"
+      - bash ci/update.sh
   # Pin the t3code-fork input to a commit whexy/t3code's CI built and pushed
   # to whexy-t3code.cachix.org. That CI starts this lane through Woodpecker's
   # API, as a manual run with the variable T3CODE_FORK_REV; no other manual
@@ -148,115 +94,8 @@ steps:
     environment: *github_app
     commands:
       - *rex_netrc
-      - git config user.name "whexy-bot[bot]"
-      - git config user.email "315421218+whexy-bot[bot]@users.noreply.github.com"
-      - |
-        rev=$T3CODE_FORK_REV
-        stage=validate
-        origin_url=
-        reported=
-        # Every failure names its stage, which the repair task reads; the push
-        # stage also gets the plain origin URL back.
-        trap 'status=$?; if [ -n "$origin_url" ]; then git remote set-url origin "$origin_url"; fi; if [ "$status" -ne 0 ] && [ -z "$reported" ]; then echo "FAILED($stage) - exit $status"; fi' EXIT
-        fail() {
-          echo "FAILED($stage) - $*"
-          reported=1
-          exit 1
-        }
-        # Ends the run as SUPERSEDED once the fork has moved past rev. Failing
-        # to read the head is a failure, not a newer commit.
-        check_head() {
-          if ! head=$(git ls-remote --exit-code https://github.com/whexy/t3code refs/heads/self-hosted-nightly); then
-            fail "cannot read the head of whexy/t3code self-hosted-nightly"
-          fi
-          case $head in
-            "$rev"[[:space:]]*) ;;
-            *)
-              echo "SUPERSEDED - $rev is no longer the head of whexy/t3code self-hosted-nightly"
-              exit 0
-              ;;
-          esac
-        }
-        case $rev in
-          *[!0-9a-f]* | "") valid=false ;;
-          *) [ "$(printf %s "$rev" | wc -c)" -eq 40 ] && valid=true || valid=false ;;
-        esac
-        [ "$valid" = true ] || fail "T3CODE_FORK_REV is not a full commit hash: $rev"
-        check_head
-      # Every host substitutes the server, so its whole closure must be in
-      # Cachix or cache.nixos.org. A dry run against an empty store lists
-      # what Nix would have to build instead.
-      - |
-        stage=cache
-        store=$(mktemp -d)
-        errors=$(mktemp)
-        for system in x86_64-linux aarch64-darwin; do
-          if ! out=$(nix eval --raw "github:whexy/t3code/$rev#packages.$system.t3-server.outPath" 2>"$errors"); then
-            cat "$errors"
-            fail "cannot evaluate the $system t3-server"
-          fi
-          if ! plan=$(nix build --dry-run --store "$store" \
-            --option substituters "https://cache.nixos.org https://whexy-t3code.cachix.org" \
-            --option trusted-public-keys "cache.nixos.org-1:6NCHdD59X431o0gWypbMrAURkbJ16ZPMQFGspcDShjY= whexy-t3code.cachix.org-1:/pDSZMaQ8YHPw/og8nsuwxiYCAAcRB8JYEcmNd2Czyg=" \
-            "$out" 2>&1); then
-            echo "$plan"
-            fail "the dry run for the $system t3-server failed"
-          fi
-          case $plan in
-            *"will be built"* | *"know how to build"*)
-              echo "$plan"
-              fail "the $system t3-server is not fully cached"
-              ;;
-          esac
-          echo "OK - $system $out is cached"
-        done
-        rm -rf "$store" "$errors"
-      - |
-        stage=pin
-        old=$(nix eval --raw --impure --expr '(builtins.fromJSON (builtins.readFile ./flake.lock)).nodes.t3code-fork.locked.rev')
-        nix shell --inputs-from . nixpkgs#gnused -c sed -i "s|github:whexy/t3code/[0-9a-f]\{40\}|github:whexy/t3code/$rev|" flake.nix
-        # Nix caches a source's hash by commit alone, and a working tree of the
-        # fork at that commit hashes differently, so the lock gets a cache of
-        # its own (AGENTS.md, "The server package").
-        XDG_CACHE_HOME=$(mktemp -d) nix flake update t3code-fork
-        if git diff --quiet; then
-          echo "NOOP - t3code-fork is already pinned to $rev"
-          exit 0
-        fi
-        # The desktop app follows the version the new server builds.
-        nix run --accept-flake-config .#update -- t3code-desktop-nightly
-        version=$(nix eval --raw .#packages.x86_64-linux.t3code-fork.version)
-        git add -A
-        git commit -m "chore(t3code-fork): pin $rev ($version)" \
-          -m "https://github.com/whexy/t3code/compare/$old...$rev"
-      - stage=check
-      - *check
-      # Push as the GitHub App onto whatever master became meanwhile, as long
-      # as the rev is still the fork's head. A newer pin that landed first
-      # supersedes this one rather than conflicting with it.
-      - |
-        stage=push
-        GITHUB_TOKEN="$(nix run --accept-flake-config .#github-app-token)"
-        origin_url="$(git remote get-url origin)"
-        git remote set-url origin "https://x-access-token:$GITHUB_TOKEN@github.com/whexy/dotfiles.git"
-        attempt=1
-        while :; do
-          check_head
-          git fetch origin master
-          if ! git rebase origin/master; then
-            git rebase --abort
-            check_head
-            fail "the pin does not rebase onto master"
-          fi
-          check_head
-          if git push origin HEAD:master; then
-            echo "OK - pinned t3code-fork to $rev"
-            break
-          fi
-          [ "$attempt" -lt 3 ] || fail "3 attempts"
-          sleep $((attempt * 10))
-          attempt=$((attempt + 1))
-        done
+      - bash ci/pin-t3code-fork.sh
+  # Build every check and evaluate every configuration.
   check:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     backend_options: *k8s_heavy
@@ -268,7 +107,7 @@ steps:
         from_secret: rex_package_token
     commands:
       - *rex_netrc
-      - *check
+      - bash ci/check.sh
   # Woodpecker fails a step that names a secret its event may not use, so pull
   # requests check in their own step, without Rex's token.
   check-pr:
@@ -278,7 +117,7 @@ steps:
       event: pull_request
     environment: *ci_cache
     commands:
-      - *check
+      - bash ci/check.sh
   # Build docs (astro) only when docs/ changes on master
   build-docs:
     image: node:22-alpine
