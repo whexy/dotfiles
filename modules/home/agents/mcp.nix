@@ -2,11 +2,9 @@
 # `dotfiles.agents.mcp.servers`, and each agent takes the set in its own
 # config's shape from `dotfiles.agents.mcp.rendered`: no two agents read the
 # same one.
-args@{ config, lib, ... }:
+{ config, lib, ... }:
 let
   cfg = config.dotfiles.agents;
-  relay = config.dotfiles.tailnetRelay;
-  tldraw = "https://draw.at-basking.ts.net";
 
   server = lib.types.submodule {
     options = {
@@ -109,44 +107,10 @@ in
       defaultText = lib.literalMD "`servers` in each agent's shape";
       description = "`servers` in the shape each agent's config takes, keyed by agent.";
     };
-
-    tldraw.enable = lib.mkOption {
-      type = lib.types.bool;
-      # The server only resolves on the tailnet, so registering it elsewhere
-      # leaves every agent with a permanently failing MCP server. Standalone
-      # homes have no osConfig to say whether this machine is on the tailnet,
-      # but a home with a tailnet relay reaches it through that.
-      default = args.osConfig.dotfiles.network.tailscale.enable or relay.enable;
-      defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or config.dotfiles.tailnetRelay.enable";
-      description = "Whether to register the tailnet tldraw MCP server (draw.at-basking.ts.net).";
-    };
   };
 
-  # Live tldraw whiteboard rooms; agents read and draw diagrams that broadcast
-  # to anyone viewing the room. Unauthenticated: reachability is the only
-  # access control, which is why registration follows tailscale.
-  config = lib.mkMerge [
-    {
-      assertions = lib.mapAttrsToList (name: s: {
-        assertion = (s.url == null) != (s.command == null);
-        message = "dotfiles.agents.mcp.servers.${name} must set exactly one of url and command.";
-      }) cfg.mcp.servers;
-    }
-    (lib.mkIf (cfg.enable && cfg.tldraw.enable) (
-      lib.mkMerge [
-        {
-          dotfiles.agents.mcp.servers.tldraw.url = "${
-            if relay.enable then relay.forwards.tldraw.url else tldraw
-          }/mcp";
-        }
-        (lib.mkIf relay.enable {
-          dotfiles.tailnetRelay.forwards.tldraw = {
-            port = 47305;
-            upstream = tldraw;
-          };
-          dotfiles.agents.launcher.relayListeners = [ relay.forwards.tldraw.address ];
-        })
-      ]
-    ))
-  ];
+  config.assertions = lib.mapAttrsToList (name: s: {
+    assertion = (s.url == null) != (s.command == null);
+    message = "dotfiles.agents.mcp.servers.${name} must set exactly one of url and command.";
+  }) cfg.mcp.servers;
 }

@@ -135,8 +135,8 @@ Every agent reads `global-rules.md`, linked into its own config directory
 
 `modules/home/agentic-tooling` (`dotfiles.agenticTooling`) holds the programs
 agents drive: REA, the video toolkit, formal verification, iPhone Use, Spark,
-transcribe, and wechat. Each adds its own skills and MCP servers to the options above, and
-`modules/home/agents` never names one.
+transcribe, wechat, and the tldraw whiteboard. Each adds its own skills and MCP
+servers to the options above, and `modules/home/agents` never names one.
 
 `checks/t3-tailnet`, `checks/t3-policy` and `checks/agent-skills` import
 plain functions beside the modules (`modules/home/t3code/services.nix`,
@@ -188,6 +188,7 @@ list of skill names.
 | `statechart`, `*-formal-verification-skill` | `formal-verification`      | picked from pstack, with TLC for statechart           |
 | `transcribe`, `wechat`                      | `transcribe`, `wechat-cli` | as shipped                                            |
 | `video-edit`, `broll`                       | local, video feature       | ours; they drive several tools                        |
+| `draw`                                      | local, tldraw feature      | ours; only where the whiteboard is reachable          |
 | `reverse-engineer-anything`, `iphone-use`   | `rea-agents`, `iphone-use` | as shipped                                            |
 | `iphone-use-setup`                          | `iphone-use`               | replaced by `agentic-tooling/iphone/iphone-use-setup` |
 | `cf-cli`                                    | `cf`                       | patched by `tooling/cloudflare/cf-cli-skill.patch`    |

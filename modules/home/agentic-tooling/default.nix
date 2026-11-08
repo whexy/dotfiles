@@ -1,7 +1,7 @@
 # Agentic tooling: programs that coding agents drive, each with the skills
 # and MCP servers it adds to every agent. Agents themselves are configured in
 # the `agents` group, which never names these tools.
-{ config, lib, ... }:
+args@{ config, lib, ... }:
 let
   cfg = config.dotfiles.agenticTooling;
 in
@@ -14,6 +14,7 @@ in
     ./spark/default.nix
     ./transcribe/default.nix
     ./wechat/default.nix
+    ./tldraw/default.nix
   ];
 
   options.dotfiles.agenticTooling = {
@@ -124,5 +125,16 @@ in
     formalVerification.enable = lib.mkEnableOption "formal verification with TLA+, and the skills that choose a verifier and keep its checks in step with the code";
     transcribe.enable = lib.mkEnableOption "transcribe, which turns recordings into word-timed transcripts, with its skill";
     wechat.enable = lib.mkEnableOption "wechat, which messages the user on WeChat, with its skill";
+
+    tldraw.enable = lib.mkOption {
+      type = lib.types.bool;
+      # The server only resolves on the tailnet, so registering it elsewhere
+      # leaves every agent with a permanently failing MCP server. Standalone
+      # homes have no osConfig to say whether this machine is on the tailnet,
+      # but a home with a tailnet relay reaches it through that.
+      default = args.osConfig.dotfiles.network.tailscale.enable or config.dotfiles.tailnetRelay.enable;
+      defaultText = lib.literalExpression "osConfig.dotfiles.network.tailscale.enable or config.dotfiles.tailnetRelay.enable";
+      description = "Whether to give agents the tailnet tldraw whiteboard's MCP server and the draw skill.";
+    };
   };
 }
