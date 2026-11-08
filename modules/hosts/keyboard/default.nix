@@ -1,5 +1,5 @@
 # Keyboard group: system-level remappers, input methods, and automation.
-# Mirrors the home keyboard group (Karabiner/fcitx5 user config).
+# The home keyboard group configures Karabiner and fcitx5 where these are on.
 { lib, ... }:
 {
   options.dotfiles.keyboard = {

@@ -31,7 +31,6 @@ in
           # Linux desktop (Wayland/niri)
           wm.niri.enable = lib.mkDefault true;
           launcher.vicinae.enable = lib.mkDefault true;
-          keyboard.fcitx5.enable = lib.mkDefault true;
           desktop = {
             xdg.enable = lib.mkDefault true;
             mako.enable = lib.mkDefault true;
@@ -44,7 +43,6 @@ in
           # macOS desktop
           wm.darwin.enable = lib.mkDefault true;
           terminal.rex.enable = lib.mkDefault true;
-          keyboard.karabiner.enable = lib.mkDefault true;
           panel.sketchybar.enable = lib.mkDefault true;
         }
       );

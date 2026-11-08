@@ -100,7 +100,9 @@ Integrated users import `homeModules.host-user`, which imports
 `homeModules.all` and the matching Home Manager cap presets via
 `flake.lib.homeCapsModules`; cap names arrive as a special argument, not a
 config option. Home modules read global system options directly from
-`osConfig.dotfiles.*`; do not mirror them into separate HM options.
+`osConfig.dotfiles.*`; do not mirror them into separate HM options. When a
+standalone home needs the same switch, the HM option defaults to the system
+option wherever `osConfig` exists, and only standalone homes set it.
 Standalone homes import `homeModules.standalone` (`homeModules.all`, their
 own nixpkgs settings and overlays, and generic Linux targets) plus
 `homeCapsModules [ ... ]`.

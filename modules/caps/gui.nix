@@ -18,11 +18,11 @@
     # OBS Studio with virtual camera; only has an effect on NixOS.
     streaming.enable = lib.mkDefault true;
     keyboard = {
-      # Kanata remapper and fcitx5 input method; only have an effect on NixOS.
+      # Kanata remapper; only has an effect on NixOS.
       kanata.enable = lib.mkDefault true;
-      fcitx5.enable = lib.mkDefault true;
-      # Karabiner-Elements ships as a Homebrew cask; its config comes from the
-      # home keyboard group.
+      # The home keyboard group configures whichever of these the platform
+      # has: fcitx5 on Linux, the Karabiner-Elements Homebrew cask on macOS.
+      fcitx5.enable = lib.mkDefault (!pkgs.stdenv.hostPlatform.isDarwin);
       karabiner.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isDarwin;
     };
     # Privileged helper for the Vicinae launcher's paste and snippet
