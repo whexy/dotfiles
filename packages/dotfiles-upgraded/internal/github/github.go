@@ -12,6 +12,8 @@ import (
 	"strconv"
 	"strings"
 	"time"
+
+	"dotfiles-upgraded/internal/commit"
 )
 
 const (
@@ -124,29 +126,16 @@ func (c *Client) Head(ctx context.Context, ref, etag string) (RefResult, error) 
 	if err != nil {
 		return result, fmt.Errorf("read commit: %w", err)
 	}
+	// A plain-text body has no structure to reject, and the SHA ends up in the
+	// flake ref and API paths, so a stray 200 from anything but the API must
+	// not pass as a commit.
 	sha := strings.TrimSpace(string(raw))
-	if !isObjectID(sha) {
+	if !commit.IsObjectID(sha) {
 		return result, fmt.Errorf("commit response is not a sha: %.64q", sha)
 	}
 	result.SHA = sha
 	result.ETag = resp.Header.Get("ETag")
 	return result, nil
-}
-
-// isObjectID reports whether s is a full SHA-1 or SHA-256 hex object name. A
-// plain-text body has no structure to reject, and the SHA ends up in the
-// flake ref and API paths, so a stray 200 from anything but the API must not
-// pass as a commit.
-func isObjectID(s string) bool {
-	if len(s) != 40 && len(s) != 64 {
-		return false
-	}
-	for _, r := range s {
-		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
-			return false
-		}
-	}
-	return true
 }
 
 // CombinedStatus returns the push pipeline's CI state for sha, which passes

@@ -11,6 +11,8 @@ import (
 	"errors"
 	"fmt"
 	"time"
+
+	"dotfiles-upgraded/internal/commit"
 )
 
 // signingContext prefixes every signed payload, so a signature made for this
@@ -103,7 +105,8 @@ func (a Announcement) validate() error {
 	switch {
 	case a.Repo == "" || a.Ref == "":
 		return errors.New("announcement names no repository or ref")
-	case !isObjectID(a.Sha):
+	// The sha ends up in the flake ref the host builds.
+	case !commit.IsObjectID(a.Sha):
 		return fmt.Errorf("announcement sha is not a commit: %.64q", a.Sha)
 	case a.Seq <= 0:
 		return fmt.Errorf("announcement seq %d is not positive", a.Seq)
@@ -111,16 +114,3 @@ func (a Announcement) validate() error {
 	return nil
 }
 
-// isObjectID reports whether s is a full SHA-1 or SHA-256 hex object name; the
-// sha ends up in the flake ref the host builds.
-func isObjectID(s string) bool {
-	if len(s) != 40 && len(s) != 64 {
-		return false
-	}
-	for _, r := range s {
-		if (r < '0' || r > '9') && (r < 'a' || r > 'f') {
-			return false
-		}
-	}
-	return true
-}
