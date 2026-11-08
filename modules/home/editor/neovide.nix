@@ -36,7 +36,7 @@ in
     # Neovide also attaches to Neovim on other machines (`neovide --server`),
     # so the development profile has its paste keys whether or not this home
     # runs Neovide.
-    (lib.mkIf (cfg.neovim.enable && cfg.neovim.dev) {
+    (lib.mkIf (cfg.neovim.enable && (cfg.neovide.enable || cfg.neovim.dev)) {
       programs.nixvim.extraConfigLua = ''
         if vim.g.neovide then
           local paste = vim.fn.has("mac") == 1 and "<D-v>" or "<C-S-v>"
