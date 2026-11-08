@@ -113,6 +113,8 @@ from each other:
 
 - `dotfiles.llmGateways` (`modules/home/llm-gateways`): the model gateways,
   CLIProxyAPI and magpie, and the Cloudflare Access token in front of them.
+  Homes with a [tailnet relay](#tailnet-relay) reach their tailnet origins
+  instead.
 - `dotfiles.agents.launcher`: the git config and shell lines every launcher
   runs before its agent.
 - `dotfiles.agents.mcp.servers`: MCP servers, in Claude's shape. A feature
@@ -690,6 +692,51 @@ tunnel service creates its tunnel (or recovers its credentials into
 DNS name at it, and runs it. The cert can create tunnels and edit every DNS
 record in the zone, so only homes that run a tunnel can decrypt it (see
 [Secrets](#secrets)).
+
+## Tailnet relay
+
+`dotfiles.tailnetRelay` (`modules/home/tailnet-relay`, `packages/tailnet-relay`)
+puts a home that runs no Tailscale daemon, such as the shared servers mars and
+venus, on the tailnet as a userspace (tsnet) node, `<hostName>` tagged
+`tag:tailnet-relay`, without root. Each forward relays plain HTTP from a
+loopback port to a tailnet HTTPS origin, opening the TLS itself. A feature adds
+its forwards; the gateways are the first (`dotfiles.llmGateways.relay`).
+
+Through it, Claude Code and Codex reach CLIProxyAPI and magpie at their
+tailnet origins, with no Cloudflare Access. Muse Code stays on the public
+origin, which alone rewrites `/muse-code/models`, and so do OpenCode and its
+search.
+
+- Every user on the host can connect to a loopback port, so the relay admits
+  only connections whose client socket the kernel (sock_diag) reports as its
+  own user's, and closes the rest before reading them. Anything running as
+  that user is trusted, including a forwarder other users can reach.
+- systemd user sockets hold the ports across relay restarts. Before
+  agent-settings sends credentials to a relay port, at launch and for model
+  discovery, it checks in `/proc/net/tcp` that this user holds it, so another
+  user who took the port gets nothing. While the relay is down, agents refuse
+  to start; they never fall back to the public origin.
+- Root on the host can take the node's identity from
+  `~/.local/state/tailnet-relay` and reach whatever the tailnet policy grants
+  the tag.
+
+To add a home:
+
+1. Once per tailnet, in the Tailscale admin console: add
+   `"tag:tailnet-relay": ["autogroup:admin"]` to `tagOwners` and the grant
+   `{ "src": ["tag:tailnet-relay"], "dst": ["tag:services"], "ip": ["tcp:443"] }`.
+   Nodes and ingress proxies share `tag:services`, so the relay reaches every
+   tailnet UI on 443. Create an OAuth client that writes auth keys for the
+   tag; its secret is `secrets/tailnet-relay-oauth.age`.
+2. Add the home to that secret's recipients and rekey (see
+   [Secrets](#secrets)).
+3. Set `dotfiles.tailnetRelay = { enable = true; hostName = "<host>-relay"; };`
+   and switch. On first start the node mints its own preauthorized,
+   non-ephemeral key from the secret, and needs it again only if its state is
+   lost.
+
+`journalctl --user -u tailnet-relay` then shows
+`tailnet: up as <hostName>.at-basking.ts.net.`
 
 ## Package updates
 

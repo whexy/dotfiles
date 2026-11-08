@@ -9,6 +9,7 @@ from agent_settings.catalog import Discover, Entry
 from agent_settings.credentials import read_secrets
 from agent_settings.documents import is_list, is_table
 from agent_settings.errors import SettingsError
+from agent_settings.listeners import check_listeners
 
 
 class _RefuseRedirect(HTTPRedirectHandler):
@@ -21,6 +22,7 @@ class _RefuseRedirect(HTTPRedirectHandler):
 
 def served_models(template: Entry, discover: Discover) -> list[tuple[str, str]]:
     """(ID, display name) of the models the template's endpoint serves, sorted."""
+    check_listeners(template)
     secrets = read_secrets(template.get("secrets", {}))
     headers = {
         "Authorization": f"Bearer {secrets[discover['keyEnv']]}",

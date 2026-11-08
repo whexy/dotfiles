@@ -13,6 +13,7 @@ from agent_settings.catalog import Catalog, Discover, Entry, Manifest, expand
 from agent_settings.credentials import read_secrets
 from agent_settings.documents import Table, edit_document, read_document, table_or_empty
 from agent_settings.errors import SettingsError
+from agent_settings.listeners import check_listeners
 from agent_settings.ownership import merge_owned
 from agent_settings.profiles import Profiles
 
@@ -110,6 +111,7 @@ class Agent(ABC):
         return entry
 
     def load_credentials(self, entry: Entry, env: dict[str, str]) -> None:
+        check_listeners(entry)
         env.update(read_secrets(entry.get("secrets", {})))
 
     def served_models(self, template: Entry, discover: Discover) -> list[tuple[str, str]]:

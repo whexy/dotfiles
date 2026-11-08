@@ -68,8 +68,10 @@ class ClaudeAgent(Agent):
             key: value for key, value in selection.get("env", {}).items() if key in endpoint_env
         }
         saved = table_or_empty(doc.get("env"))
-        # A hand-edited endpoint stays the user's, as in `snapshot`.
-        if saved.get(_BASE_URL) != wanted.get(_BASE_URL) or not (saved or wanted):
+        # A hand-edited endpoint stays the user's, as in `snapshot`; the
+        # entry's other route is Nix's own, so it moves with the route.
+        nix_urls = {wanted.get(_BASE_URL), *selection.get("replacedBaseUrls", [])}
+        if saved.get(_BASE_URL) not in nix_urls or not (saved or wanted):
             return
         env = child_table(doc, "env")
         for key in endpoint_env - wanted.keys():

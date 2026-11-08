@@ -96,6 +96,13 @@ Codex read API keys and Cloudflare headers from agenix at launch, never written 
 native configuration, and a launch with an unavailable secret fails before starting
 the agent.
 
+An entry served through a local relay names its `listeners` (`127.0.0.1:<port>`).
+Before sending credentials to one, at launch, select, or model discovery, the
+selector checks in `/proc/net/tcp{,6}` that every socket listening there belongs to
+this user, and fails otherwise. When a home switches route, a saved Claude endpoint
+that names the entry's other route (`replacedBaseUrls`) moves with it; only other
+endpoints count as hand-edited.
+
 Muse's tools inherit its environment, so Muse gets no credential there. Each
 reconciliation instead saves the selected endpoint's key with `muse auth set`
 (Muse's own credential store) and its Cloudflare headers in

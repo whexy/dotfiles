@@ -82,6 +82,11 @@ in
     ]
   );
   "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
+  # A Tailscale OAuth client secret that mints tag:tailnet-relay keys, for
+  # the homes that run dotfiles.tailnetRelay.
+  "tailnet-relay-oauth.age".publicKeys = to {
+    inherit (homes) "wenxuan@mars" "wenxuan@venus";
+  };
   # Homes that enable tooling.appStoreConnect: the dev and dev-lite homes.
   "app-store-connect-api-key.age".publicKeys = to users;
   # Homes that enable tooling.cloudflare.apiToken: the dev and dev-lite homes.

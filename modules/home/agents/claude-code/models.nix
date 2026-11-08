@@ -29,18 +29,20 @@ let
   # whole catalog; Claude Code appends /v1/messages to the base URL. They
   # accept the key in the x-api-key header.
   #
-  # The endpoints sit behind Cloudflare Access, whose service token goes
-  # in ANTHROPIC_CUSTOM_HEADERS: `Name: Value` pairs, newline-separated.
+  # The public endpoints sit behind Cloudflare Access, whose service token
+  # goes in ANTHROPIC_CUSTOM_HEADERS: `Name: Value` pairs, newline-separated.
   gatewayEntries =
     id:
     let
       gateway = llm.gateways.${id};
+      endpoint = llm.endpoint id;
     in
     rec {
       default = {
         label = "${id} (default models)";
+        inherit (endpoint) listeners replacedBaseUrls;
         env = {
-          ANTHROPIC_BASE_URL = gateway.baseUrl;
+          ANTHROPIC_BASE_URL = endpoint.baseUrl;
           # Context usage of a model Claude Code does not know comes from the
           # API instead of an assumed 200k window. That includes a gateway
           # model named at launch, as T3 Code's model picker does.
@@ -49,10 +51,10 @@ let
           # at initialize, where T3 Code adds them to its Claude provider.
           CLAUDE_CODE_ENABLE_GATEWAY_MODEL_DISCOVERY = "1";
         };
-        secrets = llm.accessSecrets // {
+        secrets = endpoint.secrets // {
           ANTHROPIC_API_KEY = gateway.apiKeyPath;
         };
-        secretHeaders = llm.accessHeaderEnv;
+        inherit (endpoint) secretHeaders;
       };
       # One entry per model the gateway serves when the picker opens. The
       # picked model fills every role, so Claude Code never falls back to a
@@ -60,7 +62,7 @@ let
       models = default // {
         label = id;
         discover = {
-          url = gateway.catalogUrl;
+          url = endpoint.catalogUrl;
           keyEnv = "ANTHROPIC_API_KEY";
           modelEnv = [
             "ANTHROPIC_MODEL"
