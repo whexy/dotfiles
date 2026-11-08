@@ -7,7 +7,7 @@ args@{
 }:
 let
   osConfig = args.osConfig or null;
-  isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
+  isWsl = osConfig.dotfiles.host.wsl or false;
   # No screen to open a browser on. WSL has no desktop of its own but opens
   # previews in Windows. Standalone homes only run on servers.
   isHeadless =

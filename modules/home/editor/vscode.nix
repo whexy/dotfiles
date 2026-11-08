@@ -10,8 +10,7 @@
   ...
 }@args:
 let
-  osConfig = args.osConfig or null;
-  isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
+  isWsl = args.osConfig.dotfiles.host.wsl or false;
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   platform = if isDarwin then "darwin" else "linux";
   # Ghostty's and Neovide's paste key.
