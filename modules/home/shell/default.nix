@@ -45,6 +45,7 @@ in
     inputs.direnv-instant.homeModules.direnv-instant
     ./atuin.nix
     ./motd.nix
+    ./tools.nix
     ./zsh.nix
     ./zsh-extras.nix
     ./nushell.nix

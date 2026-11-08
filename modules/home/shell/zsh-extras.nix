@@ -1,4 +1,4 @@
-# Shell configuration (zsh, fzf, direnv-instant, etc.)
+# zsh developer extras: prompt, plugins, and the shared tools' zsh hooks.
 {
   config,
   pkgs,
@@ -9,7 +9,7 @@ let
   cfg = config.dotfiles.shell;
 in
 {
-  config = lib.mkIf cfg.zsh.devExtras (
+  config = lib.mkIf (cfg.zsh.enable && cfg.zsh.devExtras) (
     let
       incusCompletionAvailable = pkgs ? incus && lib.meta.availableOn pkgs.stdenv.hostPlatform pkgs.incus;
       incusZshCompletion =
@@ -96,76 +96,15 @@ in
       programs = {
         # The zsh hooks of fzf, zoxide, atuin and direnv-instant are sourced from
         # build-time renders in initContent below, at Home Manager's positions.
-        fzf = {
-          enable = true;
-          enableZshIntegration = false;
-        };
-        zoxide = {
-          enable = true;
-          enableZshIntegration = false;
-        };
-
-        bat = {
-          enable = true;
-          extraPackages = with pkgs.bat-extras; [
-            batdiff
-            batman
-            batgrep
-            batwatch
-          ];
-        };
-
-        eza = {
-          enable = true;
-          icons = "auto";
-          extraOptions = [
-            "--group-directories-first"
-            "--header"
-          ];
-        };
-
-        atuin = {
-          enable = true;
-          enableZshIntegration = false;
-          settings = {
-            auto_sync = true;
-            update_check = false;
-            search_mode = "fuzzy";
-            search_mode_shell_up_key_binding = "prefix";
-            filter_mode = "global";
-            filter_mode_shell_up_key_binding = "workspace";
-            workspaces = true;
-            enter_accept = false;
-            style = "compact";
-            inline_height = 30;
-            store_failed = true;
-          };
-        };
-
-        direnv = {
-          enable = true;
-          enableZshIntegration = false;
-          silent = true;
-          nix-direnv.enable = true;
-        };
-
-        # Runs direnv in a background daemon, in place of direnv's own hook.
-        direnv-instant = {
-          enable = true;
-          enableZshIntegration = false;
-        };
+        fzf.enableZshIntegration = false;
+        zoxide.enableZshIntegration = false;
+        atuin.enableZshIntegration = false;
+        direnv.enableZshIntegration = false;
+        direnv-instant.enableZshIntegration = false;
 
         zsh = {
-          enable = true;
-          enableCompletion = true;
           autosuggestion.enable = true;
           syntaxHighlighting.enable = true;
-
-          history = {
-            save = 10000;
-            size = 10000;
-            share = true;
-          };
 
           oh-my-zsh = {
             enable = true;
