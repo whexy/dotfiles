@@ -17,7 +17,7 @@ let
   # Ghostty's and Neovide's paste key.
   pasteKey = if isDarwin then "cmd+v" else "ctrl+shift+v";
 
-  # The Nixvim profile's editing behavior and editing plugins, without its LSP,
+  # The Nixvim profile's editing basics and editing plugins, without its LSP,
   # completion, and UI plugins, which duplicate VS Code. The wrapper loads the
   # init itself, since vscode-neovim passes no `-u` without an init path.
   #
@@ -28,84 +28,24 @@ let
     (inputs.nixvim.lib.evalNixvim {
       modules = [
         ./neovim-editing.nix
+        (import ./neovim-core.nix { remapWindowKeys = true; })
         {
           nixpkgs.pkgs = vimPkgs;
           inherit (config.programs.nixvim) package;
           enableMan = false;
           luaLoader.enable = true;
 
-          globals = {
-            mapleader = " ";
-            maplocalleader = ",";
-          };
-          opts = {
-            ignorecase = true;
-            smartcase = true;
-          };
           plugins.treesitter.grammarPackages = config.programs.nixvim.plugins.treesitter.grammarPackages;
 
           # Neovim's own provider needs wl-copy or pbcopy on the extension
           # host's PATH; VS Code's clipboard API works everywhere VS Code runs.
           extraConfigLuaPre = "vim.g.clipboard = vim.g.vscode_clipboard";
-          autoCmd = [
-            {
-              event = [ "TextYankPost" ];
-              callback.__raw = ''
-                function()
-                  local event = vim.v.event
-                  if event.operator == "y" and event.regname == "" then
-                    vim.fn.setreg("+", event.regcontents, event.regtype)
-                  end
-                end
-              '';
-            }
-          ];
-
           keymaps = [
             {
               mode = "n";
               key = "<esc>";
               action = "<cmd>noh<cr><esc>";
               options.desc = "Escape and Clear hlsearch";
-            }
-            {
-              mode = "x";
-              key = "<";
-              action = "<gv";
-            }
-            {
-              mode = "x";
-              key = ">";
-              action = ">gv";
-            }
-            # Recursive, so they reach vscode-neovim's <C-w> mappings to editor
-            # groups.
-            {
-              mode = "n";
-              key = "<leader>-";
-              action = "<C-w>s";
-              options = {
-                remap = true;
-                desc = "Split Window Below";
-              };
-            }
-            {
-              mode = "n";
-              key = "<leader>|";
-              action = "<C-w>v";
-              options = {
-                remap = true;
-                desc = "Split Window Right";
-              };
-            }
-            {
-              mode = "n";
-              key = "<leader>wd";
-              action = "<C-w>c";
-              options = {
-                remap = true;
-                desc = "Delete Window";
-              };
             }
           ];
         }
