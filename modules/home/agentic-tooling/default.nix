@@ -1,7 +1,12 @@
 # Agentic tooling: programs that coding agents drive, each with the skills
 # and MCP servers it adds to every agent. Agents themselves are configured in
 # the `agents` group, which never names these tools.
-args@{ config, lib, ... }:
+args@{
+  config,
+  lib,
+  flake,
+  ...
+}:
 let
   cfg = config.dotfiles.agenticTooling;
 in
@@ -81,8 +86,8 @@ in
             };
           }
         );
-        default = import ./iphone/phones.nix;
-        defaultText = lib.literalExpression "import ./iphone/phones.nix";
+        default = import ./iphone/phones.nix { inherit flake; };
+        defaultText = lib.literalExpression "import ./iphone/phones.nix { inherit flake; }";
         description = "The iPhones agents can drive, by the name the agent shows.";
       };
       wda = {

@@ -11,6 +11,7 @@
   config,
   lib,
   pkgs,
+  flake,
   ...
 }:
 let
@@ -154,7 +155,7 @@ in
         cliproxyapi = rec {
           name = "CLIProxyAPI";
           baseUrl = "https://llm.clusters.work";
-          tailnetUrl = "https://cpa.at-basking.ts.net";
+          tailnetUrl = "https://${flake.lib.tailnetHost "cpa"}";
           apiKeyPath = secretPath "ai-proxy-api-key";
           # `client_version` selects the Codex catalog over OpenAI's list.
           catalogPath = "/v1/models?client_version=${pkgs.llm-agents.codex.version}";
@@ -175,7 +176,7 @@ in
         magpie = rec {
           name = "magpie";
           baseUrl = "https://magpie.clusters.work";
-          tailnetUrl = "https://magpie.at-basking.ts.net";
+          tailnetUrl = "https://${flake.lib.tailnetHost "magpie"}";
           apiKeyPath = secretPath "magpie-api-key";
           # /v1/models ignores `client_version` and answers OpenAI's list.
           catalogPath = "/v1/codex/models";

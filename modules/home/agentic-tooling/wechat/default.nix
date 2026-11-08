@@ -38,7 +38,7 @@ in
       (lib.mkIf relay.enable {
         dotfiles.tailnetRelay.forwards.wechat = {
           port = 47304;
-          upstream = "https://wechat.at-basking.ts.net";
+          upstream = "https://${flake.lib.tailnetHost "wechat"}";
         };
       })
     ]
