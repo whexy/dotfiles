@@ -116,30 +116,5 @@ in
       // lib.mapAttrs' (
         name: _: lib.nameValuePair ".local/share/agents/docs/${name}" { source = "${tree}/docs/${name}"; }
       ) cfg.docs;
-
-    # Home Manager cannot write a skill's link where an old link to a
-    # directory, or a directory, still stands: it reports a collision, or
-    # backs the path up by moving it, which fails inside the store and
-    # otherwise leaves a copy of every skill beside the new links. So this
-    # removes `~/.agents/skills` when it is one link, and empties every
-    # directory in a root that holds a link into a generation's files, as
-    # each skill linked file by file does: those links go, then every empty
-    # directory under it. Entries holding no such link, Claude
-    # Code's `synced/` among them, are not Home Manager's and stay.
-    # Remove once every host has activated a generation that has this.
-    home.activation.migrateSkillsDir = lib.hm.dag.entryBefore [ "checkLinkTargets" ] ''
-      if [ -L "$HOME/.agents/skills" ]; then
-        run rm $VERBOSE_ARG "$HOME/.agents/skills"
-      fi
-      for root in ${lib.concatMapStringsSep " " (root: ''"$HOME/${root}"'') roots}; do
-        for entry in "$root"/*; do
-          if [ -d "$entry" ] && [ ! -L "$entry" ] \
-            && [ -n "$(find "$entry" -type l -lname '*-home-manager-files/*' -print -quit)" ]; then
-            run find "$entry" -type l -lname '*-home-manager-files/*' -delete
-            run find "$entry" -depth -type d -empty -delete
-          fi
-        done
-      done
-    '';
   };
 }
