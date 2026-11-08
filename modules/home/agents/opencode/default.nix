@@ -6,16 +6,6 @@
 }:
 let
   cfg = config.dotfiles.agents;
-  upstream = pkgs.llm-agents.opencode2;
-  # The package installs its binary as `opencode2` to coexist with v1.
-  #
-  # The shared background server inherits the environment of the launch that
-  # starts it, so it keeps that launch's prelude until `opencode service
-  # restart`.
-  package = pkgs.writeShellScriptBin "opencode" ''
-    ${cfg.launcher.prelude}
-    exec ${lib.getExe' upstream "opencode2"} "$@"
-  '';
   settings = import ./config.nix {
     inherit pkgs lib;
     inherit (cfg.opencode) model smallModel;
@@ -41,11 +31,20 @@ in
   };
 
   config = lib.mkIf cfg.enable {
+    # The shared background server inherits the environment of the launch
+    # that starts it, so it keeps that launch's prelude until `opencode
+    # service restart`.
+    dotfiles.agents.harnesses.opencode = {
+      package = pkgs.llm-agents.opencode2;
+      # The package installs its binary as `opencode2` to coexist with v1.
+      binary = "opencode2";
+      rules.file = ".config/opencode/AGENTS.md";
+      skillsRoot = ".agents/skills";
+    };
+
     home = {
-      packages = [ package ];
       shellAliases.oc = "opencode";
       file.".config/opencode/opencode.json".text = builtins.toJSON settings;
-      file.".config/opencode/AGENTS.md".source = ../global-rules.md;
     };
   };
 }

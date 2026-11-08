@@ -15,11 +15,13 @@ let
   # per file: Codex skips a skill whose SKILL.md is a link out of the
   # skill's directory and Muse Code rejects it, while Claude Code keeps
   # `synced/` in its root and Muse Code `.muse/` in its.
-  roots = [
-    ".agents/skills"
-    ".claude/skills"
-    ".config/muse/skills"
-  ];
+  roots = lib.unique (
+    lib.sort lib.lessThan (
+      lib.filter (root: root != null) (
+        lib.mapAttrsToList (_: harness: harness.skillsRoot) config.dotfiles.agents.harnesses
+      )
+    )
+  );
 in
 {
   options.dotfiles.agents.skills = {

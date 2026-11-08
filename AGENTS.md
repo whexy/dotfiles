@@ -108,8 +108,10 @@ behavior is selected with `dotfiles.platform.*` and `dotfiles.image.*`.
 ## Agents
 
 `modules/home/agents` configures Claude Code, Codex, OpenCode, and Muse Code,
-each in a module of its own. They take what they share from options, never
-from each other:
+each in a module of its own that declares its entry in
+`dotfiles.agents.harnesses`: package, instructions file, skill root, and the
+model picker agent-settings runs for it. `harnesses.nix` renders every entry
+the same way. They take what they share from options, never from each other:
 
 - `dotfiles.llmGateways` (`modules/home/llm-gateways`): the model gateways,
   CLIProxyAPI and magpie, and `routes`, how agents reach each: homes with a
@@ -128,7 +130,8 @@ from each other:
   (`dotfiles.browser.firefox.automation.mcp`).
 - `dotfiles.agents.skills`: the skills every agent sees (below).
 
-Every agent reads `global-rules.md`, linked into its own config directory.
+Every agent reads `global-rules.md`, linked into its own config directory
+(`rules.file`), with its own `rules.extraText` after it.
 
 `modules/home/agentic-tooling` (`dotfiles.agenticTooling`) holds the programs
 agents drive: REA, the video toolkit, formal verification, iPhone Use, Spark,

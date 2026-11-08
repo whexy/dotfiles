@@ -11,6 +11,7 @@
   imports = [
     ./launcher/default.nix
     ./mcp.nix
+    ./harnesses.nix
     ./skill-tree/default.nix
     ./claude-code/default.nix
     ./codex/default.nix
