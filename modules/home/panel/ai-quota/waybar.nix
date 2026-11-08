@@ -11,6 +11,7 @@
 }:
 let
   cfg = config.dotfiles.panel;
+  inherit (import ../../desktop/style.nix) colors;
   aiQuotaPackage = perSystem.self.ai-quota-popup;
   showCountdown = cfg.aiQuota.showCountdown;
 
@@ -92,16 +93,16 @@ in
           padding: 2px 10px;
           margin: 3px 2px;
           border-radius: 10px;
-          background-color: #3c3836;
+          background-color: ${colors.bg1};
           transition: all 0.3s ease;
         }
 
         ${selectors ":hover"} {
-          background-color: #504945;
+          background-color: ${colors.bg2};
         }
 
         ${selectors ".error"} {
-          color: #928374;
+          color: ${colors.gray};
         }
 
         /* Collapse absent providers entirely. */

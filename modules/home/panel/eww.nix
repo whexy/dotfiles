@@ -15,6 +15,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.panel;
+  desktopStyle = import ../desktop/style.nix;
 
   enabled = cfg.renderer == "eww";
   audioEnabled = osConfig.dotfiles.audio.enable or false;
@@ -200,7 +201,7 @@ let
 
     * {
       all: unset;
-      font-family: "JetBrainsMono Nerd Font", monospace;
+      font-family: "${desktopStyle.font}", monospace;
       font-size: 12px;
     }
 

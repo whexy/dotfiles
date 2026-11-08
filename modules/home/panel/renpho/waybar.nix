@@ -7,6 +7,7 @@
 }:
 let
   cfg = config.dotfiles.panel;
+  inherit (import ../../desktop/style.nix) colors;
 
   jq = lib.getExe pkgs.jq;
   icon = "󰓅";
@@ -42,16 +43,16 @@ in
         padding: 2px 10px;
         margin: 3px 2px;
         border-radius: 10px;
-        background-color: #3c3836;
-        color: #d3869b;
+        background-color: ${colors.bg1};
+        color: ${colors.purpleBright};
         transition: all 0.3s ease;
       }
 
-      #custom-renpho.stale { color: #928374; }
+      #custom-renpho.stale { color: ${colors.gray}; }
 
       #custom-renpho:hover {
-        background-color: #d3869b;
-        color: #282828;
+        background-color: ${colors.purpleBright};
+        color: ${colors.bg0};
       }
     '';
   };

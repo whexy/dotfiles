@@ -9,6 +9,9 @@
   pkgs,
   ...
 }:
+let
+  inherit (import ../desktop/style.nix) colors font;
+in
 {
   config = lib.mkIf (config.dotfiles.panel.renderer == "waybar") {
     programs.waybar = {
@@ -126,28 +129,28 @@
               weeks-pos = "right";
               on-scroll = 1;
               format = {
-                months = "<span color='#d79921'><b>{}</b></span>";
-                days = "<span color='#ebdbb2'>{}</span>";
-                weekdays = "<span color='#458588'><b>{}</b></span>";
-                weeks = "<span color='#928374'>W{}</span>";
-                today = "<span color='#cc241d'><b><u>{}</u></b></span>";
+                months = "<span color='${colors.yellow}'><b>{}</b></span>";
+                days = "<span color='${colors.fg}'>{}</span>";
+                weekdays = "<span color='${colors.blue}'><b>{}</b></span>";
+                weeks = "<span color='${colors.gray}'>W{}</span>";
+                today = "<span color='${colors.red}'><b><u>{}</u></b></span>";
               };
             };
           };
         };
       };
 
-      # Gruvbox-inspired pill styling
+      # Gruvbox pill styling (../desktop/style.nix)
       style = ''
         * {
-          font-family: "JetBrainsMono Nerd Font", monospace;
+          font-family: "${font}", monospace;
           font-size: 12px;
           min-height: 0;
         }
 
         window#waybar {
           background-color: rgba(40, 40, 40, 0.9);
-          color: #ebdbb2;
+          color: ${colors.fg};
         }
 
         /* Pill-shaped module styling */
@@ -163,23 +166,23 @@
           padding: 2px 10px;
           margin: 3px 2px;
           border-radius: 10px;
-          background-color: #3c3836;
+          background-color: ${colors.bg1};
           transition: all 0.3s ease;
         }
 
         /* Idle inhibitor */
         #idle_inhibitor {
-          color: #928374;
+          color: ${colors.gray};
         }
 
         #idle_inhibitor.activated {
-          color: #282828;
-          background-color: #d79921;
+          color: ${colors.bg0};
+          background-color: ${colors.yellow};
         }
 
         /* Tray */
         #tray {
-          background-color: #3c3836;
+          background-color: ${colors.bg1};
         }
 
         #tray > .passive {
@@ -188,105 +191,105 @@
 
         #tray > .needs-attention {
           -gtk-icon-effect: highlight;
-          background-color: #cc241d;
+          background-color: ${colors.red};
           border-radius: 10px;
         }
 
         /* Network */
         #network {
-          color: #689d6a;
+          color: ${colors.aqua};
         }
 
         #network.disconnected {
-          color: #cc241d;
-          background-color: #3c3836;
+          color: ${colors.red};
+          background-color: ${colors.bg1};
         }
 
         #network:hover {
-          background-color: #689d6a;
-          color: #282828;
+          background-color: ${colors.aqua};
+          color: ${colors.bg0};
         }
 
         /* CPU */
         #cpu {
-          color: #d79921;
+          color: ${colors.yellow};
         }
 
         #cpu:hover {
-          background-color: #d79921;
-          color: #282828;
+          background-color: ${colors.yellow};
+          color: ${colors.bg0};
         }
 
         /* Memory */
         #memory {
-          color: #458588;
+          color: ${colors.blue};
         }
 
         #memory:hover {
-          background-color: #458588;
-          color: #282828;
+          background-color: ${colors.blue};
+          color: ${colors.bg0};
         }
 
         /* Disk */
         #disk {
-          color: #b16286;
+          color: ${colors.purple};
         }
 
         #disk:hover {
-          background-color: #b16286;
-          color: #282828;
+          background-color: ${colors.purple};
+          color: ${colors.bg0};
         }
 
         /* Bluetooth */
         #bluetooth {
-          color: #83a598;
+          color: ${colors.blueBright};
         }
 
         #bluetooth:hover {
-          background-color: #83a598;
-          color: #282828;
+          background-color: ${colors.blueBright};
+          color: ${colors.bg0};
         }
 
         /* Battery */
         #battery {
-          color: #98971a;
+          color: ${colors.green};
         }
 
         #battery.charging,
         #battery.plugged {
-          color: #b8bb26;
+          color: ${colors.greenBright};
         }
 
         #battery.warning:not(.charging) {
-          color: #d79921;
+          color: ${colors.yellow};
         }
 
         #battery.critical:not(.charging) {
-          color: #fb4934;
+          color: ${colors.redBright};
           animation: blink 1s linear infinite alternate;
         }
 
         #battery:hover {
-          background-color: #98971a;
-          color: #282828;
+          background-color: ${colors.green};
+          color: ${colors.bg0};
         }
 
         /* Clock */
         #clock {
-          color: #ebdbb2;
+          color: ${colors.fg};
           font-weight: bold;
-          background-color: #504945;
+          background-color: ${colors.bg2};
         }
 
         #clock:hover {
-          background-color: #ebdbb2;
-          color: #282828;
+          background-color: ${colors.fg};
+          color: ${colors.bg0};
         }
 
         /* Blink animation for critical states */
         @keyframes blink {
           to {
-            background-color: #fb4934;
+            background-color: ${colors.redBright};
           }
         }
       '';

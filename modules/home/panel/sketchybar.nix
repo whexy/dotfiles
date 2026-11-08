@@ -14,6 +14,7 @@ let
   cfg = config.dotfiles.panel;
   style = import ./sketchybar-style.nix { inherit config; };
   inherit (style) colors capsule;
+  desktopStyle = import ../desktop/style.nix;
 
   sketchybar = lib.getExe pkgs.sketchybar;
 
@@ -144,7 +145,7 @@ let
       updates=when_shown
       padding_left=4
       padding_right=4
-      icon.font="JetBrainsMono Nerd Font:Bold:12.0"
+      icon.font="${desktopStyle.font}:Bold:12.0"
       icon.color=${colors.fg}
       icon.highlight_color=${colors.fg}
       icon.padding_left=7

@@ -14,6 +14,7 @@
 }:
 let
   cfg = config.dotfiles.panel;
+  inherit (import ../../desktop/style.nix) colors;
   niri = lib.getExe config.programs.niri.package;
   sshWindow = lib.getExe config.programs.ssh-window.package;
   niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
@@ -68,20 +69,20 @@ in
         padding: 2px 8px;
         margin: 3px 1px;
         border-radius: 10px;
-        color: #928374;
-        background-color: #3c3836;
+        color: ${colors.gray};
+        background-color: ${colors.bg1};
         border: none;
         transition: all 0.3s ease;
       }
 
       #workspaces button:hover {
-        background-color: #504945;
-        color: #ebdbb2;
+        background-color: ${colors.bg2};
+        color: ${colors.fg};
       }
 
       #workspaces button.active {
-        color: #282828;
-        background-color: #458588;
+        color: ${colors.bg0};
+        background-color: ${colors.blue};
         font-weight: bold;
       }
 
@@ -90,9 +91,9 @@ in
         padding: 2px 10px;
         margin: 3px 2px;
         border-radius: 10px;
-        background-color: #3c3836;
+        background-color: ${colors.bg1};
         transition: all 0.3s ease;
-        color: #a89984;
+        color: ${colors.fg4};
         font-style: italic;
       }
 
@@ -100,7 +101,7 @@ in
         padding: 2px 10px;
         margin: 3px 2px;
         border-radius: 10px;
-        color: #b8bb26;
+        color: ${colors.greenBright};
         background-color: rgba(184, 187, 38, 0.14);
         border: 1px solid rgba(184, 187, 38, 0.5);
         font-style: normal;

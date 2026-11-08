@@ -10,6 +10,7 @@
 }:
 let
   cfg = config.dotfiles.desktop;
+  inherit (import ./style.nix) colors font;
   makoctl = lib.getExe' config.services.mako.package "makoctl";
   vicinae = lib.getExe config.programs.vicinae.package;
 in
@@ -19,8 +20,8 @@ in
       enable = true;
 
       settings = {
-        # Global defaults — Gruvbox palette matching waybar.nix.
-        font = "JetBrainsMono Nerd Font 10";
+        # Global defaults, in the desktop style (./style.nix).
+        font = "${font} 10";
         anchor = "top-right";
         layer = "overlay";
         margin = "10";
@@ -31,24 +32,24 @@ in
         max-visible = 5;
         max-icon-size = 48;
 
-        background-color = "#282828";
-        text-color = "#ebdbb2";
-        border-color = "#458588";
-        progress-color = "over #504945";
+        background-color = "${colors.bg0}";
+        text-color = "${colors.fg}";
+        border-color = "${colors.blue}";
+        progress-color = "over ${colors.bg2}";
 
         # Per-urgency overrides.
         "urgency=low" = {
-          border-color = "#928374";
+          border-color = "${colors.gray}";
           default-timeout = 3000;
         };
 
         "urgency=normal" = {
-          border-color = "#458588";
+          border-color = "${colors.blue}";
         };
 
         "urgency=critical" = {
-          border-color = "#cc241d";
-          text-color = "#fb4934";
+          border-color = "${colors.red}";
+          text-color = "${colors.redBright}";
           # Critical notifications never auto-dismiss.
           default-timeout = 0;
         };
