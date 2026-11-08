@@ -10,6 +10,7 @@
 {
   config,
   lib,
+  perSystem,
   pkgs,
   ...
 }:
@@ -17,8 +18,12 @@ let
   cfg = config.dotfiles.panel;
   showCountdown = cfg.aiQuota.showCountdown;
 
-  shared = import ./shared.nix;
-  inherit (shared) apiUrl providers updateInterval;
+  inherit (perSystem.self.ai-quota-popup)
+    apiUrl
+    providers
+    summaryFilter
+    updateInterval
+    ;
 
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
@@ -46,7 +51,7 @@ let
   # drops only its own pill.
   pillFilter = pkgs.writeText "tmux-ai-quota.jq" ''
     def summary($provider):
-    ${builtins.readFile ./summary.jq}
+    ${builtins.readFile summaryFilter}
     ;
     . as $quota
     | $ARGS.positional[]

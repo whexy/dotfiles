@@ -6,21 +6,25 @@
 {
   config,
   lib,
+  perSystem,
   pkgs,
   ...
 }:
 let
   cfg = config.dotfiles.panel;
+  aiQuotaPackage = perSystem.self.ai-quota-popup;
   showCountdown = cfg.aiQuota.showCountdown;
 
-  shared = import ./shared.nix;
-  inherit (shared) apiUrl providers updateInterval;
+  inherit (aiQuotaPackage)
+    apiUrl
+    providers
+    summaryFilter
+    updateInterval
+    ;
 
   curl = lib.getExe pkgs.curl;
   jq = lib.getExe pkgs.jq;
-  aiQuotaPackage = pkgs.callPackage ../../../../packages/ai-quota-popup { };
   aiQuotaPopup = lib.getExe aiQuotaPackage;
-  summaryFilter = ./summary.jq;
 
   enabled = cfg.renderer == "eww" && cfg.aiQuota.enable;
 

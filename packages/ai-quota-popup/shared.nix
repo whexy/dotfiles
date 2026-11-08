@@ -1,4 +1,4 @@
-# Shared API and provider metadata for the AI-quota bar renderers.
+# API and provider metadata shared by the popup and the AI-quota bar pills.
 let
   # A path literal sits inside the flake source, and `toString` on it embeds
   # that whole tree's store path without depending on it, so every repo edit

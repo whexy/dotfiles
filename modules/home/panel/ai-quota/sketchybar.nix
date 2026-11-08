@@ -13,22 +13,26 @@
 {
   config,
   lib,
+  perSystem,
   pkgs,
   ...
 }:
 let
   cfg = config.dotfiles.panel;
+  aiQuotaPackage = perSystem.self.ai-quota-popup;
   style = import ../sketchybar-style.nix { inherit config; };
   showCountdown = cfg.aiQuota.showCountdown;
-  shared = import ./shared.nix;
-  inherit (shared) apiUrl logos updateInterval;
+  inherit (aiQuotaPackage)
+    apiUrl
+    logos
+    summaryFilter
+    updateInterval
+    ;
 
   curl = lib.getExe pkgs.curl;
   sketchybar = lib.getExe pkgs.sketchybar;
   jq = lib.getExe pkgs.jq;
-  aiQuotaPackage = pkgs.callPackage ../../../../packages/ai-quota-popup { };
   aiQuotaPopup = lib.getExe aiQuotaPackage;
-  summaryFilter = ./summary.jq;
   cacheFile = "${config.xdg.cacheHome}/ai-quota.json";
 
   enabled = cfg.renderer == "sketchybar" && cfg.aiQuota.enable;

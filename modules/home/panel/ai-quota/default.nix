@@ -1,7 +1,8 @@
 # AI quota pills for the status bar.
 #
 # Each selected bar fetches the public quota API and renders current data directly.
-# API metadata is shared in ./shared.nix; quota semantics live in ./summary.jq.
+# API and provider metadata and the quota semantics (summary.jq) come from
+# the ai-quota-popup package, which renders the same data in detail.
 { config, lib, ... }:
 {
   imports = [

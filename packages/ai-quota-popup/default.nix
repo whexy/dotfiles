@@ -1,7 +1,7 @@
 { pkgs }:
 let
   inherit (pkgs) lib;
-  shared = import ../../modules/home/panel/ai-quota/shared.nix;
+  shared = import ./shared.nix;
   python = pkgs.python3.withPackages (ps: [ ps.pyside6 ]);
   metadata = pkgs.writeText "ai-quota-popup-config.json" (
     builtins.toJSON {
@@ -15,7 +15,15 @@ in
 pkgs.stdenvNoCC.mkDerivation {
   pname = "ai-quota-popup";
   version = "0.1.0";
-  src = ./.;
+  # The bar modules read the data files through passthru; only the app's
+  # own files belong in its source.
+  src = lib.fileset.toSource {
+    root = ./.;
+    fileset = lib.fileset.unions [
+      ./main.py
+      ./view.qml
+    ];
+  };
 
   nativeBuildInputs = [
     pkgs.makeWrapper
@@ -32,7 +40,7 @@ pkgs.stdenvNoCC.mkDerivation {
     install -d "$out/bin" "$out/share/ai-quota-popup/logos"
     install -m 0644 main.py view.qml "$out/share/ai-quota-popup/"
     install -m 0644 ${metadata} "$out/share/ai-quota-popup/config.json"
-    install -m 0644 ${../../modules/home/panel/ai-quota/summary.jq} "$out/share/ai-quota-popup/summary.jq"
+    install -m 0644 ${./summary.jq} "$out/share/ai-quota-popup/summary.jq"
     ${lib.concatMapStringsSep "\n" (p: ''
       install -m 0644 ${p.logo} "$out/share/ai-quota-popup/logos/${p.name}.png"
     '') shared.providers}
@@ -46,6 +54,17 @@ pkgs.stdenvNoCC.mkDerivation {
       }
     runHook postInstall
   '';
+
+  # The bar modules render the same providers and quota summary as the app.
+  passthru = {
+    inherit (shared)
+      apiUrl
+      updateInterval
+      providers
+      logos
+      ;
+    summaryFilter = ./summary.jq;
+  };
 
   meta = {
     description = "Unified quota detail popup for desktop bars";
