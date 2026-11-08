@@ -8,11 +8,12 @@
       "base"
       "dev"
     ];
-    modules = [
-      ./hardware.nix
-      ./nvidia.nix
-    ];
   };
 
-  dotfiles.system.autoUpgrade.enable = true;
+  dotfiles = {
+    system.autoUpgrade.enable = true;
+    platform.wsl.nvidia.enable = true;
+  };
+
+  system.stateVersion = "25.11";
 }

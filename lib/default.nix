@@ -173,7 +173,10 @@ in
     ]
     ++ capsModules caps
     ++ modules
-    ++ lib.optionals wsl [ inputs.nixos-wsl.nixosModules.wsl ]
+    ++ lib.optionals wsl [
+      inputs.nixos-wsl.nixosModules.wsl
+      { dotfiles.platform.wsl.enable = true; }
+    ]
     # The LXC profile sets boot.isContainer unconditionally, so it cannot be
     # option-gated inside the incusContainer platform module.
     ++ lib.optionals incusContainer [
