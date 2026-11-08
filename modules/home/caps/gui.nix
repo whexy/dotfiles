@@ -34,7 +34,6 @@ in
             udiskie.enable = lib.mkDefault true;
             macbookScreenDensity.enable = lib.mkDefault true;
           };
-          clipboard.vmware.enable = lib.mkDefault true;
         }
         // lib.optionalAttrs isDarwin {
           # macOS desktop
