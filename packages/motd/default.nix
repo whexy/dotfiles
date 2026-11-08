@@ -318,8 +318,15 @@ pkgs.writers.writePython3Bin "motd"
         tip = (status.get("tipSha") or "")[:7]
 
         # The daemon is overdue to rewrite its status when it has stopped, or
-        # when the host has just woken and it has yet to catch up.
-        if next_check is not None and now > next_check + 300:
+        # when the host has just woken and it has yet to catch up. It rewrites
+        # the file every 2 minutes except during a rebuild (updatedAt), since
+        # with CI's announcements its next check can be hours away; a daemon
+        # from before updatedAt is judged by nextCheck alone.
+        updated = timestamp(status.get("updatedAt"))
+        if updated is not None and phase != "switching":
+            if now > updated + 600:
+                return update_row("silent", YELLOW, "for " + span(now - updated)), 1
+        elif next_check is not None and now > next_check + 300:
             return update_row("last checked " + relative_age(timestamp(status["lastCheck"])), YELLOW), 1
         if phase == "up-to-date":
             # A switch the daemon did not run replaces the profile after the

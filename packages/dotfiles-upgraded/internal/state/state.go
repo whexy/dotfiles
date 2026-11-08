@@ -110,6 +110,9 @@ func (s *State) ClearIgnored() {
 // Status is the health file described by the design: the only externally
 // visible signal that an unattended host is still converging.
 type Status struct {
+	// UpdatedAt is when the daemon last wrote this file: at least every few
+	// minutes, except while a rebuild runs.
+	UpdatedAt  time.Time `json:"updatedAt"`
 	LastCheck  time.Time `json:"lastCheck"`
 	Phase      Phase     `json:"phase"`
 	PhaseSince time.Time `json:"phaseSince"`

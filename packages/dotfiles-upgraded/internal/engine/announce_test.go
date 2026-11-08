@@ -162,3 +162,62 @@ func TestWakeEndsTheWait(t *testing.T) {
 		t.Fatal("an ended context read as a wake")
 	}
 }
+
+// steppingClock advances by each Sleep and counts them.
+type steppingClock struct{ now time.Time }
+
+func (c *steppingClock) Now() time.Time { return c.now }
+func (c *steppingClock) Sleep(ctx context.Context, d time.Duration) bool {
+	c.now = c.now.Add(d)
+	return ctx.Err() == nil
+}
+
+type statusStore struct {
+	rolloutStore
+	written []state.Status
+}
+
+func (s *statusStore) WriteStatus(st state.Status) error {
+	s.written = append(s.written, st)
+	return nil
+}
+
+func TestWaitRefreshesStatus(t *testing.T) {
+	e, _, _, _, _ := announcedEngine(t, shaA, state.State{LastSuccessSha: shaA, LastSeenSha: shaA})
+	clock := &steppingClock{now: time.Unix(1000, 0)}
+	store := &statusStore{}
+	e.Clock, e.Store = clock, store
+
+	wait := e.RunOnce(context.Background())
+	if wait < 4*time.Hour {
+		t.Fatalf("wait = %s, want the notified interval", wait)
+	}
+	cycle := store.written[len(store.written)-1]
+	store.written = nil
+
+	if !e.wait(context.Background(), 10*time.Minute) {
+		t.Fatal("wait reported the context ending")
+	}
+	// 10 minutes in 2-minute steps: a refresh after each of the first four.
+	if len(store.written) != 4 {
+		t.Fatalf("refreshes = %d, want 4", len(store.written))
+	}
+	for _, st := range store.written {
+		if !st.LastCheck.Equal(cycle.LastCheck) || st.NextCheck == nil || !st.NextCheck.Equal(*cycle.NextCheck) {
+			t.Fatalf("refresh moved lastCheck/nextCheck: %+v, cycle %+v", st, cycle)
+		}
+		if st.Notify == nil || !st.Notify.Connected {
+			t.Fatalf("refresh without the stream state: %+v", st.Notify)
+		}
+		if !st.UpdatedAt.After(cycle.UpdatedAt) {
+			t.Fatalf("refresh kept updatedAt %s", st.UpdatedAt)
+		}
+	}
+
+	// Without a Notifier, waits refresh the file too.
+	e.Notifier = nil
+	store.written = nil
+	if !e.wait(context.Background(), 5*time.Minute) || len(store.written) != 2 {
+		t.Fatalf("refreshes without a notifier = %d, want 2", len(store.written))
+	}
+}

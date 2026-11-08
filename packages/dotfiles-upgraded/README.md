@@ -122,6 +122,7 @@ temporary file and renamed, so a crash mid-write cannot truncate them.
 
 ```json
 {
+  "updatedAt": "2026-09-17T04:24:03Z",
   "lastCheck": "2026-09-17T04:12:03Z",
   "phase": "up-to-date",
   "phaseSince": "2026-09-17T04:12:03Z",
@@ -158,14 +159,17 @@ The last three ignore the tip, so the host stays where it is until a newer
 commit lands. The reason is persisted with the ignore set, so a restarted
 daemon still reports it.
 
-`notify` is present when the daemon subscribes to announcements. `lastEventAt`
-is the last line the relay sent, keepalives included (every 45 seconds), so
-one more than a few minutes old with `connected` true means a stalled stream
-the daemon has yet to replace.
+`notify` is present when the daemon subscribes to announcements. `lastEventAt` is the last line
+the relay sent, keepalives included (every 45 seconds), so one more than a few
+minutes old with `connected` true means a stalled stream the daemon has yet to
+replace; the daemon replaces one silent for 3 minutes.
 
-`nextCheck` is when the daemon next acts, and is null while a rebuild runs. A
-`nextCheck` well in the past means the daemon has stopped, or the host has just
-woken and the daemon has yet to catch up. The login banner (`packages/motd`)
+`nextCheck` is when the daemon next acts, and is null while a rebuild runs.
+`lastCheck` and `nextCheck` change only when the daemon decides something;
+while it waits, it rewrites the file every 2 minutes with only `updatedAt` and
+`notify` changed. An `updatedAt` more than a few minutes old outside a rebuild
+means the daemon has stopped, or the host has just woken and the daemon has yet
+to catch up. The login banner (`packages/motd`)
 shows this state on every host whose auto-upgrade is enabled.
 
 Inspect it with:

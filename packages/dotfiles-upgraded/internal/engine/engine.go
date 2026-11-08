@@ -80,6 +80,10 @@ const (
 	backoffMax  = 30 * time.Minute
 	// rateLimitFallback applies when a 403/429 carries no usable wait hint.
 	rateLimitFallback = 15 * time.Minute
+	// statusRefresh is how often status.json is rewritten while the daemon
+	// waits. Its updatedAt then shows the daemon alive between cycles that
+	// are hours apart, and its stream fields stay current.
+	statusRefresh = 2 * time.Minute
 )
 
 // Store is the subset of state persistence the engine needs.
@@ -113,6 +117,10 @@ type Engine struct {
 	phaseSince      time.Time
 	// serverInterval holds an x-poll-interval floor requested by GitHub.
 	serverInterval time.Duration
+	// checkedAt and nextCheck are the last cycle's lastCheck and nextCheck,
+	// which a status refresh between cycles keeps.
+	checkedAt time.Time
+	nextCheck time.Time
 }
 
 // New prepares an engine with state loaded from the store.
@@ -147,11 +155,11 @@ func (e *Engine) Run(ctx context.Context) {
 	}
 }
 
-// wait sleeps for d, ending early when the Notifier wakes. It returns false
-// once ctx has ended.
+// wait sleeps for d, ending early when the Notifier wakes, and refreshes
+// status.json meanwhile. It returns false once ctx has ended.
 func (e *Engine) wait(ctx context.Context, d time.Duration) bool {
 	if e.Notifier == nil {
-		return e.Clock.Sleep(ctx, d)
+		return e.sleep(ctx, d)
 	}
 	sleepCtx, cancel := context.WithCancel(ctx)
 	exited := make(chan struct{})
@@ -163,17 +171,43 @@ func (e *Engine) wait(ctx context.Context, d time.Duration) bool {
 		case <-sleepCtx.Done():
 		}
 	}()
-	e.Clock.Sleep(sleepCtx, d)
+	e.sleep(sleepCtx, d)
 	cancel()
 	<-exited
 	return ctx.Err() == nil
 }
 
+// sleep waits for d in steps of statusRefresh, refreshing status.json after
+// each. It returns false once ctx has ended.
+func (e *Engine) sleep(ctx context.Context, d time.Duration) bool {
+	for d > 0 {
+		chunk := min(d, statusRefresh)
+		if !e.Clock.Sleep(ctx, chunk) {
+			return false
+		}
+		d -= chunk
+		if d > 0 {
+			e.refreshStatus()
+		}
+	}
+	return true
+}
+
+// refreshStatus rewrites status.json between writes that report a decision:
+// only updatedAt and the stream fields change, so lastCheck and nextCheck stay
+// those of the last one.
+func (e *Engine) refreshStatus() {
+	next := e.nextCheck
+	e.writeStatusAt(e.checkedAt, &next)
+}
+
 // RunOnce performs one cycle and returns how long to wait before the next.
 func (e *Engine) RunOnce(ctx context.Context) time.Duration {
 	wait := e.cycle(ctx)
-	next := e.Clock.Now().Add(wait)
-	e.writeStatus(&next)
+	e.checkedAt = e.Clock.Now()
+	e.nextCheck = e.checkedAt.Add(wait)
+	next := e.nextCheck
+	e.writeStatusAt(e.checkedAt, &next)
 	return wait
 }
 
@@ -362,10 +396,12 @@ func (e *Engine) attemptSwitch(ctx context.Context, sha string) {
 			break
 		}
 		wait := Backoff(attempt)
-		next := e.Clock.Now().Add(wait)
+		e.checkedAt = e.Clock.Now()
+		e.nextCheck = e.checkedAt.Add(wait)
+		next := e.nextCheck
 		e.setPhase(state.PhaseRetrying)
-		e.writeStatus(&next)
-		if !e.Clock.Sleep(ctx, wait) {
+		e.writeStatusAt(e.checkedAt, &next)
+		if !e.sleep(ctx, wait) {
 			return
 		}
 	}
@@ -470,8 +506,13 @@ func (e *Engine) recordFailure(msg string) {
 }
 
 func (e *Engine) writeStatus(nextCheck *time.Time) {
+	e.writeStatusAt(e.Clock.Now(), nextCheck)
+}
+
+func (e *Engine) writeStatusAt(lastCheck time.Time, nextCheck *time.Time) {
 	st := state.Status{
-		LastCheck:           e.Clock.Now(),
+		UpdatedAt:           e.Clock.Now(),
+		LastCheck:           lastCheck,
 		Phase:               e.phase,
 		PhaseSince:          e.phaseSince,
 		TipSha:              e.st.LastSeenSha,
