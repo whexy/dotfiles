@@ -47,7 +47,7 @@ let
       "MUSE_CUSTOM_HEADERS"
       "MUSE_MODEL"
     ];
-    entries = import ./models.nix { llm = import ../launcher/gateways.nix { inherit config; }; };
+    entries = import ./models.nix { llmGateways = config.dotfiles.llmGateways; };
   };
 in
 {

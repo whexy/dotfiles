@@ -1,7 +1,8 @@
 {
   pkgs,
   lib,
-  llm,
+  gateways,
+  access,
   model,
   smallModel,
   mcpServers,
@@ -41,9 +42,12 @@ in
     {
       package = "${./plugins/proxy}";
       options = {
-        cfAccessIdPath = llm.accessToken.idPath;
-        cfAccessSecretPath = llm.accessToken.secretPath;
-        gateways = lib.mapAttrsToList (id: gateway: gateway // { inherit id; }) llm.gateways;
+        cfAccessIdPath = access.idPath;
+        cfAccessSecretPath = access.secretPath;
+        # The plugin reaches the public origins only.
+        gateways = lib.mapAttrsToList (
+          id: gateway: removeAttrs gateway [ "relayPort" ] // { inherit id; }
+        ) gateways;
         # /bin/cat does not exist on NixOS.
         cat = "${pkgs.coreutils}/bin/cat";
         # The cluster's SearXNG, in the gateways' Cloudflare Access application.
@@ -86,5 +90,5 @@ in
     action = "provider.use";
     resource = id;
     effect = "allow";
-  }) (lib.attrNames llm.gateways);
+  }) (lib.attrNames gateways);
 }

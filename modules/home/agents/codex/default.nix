@@ -21,7 +21,10 @@ let
       "OPENAI_BASE_URL"
       "CODEX_API_KEY"
     ];
-    entries = import ./models.nix { llm = import ../launcher/gateways.nix { inherit config; }; };
+    entries = import ./models.nix {
+      inherit lib;
+      llmGateways = config.dotfiles.llmGateways;
+    };
   };
 in
 {

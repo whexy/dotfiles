@@ -1,4 +1,4 @@
-{ llm }:
+{ lib, llmGateways }:
 # Codex discovers a gateway's models itself through `model_catalog_url`, so
 # its own model picker lists them; each gateway's entry only configures the
 # provider. The native login entry clears the provider so Codex uses its saved
@@ -9,10 +9,10 @@ let
   # a header onto the env var holding its value, so the picker exports the
   # service token and codex reads it at request time, for the catalog too.
   gatewayEntry =
-    id: extra:
+    id: gateway:
     let
-      gateway = llm.gateways.${id};
-      endpoint = llm.endpoint id;
+      endpoint = llmGateways.routes.${id};
+      extra = extras.${id} or { };
     in
     endpoint.relayCheck
     // {
@@ -37,16 +37,14 @@ let
       }
       // extra.settings or { };
     };
-in
-[
-  (gatewayEntry "cliproxyapi" { })
-  (gatewayEntry "magpie" {
+
+  extras.magpie = {
     # Without a model Codex starts on the catalog's first, and magpie ranks
     # its routing groups first.
     settings.model = "codex/gpt-6.1-sol";
     # Codex offers its image tool and web.run search only to a provider
     # carrying this header, as magpie's own Codex config does.
     provider.http_headers."x-openai-actor-authorization" = "magpie";
-  })
-  { label = "default (ChatGPT login)"; }
-]
+  };
+in
+lib.mapAttrsToList gatewayEntry llmGateways.gateways ++ [ { label = "default (ChatGPT login)"; } ]

@@ -15,16 +15,17 @@
 # agent-settings saves the credentials in Muse's own config rather than its
 # environment: the key with `muse auth set`, the Cloudflare Access headers
 # (`secretHeaders`) in `endpoint_transport.http_headers`.
-{ llm }:
+{ llmGateways }:
 let
-  gateway = llm.gateways.cliproxyapi;
+  gateway = llmGateways.gateways.cliproxyapi;
+  route = llmGateways.publicRoutes.cliproxyapi;
   base = {
-    secrets = llm.accessSecrets // {
+    secrets = route.secrets // {
       META_API_KEY = gateway.apiKeyPath;
     };
-    secretHeaders = llm.accessHeaderEnv;
+    inherit (route) secretHeaders;
     settings.endpoint_transport = {
-      base_url = "${gateway.baseUrl}/v1";
+      base_url = "${route.baseUrl}/v1";
       # Muse withholds the key from any host but Meta's own unless the
       # settings pin bearer auth to this base URL.
       auth = "bearer";
@@ -47,7 +48,7 @@ in
     // {
       label = "cliproxyapi";
       discover = {
-        url = "${gateway.baseUrl}/v1/models";
+        url = "${route.baseUrl}/v1/models";
         keyEnv = "META_API_KEY";
         modelEnv = [ "MUSE_MODEL" ];
         owner = "meta";

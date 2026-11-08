@@ -19,7 +19,8 @@ let
   settings = import ./config.nix {
     inherit pkgs lib;
     inherit (cfg.opencode) model smallModel;
-    llm = import ../launcher/gateways.nix { inherit config; };
+    inherit (config.dotfiles.llmGateways) gateways;
+    access = config.dotfiles.cloudflareAccess.serviceToken;
     mcpServers = cfg.mcp.servers;
   };
 in

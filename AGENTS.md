@@ -112,8 +112,9 @@ each in a module of its own. They take what they share from options, never
 from each other:
 
 - `dotfiles.llmGateways` (`modules/home/llm-gateways`): the model gateways,
-  CLIProxyAPI and magpie. Homes with a [tailnet relay](#tailnet-relay) reach
-  their tailnet origins instead.
+  CLIProxyAPI and magpie, and `routes`, how agents reach each: homes with a
+  [tailnet relay](#tailnet-relay) reach their tailnet origins, others the
+  public ones (`publicRoutes`).
 - `dotfiles.cloudflareAccess.serviceToken` (`modules/home/cloudflare-access`):
   the Cloudflare Access service token in front of the gateways, SearXNG, the
   NAS and zepbound. A consumer sets `enable` in its own gate and reads

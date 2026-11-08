@@ -35,7 +35,10 @@ let
       "CLAUDE_CODE_USE_VERTEX"
       "CLAUDE_CODE_USE_FOUNDRY"
     ];
-    entries = import ./models.nix { llm = import ../launcher/gateways.nix { inherit config; }; };
+    entries = import ./models.nix {
+      inherit lib;
+      llmGateways = config.dotfiles.llmGateways;
+    };
   };
 in
 {

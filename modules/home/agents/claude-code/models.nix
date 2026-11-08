@@ -1,7 +1,7 @@
 # claude-code provider/model entries for the fzf picker wrapper.
 # claude reads ANTHROPIC_MODEL and authenticates with ANTHROPIC_API_KEY.
 # Compatible providers additionally require ANTHROPIC_BASE_URL.
-{ llm }:
+{ lib, llmGateways }:
 let
   roles = [
     {
@@ -32,10 +32,9 @@ let
   # The public endpoints sit behind Cloudflare Access, whose service token
   # goes in ANTHROPIC_CUSTOM_HEADERS: `Name: Value` pairs, newline-separated.
   gatewayEntries =
-    id:
+    id: gateway:
     let
-      gateway = llm.gateways.${id};
-      endpoint = llm.endpoint id;
+      endpoint = llmGateways.routes.${id};
     in
     rec {
       default = endpoint.relayCheck // {
@@ -72,14 +71,13 @@ let
         };
       };
     };
-  cliproxyapi = gatewayEntries "cliproxyapi";
-  magpie = gatewayEntries "magpie";
+  gateways = lib.attrValues (lib.mapAttrs gatewayEntries llmGateways.gateways);
 in
-[
-  cliproxyapi.default
-  cliproxyapi.models
-  magpie.default
-  magpie.models
+lib.concatMap (gateway: [
+  gateway.default
+  gateway.models
+]) gateways
+++ [
   # Fusion mode: the main pick fixes the provider (endpoint + key), and
   # each remaining role is then picked from that provider's models only.
   # Roles override the ANTHROPIC_DEFAULT_*_MODEL vars; the main model
@@ -88,10 +86,7 @@ in
     label = "fusion (one model per role)";
     fusion = {
       inherit roles;
-      candidates = [
-        cliproxyapi.models
-        magpie.models
-      ];
+      candidates = map (gateway: gateway.models) gateways;
     };
   }
   # Native claude.ai OAuth login: clears every gateway override. It stays
