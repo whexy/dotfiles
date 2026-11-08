@@ -3,15 +3,14 @@
 #
 # Automation never touches the user's real profile: firefox-devtools-mcp runs
 # Firefox under its own dedicated profile, so only the binary is needed here.
-args@{
+{
   config,
   lib,
   pkgs,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
   cfg = config.dotfiles.browser.firefox;
 in
 {

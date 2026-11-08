@@ -7,7 +7,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.browser;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 
   # Platform-independent policies/settings/search engines, also consumed by
   # packages/firefox-windows-profile to configure Windows Firefox.

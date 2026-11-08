@@ -8,7 +8,7 @@
 let
   cfg = config.dotfiles.vcs;
   localSigner =
-    if pkgs.stdenv.isDarwin then
+    if pkgs.stdenv.hostPlatform.isDarwin then
       "/Applications/1Password.app/Contents/MacOS/op-ssh-sign"
     else
       "${pkgs._1password-gui}/bin/op-ssh-sign";
@@ -22,7 +22,11 @@ in
 {
   config =
     lib.mkIf
-      (cfg.git.enable && cfg.git.signing.enable && (pkgs.stdenv.isDarwin || cfg.git.opSshSigning))
+      (
+        cfg.git.enable
+        && cfg.git.signing.enable
+        && (pkgs.stdenv.hostPlatform.isDarwin || cfg.git.opSshSigning)
+      )
       {
         programs.git.settings.gpg.ssh.program = toString signer;
       };

@@ -1,14 +1,13 @@
 # Shell configuration
-args@{
+{
   config,
   pkgs,
   lib,
   ...
 }:
 let
-  osConfig = args.osConfig or null;
   cfg = config.dotfiles.shell;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
 in
 {
   config = lib.mkIf cfg.zsh.enable (

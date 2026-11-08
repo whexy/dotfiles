@@ -8,7 +8,7 @@ args@{
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.terminal;
-  isDarwin = osConfig != null && lib.hasSuffix "-darwin" osConfig.dotfiles.host.system;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
   style = import ./style.nix;
 in
 {
