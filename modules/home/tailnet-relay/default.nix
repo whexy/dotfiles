@@ -11,6 +11,7 @@
   lib,
   pkgs,
   perSystem,
+  flake,
   ...
 }:
 let
@@ -83,7 +84,7 @@ in
               };
               upstream = lib.mkOption {
                 type = lib.types.str;
-                example = "https://cpa.at-basking.ts.net";
+                example = "https://${flake.lib.tailnetHost "cpa"}";
                 description = "Tailnet origin requests are relayed to.";
               };
               address = lib.mkOption {

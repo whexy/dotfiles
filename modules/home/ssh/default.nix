@@ -4,17 +4,21 @@ args@{
   lib,
   pkgs,
   inputs,
+  flake,
   ...
 }:
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.ssh;
-  isDarwin =
-    if osConfig != null then
-      lib.hasSuffix "-darwin" osConfig.dotfiles.host.system
-    else
-      pkgs.stdenv.hostPlatform.isDarwin;
+  inherit (pkgs.stdenv.hostPlatform) isDarwin;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
+
+  # Flake hosts off the tailnet, the shared servers, reached by their public
+  # names.
+  publicHosts = lib.genAttrs [ "mars" "venus" ] (host: {
+    HostName = "${host}.cs.northwestern.edu";
+    User = "wenxuan";
+  });
 
   # The WM owning the terminal-spawn keybinding owns window identity too.
   wmBackend =
@@ -34,18 +38,17 @@ let
   flakeHosts =
     lib.concatMap (host: [
       host
-      "${host}.at-basking.ts.net"
+      (flake.lib.tailnetHost host)
     ]) hostNames
-    ++ [
-      "mars.cs.northwestern.edu"
-      "venus.cs.northwestern.edu"
-    ];
+    ++ lib.mapAttrsToList (_: block: block.HostName) publicHosts;
   rexTerminfoHosts = "${config.xdg.configHome}/rex/terminfo-hosts";
 
   relay = config.dotfiles.tailnetRelay;
   # The flake hosts by their bare names, which only MagicDNS resolves, apart
-  # from the shared servers that their own blocks name publicly.
-  tailnetHosts = lib.subtractLists [ "mars" "venus" ] hostNames ++ [ "*.at-basking.ts.net" ];
+  # from publicHosts.
+  tailnetHosts = lib.subtractLists (lib.attrNames publicHosts) hostNames ++ [
+    (flake.lib.tailnetHost "*")
+  ];
 in
 {
   imports = [
@@ -79,24 +82,12 @@ in
           enable = !isWsl;
           enableDefaultConfig = false;
 
-          # HM 26.05 deprecated `matchBlocks`; entries now live under `settings`
-          # and use OpenSSH directive names (camelCase aliases dropped).
-          settings = {
+          settings = publicHosts // {
             "*" = {
               IdentityAgent = identityAgent;
               ForwardAgent = true;
               ServerAliveInterval = 25;
               ServerAliveCountMax = 3;
-            };
-
-            "mars" = {
-              HostName = "mars.cs.northwestern.edu";
-              User = "wenxuan";
-            };
-
-            "venus" = {
-              HostName = "venus.cs.northwestern.edu";
-              User = "wenxuan";
             };
 
             rex-terminfo = {
