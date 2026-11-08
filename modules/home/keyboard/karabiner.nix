@@ -1,7 +1,7 @@
 # Karabiner-Elements configuration (macOS)
 #
 # Remap CapsLock to Hyper / CapsLock, Tab to Meh / Tab via tap-hold.
-# This mirrors the kanata setup on NixOS (modules/hosts/desktop/nixos.nix).
+# This mirrors the kanata setup on NixOS (modules/hosts/keyboard/nixos.nix).
 #
 # Hyper = Ctrl+Alt+Shift+Cmd (held CapsLock)
 # Meh   = Ctrl+Alt+Cmd       (held Tab)

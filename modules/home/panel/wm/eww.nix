@@ -29,13 +29,20 @@ let
         }]
   '';
 
-  # Same title rewrites as the Waybar module.
-  windowTitleScript = niriEvents.listen "eww-niri-window-title" "-r" ''
-    focused_window | .title // ""
-    | if endswith(" — Mozilla Firefox") then "󰈹 " + rtrimstr(" — Mozilla Firefox")
-      elif endswith(" - fish") then " " + rtrimstr(" - fish")
-      else . end
-  '';
+  windowTitleScript =
+    let
+      rewrite =
+        t:
+        let
+          suffix = builtins.toJSON t.suffix;
+        in
+        "endswith(${suffix}) then ${builtins.toJSON "${t.icon} "} + rtrimstr(${suffix})";
+    in
+    niriEvents.listen "eww-niri-window-title" "-r" ''
+      focused_window | .title // ""
+      | if ${lib.concatMapStringsSep "\n  elif " rewrite (import ./window-titles.nix)}
+        else . end
+    '';
 in
 {
   config = lib.mkIf enabled {

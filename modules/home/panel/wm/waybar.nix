@@ -18,6 +18,7 @@ let
   niri = lib.getExe config.programs.niri.package;
   sshWindow = lib.getExe config.programs.ssh-window.package;
   niriEvents = import ./niri-events.nix { inherit lib pkgs niri; };
+  windowTitles = import ./window-titles.nix;
 
   enabled = cfg.renderer == "waybar" && config.dotfiles.wm.niri.enable;
 in
@@ -37,11 +38,13 @@ in
         "niri/window" = {
           format = "{}";
           max-length = 50;
-          rewrite = {
-            "(.*) — Mozilla Firefox" = "󰈹 $1";
-            "(.*) - fish" = " $1";
-            "(.*)" = "$1";
-          };
+          rewrite =
+            lib.listToAttrs (
+              map (t: lib.nameValuePair "(.*)${lib.escapeRegex t.suffix}" "${t.icon} $1") windowTitles
+            )
+            // {
+              "(.*)" = "$1";
+            };
         };
       }
       (lib.mkIf config.programs.ssh-window.enable {
