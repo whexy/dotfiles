@@ -19,6 +19,10 @@
       enable = true;
       hostName = "venus-relay";
     };
+    terminal.rex.server = {
+      enable = true;
+      hostName = "venus-rex";
+    };
   };
 
   home.stateVersion = "26.05";

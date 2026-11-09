@@ -600,16 +600,28 @@ On NixOS (the `dev` cap), Rex's login server serves the route. It learns each
 caller's Tailscale login from tailscaled and admits only `whexy@github`, as the
 primary user. WSL has no server: the Windows client there cannot name callers.
 
+On homes that run the [tailnet relay](#tailnet-relay) (mars and venus),
+`dotfiles.terminal.rex.server` runs Rex's server as a user service with its
+own tsnet node, `<host>-rex`, which Rex serves on 443: clients add
+`https://<host>-rex.at-basking.ts.net`.
+
+- The node joins with the relay's OAuth client secret, so it carries
+  `tag:tailnet-relay`. A tagged node has no owner, so Rex admits every caller
+  the tailnet policy lets reach it, as the user; a grant from `whexy@github`
+  to `tag:tailnet-relay` on `tcp:443` is the only gate.
+- A switch leaves a running server alone, since a restart ends every session;
+  it takes a new Rex version at its next start.
+
 There is no public tunnel: without authentication in Rex, one would give anyone
 a shell.
 
 ### The rex input
 
-The login server comes from the `rex` flake input, which pkgs.superlogical.com
-serves only with Rex's testing token until Rex's first release. Every NixOS
-evaluation imports Rex's module, so every system host decrypts the token into
-Nix's netrc (`dotfiles.nix.rexNetrc`, on the `base` cap); homes never fetch the
-input.
+Both servers come from the `rex` flake input. pkgs.superlogical.com served it
+only with Rex's testing token, and now serves it without one. Every NixOS
+evaluation imports Rex's module, and every system host still decrypts the token
+into Nix's netrc (`dotfiles.nix.rexNetrc`, on the `base` cap); homes with
+`terminal.rex.server` fetch the input without it.
 
 In CI, the update lane and the check on master read the token from the
 Woodpecker secret `rex_package_token`. A pull-request check has no token and

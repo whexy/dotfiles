@@ -19,6 +19,10 @@
       enable = true;
       hostName = "mars-relay";
     };
+    terminal.rex.server = {
+      enable = true;
+      hostName = "mars-rex";
+    };
   };
 
   home.homeDirectory = "/data/wenxuan";

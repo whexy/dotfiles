@@ -1,15 +1,40 @@
 # Rex terminal multiplexer: the Rex Beta app (macOS) with Ghostty's font and
-# themes, and the xterm-rex terminfo entry its terminals announce.
+# themes, the xterm-rex terminfo entry its terminals announce, and Rex's
+# server on the tailnet for homes without a Tailscale daemon.
 args@{
   config,
   lib,
   pkgs,
   perSystem,
+  inputs,
   ...
 }:
 let
   osConfig = args.osConfig or null;
   cfg = config.dotfiles.terminal;
+  relay = config.dotfiles.tailnetRelay;
+  rex = inputs.rex.packages.${pkgs.stdenv.hostPlatform.system}.rex;
+
+  serve = pkgs.writeShellScript "rex-server" ''
+    args=(
+      server run
+      --tailscale
+      --tailscale-hostname ${lib.escapeShellArg cfg.rex.server.hostName}
+      # Tagged nodes have no owner, so the tailnet policy alone admits callers.
+      --tailscale-allow-tailnet-members
+      ${lib.concatMapStringsSep " " (
+        tag: "--tailscale-advertise-tag ${lib.escapeShellArg tag}"
+      ) relay.tags}
+    )
+    # Rex reads the key only until the node first joins. A bare client
+    # secret mints an ephemeral key, and Tailscale removes an ephemeral node
+    # soon after it goes offline, taking the saved identity with it.
+    secret="${config.age.secrets.tailnet-relay-oauth.path}"
+    if key=$(${lib.getExe' pkgs.coreutils "cat"} "$secret" 2>/dev/null) && [ -n "$key" ]; then
+      exec ${lib.getExe rex} "''${args[@]}" --tailscale-auth-key-file - <<<"$key?ephemeral=false&preauthorized=true"
+    fi
+    exec ${lib.getExe rex} "''${args[@]}"
+  '';
   app = "/Applications/Rex Beta.app";
   terminfo = perSystem.self.rex-terminfo;
   style = import ./style.nix;
@@ -132,6 +157,41 @@ in
         run --silence ${pkgs.ncurses}/bin/tic -x -o "$HOME/.terminfo" ${terminfo.src} \
           || warnEcho "xterm-rex was not installed in ~/.terminfo"
       '';
+    })
+
+    (lib.mkIf cfg.rex.server.enable {
+      assertions = [
+        {
+          assertion = relay.enable;
+          message = "dotfiles.terminal.rex.server joins the tailnet with the tailnet relay's OAuth client, so it needs dotfiles.tailnetRelay.";
+        }
+      ];
+
+      systemd.user.services.rex = {
+        Unit = {
+          Description = "Rex server, on the tailnet as ${cfg.rex.server.hostName}";
+          After = [ "agenix.service" ];
+          Wants = [ "agenix.service" ];
+          # A restart ends every session, so a switch leaves the running
+          # server on its version until it next starts.
+          X-SwitchMethod = "keep-old";
+        };
+        Service = {
+          Type = "notify";
+          NotifyAccess = "main";
+          ExecStart = "${serve}";
+          Environment = [
+            # The trailing empty element keeps the system terminfo directories.
+            "TERMINFO_DIRS=${rex}/share/terminfo:"
+            # Go refuses to start under a GODEBUG naming a removed setting,
+            # which some systems export to every session.
+            "GODEBUG="
+          ];
+          Restart = "on-failure";
+          RestartSec = 5;
+        };
+        Install.WantedBy = [ "default.target" ];
+      };
     })
   ];
 }

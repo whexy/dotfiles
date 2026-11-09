@@ -27,6 +27,19 @@ in
     rex = {
       enable = lib.mkEnableOption "the Rex Beta terminal multiplexer app with Ghostty's look (macOS)";
       terminfo.enable = lib.mkEnableOption "Rex's xterm-rex terminfo entry, for Rex terminals that reach this machine";
+      server = {
+        enable = lib.mkEnableOption ''
+          Rex's server as a user service, on the tailnet as a node of its own
+          that joins with the tailnet relay's OAuth client and tags (Linux
+          homes that run dotfiles.tailnetRelay). Every caller the tailnet
+          policy lets reach the node on 443 gets a shell as this user
+        '';
+        hostName = lib.mkOption {
+          type = lib.types.str;
+          example = "venus-rex";
+          description = "Name of the server's node on the tailnet.";
+        };
+      };
     };
     adopt.enable = lib.mkEnableOption "totmux/tozellij job adoption wrappers (Linux)";
   };
