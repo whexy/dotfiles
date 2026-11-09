@@ -549,6 +549,15 @@ served: the first one refreshes the cache. Activation brings an existing
 selection's gateway variables up to date, so the flag reaches hosts without
 running `claude-select` again.
 
+### Push notifications
+
+Every server publishes its agent activity to the fork's push relay,
+`https://t3-push.clusters.work`, which sends the fork iOS app's notifications
+and Live Activity (`dotfiles.t3code.server.push.enable`, on by default). The
+wrapper reads the shared `t3-push-host-token` secret at each start; when it
+cannot, the server starts without push and logs
+`t3-push: host token unreadable`.
+
 ### Desktop app
 
 The `gui` cap installs the T3 Code desktop app
