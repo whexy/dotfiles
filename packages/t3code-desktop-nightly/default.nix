@@ -3,33 +3,20 @@
   flake,
 }:
 
-# The T3 Code desktop app on Linux, at the upstream nightly whexy/t3code's
-# server (t3code-fork) builds; update.py follows that version, so the pin
-# moves only with the fork's. macOS installs T3's signed app instead, which
-# updates itself (modules/home/t3code).
+# whexy/t3code's desktop app on Linux, at the nightly the fork's server
+# (t3code-fork) builds; update.py follows that version, so the pin moves only
+# with the fork's. The fork releases x86_64 only. macOS installs the fork's
+# signed app instead, which updates itself (modules/home/t3code).
 let
   inherit (pkgs) lib;
   sources = lib.importJSON ./sources.json;
   inherit (sources) version;
-  inherit (pkgs.stdenv.hostPlatform) system;
 
   pname = "t3code-desktop";
-  platform =
-    {
-      aarch64-linux = {
-        name = "linux-arm64";
-        arch = "arm64";
-      };
-      x86_64-linux = {
-        name = "linux-x64";
-        arch = "x86_64";
-      };
-    }
-    .${system} or (throw "t3code-desktop-nightly: unsupported system ${system}");
 
   src = pkgs.fetchurl {
-    url = "https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-${platform.arch}.AppImage";
-    hash = sources.hashes.${platform.name};
+    url = "https://github.com/whexy/t3code/releases/download/${version}/T3-Code-${version}-x86_64.AppImage";
+    inherit (sources) hash;
   };
 
   contents = pkgs.appimageTools.extract { inherit pname version src; };
@@ -59,12 +46,9 @@ pkgs.appimageTools.wrapAppImage {
   meta = {
     description = "Nightly T3 Code desktop app";
     homepage = "https://t3.codes";
-    changelog = "https://github.com/pingdotgg/t3code/releases/tag/v${version}";
+    changelog = "https://github.com/whexy/t3code/releases/tag/${version}";
     license = lib.licenses.mit;
     mainProgram = pname;
-    platforms = [
-      "x86_64-linux"
-      "aarch64-linux"
-    ];
+    platforms = [ "x86_64-linux" ];
   };
 }

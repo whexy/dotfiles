@@ -553,10 +553,15 @@ running `claude-select` again.
 
 The `gui` cap installs the T3 Code desktop app
 (`dotfiles.t3code.desktop.enable`). On Linux it is
-`t3code-desktop-nightly`, at the upstream nightly the pinned server builds,
-with its own updater off. On macOS, activation installs
-`/Applications/T3 Code (Nightly).app` at that nightly only when it is
-missing, and the app updates itself from then on.
+`t3code-desktop-nightly`, whexy/t3code's AppImage at the nightly the pinned
+server builds, with its own updater off. The fork releases the app once per
+upstream nightly, so until that release exists the previous pin stays. On
+macOS, activation installs the fork's signed app at
+`/Applications/T3 Code (Nightly).app`, at that nightly, when it is missing or
+is not the fork's, such as upstream's app of the same name, and the app updates
+itself from the fork's releases from then on. The fork's app has its own
+keychain entries, so secrets upstream's app stored there are entered again
+once.
 
 The app's bundled server needs `~/.t3/userdata` to itself; while the server
 service holds it, the app reports "This T3 home is unavailable" and quits.
