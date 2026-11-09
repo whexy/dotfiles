@@ -607,8 +607,8 @@ own tsnet node, `<host>-rex`, which Rex serves on 443: clients add
 
 - The node joins with the relay's OAuth client secret, so it carries
   `tag:tailnet-relay`. A tagged node has no owner, so Rex admits every caller
-  the tailnet policy lets reach it, as the user; a grant from `whexy@github`
-  to `tag:tailnet-relay` on `tcp:443` is the only gate.
+  the tailnet policy lets reach `tag:tailnet-relay` on `tcp:443`, as the user,
+  so that policy is the only gate.
 - A switch leaves a running server alone, since a restart ends every session;
   it takes a new Rex version at its next start.
 
