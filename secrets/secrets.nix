@@ -76,12 +76,7 @@ in
   "openai-api-key.age".publicKeys = to homes;
   "t3-push-host-token.age".publicKeys = to homes;
   # Homes that run a public tunnel.
-  "cloudflared-cert.age".publicKeys = to (
-    removeAttrs homes [
-      "wenxuan@mars"
-      "wenxuan@venus"
-    ]
-  );
+  "cloudflared-cert.age".publicKeys = to homes;
   "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
   # A Tailscale OAuth client secret that mints tag:tailnet-relay keys, for
   # the homes that run dotfiles.tailnetRelay.

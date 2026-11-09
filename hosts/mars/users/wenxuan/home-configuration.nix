@@ -10,10 +10,9 @@
 
   dotfiles = {
     autoUpgrade.enable = true;
-    # No T3 server runs here, and the fork's t3 comes only from
-    # whexy-t3code.cachix.org, which this home's Nix daemon may not trust;
-    # without it every upgrade would compile T3 from source.
-    t3code.enable = false;
+    tunnels.hostName = "mars";
+    # Off the tailnet, so the tunnel is the server's only route.
+    t3code.server.enable = true;
     # A shared server, kept off the tailnet; its agents reach the tailnet
     # gateways through this user's own relay.
     tailnetRelay = {
