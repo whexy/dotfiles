@@ -62,6 +62,16 @@ in
           Serve at `https://<MagicDNS name>:35338`.
         '';
       };
+      push.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = false;
+        description = ''
+          Whether the server publishes agent activity to the fork's t3-push
+          relay at `https://t3-push.clusters.work`, which sends the fork iOS
+          app's notifications and Live Activity. The host reads the shared
+          `t3-push-host-token` secret.
+        '';
+      };
       tunnel = {
         enable = lib.mkOption {
           type = lib.types.bool;

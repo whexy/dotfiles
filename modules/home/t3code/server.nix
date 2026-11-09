@@ -19,6 +19,7 @@ let
     inherit (config.home) profileDirectory homeDirectory;
     stateHome = config.xdg.stateHome;
     inherit (config.dotfiles.agents.launcher) gitConfig;
+    pushTokenPath = if cfg.server.push.enable then config.age.secrets.t3-push-host-token.path else null;
   };
 
   # T3 treats an executable at this path as its installed preview browser; the
@@ -30,6 +31,9 @@ in
 {
   config = lib.mkIf (cfg.enable && cfg.server.enable) {
     inherit (services) systemd launchd;
+    age.secrets.t3-push-host-token = lib.mkIf cfg.server.push.enable {
+      file = ../../../secrets/t3-push-host-token.age;
+    };
     dotfiles.linger.enable = lib.mkDefault true;
 
     dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable {

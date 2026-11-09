@@ -19,6 +19,9 @@
   # Where the wrapper's resolve keeps status.json, given to the updater too.
   stateHome,
   gitConfig,
+  # The t3-push host token's decrypted path, or null to publish nowhere. Home
+  # Manager's agenix path holds a variable the shell expands at start.
+  pushTokenPath ? null,
 }:
 let
   names = import ./units.nix;
@@ -58,9 +61,21 @@ let
     export T3CODE_DEV_MANAGED_POLICY_PATH
   '';
 
+  # A missing or unreadable token starts the server without push.
+  applyPush = lib.optionalString (pushTokenPath != null) ''
+    if T3CODE_PUSH_TOKEN=$(${lib.getExe' pkgs.coreutils "cat"} "${pushTokenPath}" 2>/dev/null) &&
+      [ -n "$T3CODE_PUSH_TOKEN" ]; then
+      export T3CODE_PUSH_URL=https://t3-push.clusters.work T3CODE_PUSH_TOKEN
+    else
+      echo "t3-push: host token unreadable; publishing nowhere" >&2
+      unset T3CODE_PUSH_TOKEN
+    fi
+  '';
+
   serve = pkgs.writeShellScript "t3-serve" (
     launchEnvironment
     + applyPolicy
+    + applyPush
     + ''
       exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port ${toString tailnetPort}"}
     ''

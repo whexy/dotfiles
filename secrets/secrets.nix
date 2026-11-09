@@ -74,6 +74,7 @@ in
   "kube-clusters-work.age".publicKeys = to homes;
   "magpie-api-key.age".publicKeys = to homes;
   "openai-api-key.age".publicKeys = to homes;
+  "t3-push-host-token.age".publicKeys = to homes;
   # Homes that run a public tunnel.
   "cloudflared-cert.age".publicKeys = to (
     removeAttrs homes [
