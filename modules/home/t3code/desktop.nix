@@ -1,5 +1,5 @@
-# The T3 Code desktop app: the pinned package on Linux, T3's own build on
-# macOS, and a client of the server service wherever that runs.
+# whexy/t3code's desktop app: the pinned package on Linux, the fork's signed
+# build on macOS, and a client of the server service wherever that runs.
 {
   config,
   lib,
@@ -29,10 +29,14 @@ let
     value = false;
   };
 
-  # T3's updater replaces the macOS app itself, so activation installs it only
-  # when it is missing, at the nightly the server builds. Installing as the user
-  # lets the updater run without an admin prompt.
+  # The app's updater replaces the macOS app itself, so activation installs it
+  # only when it is missing or is not the fork's, such as upstream's app of the
+  # same name, at the nightly the server builds. Installing as the user lets the
+  # updater run without an admin prompt.
   desktopApp = "/Applications/T3 Code (Nightly).app";
+  # Nothing pins the archive's hash, so only the fork's Developer ID vouches for
+  # what gets installed.
+  forkSignature = ''anchor apple generic and identifier "dev.whexy.t3code.desktop" and certificate leaf[subject.OU] = "26DMRHRW6Z"'';
   installDesktopApp =
     let
       inherit (perSystem.self.t3code-fork) version;
@@ -45,14 +49,11 @@ let
 
         /usr/bin/curl -fsSL --retry 3 --connect-timeout 30 --speed-limit 10240 --speed-time 60 \
           -o "$tmp/T3.zip" \
-          https://github.com/pingdotgg/t3code/releases/download/v${version}/T3-Code-${version}-arm64.zip
+          https://github.com/whexy/t3code/releases/download/${version}/T3-Code-${version}-arm64.zip
         /usr/bin/ditto -x -k "$tmp/T3.zip" "$tmp"
-
-        # Nothing pins the archive's hash, so only T3 Tools' Developer ID
-        # vouches for what gets installed.
-        /usr/bin/codesign --verify --deep --strict \
-          -R='anchor apple generic and identifier "com.t3tools.t3code" and certificate leaf[subject.OU] = "ARK85ZXQ4Z"' \
+        /usr/bin/codesign --verify --deep --strict -R=${lib.escapeShellArg forkSignature} \
           "$tmp/T3 Code (Nightly).app"
+        rm -rf ${lib.escapeShellArg desktopApp}
         mv "$tmp/T3 Code (Nightly).app" ${lib.escapeShellArg desktopApp}
       '';
     };
@@ -63,8 +64,8 @@ in
       # The app's bundled server reads the privacy switches from the app's
       # environment. The URL-handler entry the app writes must run this
       # wrapper, not the package's own program, or links open it unwrapped.
-      # T3's own macOS app runs unwrapped: the policy covers it wherever the
-      # server service runs, and it is a client of that server.
+      # The macOS app runs unwrapped: the policy covers it wherever the server
+      # service runs, and it is a client of that server.
       packages = lib.optional (!isDarwin) (
         privacy.wrapWith {
           T3CODE_DESKTOP_LAUNCHER_PATH = "${placeholder "out"}/bin/t3code-desktop";
@@ -79,7 +80,7 @@ in
         }
         // lib.optionalAttrs isDarwin {
           t3codeDesktopApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-            if [ ! -e ${lib.escapeShellArg desktopApp} ]; then
+            if ! /usr/bin/codesign --verify -R=${lib.escapeShellArg forkSignature} ${lib.escapeShellArg desktopApp} 2>/dev/null; then
               run ${lib.getExe installDesktopApp} || warnEcho "T3 Code was not installed; the next activation retries"
             fi
           '';
