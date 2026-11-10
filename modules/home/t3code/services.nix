@@ -14,6 +14,8 @@
   # restarts the server when it changes (dotfiles.t3code.policy.resolver),
   # or null for none.
   policy ? null,
+  # The server's public origin, which it builds webhook URLs on, or null for none.
+  publicUrl ? null,
   profileDirectory,
   homeDirectory,
   # Where the wrapper's resolve keeps status.json, given to the updater too.
@@ -77,6 +79,7 @@ let
     + applyPolicy
     + applyPush
     + ''
+      ${lib.optionalString (publicUrl != null) "export T3CODE_PUBLIC_URL=${lib.escapeShellArg publicUrl}"}
       exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port ${toString tailnetPort}"}
     ''
   );

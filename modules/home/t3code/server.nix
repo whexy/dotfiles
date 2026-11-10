@@ -16,6 +16,11 @@ let
     inherit (flake.lib.t3) port tailnetPort;
     t3 = lib.getExe' cfg.finalPackage "t3";
     policy = cfg.policy.resolver;
+    publicUrl =
+      if cfg.server.tunnel.enable then
+        "https://${config.dotfiles.tunnels.services.t3code-tunnel.hostname}"
+      else
+        null;
     inherit (config.home) profileDirectory homeDirectory;
     stateHome = config.xdg.stateHome;
     inherit (config.dotfiles.agents.launcher) gitConfig;
