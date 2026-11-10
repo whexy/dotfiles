@@ -1,5 +1,6 @@
 # T3 Code: its server, published on the tailnet and through a public tunnel,
-# the desktop app, the t3-pair helper, and the SSH device host.
+# the desktop app, the t3-pair helper, the t3-mesh links between servers, and
+# the SSH device host.
 #
 # This file declares the options and installs the package; each part has its
 # own file beside it.
@@ -17,6 +18,7 @@ let
 in
 {
   imports = [
+    ./mesh.nix
     ./policy.nix
     ./server.nix
     ./desktop.nix

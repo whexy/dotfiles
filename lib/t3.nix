@@ -11,4 +11,15 @@
   alertWebhook = "https://n8n.clusters.work/webhook/t3code-alert";
   # Where the managed policy is edited.
   policyEditor = "https://${tailnetHost "t3-policy"}/";
+  # Hosts whose T3 Code servers t3-mesh links to one another, each in both
+  # directions. The host running it reaches the others over Tailscale SSH.
+  mesh = [
+    "mudd"
+    "deimos"
+    "neith"
+    "phobos"
+    "seeley"
+    "sheridan"
+    "zoozve"
+  ];
 }
