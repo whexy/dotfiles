@@ -10,6 +10,8 @@
       rex.enable = lib.mkIf pkgs.stdenv.hostPlatform.isDarwin (lib.mkDefault true);
     };
     fonts.enable = lib.mkDefault true;
+    # Boot and shutdown progress on the console; only has an effect on NixOS.
+    system.bootvine.enable = lib.mkDefault true;
     # The home browser group follows this; on Darwin it also installs the
     # Firefox Homebrew cask.
     browser.firefox.enable = lib.mkDefault true;

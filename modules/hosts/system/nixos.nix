@@ -1,6 +1,7 @@
 {
   config,
   flake,
+  inputs,
   lib,
   pkgs,
   perSystem,
@@ -19,6 +20,8 @@ let
   };
 in
 {
+  imports = [ inputs.bootvine.nixosModules.default ];
+
   config = lib.mkMerge [
     # Inert without systemd-boot. Each listed generation keeps its kernel and
     # initrd on the ESP, so under auto-upgrades an uncapped menu fills a
@@ -95,5 +98,12 @@ in
     (lib.mkIf cfg.docs.enable { documentation.dev.enable = true; })
 
     (lib.mkIf cfg.fwupd.enable { services.fwupd.enable = true; })
+
+    (lib.mkIf cfg.bootvine.enable {
+      services.bootvine.enable = true;
+      # bootvine silences the console only once it starts; this keeps the
+      # kernel's earlier warnings off the screen (they stay in the journal).
+      boot.consoleLogLevel = lib.mkDefault 3;
+    })
   ];
 }

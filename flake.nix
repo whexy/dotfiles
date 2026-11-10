@@ -131,6 +131,14 @@
       url = "https://pkgs.superlogical.com/rex/nix/preview.tar.gz";
       inputs.nixpkgs.follows = "nixpkgs";
     };
+
+    # Following our nixpkgs links bootvine against the systemd it watches and
+    # keeps a second systemd out of the initrd, at the cost of
+    # wvhulle.cachix.org, which caches only upstream's own lock.
+    bootvine = {
+      url = "git+https://codeberg.org/wvhulle/bootvine";
+      inputs.nixpkgs.follows = "nixpkgs";
+    };
   };
 
   outputs =

@@ -1,5 +1,5 @@
-# System group: timezone, auto-upgrade, boot menu size, developer
-# documentation, Xcode management.
+# System group: timezone, auto-upgrade, boot menu size, boot console,
+# developer documentation, Xcode management.
 { config, lib, ... }:
 let
   cfg = config.dotfiles.system;
@@ -37,6 +37,8 @@ in
     };
 
     fwupd.enable = lib.mkEnableOption "Linux Vendor firmware service";
+
+    bootvine.enable = lib.mkEnableOption "bootvine, a live tree of systemd jobs on the console during boot (from the initrd) and shutdown";
 
     docs.enable = lib.mkEnableOption "developer documentation (man pages for syscalls & libc, sections 2 and 3)";
 
