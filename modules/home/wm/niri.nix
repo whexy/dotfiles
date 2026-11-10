@@ -87,21 +87,23 @@ in
         package = pkgs.niri;
       };
       services = {
-        # Lock after 5 minutes, blank the displays shortly afterward, and always
-        # lock before suspend. Any input event powers the monitors back on.
+        # Lock after 5 minutes (unless idleLock is off), blank the displays
+        # shortly afterward, and always lock before suspend. Any input event
+        # powers the monitors back on.
         swayidle = {
           enable = true;
           events.before-sleep = "${swaylock} -f";
-          timeouts = [
-            {
+          timeouts =
+            lib.optional cfg.niri.idleLock.enable {
               timeout = 300; # 5 minutes
               command = "${swaylock} -f";
             }
-            {
-              timeout = 305;
-              command = "${config.programs.niri.package}/bin/niri msg action power-off-monitors";
-            }
-          ];
+            ++ [
+              {
+                timeout = 305;
+                command = "${config.programs.niri.package}/bin/niri msg action power-off-monitors";
+              }
+            ];
         };
       };
 

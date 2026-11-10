@@ -13,7 +13,14 @@ let
 in
 {
   options.dotfiles.wm = {
-    niri.enable = lib.mkEnableOption "the niri Wayland compositor";
+    niri = {
+      enable = lib.mkEnableOption "the niri Wayland compositor";
+      idleLock.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = true;
+        description = "Whether to lock the session after 5 minutes idle. The session still locks before suspend.";
+      };
+    };
     darwin = {
       enable = lib.mkEnableOption "window management on macOS";
       windowManager = lib.mkOption {
