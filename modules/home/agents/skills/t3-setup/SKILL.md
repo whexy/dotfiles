@@ -26,12 +26,17 @@ curl -s "https://$(hostname -s)-t3.clusters.work/.well-known/t3/environment" | j
 
 ## Webhooks
 
-Without T3 Connect, `schedule_task` returns no `webhookUrl`, and its
-description tells you to send the user to T3 Connect. Don't: every T3 server
-answers webhooks itself at `/api/hooks/<task id>/<token>`, so build the URL on
-the public route.
+Every T3 server answers webhooks itself at `/api/hooks/<task id>/<token>`.
+Dotfiles starts each server that has the public route with
+`T3CODE_PUBLIC_URL` set to it, so `schedule_task` returns a `webhookUrl` on
+that route. Give Wenxuan that full URL. The token in it is the credential:
+never commit it or write it into a repository.
 
-1. Create the task with `schedule_task` and keep its `scheduledTaskId`.
+No `webhookUrl` means the host has no public route, or its server predates
+the fork's `T3CODE_PUBLIC_URL` support. Don't send Wenxuan to T3 Connect:
+build the URL yourself.
+
+1. Keep the task's `scheduledTaskId`.
 2. On the host whose server owns the task (the one you run on, when T3 Code
    started you), read the token from the server's database. Open it read-only:
    it is the live T3 Code database.
@@ -47,8 +52,6 @@ the public route.
 
 3. Check the public route is up. If it isn't, say this host has no public
    route: GitHub and other outside senders cannot reach the tailnet URL.
-4. Give Wenxuan the full URL, as T3 Connect would. The token is the
-   credential: never commit it or write it into a repository.
 
 To test without starting a run:
 
