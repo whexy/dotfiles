@@ -50,15 +50,15 @@ let
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "rea-agents";
-  version = "6.8.0";
+  version = "6.9.0";
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/rea-agents/-/rea-agents-${finalAttrs.version}.tgz";
-    hash = "sha256-jVQux2qcs1BYS2CmycCIcG/4EtW7WwlMIMlbbcJWmLs=";
+    hash = "sha256-MiM4oVBeJVdwKhYBLn1Gq9tXKWQdmJOGYnYt+/t5Jio=";
   };
 
   nodejs = pkgs.nodejs_24;
-  npmDepsHash = "sha256-XGu4uNmzDBjm3eE3PXpJGBcz7+vrZK1PnRhJihIQNHo=";
+  npmDepsHash = "sha256-qncJptwoKcu7fbu9S0g99WnMVZgE2rMisvKg4FzEnGI=";
 
   inherit (npm) postPatch dontNpmBuild;
 
