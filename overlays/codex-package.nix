@@ -5,6 +5,7 @@
   codex,
   ripgrep,
   bubblewrap,
+  patchelf,
 }:
 let
   manifest = builtins.toJSON {
@@ -22,13 +23,26 @@ in
 runCommand "codex-${codex.version}-packaged"
   {
     inherit (codex) version meta;
+    nativeBuildInputs = lib.optional stdenv.hostPlatform.isLinux patchelf;
     passthru.unwrapped = codex;
   }
   ''
     mkdir -p "$out/bin" "$out/codex-path" "$out/codex-resources"
     ${
       if stdenv.hostPlatform.isLinux then
-        ''cp -L ${codex}/libexec/codex/bin/* "$out/bin/"''
+        # Codex links aws-lc as unversioned libssl.so/libcrypto.so. Hosts that
+        # put nix-ld's directory on LD_LIBRARY_PATH (incus-container with
+        # NVIDIA) would shadow them with OpenSSL, which lacks aws-lc symbols
+        # such as EC_group_p384. DT_RPATH is searched before LD_LIBRARY_PATH;
+        # DT_RUNPATH is not.
+        ''
+          cp -L ${codex}/libexec/codex/bin/* "$out/bin/"
+          chmod u+w "$out"/bin/*
+          for f in "$out"/bin/*; do
+            patchelf --force-rpath --set-rpath "$(patchelf --print-rpath "$f")" "$f"
+          done
+          chmod u-w "$out"/bin/*
+        ''
       else
         ''cp -L ${codex}/bin/* "$out/bin/"''
     }
