@@ -76,9 +76,10 @@ def github_branch(pkg: Package, config: dict[str, Any]) -> None:
 def npm(pkg: Package, config: dict[str, Any]) -> None:
     """Bump an npm registry tarball and regenerate its vendored lockfile.
 
-    The tarball carries no lockfile, and the lockfile must match package.json
-    after the package's own ``postPatch`` filter, so the lock is generated
-    here from the filtered package.json rather than by nix-update.
+    The lockfile must match package.json after the package's own
+    ``postPatch`` filter, so the lock is generated here from the filtered
+    package.json rather than by nix-update, starting from the tarball's
+    npm-shrinkwrap.json when it ships one.
     """
     latest = npm_version(config.get("package", pkg.pname), config.get("distTag", "latest"))
     if latest != pkg.version:
@@ -128,6 +129,11 @@ def generate_lockfile(tarball: Path, jq_filter: str, dest: Path) -> None:
         manifest = source / "package.json"
         filtered = nix.run(["jq", jq_filter, str(manifest)], capture=True).stdout
         manifest.write_text(filtered)
+        # npm writes to a shrinkwrap in place of package-lock.json, and the
+        # build keeps only package-lock.json.
+        shrinkwrap = source / "npm-shrinkwrap.json"
+        if shrinkwrap.exists():
+            shrinkwrap.rename(source / "package-lock.json")
         env = dict(
             os.environ,
             HOME=str(work),

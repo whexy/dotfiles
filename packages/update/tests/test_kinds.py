@@ -1,4 +1,7 @@
+import io
 import json
+import subprocess
+import tarfile
 import tempfile
 import unittest
 from pathlib import Path
@@ -140,6 +143,38 @@ class KindTest(unittest.TestCase):
             lock.write_text(json.dumps({"packages": {}}))
             with self.assertRaises(UpdateError):
                 kinds.pin_prebuilds(self.pkg.dir, prebuilds)
+
+    def test_generate_lockfile(self):
+        dest = self.pkg.dir / "package-lock.json"
+
+        def tarball(files):
+            path = self.root / "pkg.tgz"
+            with tarfile.open(path, "w:gz") as archive:
+                for name, content in files.items():
+                    data = json.dumps(content).encode()
+                    info = tarfile.TarInfo(f"package/{name}")
+                    info.size = len(data)
+                    archive.addfile(info, io.BytesIO(data))
+            return path
+
+        def run(args, *, capture=False, cwd=None, **_kwargs):
+            if args[0] == "jq":
+                return subprocess.CompletedProcess(args, 0, stdout='{"name": "demo"}')
+            # npm updates the lock it finds, and writes package-lock.json
+            # only when there is no shrinkwrap.
+            self.assertFalse((cwd / "npm-shrinkwrap.json").exists())
+            lock = cwd / "package-lock.json"
+            seed = json.loads(lock.read_text()) if lock.exists() else {}
+            lock.write_text(json.dumps({"seed": seed}))
+            return subprocess.CompletedProcess(args, 0)
+
+        with mock.patch("updater.nix.run", run):
+            kinds.generate_lockfile(tarball({"package.json": {}}), ".", dest)
+            self.assertEqual(json.loads(dest.read_text()), {"seed": {}})
+
+            shrinkwrapped = tarball({"package.json": {}, "npm-shrinkwrap.json": {"pinned": 1}})
+            kinds.generate_lockfile(shrinkwrapped, ".", dest)
+            self.assertEqual(json.loads(dest.read_text()), {"seed": {"pinned": 1}})
 
     def test_version_sources(self):
         with mock.patch("updater.net.fetch_json", lambda _url: {"latest": "2.0", "next": "3.0"}):
