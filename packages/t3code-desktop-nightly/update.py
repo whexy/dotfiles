@@ -8,16 +8,24 @@ from updater.package import Package
 from updater.pins import b64_to_sri, write_sources
 
 
-def appimage_hash(manifest: str, file: str) -> str:
-    """An AppImage's hash, from an electron-updater manifest."""
+def appimage(manifest: str) -> tuple[str, str]:
+    """The x86_64 AppImage an electron-updater manifest lists, and its hash.
+    Its name is the manifest's to choose: T3 dropped the version from it."""
+    found = []
     url = None
     for line in manifest.splitlines():
         fields = line.split()
         if fields[:2] == ["-", "url:"] and len(fields) > 2:
             url = fields[2]
-        elif fields[:1] == ["sha512:"] and len(fields) > 1 and url == file:
-            return b64_to_sri("sha512", fields[1])
-    raise UpdateError(f"no sha512 for {file} in the desktop manifest")
+        elif fields[:1] == ["sha512:"] and len(fields) > 1 and url is not None:
+            if url.endswith("-x86_64.AppImage"):
+                found.append((url, b64_to_sri("sha512", fields[1])))
+            url = None
+    if len(found) != 1:
+        raise UpdateError(
+            f"expected one x86_64 AppImage in the desktop manifest, found {len(found)}"
+        )
+    return found[0]
 
 
 def main() -> None:
@@ -31,10 +39,5 @@ def main() -> None:
             raise
         print(f"t3code-desktop-nightly: no whexy/t3code desktop release {version}; keeping the pin")
         return
-    write_sources(
-        pkg.dir,
-        {
-            "version": version,
-            "hash": appimage_hash(manifest, f"T3-Code-{version}-x86_64.AppImage"),
-        },
-    )
+    file, digest = appimage(manifest)
+    write_sources(pkg.dir, {"version": version, "file": file, "hash": digest})

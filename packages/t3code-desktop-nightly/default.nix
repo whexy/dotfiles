@@ -15,7 +15,7 @@ let
   pname = "t3code-desktop";
 
   src = pkgs.fetchurl {
-    url = "https://github.com/whexy/t3code/releases/download/${version}/T3-Code-${version}-x86_64.AppImage";
+    url = "https://github.com/whexy/t3code/releases/download/${version}/${sources.file}";
     inherit (sources) hash;
   };
 
