@@ -49,7 +49,7 @@ specifically asked.
 My skills hold rules you cannot reconstruct from memory: `git-commit`,
 `knowledge`, `nix-blueprint`, `design`, `web-preview`, `explain`,
 `cluster-native`, `deploy-to-cluster`, `ship-pr`, `review-loop`, `council`,
-`t3-setup`, and `wechat`. Each description says when it applies; when one matches the task,
+`t3-setup`, `test-ios-app`, and `wechat`. Each description says when it applies; when one matches the task,
 read it before you start. If a skill you need is not available in this session,
 ask me instead of guessing.
 

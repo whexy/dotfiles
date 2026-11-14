@@ -61,6 +61,7 @@ let
     spark
     statechart
     t3-setup
+    test-ios-app
     transcribe
     video-edit
     web-preview
