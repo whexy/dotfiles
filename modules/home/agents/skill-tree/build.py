@@ -140,9 +140,14 @@ for name, (source, origin) in sorted(sources.items()):
 # lexically from there, so a relative link resolves only to a skill in this
 # tree. Anything else a skill links to needs an absolute path.
 LINK = re.compile(r"\]\(\s*<?([^)\s<>]+)|^\s*\[[^\]]+\]:\s*<?([^\s<>]+)", re.MULTILINE)
+# Markdown reads no links in code, where CSS such as `[popover]:is(...)`
+# looks like one.
+FENCE = re.compile(r"^ {0,3}(`{3,}|~{3,}).*?(?:^ {0,3}\1[`~]*[ \t]*$|\Z)", re.MULTILINE | re.DOTALL)
+CODE_SPAN = re.compile(r"(`+).+?\1", re.DOTALL)
 for name, (_, origin) in sorted(sources.items()):
     for doc in sorted((skills / name).rglob("*.md")):
-        for match in LINK.finditer(doc.read_text()):
+        prose = CODE_SPAN.sub("", FENCE.sub("", doc.read_text()))
+        for match in LINK.finditer(prose):
             target = match.group(1) or match.group(2)
             if target.startswith(("#", "~")) or re.match(r"[a-zA-Z][a-zA-Z0-9+.-]*:", target):
                 continue
