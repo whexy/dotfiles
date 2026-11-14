@@ -55,6 +55,7 @@ let
     iphone-use-setup
     knowledge
     maintain-formal-verification-skill
+    modern-web-guidance
     reverse-engineer-anything
     review-loop
     spark

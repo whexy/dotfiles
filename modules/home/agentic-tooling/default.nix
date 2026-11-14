@@ -19,6 +19,7 @@ in
     ./spark/default.nix
     ./transcribe/default.nix
     ./wechat/default.nix
+    ./web-guidance/default.nix
     ./tldraw/default.nix
   ];
 
@@ -130,6 +131,7 @@ in
     formalVerification.enable = lib.mkEnableOption "formal verification with TLA+, and the skills that choose a verifier and keep its checks in step with the code";
     transcribe.enable = lib.mkEnableOption "transcribe, which turns recordings into word-timed transcripts, with its skill";
     wechat.enable = lib.mkEnableOption "wechat, which messages the user on WeChat, with its skill";
+    webGuidance.enable = lib.mkEnableOption "Modern Web Guidance, Chrome's web platform best practices that agents search offline, with its skill";
 
     tldraw.enable = lib.mkOption {
       type = lib.types.bool;

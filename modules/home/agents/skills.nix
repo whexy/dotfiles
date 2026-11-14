@@ -12,7 +12,6 @@ in
   # The skill repositories every agent takes, built with the caller's pkgs:
   # a Darwin home's is nixpkgs-darwin, not the flake's packages set.
   packages = map (repo: repo.override { inherit pkgs; }) [
-    perSystem.self.modern-web-guidance
     perSystem.self.pstack
     perSystem.self.tstack
     perSystem.self.wxstack

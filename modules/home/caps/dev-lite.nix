@@ -11,6 +11,7 @@ in
     agenticTooling = {
       transcribe.enable = lib.mkDefault true;
       wechat.enable = lib.mkDefault true;
+      webGuidance.enable = lib.mkDefault true;
     };
     t3code = {
       enable = lib.mkDefault true;
