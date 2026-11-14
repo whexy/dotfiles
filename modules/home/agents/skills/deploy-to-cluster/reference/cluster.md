@@ -13,11 +13,10 @@ commits there continually.
 
 ## The cluster
 
-- **Nodes:** k3s, with all nodes joined over Tailscale:
-  - an arm64 control-plane VM on AWS, `k8s-aws`, which is also the init node
-    that applies the bootstrap add-ons;
-  - amd64 workers at home and on Incus;
-  - a tainted node in Hangzhou.
+- **Nodes:** k3s over Tailscale. Its `AGENTS.md` ("What this is") names the
+  nodes, their roles and their taints; read it there, since it changes. The
+  templates pin `kubernetes.io/arch: amd64` because CI builds only
+  linux/amd64 images.
 - **Layers:**
   - `nix/` holds the NixOS host configs (blueprint), deployed with
     `just deploy-<host>`.
@@ -56,9 +55,11 @@ and the env.
   infrastructure that other workloads depend on.
 - **Application:** add `gitops/argocd-apps/<name>.yaml` and list it in
   `gitops/argocd-apps/kustomization.yaml`.
-- **In-cluster dependencies** admit clients by NetworkPolicy: add the app's
-  namespace to the dependency's `networkpolicy.yaml`, in the dependency's own
-  app, and keep any per-client key as well.
+- **In-cluster dependencies:** the dependency's row in
+  `docs/platform-services.md` says how a Pod gets in: set its client label on
+  the app's Pod template, add the app's namespace to the dependency's
+  `networkpolicy.yaml`, or nothing when it admits every namespace. Keep any
+  per-client key as well.
 
 ## Image auto-updater
 
@@ -114,6 +115,7 @@ If the app needs secrets, follow [secrets.md](secrets.md).
   - `docs/<name>.md`, covering access, dependencies, secrets, state and
     backup, and verification;
   - a routing row in `docs/README.md`;
+  - a row in `docs/platform-services.md` if other apps will call it;
   - rows in the managed-Applications table (`docs/gitops.md`), the enrolled
     images table (`docs/image-updates.md`) and the secrets table
     (`docs/secrets.md`).
