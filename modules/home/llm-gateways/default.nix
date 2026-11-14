@@ -170,7 +170,6 @@ in
             "openai"
             "anthropic"
             "xai"
-            "meta"
           ];
         };
         magpie = rec {
@@ -213,9 +212,8 @@ in
         description = ''
           Whether Claude Code and Codex reach the gateways' tailnet origins
           through this home's tailnet relay instead of their public ones.
-          Muse Code and OpenCode stay on the public origins: Muse needs the
-          public route's `/muse-code/models` rewrite, and OpenCode's plugin
-          does not check who holds the relay's port.
+          OpenCode stays on the public origins: its plugin does not check
+          who holds the relay's port.
         '';
       };
     };
@@ -228,14 +226,6 @@ in
       ) cfg.gateways;
       defaultText = lib.literalMD "the relay route of each gateway where `relay.enable` is set, otherwise its public route";
       description = "How the agents that follow `relay.enable` reach each gateway, keyed like `gateways`.";
-    };
-
-    publicRoutes = lib.mkOption {
-      type = lib.types.attrsOf route;
-      readOnly = true;
-      default = lib.mapAttrs (_: publicRoute) cfg.gateways;
-      defaultText = lib.literalMD "each gateway's public origin, behind Cloudflare Access";
-      description = "The gateways' public routes, for agents that stay on them.";
     };
   };
 

@@ -98,16 +98,6 @@ in
       tmuxColor = "fg";
     }
     {
-      name = "meta";
-      title = "Muse";
-      variable = "meta";
-      icon = "󰛤";
-      logo = "${logos}/meta.png";
-      logoScale = 0.026;
-      accent = accent "blue";
-      tmuxColor = "blue";
-    }
-    {
       name = "opencode-go";
       title = "OpenCode";
       variable = "opencode_go";

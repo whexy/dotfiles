@@ -115,8 +115,7 @@ is selected with `dotfiles.platform.*`.
 
 ## Agents
 
-`modules/home/agents` configures Claude Code, Codex, OpenCode, and Muse Code,
-each in a module of its own that declares its entry in
+`modules/home/agents` configures Claude Code, Codex, and OpenCode, each in a module of its own that declares its entry in
 `dotfiles.agents.harnesses`: package, instructions file, skill root, and the
 model picker agent-settings runs for it. `harnesses.nix` renders every entry
 the same way. They take what they share from options, never from each other:
@@ -124,7 +123,7 @@ the same way. They take what they share from options, never from each other:
 - `dotfiles.llmGateways` (`modules/home/llm-gateways`): the model gateways,
   CLIProxyAPI and magpie, and `routes`, how agents reach each: homes with a
   [tailnet relay](#tailnet-relay) reach their tailnet origins, others the
-  public ones (`publicRoutes`).
+  public ones.
 - `dotfiles.cloudflareAccess.serviceToken` (`modules/home/cloudflare-access`):
   the Cloudflare Access service token in front of the gateways, SearXNG and
   zepbound. A consumer sets `enable` in its own gate and reads
@@ -155,8 +154,8 @@ module arguments.
 ## Skills
 
 An agent skill is a directory holding a `SKILL.md`. Every agent sees the
-same skills, linked into `~/.agents/skills`, `~/.claude/skills` and
-`~/.config/muse/skills`. Claude Code keeps the skills it syncs from the
+same skills, linked into `~/.agents/skills` and `~/.claude/skills`. Claude
+Code keeps the skills it syncs from the
 account in `~/.claude/skills/synced/`, so no skill may be named `synced`.
 
 A package ships its skills at `$out/share/skills/<name>/SKILL.md`, the way it
@@ -580,21 +579,6 @@ environment (`localEnvironmentEnabled` in `desktop-settings.json`), and the app
 is a client of that server. Pair it once: run `t3-pair` and paste the link
 under Settings → Connections → Add environment.
 
-## Muse Code
-
-Muse Code runs on the Meta subscription CLIProxyAPI holds, so no host signs in
-to Meta. Muse only speaks to its Meta provider, which agent-settings points at
-`https://llm.clusters.work/v1`; `muse-select` lists the subscription's models,
-and activation saves the default wherever no selection exists.
-
-- Muse will not start until `{origin}/muse-code/models` answers. CLIProxyAPI
-  has no such path, so the clusters-work route for `llm.clusters.work` rewrites
-  it to `/v1/models`. Requests for Meta's other services, such as its web
-  search (`/muse-code/search`), get the gateway's 404.
-- Muse's tools inherit its environment, so its credentials never go there:
-  activation stores the CLIProxyAPI key with `muse auth set` and writes the
-  Cloudflare Access headers into `~/.config/muse/settings.json`.
-
 ## Rex remote access
 
 Rex clients reach a host at `https://<MagicDNS name>:7297`
@@ -684,10 +668,8 @@ the owner in itself, once per machine:
 - Claude Code: `claude mcp login studio`
 - Codex: `codex mcp login studio`
 - OpenCode: `opencode mcp auth studio`
-- Muse Code: `muse mcp login studio`
 
-Over SSH, pass `--no-browser` to Claude Code or Codex (`--headless` to Muse
-Code) and paste the redirect URL back. T3 Code's sessions use the same token stores. Each agent registers
+Over SSH, pass `--no-browser` to Claude Code or Codex and paste the redirect URL back. T3 Code's sessions use the same token stores. Each agent registers
 its own loopback callback with Access, so the Access application needs no
 redirect URIs for them.
 
@@ -781,9 +763,8 @@ loopback port to a tailnet HTTPS origin, opening the TLS itself. A feature adds
 its forward where the relay is enabled:
 
 - `dotfiles.llmGateways.relay`: Claude Code and Codex reach CLIProxyAPI and
-  magpie at their tailnet origins, with no Cloudflare Access. Muse Code stays
-  on the public origin, which alone rewrites `/muse-code/models`, and so do
-  OpenCode and its search.
+  magpie at their tailnet origins, with no Cloudflare Access. OpenCode and
+  its search stay on the public origin.
 - Atuin syncs with `atuin.at-basking.ts.net`.
 - The `wechat` CLI reaches the WeChat relay.
 - `dotfiles-upgraded` subscribes to CI's announcements, with no
@@ -892,7 +873,7 @@ package that fails is restored and reported, the rest continue, and the run
 exits non-zero. To test an updater, downgrade the package's pin and run it:
 
 ```sh
-nix run .#update -- muse-code
+nix run .#update -- asc
 ```
 
 The nightly `update` step in `.woodpecker.yml` (`ci/update.sh`) runs

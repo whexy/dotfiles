@@ -7,7 +7,7 @@ description: Add, change, hide, or remove a skill that agents see through the do
 
 A skill is a directory that holds a `SKILL.md`. Home Manager builds every
 skill a home enables into one tree and links each one into
-`~/.agents/skills`, `~/.claude/skills` and `~/.config/muse/skills`. Never
+`~/.agents/skills` and `~/.claude/skills`. Never
 put a skill in those directories by hand.
 
 Every skill comes from one of three sources. Pick the source first:

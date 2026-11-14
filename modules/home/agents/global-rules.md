@@ -61,10 +61,7 @@ model's family, not by whichever harness lists it:
 
 - Claude: Claude Code.
 - GPT: Codex.
-- Muse: Muse Code.
 - Every other model (Grok, Gemini, and the rest): OpenCode.
-
-If asked to run Muse on Codex anyway, say so before you launch it.
 
 ### Coding
 

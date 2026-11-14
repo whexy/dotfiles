@@ -13,8 +13,7 @@ let
 
   # Each root is a real directory holding one link per skill directory, never
   # per file: Codex skips a skill whose SKILL.md is a link out of the
-  # skill's directory and Muse Code rejects it, while Claude Code keeps
-  # `synced/` in its root and Muse Code `.muse/` in its.
+  # skill's directory, and Claude Code keeps `synced/` in its root.
   roots = lib.unique (
     lib.sort lib.lessThan (
       lib.filter (root: root != null) (

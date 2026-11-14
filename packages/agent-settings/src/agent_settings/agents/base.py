@@ -45,8 +45,6 @@ class Agent(ABC):
     config_name: ClassVar[str]
     extra_managed_env: ClassVar[frozenset[str]] = frozenset()
     """Variables this agent's selection logic sets beyond the catalog's."""
-    config_subdir: ClassVar[str] = ""
-    """Named configs hold the root this far below their container directory."""
     instructions_name: ClassVar[str] = "AGENTS.md"
     """The agent's user instructions file in its config directory."""
 
@@ -76,7 +74,7 @@ class Agent(ABC):
         return Path(os.environ.get(self.home_env, self.default_root())).expanduser().absolute()
 
     def _profiles(self) -> Profiles:
-        return Profiles(self.name, default=self.default_root(), subdir=self.config_subdir)
+        return Profiles(self.name, default=self.default_root())
 
     def _fork(self, profiles: Profiles, name: str) -> Path:
         # An allowlist keeps tokens, transcripts, caches, and trust state out of forks.

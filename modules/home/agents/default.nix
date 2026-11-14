@@ -1,4 +1,4 @@
-# AI coding agents: Claude Code, Codex, OpenCode, and Muse Code, with the
+# AI coding agents: Claude Code, Codex, and OpenCode, with the
 # rules, skills, and MCP servers every one of them shares.
 {
   config,
@@ -17,7 +17,6 @@
     ./claude-code/default.nix
     ./codex/default.nix
     ./opencode/default.nix
-    ./muse-code/default.nix
   ];
 
   options.dotfiles.agents.enable = lib.mkEnableOption "agents";

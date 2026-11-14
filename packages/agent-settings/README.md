@@ -1,8 +1,8 @@
 # Agent settings
 
-Use `claude-select`, `codex-select`, or `muse-select` to choose a model gateway
+Use `claude-select` or `codex-select` to choose a model gateway
 configuration (CLIProxyAPI or magpie), save it, and launch. The searchable terminal UI provides config actions at the
-bottom. Ordinary `claude`, `codex`, and `muse` never open a picker, even with a
+bottom. Ordinary `claude` and `codex` never open a picker, even with a
 terminal and no arguments.
 
 ## Config manager
@@ -26,15 +26,6 @@ offers only the saved model from that gateway.
 Codex lists the selected gateway's models in its own `/model` picker, so
 `codex-select` offers one configuration per gateway.
 
-`muse-select` offers the CLIProxyAPI default and every model of the Meta
-subscription the proxy holds (`owned_by: meta` in `GET /v1/models`). Muse Code
-only speaks to its Meta provider, pointed at the proxy; before it starts it
-fetches `{origin}/muse-code/models`, which clusters-work routes to the proxy's
-model list. Muse marks the models it fetches that way hidden, so the selector
-also writes them as visible `model_catalog` rows, which Muse's own `/models`
-picker lists. Activation saves the default on a host with no selection, so Muse
-runs through the proxy without a Meta sign-in.
-
 The buttons at the bottom also have shortcuts:
 
 - **Ctrl+S — Switch config:** choose the default or a named config for this launch.
@@ -54,9 +45,7 @@ metadata, instructions, skills, agents, commands, hooks, rules, and Codex profil
 TOMLs. Claude's user MCP servers are copied separately. Login files, trust state,
 conversation history, caches, and installed plugins are not copied; sign in or
 install plugins separately when needed. Credentials manually embedded in copied
-settings remain part of those settings. Muse's named configs are exported as
-an `XDG_CONFIG_HOME` of their own, since that is the only relocation Muse
-honours; its sessions stay shared under the data home.
+settings remain part of those settings.
 
 Nix-managed instructions and Claude's skills directory link through the default
 config's paths, so updates and newly added skills follow Home Manager activation.
@@ -73,8 +62,7 @@ External config directories are reconciled when selecting a model in them.
 
 ## Ownership
 
-- `~/.claude/settings.json`, `~/.codex/config.toml`, and
-  `~/.config/muse/settings.json` are writable preferences.
+- `~/.claude/settings.json` and `~/.codex/config.toml` are writable preferences.
   The selector changes only its model/provider fields and owned environment keys.
   Default login removes those overrides without touching stored login credentials.
 - Home Manager activation reconciles named MCP servers and Codex provider
@@ -103,12 +91,6 @@ every socket listening there belongs to this user. When a home switches route, a
 that names the entry's other route (`replacedBaseUrls`) moves with it; only other
 endpoints count as hand-edited.
 
-Muse's tools inherit its environment, so Muse gets no credential there. Each
-reconciliation instead saves the selected endpoint's key with `muse auth set`
-(Muse's own credential store) and its Cloudflare headers in
-`endpoint_transport.http_headers` of the mode-0600 `settings.json`, together with
-the endpoint they belong to. Its session snapshot leaves the headers out.
-
 ## Session inheritance
 
 Fresh launches read the current native config. Descendants inherit a
@@ -119,8 +101,7 @@ receive one settings override combining their saved launch defaults with the cal
 settings; caller values take precedence. This is necessary
 because Claude hot-reloads saved `env` values, which also override shell exports:
 a concurrent selector must not redirect a running session's existing API key.
-Muse sessions snapshot their model and endpoint the same way, reapplied to
-descendant launches as `-c` overrides. An explicit selector resets its
+An explicit selector resets its
 agent's snapshot. CLI arguments and in-app model changes are not recorded in that
 snapshot; it represents the launch defaults, not every subsequent session edit.
 

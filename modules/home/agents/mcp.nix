@@ -60,22 +60,6 @@ let
       else
         { inherit (s) command; } // optional "args" s.args // optional "env" s.env;
 
-    # Muse expands `${VAR}` in header values, like Claude.
-    muse =
-      s:
-      if remote s then
-        {
-          transport = "streamable_http";
-          inherit (s) url;
-        }
-        // optional "headers" s.headers
-      else
-        {
-          transport = "stdio";
-          inherit (s) command args;
-        }
-        // optional "env" s.env;
-
     opencode =
       s:
       if remote s then

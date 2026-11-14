@@ -13,11 +13,11 @@ through that provider's own harness:
 
 - Claude Opus, through Claude Code
 - GPT Sol, through Codex
-- Muse Wonder Full, through Muse Code
+- Gemini, through OpenCode
 
 Codex and OpenCode also list other vendors' models. Take each member from its
 family's harness, including members the user names: Claude Code for Claude,
-Codex for GPT, Muse Code for Muse, OpenCode for every other model.
+Codex for GPT, OpenCode for every other model.
 
 In T3 Code, use `orchestrator_capabilities` to resolve each member to its
 provider instance and current model ID (pass `search` when one is not listed),
@@ -42,11 +42,11 @@ Put this section above the model disclosure at the end:
 
 Rounds: 2
 
-| Delegate         | Round 1 | Round 2 |
-| ---------------- | ------- | ------- |
-| Claude Opus      | 7/10    | 9/10    |
-| GPT Sol          | 8/10    | 10/10   |
-| Muse Wonder Full | 7/10    | 9/10    |
+| Delegate    | Round 1 | Round 2 |
+| ----------- | ------- | ------- |
+| Claude Opus | 7/10    | 9/10    |
+| GPT Sol     | 8/10    | 10/10   |
+| Gemini      | 7/10    | 9/10    |
 ```
 
 If a delegate gives no score, write `no score`. Do not invent one.

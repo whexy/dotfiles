@@ -21,27 +21,19 @@ def configs_directory(agent: str) -> Path:
 
 @final
 class Profiles:
-    def __init__(self, agent: str, default: Path, subdir: str) -> None:
+    def __init__(self, agent: str, default: Path) -> None:
         self.default = default
-        self.subdir = subdir
         self.directory = configs_directory(agent)
-
-    def root_in(self, container: Path) -> Path:
-        return container / self.subdir if self.subdir else container
-
-    def container(self, root: Path) -> Path:
-        return root.parent if self.subdir else root
 
     def is_managed(self, root: Path) -> bool:
         """Whether `root` is a named config this manager may delete."""
-        container = self.container(root)
-        return root != self.default and container.parent == self.directory
+        return root != self.default and root.parent == self.directory
 
     def configurations(self) -> dict[str, Path]:
         result = {"default": self.default}
         if self.directory.exists():
             result.update(
-                (p.name, self.root_in(p))
+                (p.name, p)
                 for p in sorted(self.directory.iterdir())
                 if p.is_dir() and not p.is_symlink() and not p.name.startswith(".")
             )
@@ -94,8 +86,7 @@ class Profiles:
         if target.exists() or target.is_symlink():
             raise SettingsError(f"config already exists: {name}")
         temporary = Path(tempfile.mkdtemp(prefix=".fork-", dir=self.directory))
-        root = self.root_in(temporary)
-        root.mkdir(parents=True, exist_ok=True)
+        root = temporary
         try:
             for filename in dict.fromkeys([*settings, *files, *managed_links]):
                 src, dst = source / filename, root / filename
@@ -113,11 +104,11 @@ class Profiles:
                         src,
                         dst,
                         materialize=filename in settings,
-                        through_source=self.container(source).parent != self.directory,
+                        through_source=source.parent != self.directory,
                     )
             populate(source, root)
             temporary.rename(target)
-            return self.root_in(target)
+            return target
         finally:
             if temporary.exists():
                 shutil.rmtree(temporary)
@@ -127,12 +118,11 @@ class Profiles:
             self._delete(root)
 
     def _delete(self, root: Path) -> None:
-        container = self.container(root)
-        if root == self.default or container.parent != self.directory or container.is_symlink():
+        if root == self.default or root.parent != self.directory or root.is_symlink():
             raise SettingsError("only configs created by this manager can be deleted")
-        if container.name not in self.configurations():
+        if root.name not in self.configurations():
             raise SettingsError("config no longer exists")
-        shutil.rmtree(container)
+        shutil.rmtree(root)
 
 
 def _copy(source: Path, target: Path, *, materialize: bool = False, through_source: bool) -> None:
