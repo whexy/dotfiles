@@ -43,6 +43,7 @@ let
     asc
     broll
     cf-cli
+    cluster-native
     council
     create-formal-verification-skill
     deploy-to-cluster

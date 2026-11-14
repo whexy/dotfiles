@@ -5,8 +5,9 @@ description: Set up or change a project's deploy pipeline to Wenxuan's cluster (
 
 # Deploy pipeline
 
-When asked to deploy something to "cluster", set up this whole pipeline. The
-result is:
+When asked to deploy something to "cluster", set up this whole pipeline. It
+assumes the project's design is settled; design a new project with
+`cluster-native` first. The result is:
 
 - a private repo `whexy/<name>` whose default branch only changes through
   rebase-merged PRs that passed CI;
