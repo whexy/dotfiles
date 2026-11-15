@@ -3,20 +3,23 @@ let
   cfg = config.dotfiles.platform.incusVm;
   inherit (config.dotfiles.host) hostName;
 
-  # All features the Incus 6.20+ guest agent understands. The agent binary is
+  # All features the Incus 7 guest agent understands. The agent binary is
   # injected by the hypervisor at boot, so the hypervisor's Incus version
-  # decides whether the feature map is honored at all.
+  # decides which features exist; a feature a later version adds is off here
+  # until it is listed.
   agentFeatures = {
     guestapi = true; # /dev/incus API inside the guest
     exec = true; # incus exec
     files = true; # incus file push/pull
     mounts = true; # shared disk devices
+    port-forward = true; # TCP from the hypervisor to guest ports, loopback included
     metrics = true; # OpenMetrics endpoint
     state = true; # OS/network state shown by incus list (incl. IPs)
   }
   // lib.optionalAttrs cfg.untrustedHypervisor {
     exec = false;
     files = false;
+    port-forward = false;
     state = false;
   }
   // cfg.agent.features;

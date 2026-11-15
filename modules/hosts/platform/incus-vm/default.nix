@@ -7,8 +7,9 @@
     untrustedHypervisor = lib.mkEnableOption ''
       a hypervisor that is not fully trusted: the guest agent turns off every
       API that can execute commands or read guest files (which would expose
-      agenix secrets under /run/agenix), and interface state (VM IPs in
-      `incus list`)
+      agenix secrets under /run/agenix), port forwarding (which reaches
+      services that listen only on the guest's loopback), and interface state
+      (VM IPs in `incus list`)
     '';
 
     # Overrides for the guest agent feature map. Every feature the agent
