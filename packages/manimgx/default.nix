@@ -114,7 +114,13 @@ python3.pkgs.buildPythonApplication {
     "1"
   ];
 
+  # The command ends through launcher.py, which skips the C runtime's
+  # teardown that NVIDIA's Vulkan driver crashes in.
   postInstall = ''
+    cp ${./launcher.py} $out/${python3.sitePackages}/_manimgx_launcher.py
+    substituteInPlace $out/bin/manimgx \
+      --replace-fail "from manimgx.cli import main" "from _manimgx_launcher import main"
+
     mkdir -p $out/share/skills
     cp -R ${repo}/skills/*/ $out/share/skills/
   '';
