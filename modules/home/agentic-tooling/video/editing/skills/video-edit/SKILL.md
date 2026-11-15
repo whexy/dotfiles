@@ -186,16 +186,16 @@ Do not ask questions. Decide, and note your assumptions in report.md.
 
 ## Commands
 
-| Command                                                                               | Does                                                         |
-| ------------------------------------------------------------------------------------- | ------------------------------------------------------------ |
-| `init MAIN --name NAME [--camera CAM]`                                                | creates the edit root, `sources.json`, `spec.json`, `style/` |
-| `silences [--refresh]`                                                                | detects pauses at the noise floor + 9 dB                     |
-| `snap [--dry-run]`                                                                    | moves range edges into silences                              |
-| `sync-script` / `set-offset N [--at S]`                                               | camera alignment                                             |
-| `build [--section S] [--version N] [--no-camera]`                                     | plan and build script                                        |
-| `slots`                                                                               | `slots/<id>/slot.json` per overlay                           |
-| `finalize RAW --slot DIR [--footage] [--input-matrix auto\|bt601\|bt709] [--dry-run]` | GPU encode to `out/<id>_vN.mp4`; `--footage` trims and crops |
-| `check FILE --slot DIR [--draft]`                                                     | spec check plus contact sheet                                |
-| `strip VIDEO START END` / `strip --cut K`                                             | filmstrip and waveform PNG                                   |
-| `words [--section S]` / `srt CUES [-o FILE] [--start-tc TC]`                          | subtitles                                                    |
-| `readback-script` / `verify-timeline` / `verify-audio`                                | verification                                                 |
+| Command                                                                               | Does                                                                                |
+| ------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------- |
+| `init MAIN --name NAME [--camera CAM]`                                                | creates the edit root, `sources.json`, `spec.json`, `style/`                        |
+| `silences [--refresh]`                                                                | detects pauses at the noise floor + 9 dB                                            |
+| `snap [--dry-run]`                                                                    | moves range edges into silences                                                     |
+| `sync-script` / `set-offset N [--at S]`                                               | camera alignment                                                                    |
+| `build [--section S] [--version N] [--no-camera]`                                     | plan and build script                                                               |
+| `slots`                                                                               | `slots/<id>/slot.json` per overlay                                                  |
+| `finalize RAW --slot DIR [--footage] [--input-matrix auto\|bt601\|bt709] [--dry-run]` | encode to `out/<id>_vN.mp4` with the machine's encoder; `--footage` trims and crops |
+| `check FILE --slot DIR [--draft]`                                                     | spec check plus contact sheet                                                       |
+| `strip VIDEO START END` / `strip --cut K`                                             | filmstrip and waveform PNG                                                          |
+| `words [--section S]` / `srt CUES [-o FILE] [--start-tc TC]`                          | subtitles                                                                           |
+| `readback-script` / `verify-timeline` / `verify-audio`                                | verification                                                                        |

@@ -10,6 +10,8 @@
     (modulesPath + "/installer/scan/not-detected.nix")
   ];
 
+  dotfiles.hardware.gpu.vendor = "amd";
+
   dotfiles.hardware.monitors = [
     {
       connector = "DP-3";

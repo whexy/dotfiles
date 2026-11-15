@@ -43,8 +43,11 @@ let
   #
   # The Chrome HyperFrames downloads cannot find its libraries on NixOS, so
   # Linux renders with T3 Code's patched copy; Darwin keeps HyperFrames' own
-  # download, which runs as is. /usr/lib/wsl/lib holds the WSL NVIDIA driver;
-  # without it `render --gpu` silently falls back to libx264.
+  # download, which runs as is. That copy draws on the GPU through ANGLE on
+  # the system EGL, which it dlopens: without libglvnd's dispatcher, which
+  # finds the driver's vendor library, it draws with SwiftShader on the CPU.
+  # /usr/lib/wsl/lib holds the WSL NVIDIA driver; without it `render --gpu`
+  # silently falls back to libx264.
   wrapperArgs = [
     "--set-default"
     "HYPERFRAMES_SKIP_SKILLS"
@@ -79,7 +82,7 @@ let
     "--prefix"
     "LD_LIBRARY_PATH"
     ":"
-    "/usr/lib/wsl/lib"
+    "${lib.getLib pkgs.libglvnd}/lib:/usr/lib/wsl/lib"
   ];
 in
 pkgs.buildNpmPackage (finalAttrs: {

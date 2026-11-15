@@ -1,5 +1,5 @@
-# The video toolkit's skills, as a `dotfiles.agents.skills` value; the home
-# module and checks/agent-skills both take it from here.
+# The video-making toolkit's skills, as a `dotfiles.agents.skills` value;
+# the home module and checks/agent-skills both take it from here.
 { pkgs, perSystem, ... }:
 let
   inherit (pkgs) lib;
@@ -11,10 +11,7 @@ in
     manimgx
   ];
 
-  local = {
-    video-edit.source = ./skills/video-edit;
-    broll.source = ./skills/broll;
-  };
+  local.broll.source = ./skills/broll;
 
   override =
     lib.genAttrs

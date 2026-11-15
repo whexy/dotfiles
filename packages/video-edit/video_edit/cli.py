@@ -55,7 +55,7 @@ def parser():
 
     cmd("slots", "write slots/<id>/slot.json for every overlay")
 
-    p = cmd("finalize", "encode a raw render to the slot's final spec on the GPU")
+    p = cmd("finalize", "encode a raw render to the slot's final spec with this machine's encoder")
     p.add_argument("raw", help="raw render (any format ffmpeg reads)")
     p.add_argument("--slot", required=True, help="slots/<id> directory")
     p.add_argument(

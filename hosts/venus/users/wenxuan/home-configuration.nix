@@ -10,6 +10,7 @@
 
   dotfiles = {
     autoUpgrade.enable = true;
+    hardware.gpu.vendor = "nvidia";
     tunnels.hostName = "venus";
     # Off the tailnet, so the tunnel is the server's only route.
     t3code.server.enable = true;

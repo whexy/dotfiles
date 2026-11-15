@@ -25,4 +25,10 @@
   };
 
   hardware.nvidia-container-toolkit.enable = config.dotfiles.virtualization.docker.enable;
+
+  # EGL would otherwise take Mesa's iGPU.
+  dotfiles.hardware.gpu = {
+    vendor = "nvidia";
+    environment.__EGL_VENDOR_LIBRARY_FILENAMES = "${config.hardware.nvidia.package}/share/glvnd/egl_vendor.d/10_nvidia.json";
+  };
 }

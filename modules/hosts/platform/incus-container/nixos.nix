@@ -14,10 +14,18 @@ let
   # driver through the regular /run/opengl-driver plumbing. The links dangle
   # until the runtime mounts them, which is what makes an instance started
   # without nvidia.runtime degrade to "no GPU" instead of failing to build.
+  # The Vulkan and EGL manifests are the driver's own, which the runtime
+  # does not mount where Nix's loaders look.
   hostDriver = pkgs.runCommand "nvidia-host-driver" { } ''
-    mkdir -p "$out/etc/OpenCL/vendors"
+    mkdir -p "$out/etc/OpenCL/vendors" "$out/share/vulkan/icd.d" "$out/share/glvnd/egl_vendor.d"
     ln -s /usr/lib64 "$out/lib"
     echo /usr/lib64/libnvidia-opencl.so.1 > "$out/etc/OpenCL/vendors/nvidia.icd"
+    cat > "$out/share/vulkan/icd.d/nvidia_icd.json" <<'EOF'
+    {"file_format_version": "1.0.1", "ICD": {"library_path": "/usr/lib64/libGLX_nvidia.so.0", "api_version": "1.4.312"}}
+    EOF
+    cat > "$out/share/glvnd/egl_vendor.d/10_nvidia.json" <<'EOF'
+    {"file_format_version": "1.0.0", "ICD": {"library_path": "/usr/lib64/libEGL_nvidia.so.0"}}
+    EOF
   '';
 
   # The runtime injects these into /usr/bin, which is not a NixOS path element.
@@ -106,6 +114,18 @@ in
         };
 
         environment.systemPackages = [ hostTools ];
+
+        # The host's libGLX_nvidia, which serves Vulkan, links X11 and loads
+        # the EGL dispatcher, none of which the runtime mounts; services do
+        # not get the nix-ld path that gives shells them.
+        dotfiles.hardware.gpu = {
+          vendor = lib.mkDefault "nvidia";
+          libraryPath = map (pkg: "${lib.getLib pkg}/lib") [
+            pkgs.libglvnd
+            pkgs.libx11
+            pkgs.libxext
+          ];
+        };
 
         # libcuda dlopens its JIT helpers (libnvidia-ptxjitcompiler, libnvidia-nvvm,
         # libnvidia-gpucomp) by bare soname rather than through its own RUNPATH, so

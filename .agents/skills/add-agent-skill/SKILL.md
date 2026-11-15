@@ -151,7 +151,7 @@ nightly update holds back that package alone; refresh the patch.
 Use `replace = ./<dir>;` when most of the skill changes, and
 `ignore = true;` to hide it. To let a skill read hidden upstream skills by
 path, also set `docs.<name>` to their tree, as
-`modules/home/agentic-tooling/video/skills.nix` does for `broll`. A `docs`
+`modules/home/agentic-tooling/video/making/skills.nix` does for `broll`. A `docs`
 tree must hold no skill that agents also see.
 
 ## Verify

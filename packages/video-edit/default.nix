@@ -1,8 +1,8 @@
 { pkgs, perSystem }:
 
 # Deterministic core of the video-editing toolkit: EDL validation, frame
-# math, generated DaVinci Resolve scripts, B-roll slot definitions, GPU
-# finalizing (NVENC on WSL, VideoToolbox on macOS) and verification. ffmpeg
+# math, generated DaVinci Resolve scripts, B-roll slot definitions,
+# finalizing with the machine's encoder and verification. ffmpeg
 # is bound onto PATH. `transcribe` is only a fallback after the caller's
 # PATH, where the agents module installs the wrapper that supplies its API
 # key.

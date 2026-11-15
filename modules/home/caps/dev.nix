@@ -2,7 +2,7 @@
 # language toolchain and the heavy tooling bundles.
 # Package bundles live in the `tooling` and `editor` feature groups; this
 # preset enables all of them. Hosts disable bundles with plain assignments.
-args@{ lib, ... }:
+args@{ config, lib, ... }:
 let
   osConfig = args.osConfig or null;
 in
@@ -11,7 +11,10 @@ in
 
   dotfiles = {
     agenticTooling = {
-      video.studio.enable = lib.mkDefault true;
+      video = {
+        making.enable = lib.mkDefault (config.dotfiles.hardware.gpu.vendor != null);
+        studio.enable = lib.mkDefault true;
+      };
       formalVerification.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser

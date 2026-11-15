@@ -141,7 +141,7 @@ Every agent reads `global-rules.md`, linked into its own config directory
 (`rules.file`), with its own `rules.extraText` after it.
 
 `modules/home/agentic-tooling` (`dotfiles.agenticTooling`) holds the programs
-agents drive: REA, the video toolkit, formal verification, iPhone Use, Spark,
+agents drive: REA, video editing and making, formal verification, iPhone Use, Spark,
 transcribe, wechat, Modern Web Guidance, and the tldraw whiteboard. Each adds its own skills and MCP
 servers to the options above, and `modules/home/agents` never names one.
 
@@ -194,7 +194,8 @@ list of skill names.
 | `ketchup`, `bro`                            | `pstack`                   | picked from cursor/plugins' pstack                          |
 | `statechart`, `*-formal-verification-skill` | `formal-verification`      | picked from pstack, with TLC for statechart                 |
 | `transcribe`, `wechat`                      | `transcribe`, `wechat-cli` | as shipped                                                  |
-| `video-edit`, `broll`                       | local, video feature       | ours; they drive several tools                              |
+| `video-edit`                                | local, video editing       | ours; it drives Resolve and the video-edit CLI              |
+| `broll`                                     | local, video making        | ours; it drives several tools                               |
 | `draw`                                      | local, tldraw feature      | ours; only where the whiteboard is reachable                |
 | `reverse-engineer-anything`, `iphone-use`   | `rea-agents`, `iphone-use` | as shipped                                                  |
 | `iphone-use-setup`                          | `iphone-use`               | replaced by `agentic-tooling/iphone/iphone-use-setup`       |
@@ -653,10 +654,49 @@ service token. The server verifies the Access JWT on every request against
 the team domain and the application's AUD tag (`server.accessAud`), so it has
 no credentials of its own.
 
+## Video editing and making
+
+Two features share `modules/home/agentic-tooling/video`:
+
+- `video.editing` (golf and wsl, the hosts with DaVinci Resolve Studio): the
+  Resolve MCP server and the `video-edit` skill. It requires video making,
+  which renders its B-roll.
+- `video.making`: HyperFrames, ManimGX, the `video-edit` CLI and the `broll`
+  skill. The `dev` cap enables it wherever the machine has a GPU label.
+
+`dotfiles.hardware.gpu` labels the machine's GPU: `vendor` is `amd`, `apple`,
+`nvidia` or null. Platforms that pass a GPU through set it (every Mac, WSL and
+Incus containers with `nvidia.enable`); other hosts set it beside their
+hardware, and standalone homes set the home option of the same name.
+`videoEncoder` is false for a GPU with no hardware encoder (the A100s of mars
+and deimos): finals there encode with libx265 on the CPU, which
+`video-edit check` accepts only on such a machine. Everywhere else
+`video-edit` finalizes with NVENC, VAAPI or VideoToolbox, HyperFrames'
+`--gpu` probes the same encoders, Chrome draws through ANGLE on the driver's
+EGL, and ManimGX draws through Vulkan.
+
+None of them fails without the driver: Chrome falls back to SwiftShader,
+ManimGX to its bundled lavapipe and HyperFrames to libx264. The video-making
+wrappers add the label's `libraryPath` and `environment`, which lead them to
+the driver where Nix does not build it:
+
+- Incus containers get the host's driver in `/usr/lib64` only with
+  `incus config set <instance> nvidia.driver.capabilities=all`; by default
+  the runtime mounts CUDA's libraries alone. The platform adds the Vulkan and
+  EGL manifests, and the X11 and GLVND libraries `libGLX_nvidia` needs.
+- Standalone NVIDIA homes (mars, venus): activation links the distribution's
+  NVIDIA libraries into `~/.local/state/host-gpu-driver/lib`, since a Nix
+  program reads no `ld.so.cache`.
+- seeley points EGL at its NVIDIA card rather than the iGPU.
+
+`hyperframes render --gpu` reports `hardware gpu` or `software gpu` for Chrome
+and its clip's encoder tag names the encoder; ManimGX's
+`_engine.adapter_info()` names the adapter it draws on.
+
 ## SimpleStudio MCP server
 
-`dotfiles.agenticTooling.video.studio` (on the `dev` cap, and wherever `video`
-is) registers SimpleStudio's MCP server,
+`dotfiles.agenticTooling.video.studio` (on the `dev` cap, and wherever video
+making is) registers SimpleStudio's MCP server,
 `https://studio-mcp.clusters.work/mcp`, with every agent. Its tools generate
 video on the studio's GPU Workers, and the `broll` skill fills B-roll slots
 with that footage.

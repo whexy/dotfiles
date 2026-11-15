@@ -1,4 +1,4 @@
-"""`finalize` (GPU encode to the slot spec) and `check` (verify a render)."""
+"""`finalize` (encode to the slot spec) and `check` (verify a render)."""
 
 import os
 import re
@@ -6,7 +6,7 @@ import tempfile
 from fractions import Fraction
 from pathlib import Path
 
-from .common import MediaError, UsageError, write_json
+from .common import MACOS, MediaError, UsageError, write_json
 from .media import frames_of, probe_video, rate, run, sniff_encoder
 from .slots import check_record, load_slot, outputs
 
@@ -19,7 +19,44 @@ COLORSPACE_NAME = {"bt709": "bt709", "bt601": "bt470bg"}
 OUT_TAGS = "setparams=color_primaries=bt709:color_trc=bt709:colorspace=bt709:range=tv"
 SCALE_FLAGS = "flags=lanczos+accurate_rnd+full_chroma_int"
 MANIMGX = "manimgx"
-GPU_ENCODERS = ("nvenc", "videotoolbox")
+GPU_ENCODERS = ("nvenc", "videotoolbox", "vaapi")
+CPU_ENCODERS = ("libx264", "libx265")
+# The render node radeonsi serves, which HyperFrames' --gpu also assumes.
+VAAPI_DEVICE = "/dev/dri/renderD128"
+# Each encoder family's settings; a spec's `final.<family>` overrides them,
+# so an edit root made on one machine finalizes on another.
+ENCODER_SETTINGS = {
+    "nvenc": {"preset": "p5", "tune": "hq", "cq": 16, "maxrate": "200M", "bufsize": "400M"},
+    # VideoToolbox drops its quality target and settles near a fixed rate
+    # once given a maxrate, so it encodes by quality alone.
+    "videotoolbox": {"quality": 75},
+    "vaapi": {"qp": 18},
+    "x265": {"preset": "medium", "crf": 16},
+}
+
+
+def machine_encoder():
+    """The HEVC encoder this machine finalizes with.
+
+    `VIDEO_EDIT_ENCODER` names it where the platform's usual one does not
+    apply: VAAPI on AMD, and libx265 where the GPU has no encoder at all.
+    """
+    if encoder := os.environ.get("VIDEO_EDIT_ENCODER"):
+        return encoder
+    return "hevc_videotoolbox" if MACOS else "hevc_nvenc"
+
+
+def final_encoder(spec):
+    return os.environ.get("VIDEO_EDIT_ENCODER") or spec["final"]["encoder"]
+
+
+def encoder_family(encoder):
+    return "x265" if encoder == "libx265" else encoder.rsplit("_", 1)[-1]
+
+
+def encoder_settings(spec, encoder):
+    family = encoder_family(encoder)
+    return {**ENCODER_SETTINGS.get(family, {}), **spec["final"].get(family, {})}
 
 
 def raw_timing(info):
@@ -130,25 +167,25 @@ def filter_graph(colour, info, width, height, fps, raw_fps, pad, crop=None):
 
 
 def encode_args(spec, fps, frames, encoder):
+    settings = encoder_settings(spec, encoder)
     if encoder.endswith("_nvenc"):
-        nv = spec["final"]["nvenc"]
         codec = [
             "-c:v",
             encoder,
             "-preset",
-            nv["preset"],
+            settings["preset"],
             "-tune",
-            nv["tune"],
+            settings["tune"],
             "-rc",
             "vbr",
             "-cq",
-            str(nv["cq"]),
+            str(settings["cq"]),
             "-b:v",
             "0",
             "-maxrate",
-            nv["maxrate"],
+            settings["maxrate"],
             "-bufsize",
-            nv["bufsize"],
+            settings["bufsize"],
             "-profile:v",
             spec["final"]["profile"],
             "-g",
@@ -157,12 +194,11 @@ def encode_args(spec, fps, frames, encoder):
             "2",
         ]
     elif encoder.endswith("_videotoolbox"):
-        vt = spec["final"]["videotoolbox"]
         codec = [
             "-c:v",
             encoder,
             "-q:v",
-            str(vt["quality"]),
+            str(settings["quality"]),
             "-prio_speed",
             "0",
             "-profile:v",
@@ -172,10 +208,39 @@ def encode_args(spec, fps, frames, encoder):
             "-bf",
             "2",
         ]
+    elif encoder.endswith("_vaapi"):
+        # No -bf: AMD's HEVC encoders before RDNA 3 have no B-frames.
+        codec = [
+            "-c:v",
+            encoder,
+            "-rc_mode",
+            "CQP",
+            "-qp",
+            str(settings["qp"]),
+            "-profile:v",
+            spec["final"]["profile"],
+            "-g",
+            str(fps),
+        ]
+    elif encoder == "libx265":
+        codec = [
+            "-c:v",
+            encoder,
+            "-preset",
+            settings["preset"],
+            "-crf",
+            str(settings["crf"]),
+            "-profile:v",
+            spec["final"]["profile"],
+            "-g",
+            str(fps),
+            "-bf",
+            "2",
+            "-x265-params",
+            "log-level=error",
+        ]
     else:
         codec = ["-c:v", encoder]
-        if encoder == "libx265":
-            codec += ["-preset", "ultrafast", "-x265-params", "log-level=error"]
     tag = ["-tag:v", "hvc1"] if "265" in encoder or "hevc" in encoder else []
     return [
         *codec,
@@ -239,7 +304,11 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", footage=False, 
     vf = filter_graph(
         colour, info, slot["width"], slot["height"], fps, raw_fps, max(0, shortfall), crop
     )
-    encoder = os.environ.get("VIDEO_EDIT_ENCODER") or spec["final"]["encoder"]
+    encoder = final_encoder(spec)
+    device = []
+    if encoder.endswith("_vaapi"):
+        device = ["-vaapi_device", VAAPI_DEVICE]
+        vf += ",format=nv12,hwupload"
     out = next_output(slot_dir, slot["id"])
     partial = out.with_name(f".{out.stem}.partial.mp4")
     cmd = [
@@ -248,6 +317,7 @@ def run_finalize(root, raw, slot_arg, matrix="auto", rng="auto", footage=False, 
         "-v",
         "error",
         "-y",
+        *device,
         "-i",
         str(raw),
         "-vf",
@@ -462,11 +532,13 @@ def run_check(root, file, slot_arg, draft=False):
             problems.append(f"codec {info['codec']}, want {final['codec']}")
         tag = info["encoder"] or ""
         sniffed = sniff_encoder(file) or ""
-        cpu = [e for e in ("libx264", "libx265") if e in tag or e == sniffed]
+        cpu = next((e for e in CPU_ENCODERS if e in tag or e == sniffed), None)
         if cpu:
-            problems.append(
-                f"encoded with {cpu[0]} on the CPU, not the GPU; run `video-edit finalize`"
-            )
+            # Only a machine whose GPU has no encoder finalizes on the CPU.
+            if cpu != final_encoder(spec):
+                problems.append(
+                    f"encoded with {cpu} on the CPU, not the GPU; run `video-edit finalize`"
+                )
         elif not any(gpu in tag or gpu in sniffed for gpu in GPU_ENCODERS):
             problems.append(f"cannot confirm a GPU encoder (tag {tag or 'none'})")
         if info["pix_fmt"] != final["pix_fmt"]:

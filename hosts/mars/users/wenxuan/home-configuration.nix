@@ -10,6 +10,11 @@
 
   dotfiles = {
     autoUpgrade.enable = true;
+    # A100s, which have no video encoder.
+    hardware.gpu = {
+      vendor = "nvidia";
+      videoEncoder = false;
+    };
     tunnels.hostName = "mars";
     # Off the tailnet, so the tunnel is the server's only route.
     t3code.server.enable = true;

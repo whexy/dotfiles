@@ -4,6 +4,9 @@ let
 in
 {
   config = lib.mkMerge [
+    # Every Mac nix-darwin runs on here is Apple silicon.
+    { dotfiles.hardware.gpu.vendor = lib.mkDefault "apple"; }
+
     # Auto-hide the macOS menu bar to free the top of the screen for a status
     # bar such as SketchyBar. Modern macOS needs both keys for "always hide";
     # the change only takes effect after logout/reboot (SystemUIServer does

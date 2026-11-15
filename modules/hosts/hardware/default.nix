@@ -1,8 +1,48 @@
 # Hardware metadata shared by system and Home Manager modules.
 # These are descriptive dotfiles options, not NixOS's hardware drivers.
-{ lib, ... }:
+{ config, lib, ... }:
 {
   options.dotfiles.hardware = {
+    gpu = {
+      vendor = lib.mkOption {
+        type = lib.types.nullOr (
+          lib.types.enum [
+            "amd"
+            "apple"
+            "nvidia"
+          ]
+        );
+        default = null;
+        description = ''
+          The vendor of the GPU that programs here draw and encode video on;
+          null on a machine without one. Platforms that pass a GPU through
+          set it themselves.
+        '';
+      };
+      videoEncoder = lib.mkOption {
+        type = lib.types.bool;
+        default = config.dotfiles.hardware.gpu.vendor != null;
+        defaultText = lib.literalExpression "config.dotfiles.hardware.gpu.vendor != null";
+        description = "Whether that GPU has a hardware video encoder; NVIDIA's A100 has none.";
+      };
+      libraryPath = lib.mkOption {
+        type = lib.types.listOf lib.types.str;
+        default = [ ];
+        description = ''
+          Library directories a Nix program needs on LD_LIBRARY_PATH to
+          reach the GPU's driver, where the driver is not built by Nix.
+        '';
+      };
+      environment = lib.mkOption {
+        type = lib.types.attrsOf lib.types.str;
+        default = { };
+        description = ''
+          Variables that steer a program onto that GPU, where the driver
+          would otherwise pick another one.
+        '';
+      };
+    };
+
     display.macbookScreen = lib.mkEnableOption ''
       this machine is using a MacBook Retina panel. Linux home modules use
       this to compensate for the 72-DPI macOS versus 96-DPI GTK baseline

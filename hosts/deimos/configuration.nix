@@ -17,6 +17,8 @@
     system.autoUpgrade.enable = true;
     network.tailscale.port = 41642;
     platform.incusContainer.nvidia.enable = true;
+    # mars's A100s.
+    hardware.gpu.videoEncoder = false;
   };
 
   system.stateVersion = "26.05";

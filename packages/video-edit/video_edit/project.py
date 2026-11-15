@@ -4,9 +4,8 @@ import shlex
 import shutil
 from pathlib import Path
 
-from . import resolve_scripts, silence, timeline
+from . import encode, resolve_scripts, silence, timeline
 from .common import (
-    MACOS,
     Root,
     UsageError,
     exec_line,
@@ -29,25 +28,10 @@ GLOSSARY = {
 }
 
 
-def gpu_encoder():
-    """The HEVC encoder for this machine's GPU, with its settings."""
-    if MACOS:
-        # VideoToolbox drops its quality target and settles near a fixed
-        # rate once given a maxrate, so it encodes by quality alone.
-        return "hevc_videotoolbox", {"videotoolbox": {"quality": 75}}
-    return "hevc_nvenc", {
-        "nvenc": {
-            "preset": "p5",
-            "tune": "hq",
-            "cq": 16,
-            "maxrate": "200M",
-            "bufsize": "400M",
-        }
-    }
-
-
 def default_spec(name, main):
-    encoder, settings = gpu_encoder()
+    encoder = encode.machine_encoder()
+    family = encode.encoder_family(encoder)
+    settings = {family: dict(encode.ENCODER_SETTINGS[family])}
     return {
         "version": 1,
         "name": name,

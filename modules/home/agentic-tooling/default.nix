@@ -13,7 +13,8 @@ in
 {
   imports = [
     ./rea/default.nix
-    ./video/default.nix
+    ./video/editing/default.nix
+    ./video/making/default.nix
     ./formal-verification/default.nix
     ./iphone/default.nix
     ./spark/default.nix
@@ -47,12 +48,13 @@ in
     };
 
     video = {
-      enable = lib.mkEnableOption "the video-editing toolkit, driving DaVinci Resolve Studio on macOS or from WSL";
+      editing.enable = lib.mkEnableOption "video editing: cutting a DaVinci Resolve Studio timeline, on macOS or from WSL";
+      making.enable = lib.mkEnableOption "video making: rendering B-roll with HyperFrames and ManimGX on this machine's GPU";
       studio.enable = lib.mkOption {
         type = lib.types.bool;
         # B-roll slots take generated footage from it.
-        default = cfg.video.enable;
-        defaultText = lib.literalExpression "config.dotfiles.agenticTooling.video.enable";
+        default = cfg.video.making.enable;
+        defaultText = lib.literalExpression "config.dotfiles.agenticTooling.video.making.enable";
         description = ''
           Whether to register SimpleStudio's MCP server, which generates video
           on the studio's GPU Workers. Each agent signs in to it once per

@@ -38,6 +38,8 @@ in
 
       # https://yomaq.github.io/posts/nvidia-on-nixos-wsl-ollama-up-24-7-on-your-gaming-pc/
       (lib.mkIf cfg.nvidia.enable {
+        dotfiles.hardware.gpu.vendor = lib.mkDefault "nvidia";
+
         environment.sessionVariables = {
           CUDA_PATH = "${pkgs.cudatoolkit}";
           LD_LIBRARY_PATH = [
