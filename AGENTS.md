@@ -191,6 +191,7 @@ list of skill names.
 | `modules/home/agents/skills/*`              | local                      | ours                                                        |
 | every skill wxstack publishes               | `wxstack`                  | ours, published in whexy/wxstack                            |
 | `sol-loop`                                  | `tstack`                   | picked from t3dotgg/tstack                                  |
+| `scientific-figure-making`                  | `figures4papers`           | as published in ChenLiu-1996/figures4papers                 |
 | `ketchup`, `bro`                            | `pstack`                   | picked from cursor/plugins' pstack                          |
 | `statechart`, `*-formal-verification-skill` | `formal-verification`      | picked from pstack, with TLC for statechart                 |
 | `transcribe`, `wechat`                      | `transcribe`, `wechat-cli` | as shipped                                                  |
