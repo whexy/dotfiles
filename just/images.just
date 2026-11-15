@@ -50,8 +50,12 @@ build-incus-vm HOST:
     echo ""
     echo "Import on the Incus host:"
     echo "  incus image import --alias {{HOST}}-image result/{{HOST}}/incus-metadata.tar.xz result/{{HOST}}/{{HOST}}.qcow2"
-    echo "  incus launch {{HOST}}-image {{HOST}} --vm -c security.secureboot=false"
-    echo "  incus console {{HOST}}"
+    echo "  incus init {{HOST}}-image {{HOST}} --vm -c security.secureboot=false -c boot.autostart=true"
+    echo "  incus config device add {{HOST}} vtpm tpm"
+    echo "  incus start {{HOST}} --console"
+    echo ""
+    echo "After the first unlock, enroll the vTPM inside the VM so later boots need no passphrase:"
+    echo "  sudo systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs= /dev/disk/by-partlabel/disk-main-root"
 
 # Build an Incus system container image (rootfs + metadata tarballs).
 build-incus-container HOST:

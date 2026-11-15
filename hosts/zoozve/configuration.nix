@@ -18,7 +18,10 @@
     platform.incusVm = {
       enable = true;
       untrustedHypervisor = true;
-      encryptedDisk.enable = true;
+      encryptedDisk = {
+        enable = true;
+        tpm.enable = true;
+      };
     };
   };
 

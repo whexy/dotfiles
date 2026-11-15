@@ -75,6 +75,10 @@ in
     };
 
     boot = {
+      initrd.luks.devices.crypted.crypttabExtraOpts = lib.mkIf (
+        cfg.encryptedDisk.enable && cfg.encryptedDisk.tpm.enable
+      ) [ "tpm2-device=auto" ];
+
       loader.systemd-boot.enable = true;
       loader.efi.canTouchEfiVariables = true;
 

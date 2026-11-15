@@ -28,5 +28,14 @@
       a LUKS-encrypted system disk, built into a `<hostName>.qcow2` image by
       `just build-incus-vm <hostName>`, which asks for the passphrase
     '';
+
+    encryptedDisk.tpm.enable = lib.mkEnableOption ''
+      unlocking the system disk at boot with the instance's virtual TPM (an
+      Incus `tpm` device), once a key is enrolled in it with
+      `systemd-cryptenroll --tpm2-device=auto --tpm2-pcrs= /dev/disk/by-partlabel/disk-main-root`.
+      The vTPM's state lives on the hypervisor, so this keeps the disk image
+      from being mounted on its own, not from the host's root. The passphrase
+      stays a keyslot and is asked for when the TPM cannot unlock
+    '';
   };
 }
