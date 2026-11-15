@@ -8,12 +8,12 @@ description: Bring in three delegates, one strong model from each of three provi
 Bring in three delegates to help with the user's request, usually for review
 or feedback. Use one strong model from each of three different providers, at
 high reasoning effort. If the user's instructions name council members, use
-those. Otherwise the council is the latest flagship of each family, run
-through that provider's own harness:
+those. Otherwise the council is these three, each run through its
+provider's own harness:
 
 - Claude Opus, through Claude Code
 - GPT Sol, through Codex
-- DeepSeek, through OpenCode
+- DeepSeek V4.1 Flash, through OpenCode, not the Pro model
 
 Codex and OpenCode also list other vendors' models. Take each member from its
 family's harness, including members the user names: Claude Code for Claude,
