@@ -44,6 +44,12 @@ stop that piece and report back with what you found. Do not redesign it.
 A member also stops and reports before anything destructive or outside its
 repository.
 
+Also tell it: do not hand me work an agent can do. When a step needs someone
+to act in an app or system, the member does it as me with the tools it has,
+such as by driving the app; that is the default, not a fallback. It asks me
+only for what nobody else can supply: a secret or login, a decision that is
+mine, or approval before something destructive or outside its repository.
+
 ## Keep the map current
 
 I follow the task on the map, not in your transcript.
@@ -58,6 +64,10 @@ I follow the task on the map, not in your transcript.
 A member that stops on a design problem hands the decision back to you.
 Decide whether the plan changes, update the map, and steer the member or
 launch a new one. If the decision is mine to make, ask me rather than guess.
+
+Hold a member's ask for me to the same rule. Before you pass it on, check
+whether a member could do it instead; if so, send it back with that
+instruction.
 
 ## Report back
 
