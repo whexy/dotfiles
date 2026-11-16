@@ -59,6 +59,16 @@ I follow the task on the map, not in your transcript.
 - Update the map on every plan change: a new piece, a dropped one, a
   blocker, a member's report that changes what comes next.
 
+## Stay with the task
+
+Follow the task until all of it is done. When I ask you something mid-task,
+answer, then pick the members back up in the same turn: check on each and act
+on what changed, rather than ending the turn at your answer.
+
+End a turn with work in flight only when something will wake you, such as a
+member's outcome waking the super thread. Never go idle with work in flight
+and nothing to wake you; keep waiting on the members instead.
+
 ## When a member stops
 
 A member that stops on a design problem hands the decision back to you.
