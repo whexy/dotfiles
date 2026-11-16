@@ -60,6 +60,7 @@ let
     review-loop
     spark
     statechart
+    super-thread
     t3-setup
     test-ios-app
     transcribe
