@@ -10,10 +10,9 @@
 }:
 let
   name = "t3code-ios";
-  # macOS puts every account with a UID of 500 or more in staff, which can read
-  # /Users/whexy; nix-darwin's default runner account (533) is one.
   user = "_t3runner";
   id = 433;
+  home = "/Users/${config.system.primaryUser}";
   workflowRef = "whexy/t3code/.github/workflows/self-hosted-build.yml@refs/heads/self-hosted-nightly";
   # The runner runs this before any step of every job it takes, and fails the
   # job when it fails. Only promoted code can reach self-hosted-nightly.
@@ -40,6 +39,14 @@ in
       group = user;
       mode = "0400";
     };
+
+    # nix-darwin creates a full account, and macOS counts every full account in
+    # staff, which may list and read the primary user's home.
+    system.activationScripts.postActivation.text = ''
+      if ! /bin/ls -led ${home} | grep -q "user:${user} deny"; then
+        /bin/chmod +a "user:${user} deny list,search,readattr,readextattr,readsecurity" ${home}
+      fi
+    '';
 
     users = {
       users.${user} = {
