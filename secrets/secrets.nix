@@ -75,6 +75,10 @@ in
   "magpie-api-key.age".publicKeys = to homes;
   "openai-api-key.age".publicKeys = to homes;
   "t3-push-host-token.age".publicKeys = to homes;
+  # Bearer tokens for wetype-asr (clusters-work): T3 Code dictation and the
+  # transcribe CLI.
+  "wetype-asr-t3-token.age".publicKeys = to homes;
+  "wetype-asr-transcribe-token.age".publicKeys = to homes;
   # Homes that run a public tunnel.
   "cloudflared-cert.age".publicKeys = to homes;
   "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
