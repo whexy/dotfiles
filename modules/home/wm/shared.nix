@@ -16,12 +16,11 @@
     paneru = "ctrl + alt + cmd";
   };
 
-  # What Hyper+T opens, or null where Rex (macOS) binds the key itself in
-  # its own settings. Rex wins over ssh-window, which clones the focused
-  # window's SSH destination and so works only for Ghostty windows.
+  # What Hyper+T opens. Rex (macOS) wins over ssh-window, which clones the
+  # focused window's SSH destination and so works only for Ghostty windows.
   terminal =
     if pkgs.stdenv.hostPlatform.isDarwin && config.dotfiles.terminal.rex.enable then
-      null
+      "rex"
     else if config.programs.ssh-window.enable then
       "ssh-window"
     else

@@ -169,7 +169,9 @@ in
 
         paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
       ''
-      + lib.optionalString (shared.terminal != null) ''
+      # Under Paneru, Rex keeps Hyper+T for the shortcut recorded in its own
+      # Settings.
+      + lib.optionalString (shared.terminal != "rex") ''
         paneru.bind(hyper .. " - t", function() os.execute("${terminalLaunch}") end)
       ''
       + lib.optionalString shared.t3codeDesktop ''
