@@ -5,7 +5,7 @@ let
   python = pkgs.python3.withPackages (ps: [ ps.pyside6 ]);
   metadata = pkgs.writeText "ai-quota-popup-config.json" (
     builtins.toJSON {
-      inherit (shared) apiUrl updateInterval;
+      inherit (shared) apiUrl usageUrl updateInterval;
       providers = map (p: {
         inherit (p) name title;
       }) shared.providers;

@@ -13,14 +13,16 @@ import sys
 import tempfile
 import threading
 import time
-from datetime import UTC, datetime, timedelta
+from datetime import UTC, date, datetime, timedelta
 from pathlib import Path
+from urllib.parse import urlencode
 
 from PySide6.QtCore import (
     Property,
     QCoreApplication,
     QLockFile,
     QObject,
+    QSettings,
     QTimer,
     QUrl,
     Signal,
@@ -34,6 +36,11 @@ from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
 RESOURCES = Path(os.environ.get("AI_QUOTA_POPUP_RESOURCES", Path(__file__).resolve().parent))
 CONFIG = json.loads((RESOURCES / "config.json").read_text())
 PROVIDERS = {provider["name"] for provider in CONFIG["providers"]}
+VIEWS = ("quota", "usage")
+# What the range picker offers before the first answer names the ranges the
+# server keeps enough data for.
+USAGE_RANGES = ["24h", "7d", "30d"]
+DEFAULT_RANGE = "7d"
 
 
 def parse_time(value):
@@ -233,14 +240,224 @@ def fetch(config=CONFIG, fixture=None):
     return summaries
 
 
+def local_zone():
+    """The IANA name of the local zone, which /api/usage buckets days in."""
+    name = r"[A-Za-z0-9_+-]+(?:/[A-Za-z0-9_+-]+)*"
+    zone = os.environ.get("TZ", "").lstrip(":")
+    if re.fullmatch(name, zone):
+        return zone
+    # Follow /etc/localtime one link at a time: macOS resolves its zoneinfo
+    # directory to zoneinfo.default, and NixOS ends in the store.
+    path = zone if zone.startswith("/") else "/etc/localtime"
+    for _ in range(8):
+        match = re.search(rf"zoneinfo(?:\.default)?/(?:posix/|right/)?({name})$", path)
+        if match:
+            return match[1]
+        try:
+            link = Path(path)
+            path = str(link.parent / link.readlink())
+        except OSError:
+            break
+    return "UTC"
+
+
+def count(value):
+    number = usage(value)
+    return number if number is not None else 0
+
+
+def compact(value):
+    value = count(value)
+    for size, suffix in ((1e12, "T"), (1e9, "B"), (1e6, "M"), (1e3, "K")):
+        if value >= size * 0.9995:
+            scaled = value / size
+            text = f"{scaled:.0f}" if scaled >= 99.95 else f"{scaled:.1f}".removesuffix(".0")
+            return text + suffix
+    return f"{value:.0f}"
+
+
+def money(value):
+    return f"${count(value):,.2f}"
+
+
+def share(part, total):
+    percent = 100 * count(part) / total if total else 0
+    if percent == 0:
+        return "0%"
+    return "<0.1%" if percent < 0.1 else f"{percent:.1f}%"
+
+
+def nice_ceiling(value):
+    if value <= 0:
+        return 1
+    magnitude = 10 ** math.floor(math.log10(value))
+    steps = (1, 1.5, 2, 2.5, 3, 4, 5, 6, 8, 10)
+    return next(step * magnitude for step in steps if step * magnitude >= value)
+
+
+def point_time(point, step):
+    if step == "hour":
+        moment = parse_time(point)
+        return moment.astimezone() if moment else None
+    try:
+        return date.fromisoformat(point)
+    except (TypeError, ValueError):
+        return None
+
+
+def day_label(moment):
+    return f"{moment:%b} {moment.day}"
+
+
+def project_usage(raw):
+    """View projection of /api/usage: totals, a stacked chart, and the groups."""
+    if not isinstance(raw, dict) or not isinstance(raw.get("totals"), dict):
+        raise ValueError("Usage response has no totals")
+    span = raw.get("range") if isinstance(raw.get("range"), dict) else {}
+    step = span.get("step")
+    priced = bool((raw.get("pricing") or {}).get("enabled"))
+    totals = raw["totals"]
+    processed = count(totals.get("processed"))
+    groups = [g for g in raw.get("groups") or [] if isinstance(g, dict)]
+    points = [p for p in raw.get("points") or [] if isinstance(p, dict)]
+
+    moments = [point_time(p.get("point"), step) for p in points]
+    daily = step != "hour"
+    named_days = daily and len(points) <= 7
+
+    def tick(moment):
+        if moment is None:
+            return ""
+        if not daily:
+            return f"{moment:%H}:00"
+        return f"{moment:%a}" if named_days else day_label(moment)
+
+    def readout(moment):
+        if moment is None:
+            return ""
+        if daily:
+            return f"{moment:%a} {day_label(moment)}"
+        return f"{day_label(moment)}, {moment:%H}:00"
+
+    peak = nice_ceiling(max((count(p.get("processed")) for p in points), default=0))
+    bars = []
+    for index, point in enumerate(points):
+        segments = []
+        # Largest group at the bottom; groups arrive sorted largest first.
+        for group in reversed(groups):
+            series = group.get("series_tokens") or []
+            value = count(series[index]) if index < len(series) else 0
+            if value > 0:
+                segments.append({"color": group.get("color") or 0, "fraction": value / peak})
+        detail = f"{compact(point.get('processed'))} tokens"
+        if priced:
+            detail += f", {money(point.get('cost'))}"
+        bars.append(
+            {
+                "segments": segments,
+                "readout": f"{readout(moments[index])}: {detail}",
+            }
+        )
+    marks = min(len(points), 5 if daily and not named_days else 7 if daily else 5)
+    ticks = sorted(
+        {round(i * (len(points) - 1) / (marks - 1)) for i in range(marks)} if marks > 1 else {0}
+    )
+
+    start, end = parse_time(span.get("from")), parse_time(span.get("to"))
+    if not daily:
+        period = "Past 24 hours"
+    elif start and end:
+        last = (end - timedelta(seconds=1)).astimezone()
+        period = f"{day_label(start.astimezone())} to {day_label(last)}"
+    else:
+        period = ""
+
+    activity = [f"{int(count(totals.get('sessions'))):,} sessions"]
+    activity.append(f"{int(count(totals.get('requests'))):,} requests")
+    if count(totals.get("failed")):
+        activity.append(f"{int(count(totals.get('failed'))):,} failed")
+
+    return {
+        "range": str(span.get("key") or ""),
+        "ranges": [r for r in span.get("ranges") or [] if isinstance(r, str)] or USAGE_RANGES,
+        "period": period,
+        "processed": compact(processed),
+        "cost": money(totals.get("cost")) if priced else "",
+        "activity": ", ".join(activity),
+        "chartTitle": "Daily processed tokens" if daily else "Hourly processed tokens",
+        "peak": compact(peak),
+        "half": compact(peak / 2),
+        "bars": bars,
+        "ticks": [{"index": i, "label": tick(moments[i])} for i in ticks if i < len(points)],
+        "groups": [
+            {
+                "label": str(group.get("label") or "Other"),
+                "detail": str(group.get("detail") or ""),
+                "color": group.get("color") or 0,
+                "tokens": compact(group.get("processed")),
+                "fraction": count(group.get("processed")) / processed if processed else 0,
+                "summary": f"{share(group.get('processed'), processed)} of tokens"
+                + (f", {money(group.get('cost'))}" if priced else ""),
+            }
+            for group in groups
+        ],
+        "generatedAt": str(raw.get("generated_at") or ""),
+    }
+
+
+class UsageError(Exception):
+    pass
+
+
+def fetch_usage(range_key, config=CONFIG, fixture=None):
+    if fixture:
+        return project_usage(json.loads(Path(fixture).read_text()))
+    query = urlencode({"range": range_key, "group": "family", "tz": local_zone()})
+    result = subprocess.run(
+        [
+            "curl",
+            "-sS",
+            "--max-time",
+            "10",
+            "--max-filesize",
+            "4000000",
+            "-w",
+            "\n%{http_code}",
+            f"{config['usageUrl']}?{query}",
+        ],
+        text=True,
+        capture_output=True,
+        timeout=12,
+        check=True,
+    )
+    body, _, status = result.stdout.rpartition("\n")
+    if status != "200":
+        try:
+            message = json.loads(body).get("error")
+        except (ValueError, AttributeError):
+            message = None
+        raise UsageError(str(message or f"HTTP {status}"))
+    return project_usage(json.loads(body))
+
+
 class Controller(QObject):
     changed = Signal()
     fetched = Signal(object, str)
+    usage_fetched = Signal(str, object, str)
 
-    def __init__(self, fixture=None, screenshot=False):
+    def __init__(self, fixture=None, usage_fixture=None, screenshot=False):
         super().__init__()
         self.fixture = fixture
+        self.usage_fixture = usage_fixture
         self.screenshot = screenshot
+        self.settings = None if screenshot else QSettings("ai-quota-popup", "ai-quota-popup")
+        self.view = "quota"
+        stored = self.settings.value("usageRange") if self.settings else None
+        self.range = stored if isinstance(stored, str) and stored else DEFAULT_RANGE
+        self.usage = {}
+        self.usage_errors = {}
+        self.usage_loading = set()
+        self.ranges = USAGE_RANGES
         self.window = None
         self.anchor = None
         self.edge = None
@@ -258,6 +475,7 @@ class Controller(QObject):
         self.idle_timer.setInterval(60_000)
         self.idle_timer.timeout.connect(QCoreApplication.quit)
         self.fetched.connect(self._on_fetched)
+        self.usage_fetched.connect(self._on_usage_fetched)
 
     @Property(str, notify=changed)
     def payload(self):
@@ -273,6 +491,12 @@ class Controller(QObject):
                 "stale": self.stale,
                 "loadedAt": self.loaded_at,
                 "loading": self.loading,
+                "view": self.view,
+                "range": self.range,
+                "ranges": self.ranges,
+                "usage": self.usage.get(self.range),
+                "usageError": self.usage_errors.get(self.range, ""),
+                "usageLoading": self.range in self.usage_loading,
             }
         )
 
@@ -287,8 +511,60 @@ class Controller(QObject):
         self.timer.stop()
         self.idle_timer.start()
 
+    @Slot(str)
+    def setView(self, view):
+        if view in VIEWS and view != self.view:
+            self.view = view
+            self.changed.emit()
+            if view == "usage":
+                self.refresh_usage()
+
+    @Slot(str)
+    def setRange(self, range_key):
+        if not re.fullmatch(r"[0-9]+[a-z]", range_key) or range_key == self.range:
+            return
+        self.range = range_key
+        if self.settings:
+            self.settings.setValue("usageRange", range_key)
+        self.changed.emit()
+        self.refresh_usage()
+
+    def busy(self):
+        return self.loading or bool(self.usage_loading)
+
+    def refresh_usage(self):
+        range_key = self.range
+        if range_key in self.usage_loading:
+            return
+        self.usage_loading.add(range_key)
+        self.changed.emit()
+
+        def worker():
+            try:
+                result = fetch_usage(range_key, fixture=self.usage_fixture)
+                self.usage_fetched.emit(range_key, result, "")
+            except UsageError as exc:
+                self.usage_fetched.emit(range_key, None, f"Usage is unavailable: {exc}")
+            except (OSError, ValueError, subprocess.SubprocessError, UnicodeError):
+                self.usage_fetched.emit(range_key, None, "Could not refresh usage")
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot(str, object, str)
+    def _on_usage_fetched(self, range_key, result, error):
+        self.usage_loading.discard(range_key)
+        if error:
+            self.usage_errors[range_key] = error
+        else:
+            self.usage[range_key] = result
+            self.usage_errors.pop(range_key, None)
+            self.ranges = result["ranges"]
+        self.changed.emit()
+
     @Slot()
     def refresh(self):
+        if self.view == "usage":
+            self.refresh_usage()
         if self.loading:
             return
         self.loading = True
@@ -338,13 +614,20 @@ class Controller(QObject):
         y = bounds.top() + 8 if self.edge == "top" else bounds.bottom() - height - 7
         self.window.setPosition(x, max(bounds.top(), y))
 
-    def toggle(self, provider, edge=None):
+    def toggle(self, provider, edge=None, view=None):
         if provider not in PROVIDERS:
             return
-        if self.window.isVisible() and self.selected == provider:
+        view = view if view in VIEWS else None
+        if self.window.isVisible() and self.selected == provider and view in (None, self.view):
             self.hide()
             return
         self.idle_timer.stop()
+        # Usage covers every provider; a click on another provider's pill asks
+        # about that provider's quota.
+        if view:
+            self.view = view
+        elif provider != self.selected:
+            self.view = "quota"
         self.selected = provider
         self.changed.emit()
         self.window.show()
@@ -386,12 +669,12 @@ def server_name():
     return "ai-quota-popup-" + hashlib.sha256(identity.encode()).hexdigest()[:20]
 
 
-def send_command(name, provider, edge=None):
+def send_command(name, provider, edge=None, view=None):
     socket = QLocalSocket()
     socket.connectToServer(name)
     if not socket.waitForConnected(250):
         return False
-    command = {"provider": provider, "version": str(RESOURCES), "edge": edge}
+    command = {"provider": provider, "version": str(RESOURCES), "edge": edge, "view": view}
     socket.write((json.dumps(command) + "\n").encode())
     socket.flush()
     if not socket.waitForReadyRead(500):
@@ -404,12 +687,12 @@ def send_command(name, provider, edge=None):
 def main():
     parser = argparse.ArgumentParser(description="Unified quota detail popup")
     parser.add_argument("--toggle", choices=sorted(PROVIDERS), metavar="PROVIDER")
+    parser.add_argument("--view", choices=VIEWS, help="open on quota or usage")
     parser.add_argument("--fixture", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--usage-fixture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--screenshot", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--serve", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
-    if args.screenshot and not args.fixture:
-        parser.error("--screenshot requires --fixture")
     name = server_name()
     selected = args.toggle or CONFIG["providers"][0]["name"]
     edge = os.environ.get("AI_QUOTA_BAR_EDGE", "bottom")
@@ -421,7 +704,7 @@ def main():
         if not lock.tryLock(3000):
             raise RuntimeError("Could not acquire quota popup launch lock")
         try:
-            if not send_command(name, selected, edge):
+            if not send_command(name, selected, edge, args.view):
                 command = [
                     sys.executable,
                     str(RESOURCES / "main.py"),
@@ -429,8 +712,12 @@ def main():
                     "--toggle",
                     selected,
                 ]
+                if args.view:
+                    command.extend(["--view", args.view])
                 if args.fixture:
                     command.extend(["--fixture", str(args.fixture.resolve())])
+                if args.usage_fixture:
+                    command.extend(["--usage-fixture", str(args.usage_fixture.resolve())])
                 subprocess.Popen(
                     command,
                     stdin=subprocess.DEVNULL,
@@ -460,7 +747,7 @@ def main():
     server.setSocketOptions(QLocalServer.UserAccessOption)
     if not args.screenshot and not server.listen(name):
         for _ in range(20):
-            if send_command(name, selected, edge):
+            if send_command(name, selected, edge, args.view):
                 return 0
             time.sleep(0.05)
             if server.listen(name):
@@ -469,7 +756,11 @@ def main():
             QLocalServer.removeServer(name)
             if not server.listen(name):
                 raise RuntimeError(server.errorString())
-    controller = Controller(fixture=args.fixture, screenshot=bool(args.screenshot))
+    controller = Controller(
+        fixture=args.fixture,
+        usage_fixture=args.usage_fixture,
+        screenshot=bool(args.screenshot),
+    )
     engine = QQmlApplicationEngine()
     engine.rootContext().setContextProperty("bridge", controller)
     engine.load(QUrl.fromLocalFile(str(RESOURCES / "view.qml")))
@@ -489,7 +780,7 @@ def main():
             if not restart:
                 provider = command.get("provider")
                 if provider in PROVIDERS:
-                    controller.toggle(provider, command.get("edge"))
+                    controller.toggle(provider, command.get("edge"), command.get("view"))
             socket.write(b"restart" if restart else b"ok")
             socket.flush()
             socket.waitForBytesWritten(250)
@@ -501,11 +792,11 @@ def main():
                 app.exit(0)
 
     server.newConnection.connect(accept)
-    controller.toggle(selected, edge)
+    controller.toggle(selected, edge, args.view)
     if args.screenshot:
 
         def save():
-            if controller.loading:
+            if controller.busy():
                 QTimer.singleShot(100, save)
                 return
             image = controller.window.grabWindow()

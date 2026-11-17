@@ -42,6 +42,7 @@ in
   inherit accents logos;
 
   apiUrl = "https://ai-quota.clusters.work/api/quota";
+  usageUrl = "https://ai-quota.clusters.work/api/usage";
   updateInterval = 30;
 
   # logoScale fits each logo into SketchyBar's icon slot; tmuxColor is the
