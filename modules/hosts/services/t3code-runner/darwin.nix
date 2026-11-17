@@ -9,7 +9,11 @@
   ...
 }:
 let
-  name = "t3code-testflight";
+  name = "t3code-ios";
+  # macOS puts every account with a UID of 500 or more in staff, which can read
+  # /Users/whexy; nix-darwin's default runner account (533) is one.
+  user = "_t3runner";
+  id = 433;
   workflowRef = "whexy/t3code/.github/workflows/self-hosted-build.yml@refs/heads/self-hosted-nightly";
   # The runner runs this before any step of every job it takes, and fails the
   # job when it fails. Only promoted code can reach self-hosted-nightly.
@@ -32,14 +36,39 @@ in
     # A new token here restarts the service.
     age.secrets.github-runner-t3code = {
       file = ../../../../secrets/github-runner-t3code.age;
-      owner = "_github-runner";
-      group = "_github-runner";
+      owner = user;
+      group = user;
       mode = "0400";
+    };
+
+    users = {
+      users.${user} = {
+        uid = id;
+        gid = id;
+        home = "/var/lib/github-runners";
+        createHome = false;
+        shell = "/bin/bash";
+        description = "GitHub Actions runner for whexy/t3code";
+      };
+      groups.${user} = {
+        gid = id;
+        description = "GitHub Actions runner for whexy/t3code";
+      };
+      # Listed but not defined, so nix-darwin deletes the default account.
+      knownUsers = [
+        user
+        "_github-runner"
+      ];
+      knownGroups = [
+        user
+        "_github-runner"
+      ];
     };
 
     services.github-runners.${name} = {
       enable = true;
-      inherit name;
+      inherit name user;
+      group = user;
       url = "https://github.com/whexy/t3code";
       tokenFile = config.age.secrets.github-runner-t3code.path;
       replace = true;
@@ -56,8 +85,13 @@ in
         # CocoaPods fails on a non-UTF-8 locale, which a launchd daemon has.
         LANG = "en_US.UTF-8";
       };
-      # Wenxuan and the simulators share this Mac; builds yield to them.
-      serviceOverrides.Nice = 10;
+      serviceOverrides = {
+        # Wenxuan and the simulators share this Mac; builds yield to them.
+        Nice = 10;
+        # launchd can start the runner before agenix writes the token, and the
+        # module only restarts it on a crash.
+        KeepAlive.PathState.${config.age.secrets.github-runner-t3code.path} = true;
+      };
     };
 
     # Xcode, codesign, security and PlistBuddy live outside the Nix store.
