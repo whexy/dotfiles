@@ -36,6 +36,7 @@ from PySide6.QtQuick import QQuickWindow, QSGRendererInterface
 RESOURCES = Path(os.environ.get("AI_QUOTA_POPUP_RESOURCES", Path(__file__).resolve().parent))
 CONFIG = json.loads((RESOURCES / "config.json").read_text())
 PROVIDERS = {provider["name"] for provider in CONFIG["providers"]}
+ACCENTS = {provider["name"]: provider.get("accent", "") for provider in CONFIG["providers"]}
 VIEWS = ("quota", "usage")
 # What the range picker offers before the first answer names the ranges the
 # server keeps enough data for.
@@ -412,10 +413,8 @@ class UsageError(Exception):
     pass
 
 
-def fetch_usage(range_key, config=CONFIG, fixture=None):
-    if fixture:
-        return project_usage(json.loads(Path(fixture).read_text()))
-    query = urlencode({"range": range_key, "group": "family", "tz": local_zone()})
+def get_json(url):
+    """GET an ai-quota usage route, whose errors carry their reason as JSON."""
     result = subprocess.run(
         [
             "curl",
@@ -426,7 +425,7 @@ def fetch_usage(range_key, config=CONFIG, fixture=None):
             "4000000",
             "-w",
             "\n%{http_code}",
-            f"{config['usageUrl']}?{query}",
+            url,
         ],
         text=True,
         capture_output=True,
@@ -440,18 +439,164 @@ def fetch_usage(range_key, config=CONFIG, fixture=None):
         except (ValueError, AttributeError):
             message = None
         raise UsageError(str(message or f"HTTP {status}"))
-    return project_usage(json.loads(body))
+    return json.loads(body)
+
+
+def fetch_usage(range_key, config=CONFIG, fixture=None):
+    if fixture:
+        return project_usage(json.loads(Path(fixture).read_text()))
+    query = urlencode({"range": range_key, "group": "family", "tz": local_zone()})
+    return project_usage(get_json(f"{config['usageUrl']}?{query}"))
+
+
+# /api/usage/quota names Grok by its CLIProxyAPI provider ID.
+POOL_PROVIDERS = {"xai": "grok"}
+
+
+def moment(ms):
+    try:
+        return datetime.fromtimestamp(float(ms) / 1000, UTC).astimezone()
+    except (TypeError, ValueError, OverflowError, OSError):
+        return None
+
+
+def clock(when):
+    return f"{when:%a} {when.hour % 12 or 12}:{when.minute:02d} {'AM' if when.hour < 12 else 'PM'}"
+
+
+def project_pool(pool, raw):
+    """One provider's pool: the figures, and a recorded and projected line."""
+    now, start, end, horizon = (count(raw.get(key)) for key in ("now", "from", "until", "horizon"))
+    window = pool.get("window") if isinstance(pool.get("window"), dict) else None
+    accounts = int(count(pool.get("account_count")))
+    if not window or not now or end <= start:
+        return None
+    capacity = count(pool.get("capacity")) or 100 * max(1, accounts)
+    remaining = usage(pool.get("remaining"))
+    burn = pool.get("burn") if isinstance(pool.get("burn"), dict) else None
+    per_hour = usage(burn.get("per_hour")) if burn else None
+
+    def empty(at):
+        when = moment(at) if at is not None else None
+        if when is None:
+            limit = moment(horizon)
+            return f"Not by {day_label(limit)}" if limit else "Not soon"
+        return "Empty now" if count(at) <= now else clock(when)
+
+    stats = [
+        {
+            "label": f"Burn, last {int(count(raw.get('burn_hours')) or 48)}h",
+            "value": f"{per_hour:.1f}%/h" if per_hour is not None else "Unknown",
+        },
+        {"label": "Pool empty", "value": empty(pool.get("pool_empty_at"))},
+    ]
+    if accounts > 1:
+        first = pool.get("first_empty") if isinstance(pool.get("first_empty"), dict) else {}
+        stats.append({"label": "First empty", "value": empty(first.get("at"))})
+    reset = pool.get("next_reset") if isinstance(pool.get("next_reset"), dict) else None
+    reset_at = moment(reset.get("at")) if reset else None
+    stats.append(
+        {
+            "label": "Next reset",
+            "value": f"+{count(reset.get('gain')):.0f}% {clock(reset_at)}"
+            if reset_at
+            else "None soon",
+        }
+    )
+
+    def x(t):
+        return (t - start) / (end - start)
+
+    def y(v):
+        return 1 - max(0, min(capacity, v)) / capacity
+
+    # Recorded values hold until the next time; null is a gap in the line.
+    recorded = pool.get("recorded") if isinstance(pool.get("recorded"), dict) else {}
+    times, values = recorded.get("times") or [], recorded.get("pool") or []
+    lines, line = [], []
+    for index, (t, v) in enumerate(zip(times, values, strict=False)):
+        t = usage(t)
+        v = usage(v)
+        if t is None or v is None:
+            if line:
+                lines.append(line)
+            line = []
+            continue
+        following = usage(times[index + 1]) if index + 1 < len(times) else now
+        following = min(following if following is not None else now, now, end)
+        if t < start or t > end:
+            continue
+        line += [[x(t), y(v)], [x(following), y(v)]]
+    if line:
+        lines.append(line)
+
+    # The projection is linear between points; clip it where the chart ends.
+    projected = pool.get("projected") if isinstance(pool.get("projected"), dict) else {}
+    points, previous = [], None
+    for t, v in zip(projected.get("times") or [], projected.get("pool") or [], strict=False):
+        t, v = usage(t), usage(v)
+        if t is None or v is None:
+            continue
+        if t > end:
+            if previous and previous[0] < end:
+                (t0, v0) = previous
+                points.append([1, y(v0 + (v - v0) * (end - t0) / (t - t0))])
+            break
+        points.append([x(t), y(v)])
+        previous = (t, v)
+
+    midnight = moment(start).replace(hour=0, minute=0, second=0, microsecond=0)
+    days = []
+    while midnight.timestamp() * 1000 <= end:
+        if midnight.timestamp() * 1000 >= start:
+            days.append(midnight)
+        midnight = (midnight + timedelta(days=1, hours=2)).replace(hour=0)
+    every = max(1, math.ceil(len(days) / 6))
+    plural = "account" if accounts == 1 else "accounts"
+    return {
+        "subtitle": f"{accounts} {plural}, {window.get('label') or 'quota window'}",
+        "remaining": f"{remaining / capacity * 100:.0f}%" if remaining is not None else "—",
+        "stats": stats,
+        "recorded": lines,
+        "projected": points if len(points) > 1 else [],
+        "now": x(now),
+        "ticks": [
+            {"x": x(day.timestamp() * 1000), "label": f"{day:%a} {day.day}"}
+            for day in days[::every]
+        ],
+    }
+
+
+def fetch_pools(config=CONFIG, fixture=None):
+    if fixture:
+        raw = json.loads(Path(fixture).read_text())
+    else:
+        raw = get_json(f"{config['poolsUrl']}?{urlencode({'step': '3h'})}")
+    if not isinstance(raw, dict) or not isinstance(raw.get("providers"), list):
+        raise ValueError("Pool response has no providers")
+    pools = {}
+    for pool in raw["providers"]:
+        if isinstance(pool, dict):
+            name = POOL_PROVIDERS.get(pool.get("provider"), pool.get("provider"))
+            if name in PROVIDERS and (view := project_pool(pool, raw)):
+                pools[name] = view
+    return pools
 
 
 class Controller(QObject):
     changed = Signal()
     fetched = Signal(object, str)
     usage_fetched = Signal(str, object, str)
+    pools_fetched = Signal(object)
 
-    def __init__(self, fixture=None, usage_fixture=None, screenshot=False):
+    def __init__(self, fixture=None, usage_fixture=None, pools_fixture=None, screenshot=False):
         super().__init__()
         self.fixture = fixture
         self.usage_fixture = usage_fixture
+        self.pools_fixture = pools_fixture
+        self.pools = {}
+        self.pools_at = None
+        self.pools_loading = False
         self.screenshot = screenshot
         self.settings = None if screenshot else QSettings("ai-quota-popup", "ai-quota-popup")
         self.view = "quota"
@@ -479,6 +624,7 @@ class Controller(QObject):
         self.idle_timer.timeout.connect(QCoreApplication.quit)
         self.fetched.connect(self._on_fetched)
         self.usage_fetched.connect(self._on_usage_fetched)
+        self.pools_fetched.connect(self._on_pools_fetched)
 
     @Property(str, notify=changed)
     def payload(self):
@@ -500,6 +646,8 @@ class Controller(QObject):
                 "usage": self.usage.get(self.range),
                 "usageError": self.usage_errors.get(self.range, ""),
                 "usageLoading": self.range in self.usage_loading,
+                "pool": self.pools.get(self.selected),
+                "accent": ACCENTS.get(self.selected, ""),
             }
         )
 
@@ -519,8 +667,7 @@ class Controller(QObject):
         if view in VIEWS and view != self.view:
             self.view = view
             self.changed.emit()
-            if view == "usage":
-                self.refresh_usage()
+            self.refresh()
 
     @Slot(str)
     def setRange(self, range_key):
@@ -533,7 +680,31 @@ class Controller(QObject):
         self.refresh_usage()
 
     def busy(self):
-        return self.loading or bool(self.usage_loading)
+        return self.loading or self.pools_loading or bool(self.usage_loading)
+
+    def refresh_pools(self):
+        # The server caches a minute, and its uncached calls share a budget.
+        if self.pools_loading or (self.pools_at and time.monotonic() - self.pools_at < 55):
+            return
+        self.pools_loading = True
+
+        def worker():
+            try:
+                self.pools_fetched.emit(fetch_pools(fixture=self.pools_fixture))
+            except (OSError, ValueError, UsageError, subprocess.SubprocessError, UnicodeError):
+                self.pools_fetched.emit(None)
+
+        threading.Thread(target=worker, daemon=True).start()
+
+    @Slot(object)
+    def _on_pools_fetched(self, result):
+        self.pools_loading = False
+        if result is not None:
+            self.pools, self.pools_at = result, time.monotonic()
+        elif self.pools_at and time.monotonic() - self.pools_at > 300:
+            # A projection from minutes ago misleads more than none.
+            self.pools, self.pools_at = {}, None
+        self.changed.emit()
 
     def refresh_usage(self):
         range_key = self.range
@@ -568,6 +739,8 @@ class Controller(QObject):
     def refresh(self):
         if self.view == "usage":
             self.refresh_usage()
+        else:
+            self.refresh_pools()
         if self.loading:
             return
         self.loading = True
@@ -693,6 +866,7 @@ def main():
     parser.add_argument("--view", choices=VIEWS, help="open on quota or usage")
     parser.add_argument("--fixture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--usage-fixture", type=Path, help=argparse.SUPPRESS)
+    parser.add_argument("--pools-fixture", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--screenshot", type=Path, help=argparse.SUPPRESS)
     parser.add_argument("--serve", action="store_true", help=argparse.SUPPRESS)
     args = parser.parse_args()
@@ -721,6 +895,8 @@ def main():
                     command.extend(["--fixture", str(args.fixture.resolve())])
                 if args.usage_fixture:
                     command.extend(["--usage-fixture", str(args.usage_fixture.resolve())])
+                if args.pools_fixture:
+                    command.extend(["--pools-fixture", str(args.pools_fixture.resolve())])
                 subprocess.Popen(
                     command,
                     stdin=subprocess.DEVNULL,
@@ -762,6 +938,7 @@ def main():
     controller = Controller(
         fixture=args.fixture,
         usage_fixture=args.usage_fixture,
+        pools_fixture=args.pools_fixture,
         screenshot=bool(args.screenshot),
     )
     engine = QQmlApplicationEngine()

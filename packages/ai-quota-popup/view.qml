@@ -413,6 +413,214 @@ ApplicationWindow {
                     }
                 }
 
+                Rectangle {
+                    id: poolCard
+                    readonly property var pool: snapshot.pool
+                    readonly property color tint: snapshot.accent || popup.green
+                    visible: !!pool
+                    width: content.width
+                    height: poolBody.implicitHeight + 40
+                    radius: 23
+                    color: popup.surface
+                    border.width: 1
+                    border.color: Qt.rgba(1, 1, 1, 0.055)
+                    onPoolChanged: poolChart.requestPaint()
+
+                    Column {
+                        id: poolBody
+                        x: 20
+                        y: 20
+                        width: parent.width - 40
+                        spacing: 16
+
+                        RowLayout {
+                            width: parent.width
+                            spacing: 11
+                            ColumnLayout {
+                                Layout.fillWidth: true
+                                spacing: 3
+                                Text {
+                                    textFormat: Text.PlainText
+                                    text: "Pool"
+                                    color: popup.ink
+                                    font.pixelSize: 17
+                                    font.weight: Font.DemiBold
+                                }
+                                Text {
+                                    Layout.fillWidth: true
+                                    textFormat: Text.PlainText
+                                    text: poolCard.pool ? poolCard.pool.subtitle : ""
+                                    color: popup.secondary
+                                    font.pixelSize: 11
+                                    elide: Text.ElideRight
+                                }
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignBaseline
+                                textFormat: Text.PlainText
+                                text: poolCard.pool ? poolCard.pool.remaining : ""
+                                color: popup.ink
+                                font.pixelSize: 29
+                                font.weight: Font.Medium
+                                font.features: ({ "tnum": 1 })
+                            }
+                            Text {
+                                Layout.alignment: Qt.AlignBaseline
+                                textFormat: Text.PlainText
+                                text: "left"
+                                color: popup.secondary
+                                font.pixelSize: 11
+                            }
+                        }
+
+                        GridLayout {
+                            width: parent.width
+                            columns: 2
+                            columnSpacing: 12
+                            rowSpacing: 10
+                            Repeater {
+                                model: poolCard.pool ? poolCard.pool.stats : []
+                                delegate: ColumnLayout {
+                                    required property var modelData
+                                    Layout.fillWidth: true
+                                    Layout.preferredWidth: 1
+                                    spacing: 2
+                                    Text {
+                                        Layout.fillWidth: true
+                                        textFormat: Text.PlainText
+                                        text: modelData.label
+                                        color: popup.secondary
+                                        font.pixelSize: 10
+                                        elide: Text.ElideRight
+                                    }
+                                    Text {
+                                        Layout.fillWidth: true
+                                        textFormat: Text.PlainText
+                                        text: modelData.value
+                                        color: popup.ink
+                                        font.pixelSize: 12
+                                        font.weight: Font.Medium
+                                        font.features: ({ "tnum": 1 })
+                                        elide: Text.ElideRight
+                                    }
+                                }
+                            }
+                        }
+
+                        Item {
+                            width: parent.width
+                            height: 78
+
+                            Canvas {
+                                id: poolChart
+                                width: parent.width
+                                height: 60
+                                renderStrategy: Canvas.Immediate
+                                onWidthChanged: requestPaint()
+                                onPaint: {
+                                    const ctx = getContext("2d")
+                                    ctx.reset()
+                                    const pool = poolCard.pool
+                                    if (!pool)
+                                        return
+                                    const w = width, h = height - 1
+                                    const px = function(p) { return [p[0] * w, 0.5 + p[1] * h] }
+                                    ctx.lineWidth = 1
+                                    for (const level of [0, 0.5, 1]) {
+                                        ctx.strokeStyle = Qt.rgba(1, 1, 1, level === 1 ? 0.10 : 0.05)
+                                        ctx.beginPath()
+                                        ctx.moveTo(0, 0.5 + level * h)
+                                        ctx.lineTo(w, 0.5 + level * h)
+                                        ctx.stroke()
+                                    }
+                                    ctx.strokeStyle = Qt.rgba(1, 1, 1, 0.35)
+                                    ctx.beginPath()
+                                    ctx.moveTo(Math.round(pool.now * w) + 0.5, 0)
+                                    ctx.lineTo(Math.round(pool.now * w) + 0.5, h + 1)
+                                    ctx.stroke()
+
+                                    const tint = poolCard.tint
+                                    for (const line of pool.recorded) {
+                                        ctx.beginPath()
+                                        const first = px(line[0])
+                                        ctx.moveTo(first[0], h + 0.5)
+                                        for (const p of line) {
+                                            const q = px(p)
+                                            ctx.lineTo(q[0], q[1])
+                                        }
+                                        ctx.lineTo(px(line[line.length - 1])[0], h + 0.5)
+                                        ctx.closePath()
+                                        ctx.fillStyle = Qt.rgba(tint.r, tint.g, tint.b, 0.16)
+                                        ctx.fill()
+                                        ctx.beginPath()
+                                        ctx.moveTo(first[0], first[1])
+                                        for (const p of line) {
+                                            const q = px(p)
+                                            ctx.lineTo(q[0], q[1])
+                                        }
+                                        ctx.strokeStyle = tint.toString()
+                                        ctx.lineWidth = 1.5
+                                        ctx.stroke()
+                                    }
+                                    const projected = pool.projected
+                                    // Dash by hand: the pattern restarts at every vertex, so
+                                    // walk the path and draw alternate 4 px pieces.
+                                    ctx.strokeStyle = tint.toString()
+                                    ctx.lineWidth = 1.5
+                                    ctx.beginPath()
+                                    let on = true, left = 4
+                                    for (let i = 1; i < projected.length; i++) {
+                                        let a = px(projected[i - 1])
+                                        const b = px(projected[i])
+                                        let length = Math.hypot(b[0] - a[0], b[1] - a[1])
+                                        while (length > 0) {
+                                            const step = Math.min(left, length)
+                                            const t = step / length
+                                            const c = [a[0] + (b[0] - a[0]) * t, a[1] + (b[1] - a[1]) * t]
+                                            if (on) {
+                                                ctx.moveTo(a[0], a[1])
+                                                ctx.lineTo(c[0], c[1])
+                                            }
+                                            a = c
+                                            length -= step
+                                            left -= step
+                                            if (left <= 0) {
+                                                on = !on
+                                                left = on ? 4 : 3
+                                            }
+                                        }
+                                    }
+                                    ctx.stroke()
+                                    if (projected.length) {
+                                        const dot = px(projected[0])
+                                        ctx.fillStyle = tint.toString()
+                                        ctx.beginPath()
+                                        ctx.arc(dot[0], dot[1], 2.5, 0, 2 * Math.PI)
+                                        ctx.fill()
+                                    }
+                                }
+                            }
+
+                            Repeater {
+                                model: poolCard.pool ? poolCard.pool.ticks : []
+                                delegate: Text {
+                                    required property var modelData
+                                    x: Math.min(Math.max(0, poolChart.width * modelData.x - width / 2), poolChart.width - width)
+                                    y: poolChart.height + 6
+                                    width: 40
+                                    horizontalAlignment: Text.AlignHCenter
+                                    textFormat: Text.PlainText
+                                    text: modelData.label
+                                    color: popup.secondary
+                                    font.pixelSize: 8
+                                    font.weight: Font.Medium
+                                    font.family: popup.mono
+                                }
+                            }
+                        }
+                    }
+                }
+
                 Text {
                     visible: snapshot.cards.length > 0 && (snapshot.stale || snapshot.error !== "")
                     width: content.width

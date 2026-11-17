@@ -43,6 +43,7 @@ in
 
   apiUrl = "https://ai-quota.clusters.work/api/quota";
   usageUrl = "https://ai-quota.clusters.work/api/usage";
+  poolsUrl = "https://ai-quota.clusters.work/api/usage/quota";
   updateInterval = 30;
 
   # logoScale fits each logo into SketchyBar's icon slot; tmuxColor is the
