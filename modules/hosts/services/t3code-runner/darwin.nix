@@ -10,7 +10,7 @@
 }:
 let
   name = "t3code-ios";
-  user = "_t3runner";
+  user = "_github-runner";
   id = 433;
   home = "/Users/${config.system.primaryUser}";
   workflowRef = "whexy/t3code/.github/workflows/self-hosted-build.yml@refs/heads/self-hosted-nightly";
@@ -40,6 +40,18 @@ in
       mode = "0400";
     };
 
+    # The runner ran as _t3runner with these IDs before, and nix-darwin deletes
+    # no account below UID 502. Runs before nix-darwin creates the new account.
+    system.activationScripts.extraActivation.text = ''
+      if dscl . -read /Users/_t3runner &> /dev/null; then
+        /bin/chmod -a "user:_t3runner deny list,search,readattr,readextattr,readsecurity" ${home} || true
+        dscl . -delete /Users/_t3runner
+      fi
+      if dscl . -read /Groups/_t3runner &> /dev/null; then
+        dscl . -delete /Groups/_t3runner
+      fi
+    '';
+
     # nix-darwin creates a full account, and macOS counts every full account in
     # staff, which may list and read the primary user's home.
     system.activationScripts.postActivation.text = ''
@@ -61,15 +73,8 @@ in
         gid = id;
         description = "GitHub Actions runner for whexy/t3code";
       };
-      # Listed but not defined, so nix-darwin deletes the default account.
-      knownUsers = [
-        user
-        "_github-runner"
-      ];
-      knownGroups = [
-        user
-        "_github-runner"
-      ];
+      knownUsers = [ user ];
+      knownGroups = [ user ];
     };
 
     services.github-runners.${name} = {
