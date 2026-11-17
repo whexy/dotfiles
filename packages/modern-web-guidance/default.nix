@@ -9,11 +9,11 @@ let
 in
 pkgs.stdenvNoCC.mkDerivation (finalAttrs: {
   pname = "modern-web-guidance";
-  version = "1.0.0";
+  version = "1.0.1";
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/modern-web-guidance/-/modern-web-guidance-${finalAttrs.version}.tgz";
-    hash = "sha256-vXqmI60QcQqa1meP28wLiQyQPFT9ar/BJv9C3gHw5Xc=";
+    hash = "sha256-cT09NE1vrVySZ/se2Nr/Xdct9GNOmtayvTsMoX+EOKM=";
   };
 
   nativeBuildInputs = [ pkgs.makeWrapper ];
