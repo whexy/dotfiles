@@ -122,14 +122,15 @@ in
           "${hyper}-f" = "layout floating tiling";
           "${hyper}-left" = "focus-monitor --wrap-around prev";
           "${hyper}-right" = "focus-monitor --wrap-around next";
+          "${hyper}-q" = "close";
+        }
+        // lib.optionalAttrs (shared.terminal != null) {
           "${hyper}-t" =
             {
-              rex = "exec-and-forget open -a 'Rex Beta'";
               ssh-window = "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch";
               ghostty = "exec-and-forget open -a Ghostty";
             }
             .${shared.terminal};
-          "${hyper}-q" = "close";
         }
         // lib.optionalAttrs shared.t3codeDesktop {
           "${meh}-t" = "exec-and-forget open -a 'T3 Code (Nightly)'";
