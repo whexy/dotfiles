@@ -16,7 +16,7 @@ let
   workflowRef = "whexy/t3code/.github/workflows/self-hosted-build.yml@refs/heads/self-hosted-nightly";
   # The runner runs this before any step of every job it takes, and fails the
   # job when it fails. Only promoted code can reach self-hosted-nightly.
-  admit = pkgs.writeShellScript "t3code-runner-admit" ''
+  admit = pkgs.writeShellScript "t3code-runner-admit.sh" ''
     if [[ "$GITHUB_REPOSITORY" == whexy/t3code \
       && ("$GITHUB_EVENT_NAME" == push || "$GITHUB_EVENT_NAME" == workflow_dispatch) \
       && "$GITHUB_WORKFLOW_REF" == ${lib.escapeShellArg workflowRef} \
