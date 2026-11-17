@@ -48,9 +48,12 @@ def parse_time(value):
         return None
     try:
         parsed = datetime.fromisoformat(value.replace("Z", "+00:00"))
-        return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
     except ValueError:
         return None
+    # Go's zero time, which the server sends before its first sample, is unknown.
+    if parsed.year < 1970:
+        return None
+    return parsed if parsed.tzinfo else parsed.replace(tzinfo=UTC)
 
 
 def usage(value):
