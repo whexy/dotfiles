@@ -55,6 +55,7 @@ let
 
   terminalLaunch =
     {
+      rex = "/usr/bin/env -i /usr/bin/open -a 'Rex Beta'";
       ssh-window = "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &";
       ghostty = "/usr/bin/env -i /usr/bin/open -a Ghostty";
     }
@@ -168,10 +169,6 @@ in
         end)
 
         paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
-      ''
-      # Under Paneru, Rex keeps Hyper+T for the shortcut recorded in its own
-      # Settings.
-      + lib.optionalString (shared.terminal != "rex") ''
         paneru.bind(hyper .. " - t", function() os.execute("${terminalLaunch}") end)
       ''
       + lib.optionalString shared.t3codeDesktop ''

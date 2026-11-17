@@ -12,52 +12,9 @@ let
   meh = shared.meh.aerospace;
   inherit (config.dotfiles.panel.sketchybar) reserve;
   sketchybar = lib.getExe pkgs.sketchybar;
-  rex = shared.terminal == "rex";
-
-  rexWindow = pkgs.writeShellApplication {
-    name = "rex-window";
-    runtimeInputs = [
-      config.programs.aerospace.package
-      pkgs.coreutils
-      pkgs.gnugrep
-      pkgs.jq
-    ];
-    text = builtins.readFile ./rex-window.sh;
-  };
-
-  # Rex's own spellings of the keys AeroSpace binds for it. A shortcut recorded
-  # in Rex's Settings on one of them would fire alongside AeroSpace's.
-  rexKeys = [
-    "ctrl+alt+shift+cmd+t"
-    "ctrl+alt+shift+cmd+enter"
-    "ctrl+alt+shift+cmd+return"
-  ];
-  rexShortcuts = "$HOME/Library/Application Support/com.superlogical.rex/Shortcuts/shortcuts.json";
 in
 {
   config = lib.mkIf (cfg.darwin.enable && cfg.darwin.windowManager == "aerospace") {
-    home.packages = lib.optional rex rexWindow;
-
-    # rex-window drives the app through Rex's CLI, which Rex refuses until
-    # Remote Control is on.
-    targets.darwin.defaults."com.superlogical.rex" = lib.mkIf rex {
-      "rex.client.remoteControl" = true;
-    };
-
-    home.activation.rexFreeShortcuts = lib.mkIf rex (
-      lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-        shortcuts="${rexShortcuts}"
-        keys='${builtins.toJSON rexKeys}'
-        if [ -f "$shortcuts" ] && ${lib.getExe pkgs.jq} -e --argjson keys "$keys" \
-          'any(.layer.bindings[]?; any(.keys[]?; IN($keys[])))' "$shortcuts" >/dev/null; then
-          tmp=$(mktemp)
-          ${lib.getExe pkgs.jq} --argjson keys "$keys" \
-            '.layer.bindings |= map(select(any(.keys[]?; IN($keys[])) | not))' "$shortcuts" >"$tmp"
-          run mv "$tmp" "$shortcuts"
-        fi
-      ''
-    );
-
     programs.aerospace = {
       enable = true;
       package = pkgs.unstable.aerospace;
@@ -165,19 +122,14 @@ in
           "${hyper}-f" = "layout floating tiling";
           "${hyper}-left" = "focus-monitor --wrap-around prev";
           "${hyper}-right" = "focus-monitor --wrap-around next";
-          "${hyper}-q" = "close";
-        }
-        // lib.optionalAttrs rex {
-          "${hyper}-enter" = "exec-and-forget ${lib.getExe rexWindow} new";
-        }
-        // {
           "${hyper}-t" =
             {
-              rex = "exec-and-forget ${lib.getExe rexWindow} scratch";
+              rex = "exec-and-forget open -a 'Rex Beta'";
               ssh-window = "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch";
               ghostty = "exec-and-forget open -a Ghostty";
             }
             .${shared.terminal};
+          "${hyper}-q" = "close";
         }
         // lib.optionalAttrs shared.t3codeDesktop {
           "${meh}-t" = "exec-and-forget open -a 'T3 Code (Nightly)'";
