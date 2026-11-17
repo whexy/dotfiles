@@ -1,10 +1,11 @@
 { pkgs }:
 
-# Agent-facing transcription CLI: whisper-1 word timestamps, annotated
-# (pauses, fillers, stumbles) so an agent can propose video cuts from the
-# transcript. ffmpeg is bound onto PATH because the tool shells out to it
-# for probing, extraction, chunking, and silence detection, and not every
-# host has it installed.
+# Agent-facing transcription CLI: segment-timed text from wetype-asr by
+# default, or whisper-1 word timestamps annotated (pauses, fillers,
+# stumbles) so an agent can propose video cuts from the transcript. ffmpeg
+# is bound onto PATH because the tool shells out to it for probing,
+# extraction, chunking, and silence detection, and not every host has it
+# installed.
 pkgs.stdenvNoCC.mkDerivation {
   pname = "transcribe";
   version = "1.0.0";
@@ -28,7 +29,7 @@ pkgs.stdenvNoCC.mkDerivation {
   '';
 
   meta = {
-    description = "Word-timed, pause/stumble-annotated transcripts for agent-driven video cutting";
+    description = "Transcripts for agents: WeType segments by default, whisper-1 word timing for video cutting";
     mainProgram = "transcribe";
     platforms = pkgs.lib.platforms.unix;
   };

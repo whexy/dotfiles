@@ -368,7 +368,17 @@ def run_verify_audio(root, version=None):
         eprint(f"transcribing {root.rel(audio)} (cut audio of v{n})")
         try:
             result = subprocess.run(
-                ["transcribe", str(audio), "--format", "json", "-o", str(heard_path), "--yes"],
+                [
+                    "transcribe",
+                    str(audio),
+                    "--backend",
+                    "whisper",
+                    "--format",
+                    "json",
+                    "-o",
+                    str(heard_path),
+                    "--yes",
+                ],
                 capture_output=True,
                 text=True,
             )

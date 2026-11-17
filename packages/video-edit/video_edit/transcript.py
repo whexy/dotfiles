@@ -15,9 +15,16 @@ def load(path):
     path = Path(path)
     if not path.exists():
         raise UsageError(
-            f"no transcript at {path}: run `transcribe <main> --format json -o {path}` once"
+            f"no transcript at {path}: run "
+            f"`transcribe <main> --backend whisper --format json -o {path}` once"
         )
     data = read_json(path)
+    if isinstance(data, dict) and data.get("timing", "word") != "word":
+        raise UsageError(
+            f"{path} has {data.get('backend')} {data.get('timing')} timing, and every cut "
+            f"needs word timing: run `transcribe <main> --backend whisper --format json "
+            f"-o {path}` again"
+        )
     try:
         raw = [w for seg in data["segments"] for w in seg["words"]]
         words = [

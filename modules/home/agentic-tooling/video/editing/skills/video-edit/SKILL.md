@@ -42,11 +42,14 @@ without asking.
 ```sh
 video-edit init "$FOOTAGE/talk.mkv" --camera "$FOOTAGE/cam.mkv" --name "AI Workflow"
 cd "$FOOTAGE/edit/AI Workflow"
-transcribe "$FOOTAGE/talk.mkv" --format json -o transcripts/talk.json
+transcribe "$FOOTAGE/talk.mkv" --backend whisper --format json -o transcripts/talk.json
 video-edit silences
 ```
 
-Transcribe once, with no `--language` or `--context`. Read it as text with
+Transcribe once with `--backend whisper` (whisper-1, $0.006 per minute),
+with no `--language` or `--context`: every cut needs its word timing, and
+`transcribe`'s default backend, WeType, has segment timing only, which
+`video-edit` refuses. Read it as text with
 `transcribe transcripts/talk.json --from-json`. `silences` detects the
 pauses that every cut is judged against and caches them.
 

@@ -1,23 +1,31 @@
 #!/usr/bin/env python3
-"""Transcribe an audio/video file into an agent-readable, word-timed transcript.
+"""Transcribe an audio/video file into an agent-readable transcript.
 
-Uses OpenAI `whisper-1`, the only transcription model that returns word
-timestamps. The transcript is annotated (per-word gaps, fillers,
-repeated word/phrase stumbles, silent stretches without speech) so an
-agent can propose video cuts from the transcript alone, reading
-individual word errors against the surrounding context. Word edges land
-about +/-0.2 s from the real pause edges; treat them as decision
-support, not cut points, until they are snapped to detected silence in
-the actual edit.
+Two backends:
 
-Default output is a compact annotated transcript; `--format json` gives
-the full word-level data, and `--from-json` re-renders that data in any
+- `wetype` (default): wetype-asr, a Whisper-compatible API on the tailnet
+  in front of WeChat's WeType cloud ASR. Free, but the audio goes to
+  Tencent, a request takes at most 5 minutes of audio, and it returns
+  segment timing only (pause-cut chunks of ~5-10 s), with fillers dropped.
+- `whisper`: OpenAI `whisper-1`, the only model that returns word
+  timestamps. The transcript is annotated (per-word gaps, fillers,
+  repeated word/phrase stumbles, silent stretches without speech) so an
+  agent can propose video cuts from it. Word edges land about +/-0.2 s
+  from the real pause edges; treat them as decision support, not cut
+  points, until they are snapped to detected silence in the actual edit.
+
+A result's `timing` says which it holds, `word` or `segment`; segment
+results have no `words`, so nothing downstream can mistake them for
+word-timed. Default output is a compact transcript; `--format json`
+gives the full data, and `--from-json` re-renders that data in any
 format without the API or ffmpeg. Exit codes: 0 ok, 2 usage (including
 a `--from-json` file that is not transcribe JSON), 3 media/ffmpeg, 4 API,
-5 missing OPENAI_API_KEY.
+5 missing API key or token.
 """
 
 import argparse
+import contextlib
+import http.client
 import json
 import math
 import os
@@ -27,16 +35,13 @@ import sys
 import tempfile
 import time
 import unicodedata
-import urllib.error
-import urllib.request
+import urllib.parse
 import uuid
 from concurrent.futures import ThreadPoolExecutor
 from pathlib import Path
 
-API_URL = os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1").rstrip("/")
 AUDIO_FORMATS = {"mp3", "mp4", "mpeg", "mpga", "m4a", "wav", "webm"}
 MAX_FILE = 24 * 1000 * 1000  # API limit is 25 MB; leave multipart headroom
-CHUNK_SECONDS = 600.0
 # Pauses sit a few dB above the recording's noise floor, which varies by
 # mic and room: a USB mic with a -44.5 dB floor has pauses at -38 to -42 dB.
 FLOOR_MARGIN_DB = 9.0
@@ -52,11 +57,38 @@ ANALYSIS_FORMAT = "aformat=sample_rates=16000:channel_layouts=mono"
 EDGE_SLOP = 0.3
 STUMBLE_PIECES = 4
 STUMBLE_GAP = 1.5
+DEFAULT_PAUSE = 0.6
 
 EXIT_OK, EXIT_USAGE, EXIT_MEDIA, EXIT_API, EXIT_NOKEY = 0, 2, 3, 4, 5
 
-MODEL = "whisper-1"
-PRICE_PER_MIN = 0.006
+# `chunk` is the length a split aims for and `limit` the longest a request
+# may carry. wetype-asr answers 413 beyond 5 minutes of audio and serves
+# one request at a time from a single queue, so parallel chunks would
+# only wait there or come back 429.
+BACKENDS = {
+    "wetype": {
+        "model": "wetype",
+        "timing": "segment",
+        "url": os.environ.get("WETYPE_ASR_URL", "https://wetype-asr.at-basking.ts.net/v1"),
+        "key_env": "WETYPE_ASR_TOKEN",
+        "secret": "secrets/wetype-asr-transcribe-token.age",
+        "price_per_min": 0.0,
+        "chunk": 270.0,
+        "limit": 290.0,
+        "workers": 1,
+    },
+    "whisper": {
+        "model": "whisper-1",
+        "timing": "word",
+        "url": os.environ.get("OPENAI_BASE_URL", "https://api.openai.com/v1"),
+        "key_env": "OPENAI_API_KEY",
+        "secret": "secrets/openai-api-key.age",
+        "price_per_min": 0.006,
+        "chunk": 600.0,
+        "limit": 720.0,
+        "workers": 4,
+    },
+}
 
 FILLERS_EN = {
     "um",
@@ -241,15 +273,15 @@ def detect_silences(path, settings, duration):
     return spans
 
 
-def plan_chunks(duration, silences, target=CHUNK_SECONDS):
-    """Split [0, duration] near `target` intervals, at silence midpoints."""
-    if duration <= target * 1.2:
-        return [(0.0, duration)]
+def plan_chunks(duration, silences, target, limit):
+    """Split [0, duration] into chunks of at most `limit` seconds, each cut
+    at the silence midpoint nearest `target` seconds in, or at `target`
+    when no silence is near."""
     mids = sorted((s + e) / 2 for s, e in silences if 0 < s < duration)
     cuts, start = [], 0.0
-    while duration - start > target * 1.2:
+    while duration - start > limit:
         ideal = start + target
-        near = [m for m in mids if abs(m - ideal) <= target * 0.25]
+        near = [m for m in mids if ideal - target * 0.25 <= m <= start + limit]
         cut = min(near, key=lambda m: abs(m - ideal)) if near else ideal
         cuts.append((start, cut))
         start = cut
@@ -310,9 +342,12 @@ def multipart(fields, file_field, filename, data):
 
 
 def transcribe_chunk(client, path, args):
-    fields = [
-        ("model", MODEL),
-        ("response_format", "verbose_json"),
+    backend = BACKENDS[args.backend]
+    fields = [("model", backend["model"]), ("response_format", "verbose_json")]
+    if args.backend == "wetype":
+        # wetype-asr ignores language and prompt, and has no word timing.
+        return client(fields, path.name, path.read_bytes())
+    fields += [
         ("timestamp_granularities[]", "word"),
         ("timestamp_granularities[]", "segment"),
     ]
@@ -325,35 +360,60 @@ def transcribe_chunk(client, path, args):
     return client(fields, path.name, path.read_bytes())
 
 
-def make_client(api_key):
+def retry_after(headers, fallback):
+    """The 429/503 response's Retry-After in seconds, capped at a minute."""
+    try:
+        return min(float(headers["Retry-After"]), 60.0)
+    except (KeyError, TypeError, ValueError):
+        return fallback
+
+
+def post(url, headers, body, timeout):
+    """(status, headers, body) of one POST.
+
+    wetype-asr answers 401 and 413 before it reads the upload and closes
+    the connection, which breaks the send; the answer is still read.
+    """
+    parts = urllib.parse.urlsplit(url)
+    connection = (
+        http.client.HTTPSConnection if parts.scheme == "https" else http.client.HTTPConnection
+    )(parts.netloc, timeout=timeout)
+    try:
+        with contextlib.suppress(BrokenPipeError, ConnectionResetError):
+            connection.request("POST", parts.path, body, headers)
+        response = connection.getresponse()
+        return response.status, response.headers, response.read()
+    finally:
+        connection.close()
+
+
+def make_client(backend, api_key):
+    url = backend["url"].rstrip("/") + "/audio/transcriptions"
+
     def call(fields, filename, data):
         delay = 2.0
         last = None
-        for _ in range(4):
+        for _ in range(6):
             body, content_type = multipart(fields, "file", filename, data)
-            request = urllib.request.Request(
-                f"{API_URL}/audio/transcriptions",
-                data=body,
-                method="POST",
-                headers={
-                    "Authorization": f"Bearer {api_key}",
-                    "Content-Type": content_type,
-                },
-            )
+            headers = {"Authorization": f"Bearer {api_key}", "Content-Type": content_type}
             try:
-                with urllib.request.urlopen(request, timeout=600) as response:
-                    return json.loads(response.read().decode("utf-8"))
-            except urllib.error.HTTPError as err:
-                detail = err.read().decode("utf-8", "replace")[:500]
-                if err.code in (429, 500, 502, 503):
-                    time.sleep(delay)
-                    delay *= 2
-                    continue
-                raise ApiError(f"HTTP {err.code}: {detail}") from err
-            except urllib.error.URLError as err:
+                status, reply_headers, reply = post(url, headers, body, timeout=600)
+            except (OSError, http.client.HTTPException) as err:
                 last = err
                 time.sleep(delay)
-                delay *= 2
+                delay = min(delay * 2, 30.0)
+                continue
+            if status == 200:
+                return json.loads(reply.decode("utf-8"))
+            detail = reply.decode("utf-8", "replace").strip()[:500]
+            if status in (429, 500, 502, 503, 504):
+                last = f"HTTP {status}: {detail}"
+                time.sleep(retry_after(reply_headers, delay))
+                delay = min(delay * 2, 30.0)
+                continue
+            if status == 401:
+                detail += f" (the key from {backend['secret']} was rejected)"
+            raise ApiError(f"HTTP {status}: {detail}")
         raise ApiError(f"request failed after retries: {last}")
 
     return call
@@ -463,12 +523,50 @@ def group_segments(words, pause_min):
     return out
 
 
+def stitch_segments(chunks, results, duration):
+    """WeType's per-chunk segments, offset to absolute time.
+
+    Each covers its stretch of audio up to the next, so they are
+    contiguous; a gap between them is no pause.
+    """
+    segments = []
+    for (offset, _), timed in zip(chunks, results, strict=True):
+        for seg in timed.get("segments", []):
+            text = str(seg.get("text", "")).strip()
+            if text:
+                segments.append(
+                    {
+                        "start": round(offset + seg["start"], 3),
+                        "end": round(min(offset + seg["end"], duration), 3),
+                        "text": text,
+                    }
+                )
+    segments.sort(key=lambda seg: seg["start"])
+    return [{"index": i, **seg} for i, seg in enumerate(segments)]
+
+
 def ts(seconds):
     minutes, centis = divmod(round(max(seconds, 0.0) * 100), 6000)
     return f"{minutes:02d}:{centis // 100:02d}.{centis % 100:02d}"
 
 
+def render_segment_text(result):
+    lines = [
+        f"# transcribe {result['source']} "
+        f"backend={result['backend']} duration={result['duration']:.1f}s",
+        "# [MM:SS.ss-MM:SS.ss] WeType segments, cut at pauses (~5-10s); segment timing only",
+        "# no word timing, filler or stumble marks: WeType drops fillers and "
+        "writes numbers as digits; rare names may be garbled",
+        "",
+    ]
+    for seg in result["segments"]:
+        lines.append(f"[{ts(seg['start'])}-{ts(seg['end'])}] {seg['text']}")
+    return "\n".join(lines) + "\n"
+
+
 def render_text(result):
+    if result.get("timing") == "segment":
+        return render_segment_text(result)
     lines = [
         f"# transcribe {result['source']} "
         f"model={result['model']} duration={result['duration']:.1f}s",
@@ -520,6 +618,7 @@ def render(result, fmt):
 
 
 def process(args, client):
+    backend = BACKENDS[args.backend]
     source = Path(args.file)
     if not source.is_file():
         raise MediaError(f"not a file: {source}")
@@ -531,14 +630,14 @@ def process(args, client):
     started = time.monotonic()
     with tempfile.TemporaryDirectory(prefix="transcribe-") as tmp:
         workdir = Path(tmp)
-        if use_direct and duration <= CHUNK_SECONDS * 1.2:
+        if use_direct and duration <= backend["limit"]:
             audio = source
         else:
             audio = workdir / "audio.mp3"
             extract_audio(source, audio)
         silence = None if args.no_silence else silence_settings(audio, args.silence_db)
         silences = detect_silences(audio, silence, duration) if silence else []
-        chunks = plan_chunks(duration, silences)
+        chunks = plan_chunks(duration, silences, backend["chunk"], backend["limit"])
         eprint(f"duration {duration:.0f}s, {len(chunks)} chunk(s)")
         if silence:
             floor = silence["noise_floor_db"]
@@ -550,9 +649,29 @@ def process(args, client):
         timings["media_seconds"] = round(time.monotonic() - started, 2)
 
         started = time.monotonic()
-        with ThreadPoolExecutor(max_workers=4) as pool:
+        with ThreadPoolExecutor(max_workers=backend["workers"]) as pool:
             results = list(pool.map(lambda f: transcribe_chunk(client, f, args), files))
         timings["api_seconds"] = round(time.monotonic() - started, 2)
+
+    header = {
+        "source": str(source),
+        "duration": duration,
+        "backend": args.backend,
+        "model": backend["model"],
+        "timing": backend["timing"],
+    }
+    cost = round(duration / 60 * backend["price_per_min"], 4)
+    if backend["timing"] == "segment":
+        return {
+            **header,
+            "languages": [],
+            "estimated_cost_usd": cost,
+            "timings": timings,
+            "segments": stitch_segments(chunks, results, duration),
+            "silence": silence,
+            # With no word gaps to explain them, every detected silence stays.
+            "silences": silences,
+        }
 
     words, languages = [], []
     for (offset, _), timed in zip(chunks, results, strict=True):
@@ -571,13 +690,11 @@ def process(args, client):
 
     words.sort(key=lambda w: w["start"])
     annotate(words)
-    segments = group_segments(words, args.pause)
+    segments = group_segments(words, args.pause or DEFAULT_PAUSE)
     return {
-        "source": str(source),
-        "duration": duration,
-        "model": MODEL,
+        **header,
         "languages": languages,
-        "estimated_cost_usd": round(duration / 60 * PRICE_PER_MIN, 4),
+        "estimated_cost_usd": cost,
         "timings": timings,
         "segments": segments,
         "silence": silence,
@@ -603,11 +720,26 @@ def load_transcript(path):
             and number(w.get("end"))
         )
 
+    def segment(seg):
+        return (
+            isinstance(seg.get("text"), str)
+            and number(seg.get("start"))
+            and number(seg.get("end"))
+            and "words" not in seg
+        )
+
     try:
+        # Results from before the WeType backend carry no `timing`; they
+        # all came from whisper-1.
+        timing = data.setdefault("timing", "word")
+        if timing == "word":
+            timed = all(all(map(word, seg["words"])) for seg in data["segments"])
+        else:
+            timed = timing == "segment" and all(map(segment, data["segments"]))
         valid = (
             {"source", "model"} <= data.keys()
             and number(data["duration"])
-            and all(all(map(word, seg["words"])) for seg in data["segments"])
+            and timed
             and all(len(s) == 2 and all(map(number, s)) for s in data["silences"])
         )
     except (AttributeError, KeyError, TypeError):
@@ -624,6 +756,13 @@ def rerender(data, args):
     are re-derived the way `process` derives them. Stored silences are
     already collapsed against those words, so they carry over as-is.
     """
+    if data["timing"] == "segment":
+        if args.pause is not None:
+            raise UsageError(f"{args.file} has segment timing only; --pause needs word timing")
+        result = {**data, "silences": [] if args.no_silence else data["silences"]}
+        if args.no_silence:
+            result["silence"] = None
+        return result
     words = [
         {"word": w["word"], "start": w["start"], "end": w["end"]}
         for seg in data["segments"]
@@ -632,7 +771,7 @@ def rerender(data, args):
     annotate(words)
     result = {
         **data,
-        "segments": group_segments(words, args.pause),
+        "segments": group_segments(words, args.pause or DEFAULT_PAUSE),
         "silences": [] if args.no_silence else data["silences"],
     }
     if args.no_silence:
@@ -641,14 +780,17 @@ def rerender(data, args):
 
 
 def estimate(args):
+    backend = BACKENDS[args.backend]
     duration = probe(Path(args.file))
     print(
         json.dumps(
             {
                 "source": args.file,
                 "duration_seconds": round(duration, 1),
-                "model": MODEL,
-                "estimated_cost_usd": round(duration / 60 * PRICE_PER_MIN, 4),
+                "backend": args.backend,
+                "model": backend["model"],
+                "timing": backend["timing"],
+                "estimated_cost_usd": round(duration / 60 * backend["price_per_min"], 4),
             },
             indent=2,
         )
@@ -672,7 +814,7 @@ def parse_args(argv=None):
         description=__doc__.splitlines()[0],
         epilog="stdout carries only the transcript; progress goes to stderr. "
         "Exit codes: 0 ok, 2 usage (including a --from-json file that is not "
-        "transcribe JSON), 3 media/ffmpeg, 4 API, 5 missing key.",
+        "transcribe JSON), 3 media/ffmpeg, 4 API, 5 missing key or token.",
     )
     parser.add_argument(
         "file",
@@ -681,29 +823,36 @@ def parse_args(argv=None):
     )
     parser.add_argument("-o", "--output", help="write to this file instead of stdout")
     parser.add_argument(
+        "--backend",
+        choices=list(BACKENDS),
+        help="wetype (default): free, audio goes to Tencent, segment timing only; "
+        "whisper: OpenAI whisper-1, $0.006/min, word timing with filler and "
+        "stumble marks, needed for cut planning",
+    )
+    parser.add_argument(
         "--format",
         choices=["text", "json", "srt"],
         default="text",
-        help="default text; json includes every word with start/end/gap and filler/stumble flags",
+        help="default text; json holds every segment, and with --backend whisper "
+        "every word with start/end/gap and filler/stumble flags",
     )
     parser.add_argument(
         "--language",
         metavar="CODE",
-        help="language hint (ISO 639-1, e.g. zh or en); omit to auto-detect "
-        "(better for code-switching)",
+        help="whisper only: language hint (ISO 639-1, e.g. zh or en); omit to "
+        "auto-detect (better for code-switching)",
     )
     parser.add_argument(
         "--context",
         metavar="TEXT",
-        help="glossary/context prompt to bias names and jargon "
+        help="whisper only: glossary/context prompt to bias names and jargon "
         "(whisper-1 accepts up to 224 tokens)",
     )
     parser.add_argument(
         "--pause",
         type=float,
-        default=0.6,
         metavar="SECONDS",
-        help="gap that starts a new segment (default 0.6)",
+        help=f"whisper only: gap that starts a new segment (default {DEFAULT_PAUSE:g})",
     )
     parser.add_argument(
         "--no-silence",
@@ -735,11 +884,23 @@ def parse_args(argv=None):
         help="skip the cost confirmation prompt on a TTY",
     )
     args = parser.parse_args(argv)
-    if args.from_json and (args.estimate or args.language or args.context or args.silence_db):
+    if args.from_json and (
+        args.estimate or args.backend or args.language or args.context or args.silence_db
+    ):
         parser.error(
-            "--from-json makes no API call or ffmpeg run; --estimate, "
+            "--from-json makes no API call or ffmpeg run; --estimate, --backend, "
             "--language, --context and --silence-db do not apply"
         )
+    if args.backend is None:
+        args.backend = "wetype"
+    if args.backend == "wetype" and not args.from_json:
+        if args.pause is not None:
+            parser.error("--pause needs word timing: pass --backend whisper")
+        if args.language or args.context:
+            eprint(
+                "WeType auto-detects the language and takes no glossary; "
+                "ignoring --language and --context"
+            )
     if args.silence_db is None:
         args.silence_db = "auto"
     return args
@@ -754,23 +915,32 @@ def main(argv=None):
         if args.from_json:
             result = rerender(load_transcript(args.file), args)
         else:
-            api_key = os.environ.get("OPENAI_API_KEY")
+            backend = BACKENDS[args.backend]
+            api_key = os.environ.get(backend["key_env"])
             if not api_key:
                 eprint(
-                    "OPENAI_API_KEY is not set. Create/print one (needs the "
-                    "Audio scope), then: export OPENAI_API_KEY=... "
-                    "or run with `--estimate` first."
+                    f"{backend['key_env']} is not set: the transcribe wrapper reads it "
+                    f"from {backend['secret']}, which this home decrypts once a "
+                    "dotfiles switch has added it."
                 )
                 return EXIT_NOKEY
-            if sys.stderr.isatty() and not args.yes:
+            if args.backend == "wetype" and not backend["url"]:
+                raise ApiError(
+                    "no route to the WeType API: the tailnet relay does not hold its "
+                    "forward (run `tailnet-relay-check` on it to see why), or pass "
+                    "--backend whisper"
+                )
+            if args.backend == "wetype":
+                eprint("sending the audio to WeType, Tencent's cloud ASR")
+            elif sys.stderr.isatty() and not args.yes:
                 duration = probe(Path(args.file))
-                cost = duration / 60 * PRICE_PER_MIN
+                cost = duration / 60 * backend["price_per_min"]
                 eprint(
                     f"about to transcribe {args.file} "
                     f"({duration:.0f}s, ~${cost:.2f}). Ctrl-C to abort."
                 )
                 time.sleep(1.5)
-            result = process(args, make_client(api_key))
+            result = process(args, make_client(backend, api_key))
     except UsageError as err:
         eprint(err)
         return EXIT_USAGE

@@ -127,7 +127,7 @@ def run_init(main, camera, name):
         "warnings": warnings,
         "next": (
             f"cd {shlex.quote(str(root.path))} && transcribe "
-            f"{shlex.quote(str(main))} --format json -o "
+            f"{shlex.quote(str(main))} --backend whisper --format json -o "
             f"{shlex.quote(root.rel(transcript))}"
             if not transcript.exists()
             else "transcript cached; read it with transcribe --from-json"

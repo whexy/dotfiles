@@ -808,6 +808,7 @@ its forward where the relay is enabled:
   its search stay on the public origin.
 - Atuin syncs with `atuin.at-basking.ts.net`.
 - The `wechat` CLI reaches the WeChat relay.
+- `transcribe` reaches wetype-asr, its default backend.
 - `dotfiles-upgraded` subscribes to CI's announcements, with no
   `tailnet-relay-check`: they are signed, so whoever holds the port can only
   withhold them.
@@ -834,11 +835,12 @@ one the relay does not hold, so the check runs in both directions:
   runs `tailnet-relay-check` (`dotfiles.tailnetRelay.checker`) before it
   connects, so another user who took a port gets nothing: agent-settings
   before it sends a gateway key, every agent launcher for the MCP servers,
-  the `atuin` and `wechat` wrappers, and `tailnet-relay-connect`, since ssh
-  trusts a new host's key on first use. kubectl runs no check: it verifies
-  the API server against the kubeconfig's CA. While the relay is down, agents and
-  `wechat` refuse to start, and Atuin keeps its history locally with sync off;
-  none of them fall back to a public origin.
+  the `atuin`, `wechat` and `transcribe` wrappers, and `tailnet-relay-connect`,
+  since ssh trusts a new host's key on first use. kubectl runs no check: it
+  verifies the API server against the kubeconfig's CA. While the relay is down,
+  agents and `wechat` refuse to start, `transcribe` runs only `--backend
+whisper`, and Atuin keeps its history locally with sync off; none of them
+  fall back to a public origin.
 - Root on the host can take the node's identity from
   `~/.local/state/tailnet-relay` and reach whatever the tailnet policy grants
   the tag.
