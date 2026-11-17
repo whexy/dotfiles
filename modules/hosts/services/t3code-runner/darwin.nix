@@ -12,6 +12,9 @@ let
   name = "t3code-ios";
   user = "_github-runner";
   id = 433;
+  # The service's HOME. Xcode resolves the account's home from the directory,
+  # the Security framework and Node from $HOME, so both must name this.
+  stateDir = "/var/lib/github-runners/${name}";
   home = "/Users/${config.system.primaryUser}";
   workflowRef = "whexy/t3code/.github/workflows/self-hosted-build.yml@refs/heads/self-hosted-nightly";
   # The runner runs this before any step of every job it takes, and fails the
@@ -40,19 +43,31 @@ in
       mode = "0400";
     };
 
-    # nix-darwin creates a full account, and macOS counts every full account in
-    # staff, which may list and read the primary user's home.
+    # nix-darwin refuses to change an existing account's home, and its checks
+    # run after this.
+    system.activationScripts.preActivation.text = ''
+      if [ "$(dscl . -read /Users/${user} NFSHomeDirectory 2> /dev/null)" = "NFSHomeDirectory: /var/lib/github-runners" ]; then
+        dscl . -change /Users/${user} NFSHomeDirectory /var/lib/github-runners ${stateDir}
+      fi
+    '';
+
     system.activationScripts.postActivation.text = ''
+      # nix-darwin creates a full account, and macOS counts every full account
+      # in staff, which may list and read the primary user's home.
       if ! /bin/ls -led ${home} | grep -q "user:${user} deny"; then
         /bin/chmod +a "user:${user} deny list,search,readattr,readextattr,readsecurity" ${home}
       fi
+      # Without them `security` silently keeps no keychain search list or
+      # default keychain, so Xcode never sees the job's signing identities.
+      install -d -o ${user} -g ${user} -m 0755 ${stateDir}/Library ${stateDir}/Library/Preferences
+      install -d -o ${user} -g ${user} -m 0700 ${stateDir}/Library/Keychains
     '';
 
     users = {
       users.${user} = {
         uid = id;
         gid = id;
-        home = "/var/lib/github-runners";
+        home = stateDir;
         createHome = false;
         shell = "/bin/bash";
         description = "GitHub Actions runner for whexy/t3code";
@@ -91,6 +106,9 @@ in
         # launchd can start the runner before agenix writes the token, and the
         # module only restarts it on a crash.
         KeepAlive.PathState.${config.age.secrets.github-runner-t3code.path} = true;
+        # A daemon has no security session of its own, and without one the
+        # keychain search list finds no identity.
+        SessionCreate = true;
       };
     };
 
