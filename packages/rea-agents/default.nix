@@ -10,11 +10,13 @@ let
   inherit (pkgs) lib stdenv;
   unstable = inputs.nixpkgs-unstable.legacyPackages.${system};
 
-  # REA admits only Ghidra 12.1.x, which the release branch does not have yet.
+  # REA admits only Ghidra 12.1 or newer, which the release branch does not
+  # have yet.
   inherit (unstable) ghidra;
-  # The JDK Ghidra itself runs on; REA also needs its javac to compile the
-  # bridge.
-  jdk = unstable.openjdk21;
+  # The JDK Ghidra runs on under REA, which requires 25 or newer and also
+  # compiles its bridge with this javac. `tests.ghidra` fails when REA's
+  # requirement moves past it.
+  jdk = unstable.openjdk25;
 
   # devDependencies only serve upstream's source checkout, and the vitepress
   # override belongs to one of them.
@@ -78,31 +80,38 @@ pkgs.buildNpmPackage (finalAttrs: {
   buildInputs = lib.optional stdenv.hostPlatform.isLinux stdenv.cc.cc.lib;
 
   # A caller's own settings still win. Sandboxed Linux tools fall back to
-  # /usr/bin/prlimit, which NixOS does not have.
+  # /usr/bin/prlimit, which NixOS does not have. On Linux REA checks who owns
+  # each child it launches with `ps`, and refuses to launch one without it.
   postFixup =
     let
       prlimit = lib.getExe' pkgs.util-linux "prlimit";
-      prlimitFlags = lib.optionalString stdenv.hostPlatform.isLinux (
+      linuxFlags = lib.optionalString stdenv.hostPlatform.isLinux (
         lib.concatMapStrings (tool: " --set-default REA_${tool}_PRLIMIT_COMMAND ${prlimit}") [
           "EVM"
           "FIRMWARE"
           "JAVASCRIPT"
         ]
+        + " --suffix PATH : ${lib.makeBinPath [ pkgs.procps ]}"
       );
     in
     ''
       for program in rea rea-agents; do
         wrapProgram $out/bin/$program \
           --set-default GHIDRA_INSTALL_DIR ${ghidra}/lib/ghidra \
-          --set-default JAVA_HOME ${jdk}${prlimitFlags}
+          --set-default JAVA_HOME ${jdk}${linuxFlags}
       done
     '';
 
   passthru = {
     inherit fridaPrebuild;
+    tests.ghidra = import ./ghidra-test.nix {
+      inherit pkgs;
+      rea-agents = finalAttrs.finalPackage;
+    };
     updater = flake.lib.updater {
       kind = "npm";
       inherit lockfileFilter prebuilds;
+      alsoBuild = [ "rea-agents.tests.ghidra" ];
     };
   };
 
