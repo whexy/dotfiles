@@ -1,4 +1,4 @@
-# Services group: OpenSSH server.
+# Services group: OpenSSH server and the T3 Code TestFlight runner.
 { lib, ... }:
 {
   options.dotfiles.services = {
@@ -23,5 +23,9 @@
         short-lived user certificates issued by Cloudflare Zero Trust are
         accepted for authentication'';
     };
+
+    t3codeRunner.enable = lib.mkEnableOption ''
+      a GitHub Actions runner for whexy/t3code's ios-testflight job (Darwin
+      only), labelled t3-testflight'';
   };
 }

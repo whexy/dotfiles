@@ -3,9 +3,12 @@
   dotfiles = {
     system.autoUpgrade.enable = true;
     power.alwaysOn.enable = true;
-    services.openssh = {
-      enable = true;
-      hardened = true;
+    services = {
+      openssh = {
+        enable = true;
+        hardened = true;
+      };
+      t3codeRunner.enable = true;
     };
     network = {
       # The campus network leases only to this registered address.

@@ -51,6 +51,9 @@ let
 in
 {
   "beszel-token.age".publicKeys = to hosts;
+  # Registration token of sheridan's t3code TestFlight runner
+  # (dotfiles.services.t3codeRunner).
+  "github-runner-t3code.age".publicKeys = to { inherit (hosts) sheridan; };
   "rex-package-netrc.age".publicKeys = to hosts;
 
   # Bearer token of the auto-upgrade failure webhook, for every
