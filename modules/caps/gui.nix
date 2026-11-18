@@ -26,6 +26,8 @@
       # The home keyboard group configures whichever of these the platform
       # has: fcitx5 on Linux, the Karabiner-Elements Homebrew cask on macOS.
       fcitx5.enable = lib.mkDefault (!pkgs.stdenv.hostPlatform.isDarwin);
+      # Macs dictate with WeType itself.
+      dictation.enable = lib.mkDefault (!pkgs.stdenv.hostPlatform.isDarwin);
       karabiner.enable = lib.mkDefault pkgs.stdenv.hostPlatform.isDarwin;
     };
     # Privileged helper for the Vicinae launcher's paste and snippet

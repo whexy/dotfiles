@@ -3,6 +3,7 @@
   config,
   pkgs,
   lib,
+  perSystem,
   ...
 }:
 let
@@ -15,12 +16,15 @@ in
         enable = true;
         type = "fcitx5";
         fcitx5.waylandFrontend = true;
-        fcitx5.addons = with pkgs; [
-          fcitx5-fluent
-          (fcitx5-rime.override {
-            rimeDataPkgs = [ pkgs.rime-ice ];
-          })
-        ];
+        fcitx5.addons =
+          with pkgs;
+          [
+            fcitx5-fluent
+            (fcitx5-rime.override {
+              rimeDataPkgs = [ pkgs.rime-ice ];
+            })
+          ]
+          ++ lib.optional cfg.dictation.enable perSystem.self.wetype-dictate;
       };
     })
 

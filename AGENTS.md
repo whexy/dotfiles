@@ -775,6 +775,21 @@ To add a phone:
    `iphone-wda install <phone>` and `iphone-wda launch <phone>`. Over SSH the
    build cannot sign: those sessions see the login keychain as locked.
 
+## Dictation
+
+`dotfiles.keyboard.dictation` (the `gui` cap on Linux) does what WeType for
+macOS does on the right Option key, on the right Alt key: a tap starts
+listening, the recognised text appears in the focused field as underlined
+preedit while the user speaks, and a second tap replaces it with the
+polished transcript. Escape drops the dictation.
+
+`packages/wetype-dictate` is an fcitx5 addon and the helper it runs for each
+dictation. The helper records with `pw-record` and streams to wetype-asr's
+`/v1/realtime`, which needs no token on the tailnet; when the stream fails it
+keeps recording and sends the whole recording to the batch API. The addon
+takes the right Alt key for itself, so it no longer works as a modifier.
+Its test drives the addon through fcitx5's test frontend with a fake helper.
+
 ## Public tunnels
 
 Each service a host publishes on the public internet gets its own Cloudflare
