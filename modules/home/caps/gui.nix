@@ -39,6 +39,7 @@ in
           # macOS desktop
           wm.darwin.enable = lib.mkDefault true;
           terminal.rex.enable = lib.mkDefault true;
+          launcher.alfred.enable = lib.mkDefault true;
           panel.sketchybar.enable = lib.mkDefault true;
         }
       );

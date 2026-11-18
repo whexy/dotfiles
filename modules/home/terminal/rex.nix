@@ -144,6 +144,8 @@ in
         run /usr/bin/defaults write ${domain} Workspace.customThemes \
           -data "$(/usr/bin/xxd -p ${themes} | /usr/bin/tr -d '\n')"
       '';
+
+      dotfiles.launcher.alfred.workflows.rex = pkgs.callPackage ./rex-alfred/workflow.nix { };
     })
 
     (lib.mkIf cfg.rex.terminfo.enable {
