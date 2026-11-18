@@ -92,13 +92,13 @@ in
           else
             null;
         defaultText = lib.literalExpression "the host's Rex route on the tailnet, if any";
-        example = "ssh://root@proxmox.at-basking.ts.net";
+        example = "ssh://proxmox";
         description = ''
           Address the Macs' Rex app reaches this user's Rex server at, in a
           form `rex -S` accepts, or null when they cannot. Every Mac with the
           Rex app declares each flake home's route as a host labelled with
           the home's host name. Standalone homes reached over SSH set it
-          themselves.
+          themselves, as an ssh config alias that supplies the user.
         '';
       };
     };
@@ -113,7 +113,19 @@ in
     ./zellij.nix
   ];
 
-  config = lib.mkIf cfg.ghostty.terminfo.enable {
-    home.packages = [ cfg.ghostty.package.terminfo ];
-  };
+  config = lib.mkMerge [
+    {
+      # Older Rex servers ignore an ssh:// host whose URL names a user, and
+      # `rex config check` does not report it.
+      assertions = [
+        {
+          assertion = builtins.match "ssh://[^/]*@.*" (toString cfg.rex.route) == null;
+          message = "dotfiles.terminal.rex.route must not name a user in an ssh:// URL; use an ssh config alias that sets the user.";
+        }
+      ];
+    }
+    (lib.mkIf cfg.ghostty.terminfo.enable {
+      home.packages = [ cfg.ghostty.package.terminfo ];
+    })
+  ];
 }

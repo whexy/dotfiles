@@ -91,6 +91,10 @@ in
           enableDefaultConfig = false;
 
           settings = offTailnetHosts // {
+            # proxmox has only a root home, which the Macs' Rex reaches
+            # through this alias.
+            proxmox.User = "root";
+
             "*" = {
               IdentityAgent = identityAgent;
               ForwardAgent = true;

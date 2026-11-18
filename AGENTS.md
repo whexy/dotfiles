@@ -623,8 +623,11 @@ a shell.
 Each home's `dotfiles.terminal.rex.route` is the address a Mac's Rex app
 reaches its Rex server at: the routes above by default, or an `ssh://` address
 a standalone home sets itself (proxmox), which also links `rex` into
-`~/.local/bin`, where Rex over SSH looks for it. A home with no route is
-unreachable from the Macs: wsl, whose node the Windows client owns, and
+`~/.local/bin`, where Rex over SSH looks for it. That address names an ssh
+config alias, `ssh://proxmox`, whose block in `modules/home/ssh` sets the
+user: older Rex servers ignore an `ssh://` host whose URL names one, and
+`rex config check` does not report it, so an assertion rejects it. A home
+with no route is unreachable from the Macs: wsl, whose node the Windows client owns, and
 b3srv0, left out on purpose as the host a Mac's Rex does not know.
 
 Every Mac with the app declares the other homes' routes with `rex.host` in
