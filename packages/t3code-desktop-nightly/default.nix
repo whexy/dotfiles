@@ -28,8 +28,7 @@ pkgs.appimageTools.wrapAppImage {
   # Nix pins the app, so its own updater stays off. At every launch the app
   # writes a URL-handler entry that runs T3CODE_DESKTOP_LAUNCHER_PATH;
   # without it, the entry would run the Electron binary outside this FHS
-  # environment. Electron talks to the input method on Wayland only with
-  # its IME flag, and niri speaks text-input v3 alone.
+  # environment.
   extraInstallCommands = ''
     install -Dm444 ${contents}/t3code.desktop -t $out/share/applications
     substituteInPlace $out/share/applications/t3code.desktop \
@@ -39,8 +38,7 @@ pkgs.appimageTools.wrapAppImage {
     . ${pkgs.makeWrapper}/nix-support/setup-hook
     wrapProgram $out/bin/${pname} \
       --set T3CODE_DISABLE_AUTO_UPDATE true \
-      --set T3CODE_DESKTOP_LAUNCHER_PATH $out/bin/${pname} \
-      --add-flags "--enable-wayland-ime --wayland-text-input-version=3"
+      --set T3CODE_DESKTOP_LAUNCHER_PATH $out/bin/${pname}
   '';
 
   passthru.updater = flake.lib.updater { kind = "script"; };
