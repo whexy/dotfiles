@@ -967,11 +967,18 @@ reverted update.
 
 ## Commits
 
-This repository keeps one branch, `master`, with linear history. Commit on
-master and push it; rebase onto `origin/master` when the push is rejected.
-Create no other branch, git worktree or pull request, and do not use the
-`ship-pr` skill here: work left on a branch is easily forgotten and never
-reaches master.
+This repository keeps one branch, `master`, with linear history. Work
+directly on master: create no other branch, git worktree or pull request,
+and do not use the `ship-pr` skill here, because work left on a branch is
+easily forgotten and never reaches master.
+
+Working on master does not license committing or pushing. Leave changes
+uncommitted until the user asks for a commit, and push only when the user
+asks for a push. When they do, rebase onto `origin/master` if the push is
+rejected.
+
+Elsewhere "ship" means the `ship-pr` skill; in this repository it means
+commit and push to master.
 
 ## Verification
 
