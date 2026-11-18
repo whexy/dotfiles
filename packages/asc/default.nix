@@ -7,16 +7,16 @@ let
 in
 pkgs.buildGo127Module (finalAttrs: {
   pname = "asc";
-  version = "6.6.1";
+  version = "7.0.0";
 
   src = pkgs.fetchFromGitHub {
     owner = "rorkai";
     repo = "App-Store-Connect-CLI";
     tag = finalAttrs.version;
-    hash = "sha256-CZr6XzFZIr8dWnIFBnShmLDcD7q/txfgY1IppKTb7Wk=";
+    hash = "sha256-r9iuBB+WewMNSeoM15d/FhM0xQXgcW9pDkfBi6cmO7M=";
   };
 
-  vendorHash = "sha256-nDtIhrLdhx8xi0z9137DLF3OBjj7g5n4XW3hLNX551s=";
+  vendorHash = "sha256-dNlNPX4PFge0X3COiYhswNeo8c9TexLR1RASXibNEdM=";
 
   subPackages = [ "." ];
 
