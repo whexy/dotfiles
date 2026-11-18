@@ -16,6 +16,11 @@ let
   # the Security framework and Node from $HOME, so both must name this.
   stateDir = "/var/lib/github-runners/${name}";
   home = "/Users/${config.system.primaryUser}";
+  # Apple's intermediate for development and distribution certificates.
+  wwdrG3 = pkgs.fetchurl {
+    url = "https://www.apple.com/certificateauthority/AppleWWDRCAG3.cer";
+    hash = "sha256-3PIYeMd/QZjktGFPA9aW2JxmxmAI1CROG5kWGqyRYB8=";
+  };
   workflowRef = "whexy/t3code/.github/workflows/self-hosted-build.yml@refs/heads/self-hosted-nightly";
   # The runner runs this before any step of every job it takes, and fails the
   # job when it fails. Only promoted code can reach self-hosted-nightly.
@@ -43,14 +48,6 @@ in
       mode = "0400";
     };
 
-    # nix-darwin refuses to change an existing account's home, and its checks
-    # run after this.
-    system.activationScripts.preActivation.text = ''
-      if [ "$(dscl . -read /Users/${user} NFSHomeDirectory 2> /dev/null)" = "NFSHomeDirectory: /var/lib/github-runners" ]; then
-        dscl . -change /Users/${user} NFSHomeDirectory /var/lib/github-runners ${stateDir}
-      fi
-    '';
-
     system.activationScripts.postActivation.text = ''
       # nix-darwin creates a full account, and macOS counts every full account
       # in staff, which may list and read the primary user's home.
@@ -61,6 +58,12 @@ in
       # default keychain, so Xcode never sees the job's signing identities.
       install -d -o ${user} -g ${user} -m 0755 ${stateDir}/Library ${stateDir}/Library/Preferences
       install -d -o ${user} -g ${user} -m 0700 ${stateDir}/Library/Keychains
+      # A daemon's codesign finds chain certificates in the System keychain,
+      # not in the job's own keychain, and fails with errSecInternalComponent
+      # when the intermediate is missing there.
+      if ! /usr/bin/security find-certificate -a -Z /Library/Keychains/System.keychain | grep -q 06EC06599F4ED0027CC58956B4D3AC1255114F35; then
+        /usr/bin/security add-certificates -k /Library/Keychains/System.keychain ${wwdrG3}
+      fi
     '';
 
     users = {
