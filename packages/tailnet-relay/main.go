@@ -1,6 +1,7 @@
 // Command tailnet-relay joins the tailnet as a userspace (tsnet) node and
 // relays loopback connections from processes of its own user to tailnet
-// services, on hosts that run no Tailscale daemon of their own.
+// services, on hosts that run no Tailscale daemon of their own. It can also
+// relay connections from the tailnet to services of the host.
 package main
 
 import (
@@ -31,6 +32,8 @@ type config struct {
 	// Proxy is the loopback address of a SOCKS5 proxy to tailnet addresses,
 	// for clients of protocols other than HTTP; empty for none.
 	Proxy string `json:"proxy"`
+	// Serves are tailnet ports relayed to loopback services of the host.
+	Serves []serve `json:"serves"`
 }
 
 // proxyName names the proxy's listener among the forwards'.
@@ -111,6 +114,9 @@ func run(configPath string) error {
 		ln := ownerOnly{Listener: listeners[proxyName], uid: uid, name: proxyName}
 		go func() { errs <- fmt.Errorf("%s: %w", proxyName, serveProxy(ln, srv, up)) }()
 	}
+	for _, s := range cfg.Serves {
+		go func() { errs <- fmt.Errorf("%s: %w", s.Name, serveTailnet(srv, s)) }()
+	}
 
 	signals := make(chan os.Signal, 1)
 	signal.Notify(signals, syscall.SIGTERM, os.Interrupt)
@@ -153,11 +159,27 @@ func loadConfig(path string) (*config, error) {
 			return nil, fmt.Errorf("forward %s: upstream must be an https:// origin, not %q", f.Name, f.Upstream)
 		}
 	}
+	ports := map[uint16]bool{}
+	for _, s := range cfg.Serves {
+		if s.Name == "" || seen[s.Name] {
+			return nil, fmt.Errorf("%s: serve name %q is empty or taken", path, s.Name)
+		}
+		seen[s.Name] = true
+		if s.Port == 0 || ports[s.Port] {
+			return nil, fmt.Errorf("serve %s: port %d is unset or taken", s.Name, s.Port)
+		}
+		ports[s.Port] = true
+		// A serve to another host would make the node a gateway from the
+		// tailnet into the host's network.
+		if err := checkLoopback(s.Target); err != nil {
+			return nil, fmt.Errorf("serve %s: %w", s.Name, err)
+		}
+	}
 	return &cfg, nil
 }
 
-// checkLoopback fails unless address is a loopback one, the only peers the
-// owner check knows.
+// checkLoopback fails unless address is a loopback one: the only peers the
+// owner check knows, and the only targets a serve may relay to.
 func checkLoopback(address string) error {
 	host, _, err := net.SplitHostPort(address)
 	if err != nil {

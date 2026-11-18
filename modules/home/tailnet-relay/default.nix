@@ -2,10 +2,11 @@
 # shared servers: it relays loopback connections to tailnet services, and
 # only from processes of this home's user (packages/tailnet-relay). HTTP
 # forwards serve clients that take a base URL; a SOCKS5 proxy serves the
-# rest.
+# rest. `serves` relays the other way, from the tailnet to the host's own
+# services.
 #
 # The node joins as `tags` with an OAuth client secret, so the tailnet
-# policy decides what it reaches; it serves nothing on the tailnet.
+# policy decides what it reaches and who reaches its serves.
 {
   config,
   lib,
@@ -44,6 +45,10 @@ let
         inherit (forward) upstream;
       }) cfg.forwards;
       proxy = cfg.proxy.address;
+      serves = lib.mapAttrsToList (name: serve: {
+        inherit name;
+        inherit (serve) port target;
+      }) cfg.serves;
     }
   );
 in
@@ -107,6 +112,39 @@ in
       );
     };
 
+    serves = lib.mkOption {
+      default = { };
+      example = lib.literalExpression ''
+        {
+          ssh = {
+            port = 22;
+            target = "127.0.0.1:22";
+          };
+        }
+      '';
+      description = ''
+        Ports of the node's tailnet addresses, each relayed to a loopback
+        service of this host. The tailnet policy is the only gate in front of
+        the service, so it authenticates callers itself, as sshd does; it
+        sees every caller as loopback, and the relay's log names the node.
+      '';
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            port = lib.mkOption {
+              type = lib.types.port;
+              description = "Port on the node's tailnet addresses.";
+            };
+            target = lib.mkOption {
+              type = lib.types.str;
+              example = "127.0.0.1:22";
+              description = "Loopback address of this host connections are relayed to.";
+            };
+          };
+        }
+      );
+    };
+
     proxy = {
       port = lib.mkOption {
         type = lib.types.port;
@@ -167,6 +205,10 @@ in
       {
         assertion = cfg.forwards != { };
         message = "dotfiles.tailnetRelay is enabled with no forwards.";
+      }
+      {
+        assertion = lib.all (name: !(cfg.forwards ? ${name}) && name != "proxy") (lib.attrNames cfg.serves);
+        message = "dotfiles.tailnetRelay.serves shares a name with a forward or the proxy.";
       }
       {
         assertion = !(cfg.forwards ? proxy);

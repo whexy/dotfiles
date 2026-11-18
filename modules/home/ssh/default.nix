@@ -13,10 +13,10 @@ let
   inherit (pkgs.stdenv.hostPlatform) isDarwin;
   isWsl = osConfig != null && osConfig.dotfiles.host.wsl;
 
-  # Flake hosts off the tailnet, the shared servers, reached by their public
-  # names.
-  publicHosts = lib.genAttrs [ "mars" "venus" ] (host: {
-    HostName = "${host}.cs.northwestern.edu";
+  # Flake hosts off the tailnet, the shared servers, reached through their
+  # tailnet relays, which relay ssh to them (dotfiles.tailnetRelay.serves).
+  offTailnetHosts = lib.genAttrs [ "mars" "venus" ] (host: {
+    HostName = flake.lib.tailnetHost "${host}-relay";
     User = "wenxuan";
   });
 
@@ -40,13 +40,13 @@ let
       host
       (flake.lib.tailnetHost host)
     ]) hostNames
-    ++ lib.mapAttrsToList (_: block: block.HostName) publicHosts;
+    ++ lib.mapAttrsToList (_: block: block.HostName) offTailnetHosts;
   rexTerminfoHosts = "${config.xdg.configHome}/rex/terminfo-hosts";
 
   relay = config.dotfiles.tailnetRelay;
   # The flake hosts by their bare names, which only MagicDNS resolves, apart
-  # from publicHosts.
-  tailnetHosts = lib.subtractLists (lib.attrNames publicHosts) hostNames ++ [
+  # from offTailnetHosts.
+  tailnetHosts = lib.subtractLists (lib.attrNames offTailnetHosts) hostNames ++ [
     (flake.lib.tailnetHost "*")
   ];
 in
@@ -90,7 +90,7 @@ in
           enable = !isWsl;
           enableDefaultConfig = false;
 
-          settings = publicHosts // {
+          settings = offTailnetHosts // {
             "*" = {
               IdentityAgent = identityAgent;
               ForwardAgent = true;

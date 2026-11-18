@@ -81,3 +81,21 @@ func TestLoadConfigRejectsBadProxy(t *testing.T) {
 		}
 	}
 }
+
+func TestLoadConfigRejectsBadServe(t *testing.T) {
+	const head = `{"hostname":"h","stateDir":"/tmp/s","forwards":[{"name":"a","listen":"127.0.0.1:1","upstream":"https://a.example"}],`
+	for name, serves := range map[string]string{
+		"non-loopback target": `"serves":[{"name":"ssh","port":22,"target":"10.0.0.1:22"}]}`,
+		"unset port":          `"serves":[{"name":"ssh","target":"127.0.0.1:22"}]}`,
+		"shared port":         `"serves":[{"name":"ssh","port":22,"target":"127.0.0.1:22"},{"name":"b","port":22,"target":"127.0.0.1:23"}]}`,
+		"name of a forward":   `"serves":[{"name":"a","port":22,"target":"127.0.0.1:22"}]}`,
+	} {
+		path := t.TempDir() + "/config.json"
+		if err := os.WriteFile(path, []byte(head+serves), 0o600); err != nil {
+			t.Fatal(err)
+		}
+		if _, err := loadConfig(path); err == nil {
+			t.Errorf("%s accepted", name)
+		}
+	}
+}
