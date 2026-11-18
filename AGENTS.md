@@ -634,6 +634,15 @@ name; activation runs `rex config reload`. The build checks the file with
 Rex also leaves out a declared host whose label a host added in the app
 already uses, so a host added by hand wins until it is removed in the app.
 
+### T3 Code
+
+T3 Code's "Open in Rex" runs `rex` on the T3 host to create the session, and
+the Mac's app opens it from its host list. Every home that runs the T3 server
+therefore needs a Rex server of its own (`dotfiles.terminal.rex.local`, which
+an assertion checks): the Rex app on macOS, whose CLI the profile wraps as
+`rex`, Rex's login server on NixOS, or else the personal server, which the T3
+server turns on by default.
+
 ### The rex input
 
 Both servers come from the `rex` flake input. pkgs.superlogical.com served it

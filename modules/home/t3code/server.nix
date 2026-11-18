@@ -1,6 +1,7 @@
 # The T3 Code server as a user service, its Tailscale route, its public
-# tunnel, and the preview browser it drives.
-{
+# tunnel, the preview browser it drives, and the Rex server it opens
+# sessions on.
+args@{
   config,
   lib,
   pkgs,
@@ -39,13 +40,27 @@ in
     age.secrets.t3-push-host-token = lib.mkIf cfg.server.push.enable {
       file = ../../../secrets/t3-push-host-token.age;
     };
-    dotfiles.linger.enable = lib.mkDefault true;
+    dotfiles = {
+      linger.enable = lib.mkDefault true;
 
-    dotfiles.tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable {
-      service = "t3";
-      inherit (flake.lib.t3) port;
-      description = "the T3 Code server";
+      # "Open in Rex" runs `rex` on this host to create the session, which a
+      # Mac's Rex app then opens from its host list.
+      terminal.rex.server.enable = lib.mkDefault (
+        pkgs.stdenv.hostPlatform.isLinux && !(args.osConfig.services.rex.loginServer.enable or false)
+      );
+
+      tunnels.services.t3code-tunnel = lib.mkIf cfg.server.tunnel.enable {
+        service = "t3";
+        inherit (flake.lib.t3) port;
+        description = "the T3 Code server";
+      };
     };
+    assertions = [
+      {
+        assertion = config.dotfiles.terminal.rex.local;
+        message = "dotfiles.t3code.server opens Rex sessions on this host, so it needs a Rex server here: the Rex app (dotfiles.terminal.rex.enable) on macOS, or Rex's login server or dotfiles.terminal.rex.server on Linux.";
+      }
+    ];
 
     home = lib.mkIf linkBrowser {
       file.${browserDir}.source = browser;
