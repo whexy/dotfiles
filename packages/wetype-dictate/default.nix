@@ -1,8 +1,8 @@
 { pkgs }:
 
-# WeType-style dictation for fcitx5: a tap on the right Alt key streams the
-# microphone to wetype-asr and shows the text as preedit while the user
-# speaks; a second tap commits the polished transcript.
+# WeType-style dictation for fcitx5: F19 streams the microphone to
+# wetype-asr and shows the text as preedit while the user speaks; F19 again
+# commits the polished transcript.
 let
   inherit (pkgs) lib;
   python = pkgs.python3.withPackages (ps: [ ps.websockets ]);
@@ -32,7 +32,7 @@ pkgs.stdenv.mkDerivation {
   '';
 
   meta = {
-    description = "Dictation on the right Alt key for fcitx5, through wetype-asr";
+    description = "Dictation on one key for fcitx5, through wetype-asr";
     platforms = lib.platforms.linux;
   };
 }

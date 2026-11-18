@@ -778,17 +778,21 @@ To add a phone:
 ## Dictation
 
 `dotfiles.keyboard.dictation` (the `gui` cap on Linux) does what WeType for
-macOS does on the right Option key, on the right Alt key: a tap starts
-listening, the recognised text appears in the focused field as underlined
-preedit while the user speaks, and a second tap replaces it with the
-polished transcript. Escape drops the dictation.
+macOS does on the right Option key, on the right Super key (the Option/Start
+key beside the right Fn): a tap starts listening, the recognised text
+appears in the focused field as underlined preedit while the user speaks,
+and a second tap replaces it with the polished transcript. Escape drops the
+dictation.
 
 `packages/wetype-dictate` is an fcitx5 addon and the helper it runs for each
 dictation. The helper records with `pw-record` and streams to wetype-asr's
 `/v1/realtime`, which needs no token on the tailnet; when the stream fails it
 keeps recording and sends the whole recording to the batch API. The addon
-takes the right Alt key for itself, so it no longer works as a modifier.
-Its test drives the addon through fcitx5's test frontend with a fake helper.
+listens for F19, which kanata sends for a lone tap of the right Super key;
+held with another key, it stays Super, so niri's shortcuts keep working.
+niri handles those shortcuts before the input method sees them, so only
+kanata can tell a tap from one. The addon's test drives it through fcitx5's
+test frontend with a fake helper.
 
 ## Public tunnels
 

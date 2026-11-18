@@ -1,8 +1,13 @@
-// Dictation on the right Alt key, the way WeType for macOS does it on the
-// right Option key: a tap starts listening and the recognised text appears
-// as underlined preedit while the user speaks; a second tap stops, and the
+// Dictation on one key, the way WeType for macOS does it on the right
+// Option key: a press starts listening and the recognised text appears as
+// underlined preedit while the user speaks; a second press stops, and the
 // polished transcript replaces the preedit. Escape while listening drops
 // the dictation.
+//
+// The key is F19, which nothing else uses. The keyboard module's kanata
+// sends it for a lone tap of the right Super key; telling a tap from a
+// compositor shortcut takes seeing every key, which kanata does and an
+// input method does not.
 //
 // The microphone and the network live in a helper process
 // (wetype_dictate.py), so nothing here blocks fcitx5's event loop.
@@ -83,27 +88,18 @@ private:
     enum class State { Idle, Listening, Finishing };
 
     void onKey(fcitx::KeyEvent &event) {
-        const bool rightAlt = event.rawKey().sym() == FcitxKey_Alt_R;
-        if (!event.isRelease()) {
-            tap_ = rightAlt;
-            if (rightAlt) {
-                event.filterAndAccept();
-            } else if (state_ == State::Listening &&
-                       event.key().check(FcitxKey_Escape)) {
+        if (event.rawKey().sym() == FcitxKey_F19) {
+            event.filterAndAccept();
+            if (!event.isRelease()) {
+                toggle(event.inputContext());
+            }
+        } else if (!event.isRelease()) {
+            if (state_ == State::Listening &&
+                event.key().check(FcitxKey_Escape)) {
                 cancel();
                 swallowEscape_ = true;
                 event.filterAndAccept();
             }
-            return;
-        }
-        if (rightAlt) {
-            // Right Alt is the dictation key alone: passing it on would
-            // toggle the menu bar of apps that open it on an Alt tap.
-            event.filterAndAccept();
-            if (tap_) {
-                toggle(event.inputContext());
-            }
-            tap_ = false;
         } else if (swallowEscape_ && event.key().check(FcitxKey_Escape)) {
             swallowEscape_ = false;
             event.filterAndAccept();
@@ -348,7 +344,6 @@ private:
     std::vector<pid_t> zombies_;
     fcitx::TrackableObjectReference<fcitx::InputContext> ic_;
     State state_ = State::Idle;
-    bool tap_ = false;
     bool swallowEscape_ = false;
     pid_t pid_ = -1;
     int toHelper_ = -1, fromHelper_ = -1;

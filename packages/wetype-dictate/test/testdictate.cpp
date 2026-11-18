@@ -74,8 +74,8 @@ int main() {
                                                            release);
     };
     auto tap = [&] {
-        FCITX_ASSERT(key("Alt_R", false));
-        FCITX_ASSERT(key("Alt_R", true));
+        FCITX_ASSERT(key("F19", false));
+        FCITX_ASSERT(key("F19", true));
     };
 
     Steps steps{&instance, {}};
@@ -90,10 +90,10 @@ int main() {
                  {"One, two.\nThree \\o/", "one two", "one two"}) {
                 frontend->call<ITestFrontend::pushCommitExpectation>(text);
             }
-            // Right Alt held as a modifier starts nothing.
+            // Other keys start nothing.
+            key("Super_R", false);
+            key("Super_R", true);
             key("Alt_R", false);
-            key("a", false);
-            key("a", true);
             key("Alt_R", true);
         },
         [&] {

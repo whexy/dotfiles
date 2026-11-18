@@ -8,9 +8,19 @@
 }:
 let
   cfg = config.dotfiles.keyboard;
+  dictate = cfg.fcitx5.enable && cfg.dictation.enable;
 in
 {
   config = lib.mkMerge [
+    {
+      assertions = [
+        {
+          assertion = cfg.dictation.enable -> cfg.kanata.enable;
+          message = "dotfiles.keyboard.dictation needs dotfiles.keyboard.kanata, which sends its key.";
+        }
+      ];
+    }
+
     (lib.mkIf cfg.fcitx5.enable {
       i18n.inputMethod = {
         enable = true;
@@ -24,7 +34,7 @@ in
               rimeDataPkgs = [ pkgs.rime-ice ];
             })
           ]
-          ++ lib.optional cfg.dictation.enable perSystem.self.wetype-dictate;
+          ++ lib.optional dictate perSystem.self.wetype-dictate;
       };
     })
 
@@ -36,6 +46,9 @@ in
     # which fcitx5 uses as the input method toggle — mimicking macOS
     # CapsLock input switching.
     # This mirrors the Karabiner setup on macOS.
+    # With dictation, a lone right Super tap emits F19, the dictation addon's
+    # key; a slower hold stays Super. niri takes Super shortcuts before the
+    # input method sees them, so only kanata can tell a tap from one.
     (lib.mkIf cfg.kanata.enable {
       services.kanata = {
         enable = true;
@@ -47,7 +60,7 @@ in
               hgl 122  ;; KEY_HANGEUL: no built-in alias in kanata on Linux
             )
             (defsrc
-              caps tab
+              caps tab${lib.optionalString dictate " rmet"}
             )
             (defvar
               tap-time 200
@@ -56,9 +69,10 @@ in
             (defalias
               hyper (tap-hold-press $tap-time $hold-time hgl (multi lctl lalt lsft lmet))
               meh   (tap-hold-press $tap-time $hold-time tab  (multi lctl lalt lmet))
+              ${lib.optionalString dictate "dictate (tap-hold-press $tap-time 400 f19 rmet)"}
             )
             (deflayer default
-              @hyper @meh
+              @hyper @meh${lib.optionalString dictate " @dictate"}
             )
           '';
         };
