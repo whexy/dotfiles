@@ -15,6 +15,9 @@ let
   # The service's HOME. Xcode resolves the account's home from the directory,
   # the Security framework and Node from $HOME, so both must name this.
   stateDir = "/var/lib/github-runners/${name}";
+  # Not under /var: Xcode drops /private from the paths it hands build phases
+  # while Node keeps it, and expo-widgets' generated imports then miss.
+  workDir = "/opt/github-runners/${name}";
   home = "/Users/${config.system.primaryUser}";
   # Apple's intermediate for development and distribution certificates.
   wwdrG3 = pkgs.fetchurl {
@@ -47,6 +50,18 @@ in
       group = user;
       mode = "0400";
     };
+
+    # The runner keeps the work folder it registered with in .runner, so a new
+    # workDir has to be written there before launchd restarts it.
+    system.activationScripts.launchd.text = lib.mkBefore ''
+      install -d -o ${user} -g ${user} -m 0750 ${workDir}
+      runner=${stateDir}/.runner
+      if [ -f "$runner" ] && [ "$(${lib.getExe pkgs.jq} -r .workFolder "$runner")" != ${workDir} ]; then
+        ${lib.getExe pkgs.jq} --arg w ${workDir} '.workFolder = $w' "$runner" > "$runner.new"
+        chown ${user}:${user} "$runner.new"
+        mv "$runner.new" "$runner"
+      fi
+    '';
 
     system.activationScripts.postActivation.text = ''
       # nix-darwin creates a full account, and macOS counts every full account
@@ -85,7 +100,7 @@ in
 
     services.github-runners.${name} = {
       enable = true;
-      inherit name user;
+      inherit name user workDir;
       group = user;
       url = "https://github.com/whexy/t3code";
       tokenFile = config.age.secrets.github-runner-t3code.path;
