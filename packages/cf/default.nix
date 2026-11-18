@@ -19,24 +19,24 @@ let
   skills = pkgs.fetchFromGitHub {
     owner = "cloudflare";
     repo = "skills";
-    rev = "cbf893b954222276bf1af57e5f23379231e0efb9";
+    rev = "5108325ecceabc899c761e07aa617b09c02445ee";
     sparseCheckout = [ "skills/cf-cli" ];
     hash = "sha256-6QcGABT4vqNFuVDnrpSxEZSM5JGELGpueCeOqXVICmg=";
   };
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "cf";
-  version = "1.0.0-rc.0";
+  version = "1.0.0-rc.1";
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/cf/-/cf-${finalAttrs.version}.tgz";
-    hash = "sha256-AsdOW/HLxSigzyyZL4kSw5K8RMWoyRSMyJYQcSkDXWw=";
+    hash = "sha256-+tHC8tXkeTPOl09Iz8Vr/G8039oDd6TWmFxw4pdUxbw=";
   };
 
   # engines: ^22.23 || ^24.22 || ^26.12; the Darwin branch's nodejs_24 is
   # still 24.21.
   nodejs = pkgs.nodejs_22;
-  npmDepsHash = "sha256-fRVTZHic9tPYkfSyhRMmQPiO+aAdzpIH3OWtncXweBo=";
+  npmDepsHash = "sha256-YT/5zHan8Zvw/6bwSdMBgc3LWto7L4C/2oSCfireHzs=";
 
   # Nix owns this copy, so the daily update notice, which tells the user to
   # `npm install --global cf@latest`, would only install a second one. The
