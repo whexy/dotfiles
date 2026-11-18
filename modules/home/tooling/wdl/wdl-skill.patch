@@ -1,0 +1,22 @@
+--- a/SKILL.md
++++ b/SKILL.md
+@@ -44,15 +44,11 @@
+ 
+ ## Set up the CLI
+ 
+-The CLI needs Node.js 22 or newer. It is third-party code, so install it
+-without install scripts:
++Nix installs `wdl` on this machine, with the Wrangler it bundles with; never
++install it with npm. A Worker project's own `npm install` still installs its
++pinned copy for `npm run` scripts.
+ 
+-```sh
+-npm install --ignore-scripts --prefix <dir> @wdl-dev/cli
+-export PATH="<dir>/node_modules/.bin:$PATH"
+-```
+-
+-Then run `wdl doctor`. It checks Node.js, Wrangler and credentials, and asks
++Run `wdl doctor`. It checks Node.js, Wrangler and credentials, and asks
+ the control plane for the platform version and the oldest CLI it supports.
+ Fix every failed check before you deploy. `wdl config explain` shows the
+ namespace, control URL and masked token in use, and where each one came from.

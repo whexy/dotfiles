@@ -50,6 +50,7 @@ in
         cli.enable = lib.mkDefault true;
         apiToken.enable = lib.mkDefault true;
       };
+      wdl.enable = lib.mkDefault true;
     };
   };
 

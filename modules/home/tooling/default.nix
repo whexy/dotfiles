@@ -26,6 +26,7 @@
       cli.enable = lib.mkEnableOption "cf, the Cloudflare CLI, and its agent skill";
       apiToken.enable = lib.mkEnableOption "my scoped Cloudflare API token for cf, read from agenix on each run";
     };
+    wdl.enable = lib.mkEnableOption "wdl, the CLI for Workers on a self-hosted WDL platform";
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
       server = lib.mkOption {
@@ -45,6 +46,7 @@
     ./extras.nix
     ./kube.nix
     ./network.nix
+    ./wdl/default.nix
     ./woodpecker.nix
   ];
 }

@@ -201,6 +201,7 @@ list of skill names.
 | `reverse-engineer-anything`, `iphone-use`   | `rea-agents`, `iphone-use` | as shipped                                                  |
 | `iphone-use-setup`                          | `iphone-use`               | replaced by `agentic-tooling/iphone/iphone-use-setup`       |
 | `cf-cli`                                    | `cf`                       | patched by `tooling/cloudflare/cf-cli-skill.patch`          |
+| `wdl`                                       | `wxstack`                  | patched by `tooling/wdl/wdl-skill.patch` where wdl is on    |
 | `modern-web-guidance`                       | `modern-web-guidance`      | patched to run the offline CLI; `chrome-extensions` ignored |
 | `asc`, `spark`                              | local, with a reason       | the tools generate theirs at runtime                        |
 | HyperFrames' skills, ManimGX's skill        | `hyperframes`, `manimgx`   | ignored; `broll` reads them by path as `docs`               |
