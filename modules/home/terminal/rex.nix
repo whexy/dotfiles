@@ -1,12 +1,13 @@
 # Rex terminal multiplexer: the Rex Beta app (macOS) with Ghostty's font and
-# themes, the xterm-rex terminfo entry its terminals announce, and Rex's
-# server on the tailnet for homes without a Tailscale daemon.
+# themes and the flake's Rex hosts, the xterm-rex terminfo entry its terminals
+# announce, and Rex's personal server for Linux homes.
 args@{
   config,
   lib,
   pkgs,
   perSystem,
   inputs,
+  flake,
   ...
 }:
 let
@@ -14,6 +15,7 @@ let
   cfg = config.dotfiles.terminal;
   relay = config.dotfiles.tailnetRelay;
   rex = inputs.rex.packages.${pkgs.stdenv.hostPlatform.system}.rex;
+  tailnetNode = cfg.rex.server.hostName != null;
 
   serve = pkgs.writeShellScript "rex-server" ''
     args=(
@@ -71,6 +73,39 @@ let
         python3 ${./rex-themes.py} \
           ${pkgs.ghostty-bin}/Applications/Ghostty.app/Contents/Resources/ghostty/themes \
           "$specs" > $out
+      '';
+
+  # The app installs its server, with the CLI, under Application Support and
+  # updates it there; the Current link follows each update.
+  appRex = "$HOME/Library/Application Support/com.superlogical.rex/RexServer/Versions/Current/Rex Server.app/Contents/MacOS/rex";
+  appCli = pkgs.writeShellScriptBin "rex" ''
+    exec "${appRex}" "$@"
+  '';
+
+  # The app's server reads init.lua, so its host list declares the flake's
+  # hosts. A host that fails Rex's check would be left out without a word.
+  hosts = import ./rex-hosts.nix {
+    inherit lib flake;
+    self = osConfig.dotfiles.host.hostName or null;
+  };
+  initLua =
+    pkgs.runCommand "rex-init.lua"
+      {
+        nativeBuildInputs = [
+          rex
+          pkgs.jq
+        ];
+        text = lib.concatMapStrings (host: "rex.host(${lib.generators.toLua { } host})\n") hosts;
+        passAsFile = [ "text" ];
+      }
+      ''
+        cp "$textPath" init.lua
+        HOME=$TMPDIR rex --autostart=false config check --json init.lua > check.json
+        if ! jq -e '.diagnostics // [] | length == 0' check.json >/dev/null; then
+          jq . check.json >&2
+          exit 1
+        fi
+        mv init.lua $out
       '';
 
   install = pkgs.writeShellApplication {
@@ -148,6 +183,22 @@ in
       dotfiles.launcher.alfred.workflows.rex = pkgs.callPackage ./rex-alfred/workflow.nix { };
     })
 
+    (lib.mkIf (cfg.rex.enable && pkgs.stdenv.hostPlatform.isDarwin) {
+      home = {
+        # T3 Code's server and other programs outside Rex's terminals find
+        # the app's CLI on the profile.
+        packages = [ appCli ];
+        # Rex reads init.lua only at start and on `rex config reload`.
+        activation.rexConfigReload = lib.hm.dag.entryAfter [ "linkGeneration" ] ''
+          if ${lib.getExe appCli} --autostart=false server status >/dev/null 2>&1; then
+            run ${lib.getExe appCli} --autostart=false config reload >/dev/null \
+              || warnEcho "Rex did not reload init.lua; run rex config reload"
+          fi
+        '';
+      };
+      xdg.configFile."rex/init.lua".source = initLua;
+    })
+
     (lib.mkIf cfg.rex.terminfo.enable {
       # `sudo` keeps TERMINFO_DIRS, which finds the profile copy. Everything
       # else needs ~/.terminfo: Home Manager on other distros exports
@@ -164,24 +215,41 @@ in
     (lib.mkIf cfg.rex.server.enable {
       assertions = [
         {
-          assertion = relay.enable;
-          message = "dotfiles.terminal.rex.server joins the tailnet with the tailnet relay's OAuth client, so it needs dotfiles.tailnetRelay.";
+          assertion = pkgs.stdenv.hostPlatform.isLinux;
+          message = "dotfiles.terminal.rex.server runs a systemd user service; on macOS the Rex app runs the server.";
+        }
+        {
+          assertion = tailnetNode -> relay.enable;
+          message = "dotfiles.terminal.rex.server.hostName joins the tailnet with the tailnet relay's OAuth client, so it needs dotfiles.tailnetRelay.";
         }
       ];
 
+      home.packages = [ rex ];
+      # Rex over ssh:// looks for `rex` in ~/.local/bin when the remote
+      # shell's PATH lacks it.
+      home.file.".local/bin/rex" = lib.mkIf (lib.hasPrefix "ssh://" (toString cfg.rex.route)) {
+        source = lib.getExe rex;
+      };
+
       systemd.user.services.rex = {
         Unit = {
-          Description = "Rex server, on the tailnet as ${cfg.rex.server.hostName}";
-          After = [ "agenix.service" ];
-          Wants = [ "agenix.service" ];
+          Description =
+            if tailnetNode then
+              "Rex server, on the tailnet as ${cfg.rex.server.hostName}"
+            else
+              "Rex personal server";
           # A restart ends every session, so a switch leaves the running
           # server on its version until it next starts.
           X-SwitchMethod = "keep-old";
+        }
+        // lib.optionalAttrs tailnetNode {
+          After = [ "agenix.service" ];
+          Wants = [ "agenix.service" ];
         };
         Service = {
           Type = "notify";
           NotifyAccess = "main";
-          ExecStart = "${serve}";
+          ExecStart = if tailnetNode then "${serve}" else "${lib.getExe rex} server run";
           Environment = [
             # The trailing empty element keeps the system terminfo directories.
             "TERMINFO_DIRS=${rex}/share/terminfo:"

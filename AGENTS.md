@@ -600,11 +600,12 @@ has no authentication, and this route keeps it from identifying callers:
 
 On NixOS (the `dev` cap), Rex's login server serves the route. It learns each
 caller's Tailscale login from tailscaled and admits only `whexy@github`, as the
-primary user. WSL has no server: the Windows client there cannot name callers.
+primary user. WSL has no route: the Windows client there cannot name callers.
 
-On homes that run the [tailnet relay](#tailnet-relay) (mars and venus),
-`dotfiles.terminal.rex.server` runs Rex's server as a user service with its
-own tsnet node, `<host>-rex`, which Rex serves on 443: clients add
+Linux homes without a login server run Rex's personal server as a user service
+(`dotfiles.terminal.rex.server`), with `rex` on the profile. On homes that run
+the [tailnet relay](#tailnet-relay) (mars and venus), `server.hostName` gives
+it its own tsnet node, `<host>-rex`, which Rex serves on 443: clients add
 `https://<host>-rex.at-basking.ts.net`.
 
 - The node joins with the relay's OAuth client secret, so it carries
@@ -616,6 +617,22 @@ own tsnet node, `<host>-rex`, which Rex serves on 443: clients add
 
 There is no public tunnel: without authentication in Rex, one would give anyone
 a shell.
+
+### The Macs' host list
+
+Each home's `dotfiles.terminal.rex.route` is the address a Mac's Rex app
+reaches its Rex server at: the routes above by default, or an `ssh://` address
+a standalone home sets itself (proxmox), which also links `rex` into
+`~/.local/bin`, where Rex over SSH looks for it. A home with no route is
+unreachable from the Macs: wsl, whose node the Windows client owns, and
+b3srv0, left out on purpose as the host a Mac's Rex does not know.
+
+Every Mac with the app declares the other homes' routes with `rex.host` in
+`~/.config/rex/init.lua`, which its server reads, each labelled with its host
+name; activation runs `rex config reload`. The build checks the file with
+`rex config check`, since Rex leaves out a host it rejects without failing.
+Rex also leaves out a declared host whose label a host added in the app
+already uses, so a host added by hand wins until it is removed in the app.
 
 ### The rex input
 

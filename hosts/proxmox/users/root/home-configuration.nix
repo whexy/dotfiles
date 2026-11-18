@@ -20,6 +20,8 @@
       };
       pair.enable = true;
     };
+    # The Macs reach root's personal Rex server over ssh on the tailnet.
+    terminal.rex.route = "ssh://root@${inputs.self.lib.tailnetHost "proxmox"}";
   };
 
   home.homeDirectory = "/root";
