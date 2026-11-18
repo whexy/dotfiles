@@ -1,6 +1,6 @@
 ---
 name: super-thread
-description: How Wenxuan wants a T3 Code super thread to coordinate its task - splitting it into member threads, one PR per piece, briefing members, keeping the task map current, and reporting back. Use whenever your prompt carries a <super_thread_role> block, which only a super thread's prompts do; not in the member threads it starts or in ordinary threads.
+description: How Wenxuan wants a T3 Code super thread to coordinate its task - splitting it into member threads, one PR per piece, planning releases, briefing members, keeping the task map current, and reporting back. Use whenever your prompt carries a <super_thread_role> block, which only a super thread's prompts do; not in the member threads it starts or in ordinary threads.
 ---
 
 # Coordinating a super thread
@@ -14,6 +14,14 @@ Your job is to plan, launch member threads, track them on the map, steer
 them, and put their results together. Do not do project work yourself.
 Reading enough code and docs to plan is fine; editing, building and
 committing belong to members.
+
+## Plan first
+
+- Read how I asked. For a big or ambiguous feature, show me the plan before
+  any member builds; when I say "push until ready", execute. When it is
+  unclear which I want, ask.
+- Ask my fallback and rollback preferences with the plan, then hold to them.
+  Never write in a fallback I have not chosen.
 
 ## Split the work
 
@@ -29,6 +37,19 @@ committing belong to members.
 A project's own instructions win over "one PR per piece". The dotfiles repo,
 for example, commits straight to master and opens no PRs.
 
+## Releases and CI
+
+- Before you steer CI or a release, list the project's scheduled and webhook
+  tasks and other bots that push or start builds. Pause them or coordinate
+  with them, and resume them when you are done; otherwise they act against
+  the plan.
+- Decide the ship points in the plan: when releases happen, and which pieces
+  each carries. Batch pieces into one release, since each release can
+  restart everything it deploys to.
+- Keep every release and promotion with you.
+- Prove risky infrastructure, such as a new CI runner, on its own before a
+  release depends on it: run a job that publishes nothing first.
+
 ## Brief each member
 
 A member knows only its brief. Give it:
@@ -38,6 +59,16 @@ A member knows only its brief. Give it:
 - ground rules: the project's instruction files, the `git-commit` skill,
   and anything it must not do without asking;
 - what counts as done, and what to report back.
+
+Every brief also sets these rules:
+
+- Wait only in ways that return to you, such as an awaited command; never
+  leave a PR watch nobody awaits. Keep GitHub API calls few: every member
+  shares one rate limit.
+- Never read another app's secrets. Ask me, or get access through the proper
+  channel.
+- Publish nothing to external or public services, such as gists.
+- Never push to a protected or release branch, and never promote or release.
 
 Tell each member: if something in the design turns out wrong or impossible,
 stop that piece and report back with what you found. Do not redesign it.
@@ -78,6 +109,29 @@ launch a new one. If the decision is mine to make, ask me rather than guess.
 Hold a member's ask for me to the same rule. Before you pass it on, check
 whether a member could do it instead; if so, send it back with that
 instruction.
+
+Launch a fix member only with evidence of the bug: a reproduction, or logs
+that show it. A failure seen once in one member's test is not enough.
+
+## When a member finishes
+
+- Check a member's numbers and security claims before you pass them to me,
+  or mark them unverified. Have members prove a security property by testing
+  it, not by reading code.
+- Settle a member once its work is merged and verified. Send a later fix in
+  its area back to that member rather than starting a new one.
+
+## Talk to me
+
+- Decide what is reversible or low-stakes yourself. Ask me only what is mine,
+  all my open decisions in one message, and do not repeat an open question
+  in every update.
+- When I say "make it work, don't bother me", act with my full authority;
+  stop only for something destructive or a secret.
+- On a wake that brings nothing new, reply in one line or not at all. Do not
+  resend the status.
+- Keep separate facts separate. Present two facts as cause and effect only
+  when one caused the other.
 
 ## Report back
 
