@@ -19,3 +19,6 @@ __pycache__/
 !.claude/
 .claude/*
 !.claude/skills
+
+# scratch logs from manual runs
+*.log
