@@ -13,7 +13,13 @@ _: {
     ruff-check.enable = true; # .py lint, with safe fixes (ruff.toml)
     ruff-format.enable = true; # .py
     stylua.enable = true; # .lua
-    shfmt.enable = true; # shell scripts
+    # shell scripts, two-space indent and simplified: treefmt-nix's
+    # defaults are tabs without -s.
+    shfmt = {
+      enable = true;
+      indent_size = 2;
+      simplify = true;
+    };
     taplo.enable = true; # .toml
   };
   settings.global.excludes = [
