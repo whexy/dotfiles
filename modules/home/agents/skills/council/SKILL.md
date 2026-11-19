@@ -13,7 +13,7 @@ provider's own harness:
 
 - Claude Opus, through Claude Code
 - GPT Sol, through Codex
-- DeepSeek V4.1 Flash, through OpenCode, not the Pro model
+- Gemini Neon, through OpenCode
 
 Codex and OpenCode also list other vendors' models. Take each member from its
 family's harness, including members the user names: Claude Code for Claude,
@@ -46,7 +46,7 @@ Rounds: 2
 | ----------- | ------- | ------- |
 | Claude Opus | 7/10    | 9/10    |
 | GPT Sol     | 8/10    | 10/10   |
-| DeepSeek    | 7/10    | 9/10    |
+| Gemini      | 7/10    | 9/10    |
 ```
 
 If a delegate gives no score, write `no score`. Do not invent one.
