@@ -1,5 +1,5 @@
-# AI coding agents: Claude Code, Codex, and OpenCode, with the
-# rules, skills, and MCP servers every one of them shares.
+# AI coding agents: Claude Code, Codex, OpenCode, and the Antigravity CLI,
+# with the rules, skills, and MCP servers every one of them shares.
 {
   config,
   lib,
@@ -17,6 +17,7 @@
     ./claude-code/default.nix
     ./codex/default.nix
     ./opencode/default.nix
+    ./antigravity/default.nix
   ];
 
   options.dotfiles.agents.enable = lib.mkEnableOption "agents";

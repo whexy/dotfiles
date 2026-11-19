@@ -12,6 +12,7 @@
     autoUpgrade.enable = true;
     # proxmox is on the tailnet, and root is trusted by its Nix daemon.
     nix.ciCache.enable = true;
+    agents.antigravity.enable = true;
     tunnels.hostName = "proxmox";
     t3code = {
       server = {

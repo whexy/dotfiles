@@ -74,6 +74,13 @@ let
           command = [ s.command ] ++ s.args;
         }
         // optional "environment" s.env;
+
+    agy =
+      s:
+      if remote s then
+        { serverUrl = s.url; } // optional "headers" s.headers
+      else
+        { inherit (s) command; } // optional "args" s.args // optional "env" s.env;
   };
 in
 {

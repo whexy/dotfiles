@@ -115,7 +115,8 @@ is selected with `dotfiles.platform.*`.
 
 ## Agents
 
-`modules/home/agents` configures Claude Code, Codex, and OpenCode, each in a module of its own that declares its entry in
+`modules/home/agents` configures Claude Code, Codex, OpenCode, and the
+Antigravity CLI (`agy`), each in a module of its own that declares its entry in
 `dotfiles.agents.harnesses`: package, instructions file, skill root, and the
 model picker agent-settings runs for it. `harnesses.nix` renders every entry
 the same way. They take what they share from options, never from each other:
@@ -139,6 +140,23 @@ the same way. They take what they share from options, never from each other:
 
 Every agent reads `global-rules.md`, linked into its own config directory
 (`rules.file`), with its own `rules.extraText` after it.
+
+`agy` reaches CLIProxyAPI in Gemini API-key mode, which lists only
+Antigravity's own Gemini models and sends no Cloudflare Access headers:
+
+- It takes CLIProxyAPI's tailnet origin, or the relay where the home has one,
+  so it is on (`dotfiles.agents.antigravity.enable`) wherever the host runs
+  Tailscale or the relay. A standalone home on the tailnet sets it itself
+  (proxmox); b3srv0 has neither.
+- It asks for models without their effort suffix, and sends the effort as the
+  request's thinking level. CLIProxyAPI's live config
+  (`oauth.model-alias.antigravity`, on its volume, not in clusters-work)
+  aliases `gemini-3.8-flash`, `gemini-4-argon` and `gemini-4-hydrogen` to its
+  Antigravity models. A model agy lists that CLIProxyAPI lacks fails with
+  `model_not_found`.
+- agy rewrites `~/.gemini/antigravity-cli/settings.json`, so activation sets
+  only its `modelProvider`. Its MCP servers are a store file,
+  `~/.gemini/config/mcp_config.json`, so `agy mcp add` cannot write there.
 
 `modules/home/agentic-tooling` (`dotfiles.agenticTooling`) holds the programs
 agents drive: REA, video editing and making, formal verification, iPhone Use, Spark,
