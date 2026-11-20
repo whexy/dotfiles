@@ -29,7 +29,7 @@ let
       line: builtins.match regex line != null
     ) (throw "t3code-fork: no line matching ${regex} in ${file}") lines;
 
-  version = lib.head (matchLine ''const VERSION = "([^"]+)";'' 0);
+  version = lib.last (matchLine ''(export )?const VERSION = "([^"]+)";'' 0);
   platform =
     {
       aarch64-linux = "linux-arm64";
