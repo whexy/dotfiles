@@ -26,17 +26,17 @@ let
 in
 pkgs.buildNpmPackage (finalAttrs: {
   pname = "cf";
-  version = "1.0.0-rc.1";
+  version = "1.0.0-rc.2";
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/cf/-/cf-${finalAttrs.version}.tgz";
-    hash = "sha256-+tHC8tXkeTPOl09Iz8Vr/G8039oDd6TWmFxw4pdUxbw=";
+    hash = "sha256-c4OCQdD2M84FVifHJXG5P6ENjl/DBGtyxw8W3nknzfk=";
   };
 
   # engines: ^22.23 || ^24.22 || ^26.12; the Darwin branch's nodejs_24 is
   # still 24.21.
   nodejs = pkgs.nodejs_22;
-  npmDepsHash = "sha256-YT/5zHan8Zvw/6bwSdMBgc3LWto7L4C/2oSCfireHzs=";
+  npmDepsHash = "sha256-eMzNMr6mSmzX2Th6rdj429issZj6CLlTVC5p4N8Ouoc=";
 
   # Nix owns this copy, so the daily update notice, which tells the user to
   # `npm install --global cf@latest`, would only install a second one. The
