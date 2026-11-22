@@ -256,7 +256,10 @@ in
             # Go refuses to start under a GODEBUG naming a removed setting,
             # which some systems export to every session.
             "GODEBUG="
-          ];
+          ]
+          # Rex's tsnet node sends from the same host as the tailnet relay, so
+          # it disables UDP GSO for the same reason (packages/tailnet-relay).
+          ++ lib.optional tailnetNode "TS_DEBUG_DISABLE_UDP_GSO=true";
           Restart = "on-failure";
           RestartSec = 5;
         };

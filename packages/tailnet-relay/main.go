@@ -62,6 +62,13 @@ func run(configPath string) error {
 	// The node runs on hosts the owner does not control, so its logs stay
 	// on the host instead of going to Tailscale's log service.
 	envknob.SetNoLogsNoSupport()
+	// Linux rejects a UDP GSO batch whose segments exceed the path MTU it has
+	// cached for the peer, and Tailscale retries without GSO only on EIO, so
+	// the batch is lost and bulk sends over such a path crawl. The cluster's
+	// NodePort endpoint has an MTU of 1230 (flannel over Tailscale), below a
+	// full WireGuard packet; its ingress proxies disable GSO too
+	// (tailscale/tailscale#20858).
+	envknob.Setenv("TS_DEBUG_DISABLE_UDP_GSO", "true")
 
 	if err := os.MkdirAll(cfg.StateDir, 0o700); err != nil {
 		return err
