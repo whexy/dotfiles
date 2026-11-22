@@ -61,7 +61,8 @@ model's family, not by whichever harness lists it:
 
 - Claude: Claude Code.
 - GPT: Codex.
-- Every other model (Grok, Gemini, and the rest): OpenCode.
+- Gemini: Antigravity.
+- Every other model (Grok and the rest): OpenCode.
 
 ### Coding
 

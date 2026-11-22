@@ -32,7 +32,8 @@ Assisted-by: <Tool Name>, <model ID>
 ```
 
 - `<Tool Name>` is the harness's official product name, spelled and
-  capitalized as its vendor does: `Claude Code`, `Codex`, `Pi`, `OpenCode`.
+  capitalized as its vendor does: `Claude Code`, `Codex`, `Pi`, `OpenCode`,
+  `Antigravity`.
 - `<model ID>` is the exact model identifier the harness runs, as the API
   takes it: lowercase, hyphenated, no provider prefix, no context-window
   suffix such as `[1m]`, and no marketing name (`claude-opus-5-5`, not

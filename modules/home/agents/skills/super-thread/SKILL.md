@@ -32,7 +32,7 @@ committing belong to members.
 - Start each member in its own worktree from the project's default branch,
   unless the piece builds on another piece's unmerged work.
 - Pick each member's harness by its model's family: Claude Code for Claude,
-  Codex for GPT, OpenCode for every other model.
+  Codex for GPT, Antigravity for Gemini, OpenCode for every other model.
 
 A project's own instructions win over "one PR per piece". The dotfiles repo,
 for example, commits straight to master and opens no PRs.
