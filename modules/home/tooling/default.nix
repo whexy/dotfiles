@@ -27,6 +27,7 @@
       apiToken.enable = lib.mkEnableOption "my scoped Cloudflare API token for cf, read from agenix on each run";
     };
     wdl.enable = lib.mkEnableOption "wdl, the CLI for Workers on a self-hosted WDL platform";
+    clustersWorkKey.enable = lib.mkEnableOption "the clusters-work agenix key, which that repository's dev shell decrypts its secrets with";
     woodpecker = {
       enable = lib.mkEnableOption "woodpecker-cli preconfigured against my CI server";
       server = lib.mkOption {
@@ -42,6 +43,7 @@
     ./aws.nix
     ./cli.nix
     ./cloudflare/default.nix
+    ./clusters-work.nix
     ./debug.nix
     ./extras.nix
     ./kube.nix

@@ -51,6 +51,7 @@ in
         apiToken.enable = lib.mkDefault true;
       };
       wdl.enable = lib.mkDefault true;
+      clustersWorkKey.enable = lib.mkDefault true;
     };
   };
 

@@ -94,6 +94,10 @@ in
   "app-store-connect-api-key.age".publicKeys = to users;
   # Homes that enable tooling.cloudflare.apiToken: the dev and dev-lite homes.
   "cloudflare-api-token.age".publicKeys = to users;
+  # Homes that enable tooling.clustersWorkKey: the dev and dev-lite homes.
+  # clusters-work's agenix identity (an OpenSSH ed25519 private key), its
+  # only escrow.
+  "clusters-work-devkey.age".publicKeys = to users;
   # Homes that enable tooling.aws: the dev and dev-lite homes.
   "aws-credentials.age".publicKeys = to users;
   # The Atuin module decrypts these during activation, not via age.secrets.
