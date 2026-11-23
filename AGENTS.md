@@ -402,6 +402,16 @@ through nix-ld, which the `dev` cap enables.
 
 To rotate, roll the token in the dashboard and repeat step 2.
 
+## clusters-work agenix key
+
+The `dev` and `dev-lite` caps decrypt clusters-work's agenix identity,
+`secrets/clusters-work-devkey.age` (`dotfiles.tooling.clustersWorkKey`), to
+`clusters-work-devkey` in the home's agenix directory. That repository's dev
+shell passes it to its `agenix`, so editing its secrets needs nothing else.
+The file is the OpenSSH-format private key, since age rejects PKCS#8, and it
+is the key's only copy: clusters-work's dev-key-only secrets are lost with
+it. It is that repository's key, so rotating it means rekeying there first.
+
 ## AWS CLI
 
 The `dev` and `dev-lite` caps install AWS CLI v2
