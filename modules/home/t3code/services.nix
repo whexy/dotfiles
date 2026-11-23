@@ -16,6 +16,9 @@
   policy ? null,
   # The server's public origin, which it builds webhook URLs on, or null for none.
   publicUrl ? null,
+  # The server's tailnet origin when something other than Tailscale Serve
+  # publishes it, which the server reports to clients; null for none.
+  tailnetUrl ? null,
   profileDirectory,
   homeDirectory,
   # Where the wrapper's resolve keeps status.json, given to the updater too.
@@ -80,6 +83,9 @@ let
     + applyPush
     + ''
       ${lib.optionalString (publicUrl != null) "export T3CODE_PUBLIC_URL=${lib.escapeShellArg publicUrl}"}
+      ${lib.optionalString (
+        tailnetUrl != null
+      ) "export T3CODE_TAILNET_URL=${lib.escapeShellArg tailnetUrl}"}
       exec ${t3} serve --host 127.0.0.1 --port ${toString port} --no-browser ${lib.optionalString cfg.server.tailnet.enable "--tailscale-serve --tailscale-serve-port ${toString tailnetPort}"}
     ''
   );

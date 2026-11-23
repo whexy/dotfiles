@@ -5,7 +5,8 @@
 #
 # The token is minted on the dev host (over ssh unless it is this machine) and
 # handed back as a pairing URL on the host's public tunnel name when it
-# answers, else on its Tailscale Serve name. The public name comes from the
+# answers, else on its tailnet name: its Tailscale Serve name, or its tailnet
+# relay's for a host off the tailnet. The public name comes from the
 # host name given, or this machine's hostname, never from the tailnet: a WSL
 # host shares its Windows host's node and so its tailnet name. A client paired
 # over the public name learns the Tailscale route from the server and prefers
@@ -99,13 +100,16 @@ pkgs.writeShellApplication {
     if status=$(tailscale status --json 2>/dev/null) &&
       [ "$(jq -r '.BackendState' <<<"$status")" = Running ]; then
       # Match on the MagicDNS name, whole or its first label, rather than
-      # HostName: that is the name the HTTPS certificate is issued for.
+      # HostName: that is the name the HTTPS certificate is issued for. A host
+      # off the tailnet is served by its tailnet relay's node, <host>-relay.
       peer=$(
         jq -r --arg host "''${host,,}" '
           if $host == "" then .Self
           else
             [.Self, (.Peer // {} | .[])]
-            | map(select(.DNSName | rtrimstr(".") | . == $host or split(".")[0] == $host))
+            | map(.DNSName |= rtrimstr("."))
+            | map(select(.DNSName == $host or (.DNSName | split(".")[0]) == $host))
+              + map(select((.DNSName | split(".")[0]) == "\($host)-relay"))
             | first // empty
           end
           | "\(.ID) \(.DNSName | rtrimstr("."))"

@@ -47,7 +47,7 @@ let
       proxy = cfg.proxy.address;
       serves = lib.mapAttrsToList (name: serve: {
         inherit name;
-        inherit (serve) port target;
+        inherit (serve) port target tls;
       }) cfg.serves;
     }
   );
@@ -139,6 +139,16 @@ in
               type = lib.types.str;
               example = "127.0.0.1:22";
               description = "Loopback address of this host connections are relayed to.";
+            };
+            tls = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = ''
+                Whether to end TLS on the port with the node's MagicDNS
+                certificate and relay the plaintext, so a plain HTTP service
+                is reached at `https://<hostName>.<tailnet>:<port>`. The
+                tailnet needs MagicDNS and HTTPS certificates enabled.
+              '';
             };
           };
         }

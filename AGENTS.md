@@ -445,7 +445,11 @@ Verify with `kubectl config get-contexts`.
 is set. The server listens only on loopback, at port 3773. On tailnet hosts
 (`dotfiles.t3code.server.tailnet.enable`, on by default wherever
 `dotfiles.network.tailscale` is), Tailscale Serve also publishes it at
-`https://<MagicDNS name>:35338`. Every server is published on the public
+`https://<MagicDNS name>:35338`. Homes with a [tailnet relay](#tailnet-relay)
+and no Tailscale (mars, venus) publish it through the relay instead
+(`server.relay.enable`), at `https://<host>-relay.at-basking.ts.net:35338`,
+and give the server that URL as `T3CODE_TAILNET_URL`, which it reports to
+clients as its tailnet route. Every server is published on the public
 internet by its own tunnel (below).
 
 Standalone homes have no `osConfig`, so a standalone host that runs the
@@ -891,6 +895,19 @@ tag reaches, by MagicDNS name or address, TCP only:
   any `*.at-basking.ts.net` host, through the `tailnet-relay-connect`
   `ProxyCommand` (`dotfiles.tailnetRelay.connect`).
 
+The relay also serves the other way (`dotfiles.tailnetRelay.serves`): each
+serve listens on a port of the node's tailnet addresses and relays every
+connection to a loopback service of the host. Targets must be loopback, so
+the node is no gateway into the host's network.
+
+- mars and venus serve their sshd on port 22, which the `mars` and `venus`
+  ssh host blocks reach, and their T3 Code servers on 35338.
+- A serve with `tls` ends TLS with the node's MagicDNS certificate, so a plain
+  HTTP service is reached over HTTPS, as Tailscale Serve would serve it.
+- The tailnet policy is the only gate in front of a serve, and the service
+  sees every caller as loopback, so it authenticates callers itself, as sshd
+  and T3's pairing do. The relay's journal names each caller's node and login.
+
 Every user on the host can connect to a loopback port, and any user can bind
 one the relay does not hold, so the check runs in both directions:
 
@@ -920,7 +937,9 @@ To add a home:
    and `{ "src": ["tag:tailnet-relay"], "dst": ["whexy@github"], "ip": ["tcp:22"] }`.
    Nodes and ingress proxies share `tag:services`, so the relay reaches every
    tailnet UI on 443 and the Kubernetes API on 6443; the second grant is ssh
-   to the owner's machines. Create an OAuth client that writes auth keys for the
+   to the owner's machines. Serves need a grant from their callers to
+   `tag:tailnet-relay` on each serve's port: `tcp:22` and `tcp:35338`.
+   Create an OAuth client that writes auth keys for the
    tag; its secret is `secrets/tailnet-relay-oauth.age`.
 2. Add the home to that secret's recipients and rekey (see
    [Secrets](#secrets)).

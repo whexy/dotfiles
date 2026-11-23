@@ -64,6 +64,17 @@ in
           Serve at `https://<MagicDNS name>:35338`.
         '';
       };
+      relay.enable = lib.mkOption {
+        type = lib.types.bool;
+        default = config.dotfiles.tailnetRelay.enable && !cfg.server.tailnet.enable;
+        defaultText = lib.literalExpression "config.dotfiles.tailnetRelay.enable && !config.dotfiles.t3code.server.tailnet.enable";
+        description = ''
+          Whether to publish the server on the tailnet through the home's
+          tailnet relay, for a host that runs no Tailscale daemon, at
+          `https://<relay hostName>:35338`. The server reports that URL to
+          its clients as its tailnet route.
+        '';
+      };
       push.enable = lib.mkOption {
         type = lib.types.bool;
         default = true;

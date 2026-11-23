@@ -20,13 +20,22 @@ type serve struct {
 	Name   string `json:"name"`
 	Port   uint16 `json:"port"`
 	Target string `json:"target"`
+	// TLS ends TLS on the port with the node's MagicDNS certificate and
+	// relays the plaintext, so a plain HTTP service is served as
+	// https://<node>:<port>, as Tailscale Serve would serve it.
+	TLS bool `json:"tls"`
 }
 
 // serveTailnet relays connections to s.Port of the node to s.Target. The
 // tailnet policy is the only gate in front of the target, so the target's
 // own protocol has to authenticate callers.
 func serveTailnet(srv *tsnet.Server, s serve) error {
-	ln, err := srv.Listen("tcp", fmt.Sprintf(":%d", s.Port))
+	listen := srv.Listen
+	if s.TLS {
+		// Waits for the node to come up, which knows its certificate's name.
+		listen = srv.ListenTLS
+	}
+	ln, err := listen("tcp", fmt.Sprintf(":%d", s.Port))
 	if err != nil {
 		return err
 	}
