@@ -52,11 +52,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1795416376,
-        "narHash": "sha256-ivbtn2CfktYSRThu5J7aAauyUvHAFqaKuK6qGmkjviU=",
+        "lastModified": 1795417174,
+        "narHash": "sha256-YZhRJqsSuwA/Xh5RSELzVh1j7q9d+gwCc4iQs6cd4J0=",
         "ref": "refs/heads/main",
-        "rev": "2d3be038cb1964aa2a3015fe247b8ce42e7440bd",
-        "revCount": 151,
+        "rev": "0e7acf85f85084b30c681658a4b8fc1c3a90b0a3",
+        "revCount": 152,
         "type": "git",
         "url": "https://codeberg.org/wvhulle/bootvine"
       },
@@ -442,11 +442,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1795416666,
-        "narHash": "sha256-b1GmfrMPoZ2ANkR0we9Q9KQN6n1e+vNyDqt1p4CNEAY=",
+        "lastModified": 1795495638,
+        "narHash": "sha256-hhROWq9062PdIznKMqiQuy3L9F7l4LHwofEVrcncfZM=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "5330ee115c06d2b43f49e902130125eab579b22f",
+        "rev": "45e6e554481f962d4134021d3a63c96d8755f395",
         "type": "github"
       },
       "original": {
@@ -678,11 +678,11 @@
     },
     "nixpkgs_2": {
       "locked": {
-        "lastModified": 1795258312,
-        "narHash": "sha256-IEuDsf80ubivfpidbRsIm30HVo7PZIdZt1stRsbaY4Y=",
+        "lastModified": 1795370043,
+        "narHash": "sha256-s/0jq8usZtLVOolYBwmyUmd3JsfAu7w3FU+a0dgMqSY=",
         "owner": "NixOS",
         "repo": "nixpkgs",
-        "rev": "94c3211b0ee8ba969a3f12eb4aff8ba0f72971dd",
+        "rev": "0dc498bfe49baeb18b0f9891e800b53bb2603193",
         "type": "github"
       },
       "original": {
@@ -799,11 +799,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1794827825,
-        "narHash": "sha256-FS/BVVnTKxST60EDReJuXWFjk4SJCudwKVERXgZU3sw=",
+        "lastModified": 1795033038,
+        "narHash": "sha256-KZnUON6LoaTR3F/SaBaxxZSRXy2L+dUt5hbEt1CRg9g=",
         "owner": "karinushka",
         "repo": "paneru",
-        "rev": "35344e6545a81610836116d413e5e26eb35529b7",
+        "rev": "28152e99965c25c123295e331adba55bc3758e6d",
         "type": "github"
       },
       "original": {
@@ -891,10 +891,10 @@
         ]
       },
       "locked": {
-        "lastModified": 1795116584,
-        "narHash": "sha256-sodLKItgiZdA4JQowYVogqE02b4SmGTPB1ux9pyEUrk=",
+        "lastModified": 1795467078,
+        "narHash": "sha256-Q+GqRAQCGrpaERDvjAR7B0T5AMqnQWullUVDCskIQOU=",
         "type": "tarball",
-        "url": "https://pkgs.superlogical.com/rex/nix/preview/0.1.0-preview.22.tar.gz"
+        "url": "https://pkgs.superlogical.com/rex/nix/preview/0.1.0-preview.23.tar.gz"
       },
       "original": {
         "type": "tarball",
