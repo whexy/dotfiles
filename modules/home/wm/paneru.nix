@@ -55,7 +55,7 @@ let
 
   terminalLaunch =
     {
-      rex = "/usr/bin/env -i /usr/bin/open -a 'Rex Beta'";
+      rex = "/usr/bin/env -i /usr/bin/open -b com.superlogical.rex";
       ssh-window = "${config.programs.ssh-window.package}/bin/ssh-window launch >/dev/null 2>&1 &";
       ghostty = "/usr/bin/env -i /usr/bin/open -a Ghostty";
     }
@@ -168,7 +168,7 @@ in
           paneru.run(window and window.floating and "window focus managed" or "window focus unmanaged")
         end)
 
-        paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -a "Alfred 5"]]) end)
+        paneru.bind(hyper .. " - space", function() os.execute([[/usr/bin/env -i /usr/bin/open -b com.runningwithcrayons.Alfred]]) end)
         paneru.bind(hyper .. " - t", function() os.execute("${terminalLaunch}") end)
       ''
       + lib.optionalString shared.t3codeDesktop ''

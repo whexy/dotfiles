@@ -1,4 +1,4 @@
-# Rex terminal multiplexer: the Rex Beta app (macOS) with Ghostty's font and
+# Rex terminal multiplexer: the Rex app (macOS) with Ghostty's font and
 # themes and the flake's Rex hosts, the xterm-rex terminfo entry its terminals
 # announce, and Rex's personal server for Linux homes.
 args@{
@@ -37,7 +37,7 @@ let
     fi
     exec ${lib.getExe rex} "''${args[@]}"
   '';
-  app = "/Applications/Rex Beta.app";
+  app = "/Applications/Rex.app";
   terminfo = perSystem.self.rex-terminfo;
   style = import ./style.nix;
   domain = "com.superlogical.rex";
@@ -120,15 +120,15 @@ let
       mkdir "$tmp/mnt"
       /usr/bin/hdiutil attach -quiet -nobrowse -readonly -noautoopen \
         -mountpoint "$tmp/mnt" "$tmp/Rex.dmg"
-      /usr/bin/ditto "$tmp/mnt/Rex Beta.app" "$tmp/Rex Beta.app"
+      /usr/bin/ditto "$tmp/mnt/Rex.app" "$tmp/Rex.app"
       /usr/bin/hdiutil detach -quiet "$tmp/mnt"
 
       # The download is unpinned, so only Superlogical's Developer ID vouches
       # for what gets installed.
       /usr/bin/codesign --verify --deep --strict \
         -R='anchor apple generic and identifier "com.superlogical.rex" and certificate leaf[subject.OU] = "AG92C3PT77"' \
-        "$tmp/Rex Beta.app"
-      mv "$tmp/Rex Beta.app" ${lib.escapeShellArg app}
+        "$tmp/Rex.app"
+      mv "$tmp/Rex.app" ${lib.escapeShellArg app}
     '';
   };
 in
@@ -141,7 +141,7 @@ in
       # admin prompt.
       home.activation.installRexApp = lib.hm.dag.entryAfter [ "writeBoundary" ] ''
         if [ ! -e ${lib.escapeShellArg app} ]; then
-          run ${lib.getExe install} || warnEcho "Rex Beta was not installed; the next activation retries"
+          run ${lib.getExe install} || warnEcho "Rex was not installed; the next activation retries"
         fi
       '';
 

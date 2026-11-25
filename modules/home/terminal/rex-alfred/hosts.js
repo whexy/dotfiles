@@ -3,7 +3,7 @@
 // host's ID for new-session.js. Alfred filters the items by the query.
 
 function run() {
-  const rex = Application("Rex Beta");
+  const rex = Application("com.superlogical.rex");
   // Asking a stopped app for its hosts would launch it on every keystroke.
   if (!rex.running()) {
     return JSON.stringify({
@@ -24,7 +24,7 @@ function run() {
         subtitle: `New Rex session on ${name}`,
         arg: host.id(),
         match: local ? `${name} local` : name,
-        icon: { type: "fileicon", path: "/Applications/Rex Beta.app" },
+        icon: { type: "fileicon", path: "/Applications/Rex.app" },
       };
     });
 

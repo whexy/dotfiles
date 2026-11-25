@@ -124,7 +124,7 @@ in
           "${hyper}-right" = "focus-monitor --wrap-around next";
           "${hyper}-t" =
             {
-              rex = "exec-and-forget open -a 'Rex Beta'";
+              rex = "exec-and-forget open -b com.superlogical.rex";
               ssh-window = "exec-and-forget ${config.programs.ssh-window.package}/bin/ssh-window launch";
               ghostty = "exec-and-forget open -a Ghostty";
             }

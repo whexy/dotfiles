@@ -48,7 +48,7 @@ in
     tmux.enable = lib.mkEnableOption "tmux";
     zellij.enable = lib.mkEnableOption "zellij";
     rex = {
-      enable = lib.mkEnableOption "the Rex Beta terminal multiplexer app with Ghostty's look (macOS)";
+      enable = lib.mkEnableOption "the Rex terminal multiplexer app with Ghostty's look (macOS)";
       terminfo.enable = lib.mkEnableOption "Rex's xterm-rex terminfo entry, for Rex terminals that reach this machine";
       server = {
         enable = lib.mkEnableOption ''

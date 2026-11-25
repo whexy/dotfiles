@@ -1,4 +1,4 @@
-"""Convert Ghostty theme files into Rex Beta custom themes.
+"""Convert Ghostty theme files into Rex custom themes.
 
 Usage: rex-themes.py THEMES_DIR SPECS
 
