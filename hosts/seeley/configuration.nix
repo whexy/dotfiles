@@ -32,6 +32,12 @@
       useRoutingFeatures = "server";
       extraSetFlags = [ "--advertise-routes=129.105.0.0/16,165.124.0.0/16" ];
     };
+    # The wired port is the only network; a Wi-Fi link must not take over
+    # routing or DNS. Unmanaged through udev because a change to
+    # networking.networkmanager.unmanaged restarts NetworkManager on switch.
+    udev.extraRules = ''
+      SUBSYSTEM=="net", ENV{DEVTYPE}=="wlan", ENV{NM_UNMANAGED}="1"
+    '';
   };
 
   dotfiles = {
