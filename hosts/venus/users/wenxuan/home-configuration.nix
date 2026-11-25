@@ -10,6 +10,15 @@
 
   dotfiles = {
     autoUpgrade.enable = true;
+    # Other admins have root on this shared server, so it decrypts none of the
+    # dev cap's account credentials (secrets/secrets.nix's devUsers).
+    tooling = {
+      appStoreConnect.enable = false;
+      aws.enable = false;
+      cloudflare.apiToken.enable = false;
+      clustersWorkKey.enable = false;
+      woodpecker.enable = false;
+    };
     hardware.gpu.vendor = "nvidia";
     tunnels.hostName = "venus";
     # Off the tailnet, so the tunnel is the server's only route.

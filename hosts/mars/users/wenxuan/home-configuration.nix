@@ -10,6 +10,15 @@
 
   dotfiles = {
     autoUpgrade.enable = true;
+    # Other admins have root on this shared server, so it decrypts none of the
+    # dev cap's account credentials (secrets/secrets.nix's devUsers).
+    tooling = {
+      appStoreConnect.enable = false;
+      aws.enable = false;
+      cloudflare.apiToken.enable = false;
+      clustersWorkKey.enable = false;
+      woodpecker.enable = false;
+    };
     # A100s, which have no video encoder.
     hardware.gpu = {
       vendor = "nvidia";

@@ -48,6 +48,12 @@ let
   to = group: builtins.attrValues (group // editors);
 
   homes = users // roots;
+  # The shared servers mars and venus, where other admins have root, hold
+  # none of these account credentials.
+  devUsers = removeAttrs users [
+    "wenxuan@mars"
+    "wenxuan@venus"
+  ];
 in
 {
   "beszel-token.age".publicKeys = to hosts;
@@ -84,22 +90,22 @@ in
   "wetype-asr-transcribe-token.age".publicKeys = to homes;
   # Homes that run a public tunnel.
   "cloudflared-cert.age".publicKeys = to homes;
-  "woodpecker-token.age".publicKeys = to (removeAttrs users [ "whexy@sheridan" ]);
+  "woodpecker-token.age".publicKeys = to (removeAttrs devUsers [ "whexy@sheridan" ]);
   # A Tailscale OAuth client secret that mints tag:tailnet-relay keys, for
   # the homes that run dotfiles.tailnetRelay.
   "tailnet-relay-oauth.age".publicKeys = to {
     inherit (homes) "wenxuan@mars" "wenxuan@venus";
   };
   # Homes that enable tooling.appStoreConnect: the dev and dev-lite homes.
-  "app-store-connect-api-key.age".publicKeys = to users;
+  "app-store-connect-api-key.age".publicKeys = to devUsers;
   # Homes that enable tooling.cloudflare.apiToken: the dev and dev-lite homes.
-  "cloudflare-api-token.age".publicKeys = to users;
+  "cloudflare-api-token.age".publicKeys = to devUsers;
   # Homes that enable tooling.clustersWorkKey: the dev and dev-lite homes.
   # clusters-work's agenix identity (an OpenSSH ed25519 private key), its
   # only escrow.
-  "clusters-work-devkey.age".publicKeys = to users;
+  "clusters-work-devkey.age".publicKeys = to devUsers;
   # Homes that enable tooling.aws: the dev and dev-lite homes.
-  "aws-credentials.age".publicKeys = to users;
+  "aws-credentials.age".publicKeys = to devUsers;
   # The Atuin module decrypts these during activation, not via age.secrets.
   "atuin-key.age".publicKeys = to users;
   "atuin-session.age".publicKeys = to users;
