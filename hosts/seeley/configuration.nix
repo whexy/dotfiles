@@ -11,6 +11,7 @@
     modules = [
       ./disk-config.nix
       ./hardware.nix
+      ./incus.nix
       ./nvidia.nix
     ];
   };
