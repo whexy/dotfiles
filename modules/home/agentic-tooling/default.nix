@@ -7,9 +7,6 @@ args@{
   flake,
   ...
 }:
-let
-  cfg = config.dotfiles.agenticTooling;
-in
 {
   imports = [
     ./rea/default.nix
@@ -50,17 +47,11 @@ in
     video = {
       editing.enable = lib.mkEnableOption "video editing: cutting a DaVinci Resolve Studio timeline, on macOS or from WSL";
       making.enable = lib.mkEnableOption "video making: rendering B-roll with HyperFrames and ManimGX on this machine's GPU";
-      studio.enable = lib.mkOption {
-        type = lib.types.bool;
-        # B-roll slots take generated footage from it.
-        default = cfg.video.making.enable;
-        defaultText = lib.literalExpression "config.dotfiles.agenticTooling.video.making.enable";
-        description = ''
-          Whether to register SimpleStudio's MCP server, which generates video
-          on the studio's GPU Workers. Each agent signs in to it once per
-          machine, through Cloudflare Access.
-        '';
-      };
+      studio.enable = lib.mkEnableOption ''
+        SimpleStudio's MCP server, which generates video on the studio's GPU
+        Workers for B-roll slots. Each agent signs in to it once per machine,
+        through Cloudflare Access
+      '';
     };
 
     iphoneUse = {

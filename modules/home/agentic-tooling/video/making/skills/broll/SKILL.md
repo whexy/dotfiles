@@ -30,7 +30,9 @@ is your slot's id.
 Use HyperFrames (HTML, CSS and GSAP, rendered frame-exact) by default. Use
 ManimGX for math, graphs and diagrams that morph. When the brief asks for real
 footage, generate it with Studio instead; see
-[Footage from Studio](#footage-from-studio).
+[Footage from Studio](#footage-from-studio). Without the `studio` MCP server,
+which a machine registers only when enabled, report that the slot needs
+footage instead of rendering a stand-in.
 
 - HyperFrames: read `hyperframes/SKILL.md` in
   `~/.local/share/agents/docs/hyperframes/`, and the files under its

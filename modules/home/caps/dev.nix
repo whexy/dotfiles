@@ -11,10 +11,7 @@ in
 
   dotfiles = {
     agenticTooling = {
-      video = {
-        making.enable = lib.mkDefault (config.dotfiles.hardware.gpu.vendor != null);
-        studio.enable = lib.mkDefault true;
-      };
+      video.making.enable = lib.mkDefault (config.dotfiles.hardware.gpu.vendor != null);
       formalVerification.enable = lib.mkDefault true;
     };
     # Agents drive Firefox headlessly, so a dev machine needs the browser

@@ -756,8 +756,8 @@ and its clip's encoder tag names the encoder; ManimGX's
 
 ## SimpleStudio MCP server
 
-`dotfiles.agenticTooling.video.studio` (on the `dev` cap, and wherever video
-making is) registers SimpleStudio's MCP server,
+`dotfiles.agenticTooling.video.studio` (off unless a home enables it)
+registers SimpleStudio's MCP server,
 `https://studio-mcp.clusters.work/mcp`, with every agent. Its tools generate
 video on the studio's GPU Workers, and the `broll` skill fills B-roll slots
 with that footage.
