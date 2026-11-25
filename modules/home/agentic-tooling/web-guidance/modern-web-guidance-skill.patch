@@ -11,15 +11,13 @@
  ## Primary Workflow
  
  ### Step 1. Search Use Cases
-@@ -33,7 +37,7 @@
- Once you have relevant `id`(s) from the search results, call `retrieve` to get the full guide(s)—including both specific use-case guides that match your task and any broader discipline guide (e.g., `html`, `css`, `forms`, `accessibility`, `color`, `performance`, `security`) that applies. You can pass multiple IDs separated by commas.
+@@ -34,5 +38,5 @@
  
  ```sh
 -npx -y modern-web-guidance@latest retrieve "<id>"
 +modern-web-guidance retrieve "<id>"
  ```
  
- If `retrieve` saves large output (> 9.5 KB) to a temporary file to prevent truncation, read that file path in full using your file-reading tool (reading remaining line ranges if needed)—do not use `cat` or `head`.
 @@ -45,14 +49,6 @@
  - **Task Fulfillment**: Confirm that the implementation fully satisfies the user's request.
  - Do not run `legacy-scan`; it's for detecting legacy patterns to modernize, not this.
