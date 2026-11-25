@@ -97,9 +97,15 @@ in
 
             "*" = {
               IdentityAgent = identityAgent;
-              ForwardAgent = true;
               ServerAliveInterval = 25;
               ServerAliveCountMax = 3;
+            };
+
+            # Root on a host the agent is forwarded to can sign with it. Git
+            # signing on the flake hosts, mars and venus included, needs it.
+            forward-agent = {
+              header = "Match host ${lib.concatStringsSep "," flakeHosts}";
+              ForwardAgent = true;
             };
 
             rex-terminfo = {
