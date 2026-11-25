@@ -42,17 +42,25 @@
   websearch.provider = "searxng";
   mcp.servers = mcpServers;
 
-  permissions =
-    map (resource: {
-      action = "external_directory";
-      inherit resource;
-      effect = "allow";
-    }) (policy.readable ++ [ "/tmp/**" ])
-    ++ map (resource: {
-      action = "edit";
-      inherit resource;
-      effect = "deny";
-    }) policy.readOnly;
+  # OpenCode's primary agent starts from an allow-all rule, and the last
+  # matching rule wins.
+  permissions = [
+    {
+      action = "shell";
+      resource = "*";
+      effect = "ask";
+    }
+  ]
+  ++ map (resource: {
+    action = "external_directory";
+    inherit resource;
+    effect = "allow";
+  }) policy.readable
+  ++ map (resource: {
+    action = "edit";
+    inherit resource;
+    effect = "deny";
+  }) policy.readOnly;
 
   # Keep providers auto-detected from ambient credentials (and OpenCode Zen)
   # out of the configured provider set.
