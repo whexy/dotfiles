@@ -38,8 +38,9 @@ in
       };
 
       # macOS: tell System Events to set the desktop picture on each
-      # activation. The auto-upgrade daemon's switch cannot always launch
-      # System Events (-10810), and a wallpaper must not abort the switch.
+      # activation. With no GUI login session, `launchctl asuser` runs
+      # activation in the background user domain, where apps cannot launch
+      # (-10810); an unattended switch must not fail for a wallpaper.
       home.activation.setWallpaper = lib.mkIf isDarwin (
         lib.hm.dag.entryAfter [ "writeBoundary" ] ''
           run /usr/bin/osascript <<'EOF' || warnEcho "The desktop picture was not set; the next activation retries"
