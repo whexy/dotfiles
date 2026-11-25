@@ -15,6 +15,17 @@
         a weekly `docker system prune` of stopped containers, unused
         networks, dangling images and dangling build cache; tagged images
         and volumes are kept'';
+
+      publishAddress = lib.mkOption {
+        type = lib.types.nullOr lib.types.str;
+        default = null;
+        example = "127.0.0.1";
+        description = ''
+          The host address `docker run -p` binds when it names none. Docker's
+          port forwarding bypasses the NixOS firewall, so a host on a public
+          network sets this to keep published ports off it.
+        '';
+      };
     };
 
     podman.enable = lib.mkEnableOption "Podman";

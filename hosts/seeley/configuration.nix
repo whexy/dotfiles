@@ -37,6 +37,9 @@
       alwaysOn.enable = true;
       performance.enable = true;
     };
+    # Published container ports would otherwise be open on the public
+    # campus address.
+    virtualization.docker.publishAddress = "127.0.0.1";
   };
 
   system.stateVersion = "26.05";

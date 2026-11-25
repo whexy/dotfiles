@@ -21,9 +21,14 @@ in
           autoPrune.enable = cfg.docker.autoPrune;
           # Update 2026-01-08: enabling gVisor runtime (company contract needs it)
           extraPackages = lib.optional cfg.docker.gvisor pkgs.gvisor;
-          daemon.settings = lib.mkIf cfg.docker.gvisor {
-            runtimes.runsc.path = "${pkgs.gvisor}/bin/runsc";
-          };
+          daemon.settings = lib.mkMerge [
+            (lib.mkIf cfg.docker.gvisor {
+              runtimes.runsc.path = "${pkgs.gvisor}/bin/runsc";
+            })
+            (lib.mkIf (cfg.docker.publishAddress != null) {
+              ip = cfg.docker.publishAddress;
+            })
+          ];
         };
 
         containers = {
