@@ -12,10 +12,12 @@ pipeline = yaml.safe_load(Path(sys.argv[1]).read_text())
 scripts = Path(sys.argv[2])
 steps = pipeline["steps"]
 assert {"event": "push", "branch": "master"} in pipeline["when"]
+for cond in pipeline["when"]:
+    events = cond["event"] if isinstance(cond["event"], list) else [cond["event"]]
+    assert "pull_request" not in events, cond
 assert "push" in steps["check"]["when"]["event"]
 check = "bash ci/check.sh"
-for name in ("check", "check-pr"):
-    assert check in steps[name]["commands"], name
+assert check in steps["check"]["commands"]
 
 # An update lane is a step that runs ci/update.sh.
 lanes = {

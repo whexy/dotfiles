@@ -49,7 +49,7 @@ Tailscale on everything, so I can safely expose services in private network.
 ### Automation
 
 Woodpecker CI runs the pre-commit checks (treefmt, statix, nil, deadnix) and
-evaluates configurations on every pull request and every push to master.
+evaluates configurations on every push to master.
 
 Nightly, a GitHub App bot updates every `flake.lock` input and every package
 that pins an upstream release, one commit each. The bot runs the same checks

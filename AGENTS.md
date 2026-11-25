@@ -687,10 +687,8 @@ into Nix's netrc (`dotfiles.nix.rexNetrc`, on the `base` cap); homes with
 `terminal.rex.server` fetch the input without it.
 
 In CI, the update lane and the check on master read the token from the
-Woodpecker secret `rex_package_token`. A pull-request check has no token and
-substitutes the input from the CI cache, so a pull request that moves the `rex`
-lock fails its check. A new token goes into both `rex-package-netrc.age` and
-that secret.
+Woodpecker secret `rex_package_token`. A new token goes into both
+`rex-package-netrc.age` and that secret.
 
 ## Spark MCP server
 
@@ -1047,6 +1045,7 @@ This repository keeps one branch, `master`, with linear history. Work
 directly on master: create no other branch, git worktree or pull request,
 and do not use the `ship-pr` skill here, because work left on a branch is
 easily forgotten and never reaches master.
+CI runs no pull-request pipelines; `.woodpecker.yml` says why.
 
 Working on master does not license committing or pushing. Leave changes
 uncommitted until the user asks for a commit, and push only when the user

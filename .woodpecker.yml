@@ -16,10 +16,9 @@ variables:
         limits:
           memory: 12Gi # <= LimitRange max
           cpu: "16" # <= LimitRange max; let nix use many of k8s-3's 24 cores
-  # The shared CI cache's credentials, the only secrets a pull-request step may
-  # have. nix-ci fetches whatever an earlier run built and uploads, signed,
-  # what this one builds, so a package or check none of whose inputs changed
-  # is downloaded instead of built.
+  # The shared CI cache's credentials. nix-ci fetches whatever an earlier run
+  # built and uploads, signed, what this one builds, so a package or check none
+  # of whose inputs changed is downloaded instead of built.
   - &ci_cache
     AWS_ACCESS_KEY_ID:
       from_secret: ci_cache_access_key
@@ -40,18 +39,17 @@ variables:
     REX_PACKAGE_TOKEN:
       from_secret: rex_package_token
   # pkgs.superlogical.com serves the rex input only with Rex's testing token.
-  # A pull-request step goes without it and substitutes the input from the CI
-  # cache, where every check on master archives it.
   - &rex_netrc |
     netrc=$(mktemp)
     printf 'machine pkgs.superlogical.com login rex password %s\n' "$REX_PACKAGE_TOKEN" >"$netrc"
     export NIX_CONFIG="$NIX_CONFIG
     netrc-file = $netrc"
-# Branches other than master are checked through their pull requests.
+# No pull-request pipelines: this repository takes no pull requests, and the
+# organization gives them the CI cache's signing key, which every host trusts.
 when:
   - event: push
     branch: master
-  - event: [pull_request, manual]
+  - event: manual
   - event: cron
     cron: nightly
 labels:
@@ -71,9 +69,12 @@ steps:
     when:
       - event: cron
         cron: nightly
+        branch: master
       # whexy/t3code's CI starts a manual run with T3CODE_FORK_REV after each
-      # build; it is not a request to update.
+      # build; it is not a request to update. A manual run elsewhere would
+      # push that branch's commits to master.
       - event: manual
+        branch: master
         evaluate: '(T3CODE_FORK_REV ?? "") == ""'
     backend_options: *k8s_heavy
     environment: *github_app
@@ -89,6 +90,7 @@ steps:
     image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
     when:
       - event: manual
+        branch: master
         evaluate: '(T3CODE_FORK_REV ?? "") != ""'
     backend_options: *k8s_heavy
     environment: *github_app
@@ -107,16 +109,6 @@ steps:
         from_secret: rex_package_token
     commands:
       - *rex_netrc
-      - bash ci/check.sh
-  # Woodpecker fails a step that names a secret its event may not use, so pull
-  # requests check in their own step, without Rex's token.
-  check-pr:
-    image: ghcr.io/whexy/nix-ci:0.1.0-alpha.2
-    backend_options: *k8s_heavy
-    when:
-      event: pull_request
-    environment: *ci_cache
-    commands:
       - bash ci/check.sh
   # Build docs (astro) only when docs/ changes on master
   build-docs:

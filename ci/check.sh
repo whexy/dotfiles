@@ -2,8 +2,8 @@
 # Check HEAD's tree: build every check but the host closures, then evaluate
 # every host and standalone home without building it, each in its own process
 # (ci/eval-all.sh). Building the closures, as `nix flake check` would, is too
-# heavy for one CI pod. A tree that passes is recorded in the CI cache, so a
-# pull request that lands on master unchanged is not checked again.
+# heavy for one CI pod. A tree that passes is recorded in the CI cache, so it
+# is not checked again.
 set -euo pipefail
 here=$(dirname "${BASH_SOURCE[0]}")
 
