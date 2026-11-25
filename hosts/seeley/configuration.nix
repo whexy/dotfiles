@@ -24,6 +24,13 @@
     # The wired port has a public campus address. SSH stays reachable over
     # tailscale0, which the firewall trusts.
     openssh.openFirewall = false;
+    # Subnet router for the campus ranges, which the wired port reaches.
+    # `tailscale set` keeps routes after the flag is dropped, so withdrawing
+    # them takes an explicit empty `--advertise-routes=`.
+    tailscale = {
+      useRoutingFeatures = "server";
+      extraSetFlags = [ "--advertise-routes=129.105.0.0/16,165.124.0.0/16" ];
+    };
   };
 
   dotfiles = {
