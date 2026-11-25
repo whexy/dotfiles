@@ -77,4 +77,16 @@ in
       deny 0-65535 0.0.0.0/0 0-65535
     '';
   };
+
+  # miniupnpd exits when its listening interface is missing, and incusd
+  # creates the bridge only once it runs. k8s-7 autostarts, so incusd runs at
+  # every boot anyway.
+  systemd.services.miniupnpd = {
+    wants = [ "incus-preseed.service" ];
+    after = [ "incus-preseed.service" ];
+    serviceConfig = {
+      Restart = "on-failure";
+      RestartSec = "10s";
+    };
+  };
 }
