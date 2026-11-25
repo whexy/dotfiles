@@ -37,10 +37,12 @@ in
         ];
       };
 
-      # macOS: tell Finder to set the desktop picture on each activation.
+      # macOS: tell System Events to set the desktop picture on each
+      # activation. The auto-upgrade daemon's switch cannot always launch
+      # System Events (-10810), and a wallpaper must not abort the switch.
       home.activation.setWallpaper = lib.mkIf isDarwin (
         lib.hm.dag.entryAfter [ "writeBoundary" ] ''
-          /usr/bin/osascript <<'EOF'
+          run /usr/bin/osascript <<'EOF' || warnEcho "The desktop picture was not set; the next activation retries"
           tell application "System Events"
             repeat with d in desktops
               set picture of d to POSIX file "${wallpaper}"
