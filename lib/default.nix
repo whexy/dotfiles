@@ -18,6 +18,10 @@ let
   # MagicDNS name of a tailnet node or ingress.
   tailnetHost = name: "${name}.at-basking.ts.net";
 
+  # Name of the tailnet node a flake host is reached at. wsl shares its
+  # Windows host's node, which keeps the Windows machine's name.
+  tailnetNode = host: { wsl = "whexygamemaster"; }.${host} or host;
+
   overlays = {
     container-darwin = import ../overlays/container-darwin.nix;
     direnv-darwin = import ../overlays/direnv-darwin.nix;
@@ -54,6 +58,7 @@ in
   inherit
     publicHost
     tailnetHost
+    tailnetNode
     overlays
     commonOverlays
     capsModules

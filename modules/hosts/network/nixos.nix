@@ -52,6 +52,67 @@ in
 
     (lib.mkIf (cfg.tailscale.enable && wsl) {
       environment.systemPackages = [ pkgs.tailscale-wsl ];
+
+      dotfiles.network.wslServe = {
+        ssh = lib.mkIf config.services.openssh.enable {
+          port = 22;
+          target = "127.0.0.1:${toString (lib.head config.services.openssh.ports)}";
+        };
+        # The primary user's personal server listens here
+        # (modules/home/terminal/rex.nix).
+        rex = lib.mkIf cfg.tailscale.rex.enable {
+          inherit (cfg.tailscale.rex) port;
+          https = true;
+          target = "127.0.0.1:${toString cfg.tailscale.rex.port}";
+        };
+      };
+    })
+
+    # A user service, because only the user's manager has WSL's interop, which
+    # runs tailscale.exe. The routes are left in place on stop: removing port
+    # 22's would cut the ssh session that switched this host.
+    (lib.mkIf (cfg.tailscale.enable && wsl && cfg.wslServe != { }) {
+      systemd.user.services.tailscale-wsl-serve = {
+        description = "Tailscale Serve routes from the Windows node to WSL";
+        wantedBy = [ "default.target" ];
+        unitConfig.ConditionUser = config.dotfiles.host.username;
+        path = [
+          pkgs.tailscale-wsl
+          pkgs.jq
+          pkgs.coreutils
+        ];
+        serviceConfig = {
+          ExecStart = pkgs.writeShellScript "tailscale-wsl-serve" ''
+            while true; do
+              if status=$(timeout -k 2 10 tailscale status --json) &&
+                name=$(jq -er 'select(.BackendState == "Running") | .Self.DNSName | select(type == "string" and length > 0) | rtrimstr(".")' <<<"$status") &&
+                serve=$(timeout -k 2 10 tailscale serve status --json); then
+                ${lib.concatMapStrings (
+                  route:
+                  let
+                    port = toString route.port;
+                  in
+                  if route.https then
+                    ''
+                      jq -e --arg host "$name:${port}" '.Web[$host].Handlers["/"].Proxy == "http://${route.target}"' <<<"$serve" >/dev/null ||
+                        timeout -k 2 10 tailscale serve --bg --https=${port} http://${route.target} >/dev/null ||
+                        echo 'tailscale-wsl-serve: could not route port ${port}; retrying' >&2
+                    ''
+                  else
+                    ''
+                      jq -e '.TCP["${port}"].TCPForward == "${route.target}"' <<<"$serve" >/dev/null ||
+                        timeout -k 2 10 tailscale serve --bg --tcp=${port} tcp://${route.target} >/dev/null ||
+                        echo 'tailscale-wsl-serve: could not route port ${port}; retrying' >&2
+                    ''
+                ) (lib.attrValues cfg.wslServe)}
+              fi
+              sleep 30
+            done
+          '';
+          Restart = "always";
+          RestartSec = 10;
+        };
+      };
     })
 
     # The login server learns each caller's Tailscale login from tailscaled,

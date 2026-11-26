@@ -51,7 +51,9 @@
           to the Rex app's server, which cannot tell callers apart, so every
           tailnet device the ACL lets reach this host gets a shell as that
           user. On NixOS, Rex's login server serves the route and admits only
-          the tailnet owner's login, as that user (not on WSL)
+          the tailnet owner's login, as that user. On WSL, the Windows node
+          serves it from the user's personal server, which cannot tell callers
+          apart either
         '';
         port = lib.mkOption {
           type = lib.types.port;
@@ -63,6 +65,38 @@
           '';
         };
       };
+    };
+    wslServe = lib.mkOption {
+      type = lib.types.attrsOf (
+        lib.types.submodule {
+          options = {
+            port = lib.mkOption {
+              type = lib.types.port;
+              description = "Port on the Windows node's tailnet addresses.";
+            };
+            https = lib.mkOption {
+              type = lib.types.bool;
+              default = false;
+              description = ''
+                Whether Serve ends TLS with the node's certificate and proxies
+                HTTP, rather than forwarding raw TCP.
+              '';
+            };
+            target = lib.mkOption {
+              type = lib.types.str;
+              example = "127.0.0.1:22";
+              description = "Loopback `host:port` of the WSL service.";
+            };
+          };
+        }
+      );
+      default = { };
+      description = ''
+        Services the Windows Tailscale node serves from WSL (WSL only).
+        Windows' loopback reaches WSL's listening ports, so Tailscale Serve
+        there forwards to them. Turning a route off leaves it on the node;
+        remove it with `tailscale serve`.
+      '';
     };
     macAddresses = lib.mkOption {
       type = lib.types.attrsOf (lib.types.strMatching "([0-9a-fA-F]{2}:){5}[0-9a-fA-F]{2}");

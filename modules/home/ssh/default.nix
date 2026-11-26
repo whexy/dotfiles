@@ -38,9 +38,17 @@ let
   flakeHosts =
     lib.concatMap (host: [
       host
-      (flake.lib.tailnetHost host)
+      (flake.lib.tailnetHost (flake.lib.tailnetNode host))
     ]) hostNames
     ++ lib.mapAttrsToList (_: block: block.HostName) offTailnetHosts;
+
+  # Flake hosts on a node of another name (wsl, on its Windows host's), by
+  # their flake names.
+  sharedNodeHosts =
+    lib.genAttrs (lib.filter (host: flake.lib.tailnetNode host != host) hostNames)
+      (host: {
+        HostName = flake.lib.tailnetHost (flake.lib.tailnetNode host);
+      });
   rexTerminfoHosts = "${config.xdg.configHome}/rex/terminfo-hosts";
 
   relay = config.dotfiles.tailnetRelay;
@@ -90,43 +98,46 @@ in
           enable = !isWsl;
           enableDefaultConfig = false;
 
-          settings = offTailnetHosts // {
-            # proxmox has only a root home, which the Macs' Rex reaches
-            # through this alias.
-            proxmox.User = "root";
+          settings =
+            offTailnetHosts
+            // sharedNodeHosts
+            // {
+              # proxmox has only a root home, which the Macs' Rex reaches
+              # through this alias.
+              proxmox.User = "root";
 
-            "*" = {
-              IdentityAgent = identityAgent;
-              ServerAliveInterval = 25;
-              ServerAliveCountMax = 3;
-            };
+              "*" = {
+                IdentityAgent = identityAgent;
+                ServerAliveInterval = 25;
+                ServerAliveCountMax = 3;
+              };
 
-            # Root on a host the agent is forwarded to can sign with it. Git
-            # signing on the flake hosts, mars and venus included, needs it.
-            forward-agent = {
-              header = "Match host ${lib.concatStringsSep "," flakeHosts}";
-              ForwardAgent = true;
-            };
+              # Root on a host the agent is forwarded to can sign with it. Git
+              # signing on the flake hosts, mars and venus included, needs it.
+              forward-agent = {
+                header = "Match host ${lib.concatStringsSep "," flakeHosts}";
+                ForwardAgent = true;
+              };
 
-            rex-terminfo = {
-              header = "Match !host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ] && ! grep -qxF -- %h ${rexTerminfoHosts} 2>/dev/null'\"";
-              SetEnv.TERM = "xterm-256color";
-            };
+              rex-terminfo = {
+                header = "Match !host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ] && ! grep -qxF -- %h ${rexTerminfoHosts} 2>/dev/null'\"";
+                SetEnv.TERM = "xterm-256color";
+              };
 
-            # A home with a tailnet relay reaches tailnet hosts through it.
-            tailnet-relay = lib.mkIf relay.enable {
-              header = "Match host ${lib.concatStringsSep "," tailnetHosts}";
-              ProxyCommand = "${relay.connect} %h %p";
-            };
+              # A home with a tailnet relay reaches tailnet hosts through it.
+              tailnet-relay = lib.mkIf relay.enable {
+                header = "Match host ${lib.concatStringsSep "," tailnetHosts}";
+                ProxyCommand = "${relay.connect} %h %p";
+              };
 
-            # Hosts that run Rex's login server also have its guard in
-            # /etc/ssh/ssh_config, which would downgrade the flake hosts too.
-            # ssh keeps the first SetEnv it reads, and this file comes first.
-            rex-terminfo-flake = {
-              header = "Match host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ]'\"";
-              SetEnv.TERM = "xterm-rex";
+              # Hosts that run Rex's login server also have its guard in
+              # /etc/ssh/ssh_config, which would downgrade the flake hosts too.
+              # ssh keeps the first SetEnv it reads, and this file comes first.
+              rex-terminfo-flake = {
+                header = "Match host ${lib.concatStringsSep "," flakeHosts} exec \"/bin/sh -c '[ x$TERM = xxterm-rex ]'\"";
+                SetEnv.TERM = "xterm-rex";
+              };
             };
-          };
         };
       }
     ))

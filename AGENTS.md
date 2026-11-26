@@ -632,7 +632,14 @@ has no authentication, and this route keeps it from identifying callers:
 
 On NixOS (the `dev` cap), Rex's login server serves the route. It learns each
 caller's Tailscale login from tailscaled and admits only `whexy@github`, as the
-primary user. WSL has no route: the Windows client there cannot name callers.
+primary user.
+
+On WSL the route is the Windows node's, `whexy@whexygamemaster.at-basking.ts.net`
+(see [WSL on the tailnet](#wsl-on-the-tailnet)). The Windows client cannot name
+callers to WSL, so the primary user's personal server (below) also listens on
+`127.0.0.1:7297` with `--allow-anonymous`. Every device the tailnet ACL lets
+reach the Windows node on that port, and every Windows process, gets a shell
+as that user.
 
 Linux homes without a login server run Rex's personal server as a user service
 (`dotfiles.terminal.rex.server`), with `rex` on the profile. On homes that run
@@ -659,8 +666,8 @@ a standalone home sets itself (proxmox), which also links `rex` into
 config alias, `ssh://proxmox`, whose block in `modules/home/ssh` sets the
 user: older Rex servers ignore an `ssh://` host whose URL names one, and
 `rex config check` does not report it, so an assertion rejects it. A home
-with no route is unreachable from the Macs: wsl, whose node the Windows client owns, and
-b3srv0, left out on purpose as the host a Mac's Rex does not know.
+with no route is unreachable from the Macs: b3srv0, left out on purpose as the
+host a Mac's Rex does not know.
 
 Every Mac with the app declares the other homes' routes with `rex.host` in
 `~/.config/rex/init.lua`, which its server reads, each labelled with its host
@@ -689,6 +696,22 @@ into Nix's netrc (`dotfiles.nix.rexNetrc`, on the `base` cap); homes with
 In CI, the update lane and the check on master read the token from the
 Woodpecker secret `rex_package_token`. A new token goes into both
 `rex-package-netrc.age` and that secret.
+
+## WSL on the tailnet
+
+wsl has no tailnet node of its own: it runs no tailscaled, and its `tailscale`
+command is the Windows client's CLI. It is reached at its Windows host's node,
+`whexygamemaster`, which `flake.lib.tailnetNode` names for everything that
+addresses a flake host on the tailnet. Every flake home's ssh config has a
+`wsl` alias for it.
+
+Windows' loopback reaches the ports WSL listens on, so Tailscale Serve on the
+Windows node publishes WSL's services (`dotfiles.network.wslServe`): sshd on
+port 22, Rex on 7297, and T3 Code on 35338, whose own helper keeps that route.
+The `tailscale-wsl-serve` user service keeps the others; it needs WSL's
+interop to run `tailscale.exe`, which only the user's manager has. It never
+removes a route, since dropping port 22 would cut the ssh session that
+switched the host; remove one with `tailscale serve`.
 
 ## Spark MCP server
 

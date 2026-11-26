@@ -74,5 +74,5 @@ server and uses it wherever it works; a client paired over the tailnet never
 learns the public route.
 
 wsl has no tailnet node of its own: it is reached through its Windows host's
-node, `whexygamemaster`, and `ssh wsl` does not resolve from other hosts. Run
-`t3-pair` on wsl itself.
+node, `whexygamemaster`, so its tailnet URL is
+`https://whexygamemaster.at-basking.ts.net:35338`, and `ssh wsl` reaches it.

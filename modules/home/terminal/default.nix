@@ -10,19 +10,17 @@ let
   cfg = config.dotfiles.terminal;
   osConfig = args.osConfig or null;
 
-  # Rex's login server on NixOS, or Tailscale Serve to the Rex app on macOS,
-  # each for the host's primary user only.
+  # Rex's login server on NixOS, Tailscale Serve to the Rex app on macOS, or
+  # the Windows node's Serve to the personal server on WSL, each for the
+  # host's primary user only.
   systemRoute =
     let
       inherit (osConfig.dotfiles) host network;
-      account = "${host.username}@${flake.lib.tailnetHost host.hostName}";
+      account = "${host.username}@${flake.lib.tailnetHost (flake.lib.tailnetNode host.hostName)}";
+      served =
+        if host.wsl then network.wslServe ? rex && cfg.rex.server.enable else network.tailscale.rex.enable;
     in
-    if
-      network.tailscale.enable
-      && network.tailscale.rex.enable
-      && !host.wsl
-      && config.home.username == host.username
-    then
+    if network.tailscale.enable && served && config.home.username == host.username then
       # Rex clients try HTTPS on 7297 for a bare host name.
       if network.tailscale.rex.port == 7297 then
         account

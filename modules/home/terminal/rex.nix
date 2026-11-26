@@ -17,6 +17,18 @@ let
   rex = inputs.rex.packages.${pkgs.stdenv.hostPlatform.system}.rex;
   tailnetNode = cfg.rex.server.hostName != null;
 
+  # On WSL the Windows node serves the primary user's server from a loopback
+  # listener, which cannot tell callers apart, so it admits every one.
+  wslRoute =
+    if
+      osConfig != null
+      && osConfig.dotfiles.host.wsl
+      && config.home.username == osConfig.dotfiles.host.username
+    then
+      osConfig.dotfiles.network.wslServe.rex or null
+    else
+      null;
+
   serve = pkgs.writeShellScript "rex-server" ''
     args=(
       server run
@@ -249,7 +261,14 @@ in
         Service = {
           Type = "notify";
           NotifyAccess = "main";
-          ExecStart = if tailnetNode then "${serve}" else "${lib.getExe rex} server run";
+          ExecStart =
+            if tailnetNode then
+              "${serve}"
+            else
+              "${lib.getExe rex} server run"
+              + lib.optionalString (
+                wslRoute != null
+              ) " --extra-listen http://${wslRoute.target} --allow-anonymous";
           Environment = [
             # The trailing empty element keeps the system terminfo directories.
             "TERMINFO_DIRS=${rex}/share/terminfo:"
