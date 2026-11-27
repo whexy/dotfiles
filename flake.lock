@@ -52,11 +52,11 @@
         "rust-overlay": "rust-overlay"
       },
       "locked": {
-        "lastModified": 1795417174,
-        "narHash": "sha256-YZhRJqsSuwA/Xh5RSELzVh1j7q9d+gwCc4iQs6cd4J0=",
+        "lastModified": 1795701077,
+        "narHash": "sha256-kG3ZdwpNc5fh8fCcJpXWkuXpNiYgj8JsjGpGyBAi6L0=",
         "ref": "refs/heads/main",
-        "rev": "0e7acf85f85084b30c681658a4b8fc1c3a90b0a3",
-        "revCount": 152,
+        "rev": "0fd15d5e99c4b803a74148c971315540d09f0be6",
+        "revCount": 153,
         "type": "git",
         "url": "https://codeberg.org/wvhulle/bootvine"
       },
@@ -140,11 +140,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795352180,
-        "narHash": "sha256-dn3Stv2qtbb6D5FzZXmxYRVQkNQphjug60mzs96kTvM=",
+        "lastModified": 1795676828,
+        "narHash": "sha256-5xXZjRoXm20Yu4bhM38E03iSGbJKvTNjCm0QxJz9Nt0=",
         "owner": "Mic92",
         "repo": "direnv-instant",
-        "rev": "991706214dfef2a04d915a95f061e58769e5fb05",
+        "rev": "b225a32eec62b5cfd2f5e7d59b60fd6448edea7a",
         "type": "github"
       },
       "original": {
@@ -347,11 +347,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795608474,
-        "narHash": "sha256-CwC7f1DripMBQjB7BozobprSYiA8Cn9rz8vsBthWJwk=",
+        "lastModified": 1795742716,
+        "narHash": "sha256-ddfB/7u6gJk6VjxNOZit/MZssPhnFzC8BI5lfp6TuIk=",
         "owner": "cachix",
         "repo": "git-hooks.nix",
-        "rev": "5c6bf7c418b4abf003e6d00d231e87f5e6ad5230",
+        "rev": "26f3f17f0d64137a569aa30ad953a59ab6662be2",
         "type": "github"
       },
       "original": {
@@ -442,11 +442,11 @@
         "treefmt-nix": "treefmt-nix"
       },
       "locked": {
-        "lastModified": 1795663188,
-        "narHash": "sha256-j1S8p6N1lAu0Ab4csCu3JmSDS1xzPc5nlUqFUcjMNBg=",
+        "lastModified": 1795762199,
+        "narHash": "sha256-905VD2XnSVaKbrMP2pqDtecs5WR86rTWqcBcnbxTDgw=",
         "owner": "numtide",
         "repo": "llm-agents.nix",
-        "rev": "a8e2ca87ef6a622821d175555d320e196cac2d34",
+        "rev": "c0b9f909da5d15fb74c5f715d64a7de252d85487",
         "type": "github"
       },
       "original": {
@@ -799,11 +799,11 @@
         ]
       },
       "locked": {
-        "lastModified": 1795117632,
-        "narHash": "sha256-l573vlNoKwZ7TSohEwjM6hCy+ZHN6mUKAv9lt7ctpt0=",
+        "lastModified": 1795294459,
+        "narHash": "sha256-4r9V4o4tyry3qWKy4A4Js6ZghGSADrLa9OBC7bpZQlU=",
         "owner": "karinushka",
         "repo": "paneru",
-        "rev": "8c79b382c61255457261c6b77adc86cab918cab6",
+        "rev": "f10cae2d7f5937f2bf36e86f120b6495a0711ead",
         "type": "github"
       },
       "original": {
