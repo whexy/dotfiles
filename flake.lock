@@ -1014,17 +1014,17 @@
         "nixpkgs": "nixpkgs_4"
       },
       "locked": {
-        "lastModified": 1795723901,
-        "narHash": "sha256-IlfbV8N6n5bADucrDz76z+suHsdqLYtI+sA0R+YzwzI=",
+        "lastModified": 1795791102,
+        "narHash": "sha256-V8YWAhJtCPrYIR2Rlci1re9CLbTgDn68C5+jQ0MZpg0=",
         "owner": "whexy",
         "repo": "t3code",
-        "rev": "ef41b84496789c14e6e004678b9e8a2509eac748",
+        "rev": "b41fbb87630022c4ecc17f6237293ddceca195c9",
         "type": "github"
       },
       "original": {
         "owner": "whexy",
         "repo": "t3code",
-        "rev": "ef41b84496789c14e6e004678b9e8a2509eac748",
+        "rev": "b41fbb87630022c4ecc17f6237293ddceca195c9",
         "type": "github"
       }
     },
