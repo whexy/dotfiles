@@ -1,0 +1,74 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <meta name="color-scheme" content="dark" />
+    <title>tab</title>
+    <link rel="stylesheet" href="xterm/xterm.css" />
+    <style>
+      :root {
+        --bg: #16181d;
+        --fg: #d7dae0;
+        --dim: #8b919c;
+        --warn: #f0b072;
+      }
+      html,
+      body {
+        height: 100%;
+        margin: 0;
+        background: var(--bg);
+        color: var(--fg);
+        font:
+          14px/1.4 ui-monospace,
+          "JetBrains Mono",
+          Menlo,
+          Consolas,
+          monospace;
+      }
+      body {
+        display: grid;
+        grid-template-rows: auto minmax(0, 1fr) auto;
+      }
+      #screen {
+        display: grid;
+        place-items: center;
+        min-height: 0;
+        height: 70vh;
+        background: #000;
+      }
+      #screen[hidden] {
+        display: none;
+      }
+      #screen canvas {
+        max-width: 100%;
+        max-height: 70vh;
+        cursor: none;
+        outline: none;
+      }
+      #terminal {
+        min-height: 0;
+        padding: 8px;
+      }
+      #status {
+        padding: 4px 12px;
+        color: var(--dim);
+      }
+      #status:empty {
+        display: none;
+      }
+      #status[data-kind="error"] {
+        color: var(--warn);
+        white-space: pre-wrap;
+      }
+    </style>
+  </head>
+  <body>
+    <section id="screen" hidden>
+      <canvas tabindex="0" aria-label="The machine's display"></canvas>
+    </section>
+    <main id="terminal"></main>
+    <output id="status" role="status">Loading</output>
+    <script type="module" src="main.js"></script>
+  </body>
+</html>

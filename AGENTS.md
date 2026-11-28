@@ -713,6 +713,89 @@ interop to run `tailscale.exe`, which only the user's manager has. It never
 removes a route, since dropping port 22 would cut the ssh session that
 switched the host; remove one with `tailscale serve`.
 
+## NixOS in a browser tab
+
+`hosts/tab` is a toy: a NixOS host that runs in a browser tab, on
+[unkernel](https://unkernel.dev), a Linux kernel compiled to WebAssembly that
+runs unmodified aarch64 programs.
+
+```sh
+just tab            # serve the page at http://127.0.0.1:8377/
+just tab console    # boot it in this terminal instead; Ctrl-] quits
+```
+
+`dotfiles.platform.unkernel` makes the host a container-style system: unkernel
+brings the kernel and mounts the root, then runs the host's own systemd as
+PID 1. `system.build.unkernel` is the launcher, built for
+`launcherSystem`, the machine that serves it:
+
+- Its image (`.image`) is an EROFS file system of the system's closure, with a
+  Nix database that knows it. The page reads it lazily with Range requests,
+  so a boot downloads only what it touches.
+- The root is an overlay over that image. Changes stay in memory, so a reload
+  starts a fresh machine.
+- The page boots several CPUs only where it is cross-origin isolated, which
+  needs `localhost` or HTTPS; elsewhere it boots one.
+- `console` reaches the internet through the launcher's sockets.
+
+A browser opens no sockets, so the page's guest reaches the internet through
+a [Wisp](https://github.com/MercuryWorkshop/wisp-protocol) proxy
+(`packages/wisp-server`) that the launcher runs and serves at `/wisp/`, or
+through the one `?wisp=wss://...` names.
+
+- Whoever can open the page can open TCP and UDP connections from the machine
+  that serves it, to any address but loopback and private ones; the tailnet
+  is not among those. The launcher therefore listens on loopback unless told
+  otherwise.
+- The proxy answers only a page whose `Origin` is the listen address or
+  `localhost`, so no other site open in the same browser can use it. A page
+  served under another name, such as behind Tailscale Serve, passes its
+  origin after the address: `just tab serve 127.0.0.1:8377 https://<name>`.
+- Wisp resolves names at the proxy, so the guest sees placeholder addresses
+  in 198.18.0.0/15.
+
+The host takes no cap. A cap's packages would all be in the image, so
+`hosts/tab` names its features itself: zsh, tmux, Neovim, git, the motd,
+Tailscale and Claude Code. It leaves out the registry's copy of nixpkgs, so
+`nix run nixpkgs#hello` fetches nixpkgs first (about 100 s under Node, then
+cached until the reload).
+
+- Tailscale runs on the kernel's TUN device with `--netfilter-mode=off`,
+  since the kernel has no netfilter. `tailscale up` prints the login URL; a
+  login lasts until the reload. unkernel 0.2.0 carries no UDP, so the node
+  reaches its peers through DERP relays alone.
+- Claude Code is the package alone, with a claude.ai login. `dotfiles.agents`
+  would add every agent and gateway keys the tab cannot decrypt: no agenix
+  secret has a tab among its recipients.
+
+### The tab's desktop
+
+`dotfiles.platform.unkernel.display` gives the host the display unkernel
+offers, a virtio-gpu KMS device (`Virtual-1`, one mode of `width` x `height`)
+with a keyboard and an absolute pointer, and the page draws it above the
+terminal. The host has udev, Mesa and seat0 for it, and runs
+`display.session` as the user at boot. tab runs `niri-session` with the niri
+and Ghostty home options, without the `gui` cap.
+
+- niri draws only where the page gets WebGL2, which gives the guest
+  GL 2.1 and GLES 3.0 (virgl). Without it the GPU is 2D, and niri refuses
+  software renderers ("software EGL renderers are skipped"), so the display
+  stays hidden. `console` boots without the display, and the session is
+  skipped.
+- Ghostty needs OpenGL 4.3, so tab's home runs it with
+  `LIBGL_ALWAYS_SOFTWARE=1`, on llvmpipe; without it Ghostty shows "Unable to
+  acquire an OpenGL context for rendering".
+- The canvas takes keys while it has the focus. CapsLock is Hyper
+  (Ctrl+Alt+Shift+Super), as kanata makes it on the real desktop: CapsLock+T
+  opens Ghostty.
+
+Building the image builds the host's closure, so the machine needs an
+aarch64-linux builder (`dotfiles.compat.binfmt`). The launcher is not a
+package, so CI evaluates the host and never builds its image.
+`packages/unkernel` is the kernel and its SDK from npm, and
+`packages/unkernel/host` holds the image builder, the page and the launcher.
+`packages/wisp-server` is wisp-server-python from PyPI.
+
 ## Spark MCP server
 
 `packages/spark-mcp` serves the email-reading tools of Spark Desktop's stdio

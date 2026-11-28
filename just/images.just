@@ -109,3 +109,8 @@ build-wsl:
     cd result/wsl && sudo ../../result/wsl/build/bin/nixos-wsl-tarball-builder
     @echo "WSL tarball created: result/wsl/nixos.wsl"
     @echo "Import with: wsl --import NixOS <install-path> result/wsl/nixos.wsl"
+
+# Serve the page that boots the tab host in a browser tab, or boot it in this
+# terminal with `just tab console`.
+tab *ARGS:
+    nix run .#nixosConfigurations.tab.config.system.build.unkernel -- {{ARGS}}
