@@ -914,7 +914,6 @@ reach the phone on port 9100.
   another host keeps streaming the phone's screen.
 - `checks/iphone-preview` model-checks the preview's stream around a pause,
   and so does every iphone-use bump.
-  The `verify-iphone-preview` project skill says what it covers.
 
 `iphone-wda` launches the runner. It needs a host that reaches the phone's
 developer services, today a Mac paired with the phone (golf, over Wi-Fi). Run

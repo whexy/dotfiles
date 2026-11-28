@@ -1,9 +1,7 @@
 # Model-checks iPhone Use's live preview (PreviewStream.tla) with TLC, for
 # each pauser on this host. StallTimeout comes from the curl command the
 # packaged server runs, and the check fails when iphone-use-select and the
-# patched server name the relay variable differently. The model stays in
-# checks/iphone-preview, where the `.agents/skills/verify-iphone-preview`
-# skill also runs it by hand and says what it covers.
+# patched server name the relay variable differently.
 { pkgs, iphone-use }:
 let
   model = ../../checks/iphone-preview;
