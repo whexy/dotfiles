@@ -9,7 +9,7 @@
 let
   inherit (pkgs) lib;
   inherit (pkgs.stdenv.hostPlatform) isLinux;
-  version = "0.9.102";
+  version = "0.9.104";
 
   # devDependencies only serve upstream's monorepo; its `workspace:*` ones
   # cannot be resolved from the registry, and dist/ already bundles them.
@@ -34,7 +34,7 @@ let
     repo = "hyperframes";
     tag = "v${version}";
     sparseCheckout = [ "skills" ];
-    hash = "sha256-AZ4goS3D1YV4oEzsU85adbnV29PKIwpCgzKfDtXz+to=";
+    hash = "sha256-SXaylGQfDtwydTa8HUo45ZjsbPts3wiGhgf7IbkxnxY=";
   };
 
   # A caller's own settings still win. The switches stop HyperFrames from
@@ -91,11 +91,11 @@ pkgs.buildNpmPackage (finalAttrs: {
 
   src = pkgs.fetchurl {
     url = "https://registry.npmjs.org/hyperframes/-/hyperframes-${finalAttrs.version}.tgz";
-    hash = "sha256-2dC3NJadzfQjiZ4qn6XnVWf6INCq69XNvgzLvG7AyeQ=";
+    hash = "sha256-CkbTNRu6B2nZTIoqKZ3wDdgTAHQczRmFFS4smJLtK1o=";
   };
 
   nodejs = pkgs.nodejs_22;
-  npmDepsHash = "sha256-J5n71bSK4Snq7lHkAQf+1RBXG/cPs+PQL2IHN/K0dRU=";
+  npmDepsHash = "sha256-XwgKuuoZqSo5DR5wCAlj6ye4zyka36+o8udqk0UfrjQ=";
 
   # `init` copies its templates out of the store with their read-only modes,
   # then fails to rewrite them; the copies get their owner write bit back.
