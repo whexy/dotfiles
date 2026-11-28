@@ -9,6 +9,29 @@
 let
   cfg = config.dotfiles.platform.unkernel;
 
+  launcherPkgs = inputs.nixpkgs.legacyPackages.${cfg.launcherSystem};
+
+  # Match both halves of the relay protocol with the pinned unkernel demo.
+  wlandVersion = "0.1.0-261125-0023837";
+  wlandWeb = launcherPkgs.fetchzip {
+    url = "https://registry.npmjs.org/wland/-/wland-${wlandVersion}.tgz";
+    hash = "sha256-rwebqgg7VwFsMxOZht4KhC1nLJjB5f1G/5FkTa/YxEo=";
+  };
+  wlandRelay = pkgs.stdenvNoCC.mkDerivation {
+    pname = "wlandr";
+    version = wlandVersion;
+    src = pkgs.fetchurl {
+      url = "https://github.com/pithings/wland/releases/download/v${wlandVersion}/wlandr-link-linux-arm64.tar.gz";
+      hash = "sha256-E1tMxpmWqe5EPO2otxIsLZ7ekQHvOMjbYalHdWNrqt0=";
+    };
+    sourceRoot = ".";
+    installPhase = ''
+      runHook preInstall
+      install -Dm755 wlandr "$out/bin/wlandr"
+      runHook postInstall
+    '';
+  };
+
   # The tools of unkernel's base system, which it lays over every image's
   # root. They belong to the kernel bundle, so the image carries none.
   kwbox = "/usr/bin/kwbox";
@@ -20,8 +43,9 @@ in
     boot.isContainer = true;
 
     system.build.unkernel = import ../../../../packages/unkernel/host/launcher.nix {
-      pkgs = inputs.nixpkgs.legacyPackages.${cfg.launcherSystem};
-      inherit (flake.packages.${cfg.launcherSystem}) unkernel wisp-server;
+      pkgs = launcherPkgs;
+      waylandWeb = if cfg.wayland.enable then wlandWeb else null;
+      inherit (flake.packages.${cfg.launcherSystem}) unkernel wisp-server wxstack;
       system = config;
     };
 
@@ -58,9 +82,6 @@ in
       resolvconf.enable = false;
     };
 
-    # Mesa, for the virtio-gpu device the host offers with the display.
-    hardware.graphics.enable = cfg.display.enable;
-
     systemd.services = {
       # The page's terminal is the console. kwbox logs in the user that
       # kw.user= on the kernel command line names.
@@ -87,6 +108,10 @@ in
       unkernel-sessions = {
         description = "Sessions the unkernel host opens over vsock";
         wantedBy = [ "multi-user.target" ];
+        after = [
+          "systemd-user-sessions.service"
+          "home-manager-${config.dotfiles.host.username}.service"
+        ];
         serviceConfig = {
           ExecStart = "${kwbox} tty serve";
           Restart = "always";
@@ -105,48 +130,18 @@ in
         };
       };
 
-      # A container-style system has no systemd-udev-trigger, and the kernel
-      # made its devices before udevd started. libinput and compositors find
-      # devices only in udev's database.
-      unkernel-coldplug = lib.mkIf cfg.display.enable {
-        description = "Announce the unkernel host's devices to udev";
+      unkernel-wayland = lib.mkIf cfg.wayland.enable {
+        description = "Wayland relay to the browser compositor";
         wantedBy = [ "multi-user.target" ];
-        after = [ "systemd-udevd.service" ];
-        serviceConfig = {
-          Type = "oneshot";
-          RemainAfterExit = true;
-          ExecStart = [
-            "${config.systemd.package}/bin/udevadm trigger --action=add"
-            "${config.systemd.package}/bin/udevadm settle --timeout=60"
-          ];
-        };
-      };
-
-      unkernel-display = lib.mkIf (cfg.display.enable && cfg.display.session != null) {
-        description = "Wayland session on the unkernel display";
-        wantedBy = [ "multi-user.target" ];
-        after = [
-          "systemd-user-sessions.service"
-          "systemd-logind.service"
-          "unkernel-coldplug.service"
-          "home-manager-${config.dotfiles.host.username}.service"
-        ];
-        wants = [ "unkernel-coldplug.service" ];
-        # Booted without the display, as `console` does by default.
-        unitConfig.ConditionPathExists = "/dev/dri/card0";
-        # The kernel has no virtual terminals, so no getty or display manager
-        # can own seat0; pam_systemd takes the seat from the environment.
-        environment = {
-          XDG_SEAT = "seat0";
-          XDG_SESSION_TYPE = "wayland";
-          XDG_SESSION_CLASS = "user";
-        };
+        unitConfig.ConditionPathExists = "/dev/kwshm";
+        environment.XDG_RUNTIME_DIR = "/run/tabos-wayland";
         serviceConfig = {
           User = config.dotfiles.host.username;
-          PAMName = "login";
-          ExecStart = "${pkgs.runtimeShell} -lc ${lib.escapeShellArg "exec ${cfg.display.session}"}";
+          RuntimeDirectory = "tabos-wayland";
+          RuntimeDirectoryMode = "0700";
+          # Leave the browser compositor unloaded until a Wayland client connects.
+          ExecStart = "${wlandRelay}/bin/wlandr --link vsock:2:1023 --buffers kwshm --link-on-demand --display wayland-0";
           Restart = "on-failure";
-          RestartSec = 5;
         };
       };
     };

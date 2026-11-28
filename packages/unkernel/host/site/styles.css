@@ -1,0 +1,496 @@
+@import "tailwindcss" source(none);
+@import "./styles/frost/tokens.css";
+@import "./styles/frost/components.css";
+@source "./index.html";
+@source "./main.js";
+
+@font-face {
+  font-family: Lato;
+  src: url("./fonts/Lato-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: Lato;
+  src: url("./fonts/Lato-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "Fira Sans";
+  src: url("./fonts/FiraSans-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "FiraCode Nerd Font";
+  src: url("./fonts/FiraCodeNerdFont-Regular.woff2") format("woff2");
+  font-weight: 400;
+  font-display: swap;
+}
+
+@font-face {
+  font-family: "FiraCode Nerd Font";
+  src: url("./fonts/FiraCodeNerdFont-Bold.woff2") format("woff2");
+  font-weight: 700;
+  font-display: swap;
+}
+
+:root {
+  --font-lato: Lato;
+  --font-fira: "Fira Sans";
+  --font-notosans: "Noto Sans SC";
+  --font-jetbrains: "JetBrains Mono";
+  --font-terminal: "FiraCode Nerd Font", ui-monospace, monospace;
+}
+
+/* The tab strip's edge fades; registered so they interpolate. */
+@property --fade-start {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@property --fade-end {
+  syntax: "<length>";
+  inherits: false;
+  initial-value: 0px;
+}
+
+@keyframes reveal-fade-start {
+  to {
+    --fade-start: var(--fade-size);
+  }
+}
+
+@keyframes hide-fade-end {
+  from {
+    --fade-end: var(--fade-size);
+  }
+}
+
+@layer components {
+  .icon {
+    @apply size-4 shrink-0;
+    fill: none;
+    stroke: currentColor;
+    stroke-width: 1.5;
+    stroke-linecap: round;
+    stroke-linejoin: round;
+  }
+
+  /* ================= Page ================= */
+
+  .tabos {
+    @apply font-title text-ink relative isolate grid h-dvh min-h-0 overflow-hidden;
+    grid-template-rows: auto minmax(0, 1fr);
+  }
+
+  .tabos-glow-a {
+    @apply pointer-events-none fixed -start-16 -top-24 size-72 from-blue-200/30 to-cyan-200/30 blur-2xl;
+  }
+
+  .tabos-glow-b {
+    @apply pointer-events-none fixed -end-16 -top-24 size-72 from-purple-200/25 to-pink-200/25 blur-2xl;
+  }
+
+  /* ================= Title bar ================= */
+
+  .titlebar {
+    @apply flex h-11 min-w-0 items-center gap-1.5 px-1.5 sm:gap-2 sm:px-2;
+  }
+
+  /* Host, tabs and actions share one height and one material. */
+  .host,
+  .actions {
+    @apply flex h-8 shrink-0 items-center rounded-xl border border-black/5 bg-white/60 shadow-sm shadow-black/5 backdrop-blur-sm backdrop-saturate-150;
+  }
+
+  .host {
+    @apply text-ink-soft gap-2 ps-2.5 pe-3 max-sm:hidden;
+  }
+
+  .host-text {
+    @apply grid text-xs leading-tight;
+  }
+
+  .host-text strong {
+    @apply text-ink font-bold;
+  }
+
+  .host-text span {
+    @apply text-ink-muted tabular-nums;
+  }
+
+  .tabstrip {
+    @apply flex min-w-0 flex-1 items-center gap-0.5 overflow-x-auto;
+    scrollbar-width: none;
+    --fade-size: calc(var(--spacing) * 8);
+    scroll-padding-inline: var(--fade-size);
+    mask:
+      linear-gradient(black, black) no-clip subtract,
+      linear-gradient(to right, black, transparent) 0 0 / var(--fade-start) 100%
+        no-repeat no-clip,
+      linear-gradient(to right, transparent, black) 100% 0 / var(--fade-end)
+        100% no-repeat no-clip;
+    animation:
+      reveal-fade-start linear both,
+      hide-fade-end linear both;
+    animation-timeline: scroll(self inline);
+    animation-range:
+      0 var(--fade-size),
+      calc(100% - var(--fade-size)) 100%;
+  }
+
+  .tabstrip::-webkit-scrollbar {
+    display: none;
+  }
+
+  .tab {
+    @apply text-ink-subtle relative flex h-8 min-w-28 items-center rounded-xl border border-transparent transition-colors duration-150;
+    flex: 0 1 calc(var(--spacing) * 52);
+  }
+
+  .tab[data-pinned] {
+    @apply min-w-0 flex-none;
+  }
+
+  .tab:hover {
+    @apply text-ink-strong bg-black/5;
+  }
+
+  /* Idle tabs shrink first; the selected one keeps its title. */
+  .tab[data-selected] {
+    @apply text-ink-strong shrink-0 border-black/5 bg-white shadow-sm shadow-black/5;
+  }
+
+  /* Hairlines between idle tabs, as in a browser's strip. */
+  .tab + .tab::before {
+    @apply pointer-events-none absolute inset-y-2 -start-0.5 w-px bg-black/10 transition-opacity duration-150;
+    content: "";
+  }
+
+  .tab[data-selected]::before,
+  .tab[data-selected] + .tab::before,
+  .tab:hover::before,
+  .tab:hover + .tab::before {
+    @apply opacity-0;
+  }
+
+  .tab-button {
+    @apply focus-visible:outline-accent flex h-full min-w-0 flex-1 items-center gap-2 rounded-xl ps-2.5 pe-2 text-sm font-medium focus-visible:outline-2 focus-visible:-outline-offset-2;
+  }
+
+  .tab-label {
+    @apply truncate;
+  }
+
+  .tab-close {
+    @apply text-ink-faint focus-visible:outline-accent me-1 grid size-6 shrink-0 place-items-center rounded-lg transition-colors duration-150 hover:bg-black/5 hover:text-ink-strong focus-visible:outline-2;
+  }
+
+  .tab-close .icon {
+    @apply size-3.5;
+  }
+
+  .tab[data-selected] .tab-close {
+    @apply text-ink-muted;
+  }
+
+  .actions {
+    @apply gap-0.5 px-0.5;
+  }
+
+  .action {
+    @apply text-ink-soft focus-visible:outline-accent grid size-7 place-items-center rounded-lg transition-colors duration-150 hover:bg-black/5 hover:text-ink-strong focus-visible:outline-2 focus-visible:outline-offset-2 disabled:pointer-events-none disabled:opacity-40;
+  }
+
+  /* ================= Workspace ================= */
+
+  .workspace {
+    @apply bg-ink relative grid min-h-0 min-w-0 overflow-hidden shadow-sm shadow-black/5 transition-colors duration-200 sm:mx-2 sm:mb-2 sm:rounded-2xl;
+  }
+
+  .workspace:has(> .startup:not([hidden])) {
+    @apply bg-transparent shadow-none;
+  }
+
+  .workspace > * {
+    grid-area: 1 / 1;
+  }
+
+  .terminal-pane {
+    @apply bg-ink text-on-ink min-h-0 min-w-0 overflow-hidden ps-3 pe-1 pt-2 pb-1 sm:ps-4 sm:pt-3;
+  }
+
+  .terminal-pane[inert] {
+    visibility: hidden;
+  }
+
+  .terminal-surface {
+    @apply relative size-full;
+    font-family: var(--font-terminal);
+    caret-color: transparent;
+  }
+
+  .wayland-pane {
+    @apply relative min-h-0 min-w-0 overflow-hidden bg-white;
+  }
+
+  /* ================= Boot ================= */
+
+  .startup {
+    @apply z-10 grid place-items-center overflow-auto p-4;
+  }
+
+  .boot-card {
+    @apply w-full max-w-md p-5 sm:p-6;
+  }
+
+  .boot-card > :not(.glass-tint) {
+    @apply relative z-10;
+  }
+
+  .boot-head {
+    @apply flex items-baseline justify-between gap-4;
+  }
+
+  .boot-head h1 {
+    @apply text-ink text-lg font-bold tracking-tight;
+  }
+
+  .boot-clock {
+    @apply text-ink-muted text-sm tabular-nums;
+  }
+
+  .boot-meter {
+    @apply mt-3 h-1 overflow-hidden rounded-full bg-black/5;
+  }
+
+  .boot-meter span {
+    @apply bg-ink block h-full w-full origin-left rounded-full transition-transform duration-200;
+    scale: var(--progress, 0) 1;
+  }
+
+  .boot-steps {
+    @apply mt-4 grid gap-2 text-sm;
+  }
+
+  .boot-steps li {
+    @apply text-ink-soft grid items-center gap-3;
+    grid-template-columns: auto minmax(0, 1fr) auto;
+  }
+
+  .boot-steps .icon {
+    @apply text-ink-muted size-3.5;
+  }
+
+  .boot-steps li[data-pending] {
+    @apply text-ink font-medium;
+  }
+
+  .step-label {
+    @apply truncate;
+  }
+
+  .step-label small {
+    @apply text-ink-muted text-sm font-normal;
+  }
+
+  .step-time {
+    @apply text-ink-muted tabular-nums;
+  }
+
+  .spinner {
+    @apply border-t-ink size-3.5 animate-spin rounded-full border-2 border-black/10;
+  }
+
+  .boot-error {
+    @apply text-ink-subtle mt-4 block rounded-xl bg-white/60 px-3 py-2 text-sm break-words whitespace-pre-wrap;
+  }
+
+  .boot-foot {
+    @apply mt-5 flex justify-end;
+  }
+
+  /* ================= Menus and toasts ================= */
+
+  /* Without anchor positioning it opens under the actions. */
+  .menu {
+    @apply fixed inset-auto end-2 top-12 m-0 w-56 rounded-2xl bg-white p-1.5 shadow-md shadow-black/10;
+  }
+
+  @supports (position-area: block-end) {
+    .menu {
+      @apply inset-auto m-0 mt-2;
+      position-area: block-end span-inline-start;
+      position-try-fallbacks: flip-inline;
+    }
+  }
+
+  .menu-item {
+    @apply text-ink-glass focus-visible:outline-accent flex w-full items-center gap-3 rounded-xl px-3 py-2 text-start text-sm font-medium transition-colors duration-150 hover:bg-black/5 hover:text-ink-strong focus-visible:outline-2;
+  }
+
+  .menu-item .icon {
+    @apply text-ink-muted;
+  }
+
+  .menu-rule {
+    @apply mx-3 my-1 border-black/5;
+  }
+
+  .toast {
+    @apply font-title text-ink-glass fixed inset-x-4 bottom-4 z-50 mx-auto block w-fit max-w-md cursor-pointer rounded-xl border border-black/5 bg-white px-4 py-2 text-sm break-words whitespace-pre-wrap shadow-md shadow-black/10;
+  }
+
+  /* ================= Settings ================= */
+
+  .sheet {
+    @apply text-ink m-auto w-full max-w-md overflow-auto bg-white p-5 shadow-sm shadow-black/5 sm:rounded-3xl sm:p-6;
+    max-block-size: calc(100dvh - var(--spacing) * 8);
+    overscroll-behavior: contain;
+    scrollbar-width: thin;
+    scrollbar-color: var(--color-neutral-300) transparent;
+  }
+
+  .sheet::backdrop {
+    @apply bg-black/20 backdrop-blur-sm;
+    overflow: hidden;
+    overscroll-behavior: contain;
+  }
+
+  .sheet-head {
+    @apply flex items-center justify-between gap-4;
+  }
+
+  .sheet-head h1 {
+    @apply text-lg font-bold tracking-tight;
+  }
+
+  .sheet-section {
+    @apply mt-5;
+  }
+
+  .sheet-section h2 {
+    @apply text-ink-muted mb-2 px-1 text-xs font-semibold tracking-wide uppercase;
+  }
+
+  .group {
+    @apply divide-y divide-black/5 rounded-2xl border border-black/5 bg-wash;
+  }
+
+  .row {
+    @apply text-ink-glass flex min-h-11 items-center justify-between gap-4 px-4 py-1.5 text-sm;
+  }
+
+  .row input {
+    @apply font-title text-ink focus-visible:outline-accent w-20 rounded-lg border border-black/10 bg-white px-2 py-1 text-end text-sm tabular-nums focus-visible:outline-2 focus-visible:outline-offset-2 disabled:text-ink-faint;
+  }
+
+  .stepper {
+    @apply flex items-center gap-1;
+  }
+
+  .stepper input {
+    @apply w-12 text-center;
+    appearance: textfield;
+  }
+
+  .stepper input::-webkit-inner-spin-button {
+    appearance: none;
+  }
+
+  .stepper-button {
+    @apply text-ink-soft focus-visible:outline-accent grid size-8 place-items-center rounded-lg transition-colors duration-150 hover:bg-black/5 hover:text-ink-strong focus-visible:outline-2;
+  }
+
+  .unit {
+    @apply text-ink-muted ms-1;
+  }
+
+  .note {
+    @apply text-ink-muted mt-2 px-1 text-sm;
+  }
+
+  .note kbd {
+    @apply font-title text-ink-subtle rounded-md border border-black/10 bg-wash px-1.5 text-xs;
+  }
+
+  .restart {
+    @apply mt-3 flex items-center justify-between gap-4;
+  }
+
+  .restart .note {
+    @apply mt-0;
+  }
+
+  .restart .btn-solid {
+    @apply shrink-0;
+  }
+
+  .facts dt {
+    @apply shrink-0;
+  }
+
+  .facts dd {
+    @apply text-ink-muted min-w-0 text-end;
+  }
+
+  .boot-log {
+    @apply mt-2 px-1;
+  }
+
+  .boot-log summary {
+    @apply text-ink-subtle focus-visible:outline-accent cursor-pointer rounded-md text-sm hover:text-ink-strong focus-visible:outline-2 focus-visible:outline-offset-2;
+  }
+
+  .boot-log .boot-steps {
+    @apply mt-3;
+  }
+
+  @media (width < 40rem) {
+    /* A bottom sheet on phones. */
+    .sheet {
+      @apply mb-0 max-w-none rounded-t-3xl pb-8;
+      max-block-size: 85dvh;
+    }
+  }
+
+  @media (pointer: coarse) {
+    .titlebar {
+      @apply h-12;
+    }
+
+    .tab,
+    .host,
+    .actions {
+      @apply h-9;
+    }
+
+    .action {
+      @apply size-8;
+    }
+
+    .tab-close {
+      @apply size-7;
+    }
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .btn-glass,
+  .spinner,
+  .boot-meter span {
+    animation: none;
+    transition: none;
+    scale: none;
+  }
+
+  .boot-meter span {
+    scale: var(--progress, 0) 1;
+  }
+}

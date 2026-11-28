@@ -4,8 +4,10 @@
 {
   pkgs,
   unkernel,
+  waylandWeb,
   wisp-server,
   system,
+  wxstack,
 }:
 let
   inherit (pkgs) lib;
@@ -17,40 +19,64 @@ let
     inherit (system.system.build) toplevel;
   };
 
-  xterm = pkgs.fetchzip {
-    url = "https://registry.npmjs.org/@xterm/xterm/-/xterm-6.0.0.tgz";
-    hash = "sha256-zvXw/gCBNx2oHI7qQTVrFJs4ulvNdduRgk+c+RIgsoE=";
-  };
-  xtermFit = pkgs.fetchzip {
-    url = "https://registry.npmjs.org/@xterm/addon-fit/-/addon-fit-0.11.0.tgz";
-    hash = "sha256-W7UvELD7qWafLVdLSCK8/ijEgf8eltSqIf4u2ze8fhM=";
+  ghosttyWeb = pkgs.fetchzip {
+    url = "https://registry.npmjs.org/ghostty-web/-/ghostty-web-0.4.0.tgz";
+    hash = "sha256-ylBlhpFJaChMnNaSc+R/yvTLiDnjTH9Sz/HBr8CNU3k=";
   };
 
   # The image's name carries its hash, so a browser never reads a cached
   # range of an older image.
   imageName = "${lib.substring 11 32 image.outPath}.erofs";
 
-  site = pkgs.runCommand "${hostName}-site" { } ''
-    mkdir -p $out/xterm
-    cp ${./site}/* $out/
-    cp ${xterm}/lib/xterm.mjs ${xterm}/css/xterm.css ${xtermFit}/lib/addon-fit.mjs $out/xterm/
-    ln -s ${unkernel.web} $out/unkernel
-    ln -s ${image} $out/${imageName}
-    cp ${
-      pkgs.writeText "config.json" (
-        builtins.toJSON {
-          image = imageName;
-          wisp = "wisp/";
-          inherit hostName user;
-          display =
-            let
-              inherit (system.dotfiles.platform.unkernel) display;
-            in
-            if display.enable then { inherit (display) width height; } else null;
-        }
-      )
-    } $out/config.json
-  '';
+  site =
+    pkgs.runCommand "${hostName}-site"
+      {
+        nativeBuildInputs = [
+          pkgs.patch
+          pkgs.tailwindcss_4
+          pkgs.woff2
+        ];
+      }
+      ''
+        mkdir -p $out/{ghostty-web,fonts} styles/frost
+        cp ${wxstack}/share/skills/frost/assets/{tokens,components}.css styles/frost/
+        cp ${./site}/{index.html,main.js,wayland.js} $out/
+        cp ${./site}/styles.css .
+        chmod u+w styles.css
+        cp ${./site}/{index.html,main.js} .
+        tailwindcss -i styles.css -o $out/styles.css --minify
+
+        firaCode=${pkgs.nerd-fonts.fira-code}/share/fonts/truetype/NerdFonts/FiraCode
+        for font in "$firaCode"/FiraCodeNerdFont-{Regular,Bold}.ttf \
+          ${pkgs.lato}/share/fonts/lato/Lato-{Regular,Bold}.ttf \
+          ${pkgs.fira-sans}/share/fonts/truetype/FiraSans-Regular.ttf; do
+          cp "$font" .
+          woff2_compress "''${font##*/}"
+        done
+        cp ./*.woff2 $out/fonts/
+        cp ${./site}/font-licenses.txt $out/fonts/LICENSE.txt
+
+        cp ${ghosttyWeb}/dist/*.js $out/ghostty-web/
+        chmod u+w $out/ghostty-web/ghostty-web.js
+        patch --directory="$out/ghostty-web" -p1 --fuzz=0 < ${./ghostty-web.patch}
+        ${lib.optionalString (waylandWeb != null) ''
+          mkdir -p $out/wland
+          cp ${waylandWeb}/dist/*.mjs ${waylandWeb}/dist/wland.wasm $out/wland/
+        ''}
+        ln -s ${unkernel.web} $out/unkernel
+        ln -s ${image} $out/${imageName}
+        cp ${
+          pkgs.writeText "config.json" (
+            builtins.toJSON {
+              image = imageName;
+              wisp = "wisp/";
+              inherit hostName user;
+              inherit (system.dotfiles.platform.unkernel) apps;
+              wayland = waylandWeb != null;
+            }
+          )
+        } $out/config.json
+      '';
 
   # Range requests read the image lazily, and the isolation headers give the
   # page the shared memory that several CPUs need.

@@ -2,73 +2,266 @@
 <html lang="en">
   <head>
     <meta charset="utf-8" />
-    <meta name="viewport" content="width=device-width, initial-scale=1" />
-    <meta name="color-scheme" content="dark" />
-    <title>tab</title>
-    <link rel="stylesheet" href="xterm/xterm.css" />
-    <style>
-      :root {
-        --bg: #16181d;
-        --fg: #d7dae0;
-        --dim: #8b919c;
-        --warn: #f0b072;
-      }
-      html,
-      body {
-        height: 100%;
-        margin: 0;
-        background: var(--bg);
-        color: var(--fg);
-        font:
-          14px/1.4 ui-monospace,
-          "JetBrains Mono",
-          Menlo,
-          Consolas,
-          monospace;
-      }
-      body {
-        display: grid;
-        grid-template-rows: auto minmax(0, 1fr) auto;
-      }
-      #screen {
-        display: grid;
-        place-items: center;
-        min-height: 0;
-        height: 70vh;
-        background: #000;
-      }
-      #screen[hidden] {
-        display: none;
-      }
-      #screen canvas {
-        max-width: 100%;
-        max-height: 70vh;
-        cursor: none;
-        outline: none;
-      }
-      #terminal {
-        min-height: 0;
-        padding: 8px;
-      }
-      #status {
-        padding: 4px 12px;
-        color: var(--dim);
-      }
-      #status:empty {
-        display: none;
-      }
-      #status[data-kind="error"] {
-        color: var(--warn);
-        white-space: pre-wrap;
-      }
-    </style>
+    <meta
+      name="viewport"
+      content="width=device-width, initial-scale=1, interactive-widget=resizes-content"
+    />
+    <meta name="color-scheme" content="light" />
+    <title>TabOS</title>
+    <link
+      rel="preload"
+      href="fonts/FiraCodeNerdFont-Regular.woff2"
+      as="font"
+      type="font/woff2"
+      crossorigin
+    />
+    <link rel="stylesheet" href="styles.css" />
   </head>
-  <body>
-    <section id="screen" hidden>
-      <canvas tabindex="0" aria-label="The machine's display"></canvas>
-    </section>
-    <main id="terminal"></main>
-    <output id="status" role="status">Loading</output>
+  <body class="tabos">
+    <svg hidden aria-hidden="true">
+      <symbol id="i-machine" viewBox="0 0 16 16">
+        <rect x="3.5" y="3.5" width="9" height="9" rx="1.5" />
+        <path
+          d="M6 1.5v2M10 1.5v2M6 12.5v2M10 12.5v2M1.5 6h2M1.5 10h2M12.5 6h2M12.5 10h2"
+        />
+      </symbol>
+      <symbol id="i-console" viewBox="0 0 16 16">
+        <path d="M2.5 4h11M2.5 8h11M2.5 12h6.5" />
+      </symbol>
+      <symbol id="i-terminal" viewBox="0 0 16 16">
+        <path d="M3 4.5 6.5 8 3 11.5M8.5 11.5h4.5" />
+      </symbol>
+      <symbol id="i-window" viewBox="0 0 16 16">
+        <rect x="2" y="2.75" width="12" height="10.5" rx="2" />
+        <path d="M2 6h12" />
+      </symbol>
+      <symbol id="i-plus" viewBox="0 0 16 16">
+        <path d="M8 3v10M3 8h10" />
+      </symbol>
+      <symbol id="i-minus" viewBox="0 0 16 16">
+        <path d="M3 8h10" />
+      </symbol>
+      <symbol id="i-close" viewBox="0 0 16 16">
+        <path d="m4.5 4.5 7 7M11.5 4.5l-7 7" />
+      </symbol>
+      <symbol id="i-settings" viewBox="0 0 16 16">
+        <path d="M2.5 5h6M11.5 5h2M2.5 11h2M7.5 11h6" />
+        <circle cx="10" cy="5" r="1.5" />
+        <circle cx="6" cy="11" r="1.5" />
+      </symbol>
+      <symbol id="i-check" viewBox="0 0 16 16">
+        <path d="m3.5 8.5 3 3 6-7" />
+      </symbol>
+    </svg>
+
+    <div class="glow-blob tabos-glow-a" aria-hidden="true"></div>
+    <div class="glow-blob tabos-glow-b" aria-hidden="true"></div>
+
+    <header class="titlebar">
+      <div class="host" id="host">
+        <svg class="icon"><use href="#i-machine" /></svg>
+        <span class="host-text">
+          <strong id="host-name">tab</strong>
+          <span id="host-state">Starting</span>
+        </span>
+      </div>
+      <div
+        id="tabs"
+        class="tabstrip"
+        role="tablist"
+        aria-label="Sessions"
+        aria-keyshortcuts="Control+Shift+."
+      >
+        <div class="tab" role="presentation" data-pinned data-selected>
+          <button
+            id="console-tab"
+            class="tab-button"
+            type="button"
+            role="tab"
+            aria-controls="console"
+            aria-selected="true"
+          >
+            <svg class="icon"><use href="#i-console" /></svg>
+            <span class="tab-label">Console</span>
+          </button>
+        </div>
+      </div>
+      <div class="actions">
+        <button
+          id="new-tab"
+          type="button"
+          class="action"
+          aria-label="New tab"
+          title="New tab"
+          popovertarget="new-tab-menu"
+          disabled
+        >
+          <svg class="icon"><use href="#i-plus" /></svg>
+        </button>
+        <button
+          id="settings-button"
+          type="button"
+          class="action"
+          aria-label="Settings"
+          title="Settings"
+        >
+          <svg class="icon"><use href="#i-settings" /></svg>
+        </button>
+      </div>
+    </header>
+
+    <main id="workspace" class="workspace">
+      <div
+        id="console"
+        class="terminal-pane"
+        role="tabpanel"
+        aria-labelledby="console-tab"
+        inert
+      ></div>
+      <section id="startup" class="startup" aria-labelledby="boot-summary">
+        <div class="boot-card glass-card">
+          <div
+            class="glass-tint from-blue-100/40 via-purple-50/30 to-pink-100/40"
+            aria-hidden="true"
+          ></div>
+          <div class="boot-head">
+            <h1 id="boot-summary" role="status">Starting NixOS</h1>
+            <span id="boot-clock" class="boot-clock">0.0 s</span>
+          </div>
+          <div class="boot-meter" aria-hidden="true">
+            <span id="boot-meter"></span>
+          </div>
+          <ol id="boot-steps" class="boot-steps">
+            <li data-pending>
+              <span class="spinner"></span>
+              <span class="step-label">Loading the terminal runtime</span>
+              <span class="step-time"></span>
+            </li>
+          </ol>
+          <output id="boot-error" class="boot-error" hidden></output>
+          <div class="boot-foot">
+            <button id="view-console" type="button" class="btn-glass">
+              View console
+            </button>
+          </div>
+        </div>
+      </section>
+    </main>
+
+    <output id="status" class="toast" role="status" hidden></output>
+
+    <div id="new-tab-menu" class="menu glass-card" popover>
+      <button id="new-shell" type="button" class="menu-item">
+        <svg class="icon"><use href="#i-terminal" /></svg>
+        <span>Shell</span>
+      </button>
+    </div>
+
+    <dialog
+      id="settings"
+      class="sheet"
+      closedby="any"
+      aria-labelledby="settings-title"
+    >
+      <header class="sheet-head">
+        <h1 id="settings-title">Settings</h1>
+        <form method="dialog">
+          <button class="action" aria-label="Close settings">
+            <svg class="icon"><use href="#i-close" /></svg>
+          </button>
+        </form>
+      </header>
+
+      <section class="sheet-section" aria-labelledby="terminal-title">
+        <h2 id="terminal-title">Terminal</h2>
+        <div class="group">
+          <label class="row" for="font-size">
+            <span>Font size</span>
+            <span class="stepper">
+              <button
+                type="button"
+                class="stepper-button"
+                data-step="-1"
+                aria-label="Smaller"
+              >
+                <svg class="icon"><use href="#i-minus" /></svg>
+              </button>
+              <input
+                id="font-size"
+                type="number"
+                inputmode="numeric"
+                min="10"
+                max="28"
+                value="14"
+                required
+              />
+              <button
+                type="button"
+                class="stepper-button"
+                data-step="1"
+                aria-label="Larger"
+              >
+                <svg class="icon"><use href="#i-plus" /></svg>
+              </button>
+            </span>
+          </label>
+        </div>
+        <p id="tab-shortcut" class="note">
+          <kbd>Ctrl</kbd> <kbd>Shift</kbd> <kbd>.</kbd> moves focus from a
+          session to its tab.
+        </p>
+      </section>
+
+      <form id="preferences" class="sheet-section">
+        <h2 id="machine-title">Machine</h2>
+        <div class="group" role="group" aria-labelledby="machine-title">
+          <label class="row">
+            <span>CPUs</span>
+            <input name="cpus" type="number" min="1" max="16" required />
+          </label>
+          <label class="row">
+            <span>Memory <span class="unit">MiB</span></span>
+            <input
+              name="memory"
+              type="number"
+              min="256"
+              max="4096"
+              step="256"
+              required
+            />
+          </label>
+        </div>
+        <div class="restart">
+          <p class="note">
+            Restarting discards guest files and
+            <span class="whitespace-nowrap">sign-ins</span>.
+          </p>
+          <button type="submit" class="btn-solid">Restart</button>
+        </div>
+      </form>
+
+      <section class="sheet-section" aria-labelledby="boot-title">
+        <h2 id="boot-title">This boot</h2>
+        <dl class="group facts">
+          <div class="row">
+            <dt>Running</dt>
+            <dd id="resources">Waiting for the kernel</dd>
+          </div>
+          <div class="row">
+            <dt>Image</dt>
+            <dd id="image-info">Waiting for the disk</dd>
+          </div>
+          <div class="row">
+            <dt>Boot time</dt>
+            <dd id="boot-time">Booting</dd>
+          </div>
+        </dl>
+        <details id="boot-log" class="boot-log" hidden>
+          <summary>Boot steps</summary>
+          <div id="boot-log-slot"></div>
+        </details>
+      </section>
+    </dialog>
     <script type="module" src="main.js"></script>
   </body>
 </html>

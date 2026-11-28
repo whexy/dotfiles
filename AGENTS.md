@@ -713,9 +713,9 @@ interop to run `tailscale.exe`, which only the user's manager has. It never
 removes a route, since dropping port 22 would cut the ssh session that
 switched the host; remove one with `tailscale serve`.
 
-## NixOS in a browser tab
+## TabOS
 
-`hosts/tab` is a toy: a NixOS host that runs in a browser tab, on
+`hosts/tab` runs NixOS in a browser tab on
 [unkernel](https://unkernel.dev), a Linux kernel compiled to WebAssembly that
 runs unmodified aarch64 programs.
 
@@ -768,26 +768,20 @@ cached until the reload).
   would add every agent and gateway keys the tab cannot decrypt: no agenix
   secret has a tab among its recipients.
 
-### The tab's desktop
+### Workspace
 
-`dotfiles.platform.unkernel.display` gives the host the display unkernel
-offers, a virtio-gpu KMS device (`Virtual-1`, one mode of `width` x `height`)
-with a keyboard and an absolute pointer, and the page draws it above the
-terminal. The host has udev, Mesa and seat0 for it, and runs
-`display.session` as the user at boot. tab runs `niri-session` with the niri
-and Ghostty home options, without the `gui` cap.
+TabOS shows boot milestones and then opens a login shell. Console keeps the
+boot output. Use **+** to open a shell, Neovim, tmux, Claude Code, or
+Calculator. Each session has its own tab with a close button. Settings
+contains the boot log, terminal font size, and CPU and memory options.
+Changing CPU or memory takes a restart.
 
-- niri draws only where the page gets WebGL2, which gives the guest
-  GL 2.1 and GLES 3.0 (virgl). Without it the GPU is 2D, and niri refuses
-  software renderers ("software EGL renderers are skipped"), so the display
-  stays hidden. `console` boots without the display, and the session is
-  skipped.
-- Ghostty needs OpenGL 4.3, so tab's home runs it with
-  `LIBGL_ALWAYS_SOFTWARE=1`, on llvmpipe; without it Ghostty shows "Unable to
-  acquire an OpenGL context for rendering".
-- The canvas takes keys while it has the focus. CapsLock is Hyper
-  (Ctrl+Alt+Shift+Super), as kanata makes it on the real desktop: CapsLock+T
-  opens Ghostty.
+Terminal tabs use `ghostty-web` with locally served FiraCode Nerd Font.
+`dotfiles.platform.unkernel.wayland.enable` runs a Wayland relay in the
+guest. The browser compositor reads its buffers through unkernel shared
+memory and opens each GUI window in a tab. Calculator is the bundled
+example. The `wayland-run` command also lets a shell launch a Wayland app
+against that relay.
 
 Building the image builds the host's closure, so the machine needs an
 aarch64-linux builder (`dotfiles.compat.binfmt`). The launcher is not a

@@ -1,0 +1,62 @@
+--- a/ghostty-web.js
++++ b/ghostty-web.js
+@@ -1386,5 +1386,6 @@
+    */
+   resize(A, B) {
+-    const g = A * this.metrics.width, E = B * this.metrics.height;
++    // FitAddon already reserves a gutter for the scrollbar.
++    const g = A * this.metrics.width + 15, E = B * this.metrics.height;
+     this.canvas.style.width = `${g}px`, this.canvas.style.height = `${E}px`, this.canvas.width = g * this.devicePixelRatio, this.canvas.height = E * this.devicePixelRatio, this.ctx.scale(this.devicePixelRatio, this.devicePixelRatio), this.ctx.textBaseline = "alphabetic", this.ctx.textAlign = "left", this.ctx.fillStyle = this.theme.background, this.ctx.fillRect(0, 0, g, E);
+   }
+@@ -1399,6 +1400,9 @@
+     this.currentBuffer = A;
+     const I = A.getCursor(), D = A.getDimensions(), i = E ? E.getScrollbackLength() : 0;
+-    (U = A.needsFullRedraw) != null && U.call(A) && (B = !0), (this.canvas.width !== D.cols * this.metrics.width * this.devicePixelRatio || this.canvas.height !== D.rows * this.metrics.height * this.devicePixelRatio) && (this.resize(D.cols, D.rows), B = !0), g !== this.lastViewportY && (B = !0, this.lastViewportY = g);
+-    const s = I.x !== this.lastCursorPosition.x || I.y !== this.lastCursorPosition.y;
++    (U = A.needsFullRedraw) != null && U.call(A) && (B = !0), (this.canvas.width !== Math.floor((D.cols * this.metrics.width + 15) * this.devicePixelRatio) || this.canvas.height !== D.rows * this.metrics.height * this.devicePixelRatio) && (this.resize(D.cols, D.rows), B = !0), g !== this.lastViewportY && (B = !0, this.lastViewportY = g);
++    const showCursor = g === 0 && Boolean(I.visible) && this.cursorVisible;
++    const lastCursor = this.lastCursorPosition;
++    const s = I.x !== lastCursor.x || I.y !== lastCursor.y ||
++      showCursor !== lastCursor.visible || this.cursorStyle !== lastCursor.style;
+     if (s || this.cursorBlink) {
+       if (!B && !A.isRowDirty(I.y)) {
+@@ -1477,5 +1481,8 @@
+       c && this.renderLine(c, t, D.cols);
+     }
+-    g === 0 && I.visible && this.cursorVisible && this.renderCursor(I.x, I.y), E && C > 0 && this.renderScrollbar(g, i, D.rows, C), this.lastCursorPosition = { x: I.x, y: I.y }, A.clearDirty();
++    if (showCursor) this.renderCursor(I.x, I.y);
++    if (E && C > 0) this.renderScrollbar(g, i, D.rows, C);
++    this.lastCursorPosition = { x: I.x, y: I.y, visible: showCursor, style: this.cursorStyle };
++    A.clearDirty();
+   }
+   /**
+@@ -1520,5 +1527,5 @@
+    * Selection foreground color is applied here to match the selection background.
+    */
+-  renderCellText(A, B, g) {
++  renderCellText(A, B, g, cursor = false) {
+     var k;
+     const E = B * this.metrics.width, C = g * this.metrics.height, I = this.metrics.width * A.width;
+@@ -1527,5 +1534,7 @@
+     const D = this.isInSelection(B, g);
+     let i = "";
+-    if (A.flags & e.ITALIC && (i += "italic "), A.flags & e.BOLD && (i += "bold "), this.ctx.font = `${i}${this.fontSize}px ${this.fontFamily}`, D)
++    if (A.flags & e.ITALIC && (i += "italic "), A.flags & e.BOLD && (i += "bold "), this.ctx.font = `${i}${this.fontSize}px ${this.fontFamily}`, cursor)
++      this.ctx.fillStyle = this.theme.background;
++    else if (D)
+       this.ctx.fillStyle = this.theme.selectionForeground;
+     else {
+@@ -1562,7 +1571,11 @@
+     const g = A * this.metrics.width, E = B * this.metrics.height;
+     switch (this.ctx.fillStyle = this.theme.cursor, this.cursorStyle) {
+-      case "block":
+-        this.ctx.fillRect(g, E, this.metrics.width, this.metrics.height);
++      case "block": {
++        const cell = this.currentBuffer?.getLine(B)?.[A];
++        this.ctx.fillRect(g, E, this.metrics.width * (cell?.width || 1), this.metrics.height);
++        if (cell?.width)
++          this.renderCellText(cell, A, B, true);
+         break;
++      }
+       case "underline":
+         const C = Math.max(2, Math.floor(this.metrics.height * 0.15));

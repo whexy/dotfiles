@@ -1,10 +1,25 @@
 {
-  config,
   flake,
   hostName,
+  lib,
   pkgs,
   ...
 }:
+let
+  waylandRun = pkgs.writeShellApplication {
+    name = "wayland-run";
+    text = ''
+      export XDG_RUNTIME_DIR=/run/tabos-wayland
+      export WAYLAND_DISPLAY=wayland-0
+      export GDK_BACKEND=wayland
+      if [[ ! -S "$XDG_RUNTIME_DIR/$WAYLAND_DISPLAY" ]]; then
+        echo "TabOS Wayland is unavailable. Open the guest in a browser and wait for it to start." >&2
+        exit 1
+      fi
+      exec "$@"
+    '';
+  };
+in
 {
   # No cap: a tab downloads what its image holds, so this host names the few
   # features it has.
@@ -18,19 +33,30 @@
   dotfiles = {
     platform.unkernel = {
       enable = true;
-      display = {
-        enable = true;
-        session = "niri-session";
-      };
+      wayland.enable = true;
+      apps = [
+        {
+          name = "Calculator";
+          command = [
+            "${lib.getExe waylandRun}"
+            "${lib.getExe pkgs.galculator}"
+          ];
+          wayland = true;
+        }
+        {
+          name = "Neovim";
+          command = [ "nvim" ];
+        }
+        {
+          name = "tmux";
+          command = [ "tmux" ];
+        }
+        {
+          name = "Claude Code";
+          command = [ "claude" ];
+        }
+      ];
     };
-    # niri scales an output it has no declaration for by 1.5.
-    hardware.monitors = [
-      {
-        connector = "Virtual-1";
-        resolution = { inherit (config.dotfiles.platform.unkernel.display) width height; };
-        scale = 1.0;
-      }
-    ];
     nix = {
       caches.enable = true;
       # The CI cache is on the tailnet, which the tab joins only after a
@@ -52,7 +78,6 @@
     enable = false;
     man.enable = false;
   };
-  environment.defaultPackages = [ ];
   # The registry's nixpkgs would be a third of the image; `nix run nixpkgs#...`
   # fetches the unstable branch instead.
   nixpkgs.flake = {
@@ -60,18 +85,14 @@
     setNixPath = false;
   };
 
-  # Ghostty's font alone, without the CJK fonts of dotfiles.fonts.
-  fonts = {
-    packages = [ pkgs.nerd-fonts.fira-code ];
-    fontconfig.defaultFonts.monospace = [ "FiraCode Nerd Font" ];
+  fonts.packages = [ pkgs.dejavu_fonts ];
+  environment = {
+    defaultPackages = [ ];
+    systemPackages = [
+      waylandRun
+      pkgs.galculator
+    ];
   };
-
-  # Home Manager's xdg.portal, which the niri home module enables, asserts
-  # these.
-  environment.pathsToLink = [
-    "/share/applications"
-    "/share/xdg-desktop-portal"
-  ];
 
   system.stateVersion = "26.05";
 }
